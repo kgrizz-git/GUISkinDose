@@ -89,6 +89,24 @@ The store is not the bundled correction provider and never mutates package data.
 `corrections_db_path`; that read-only legacy path remains an independent explicit source for HVL,
 `k_med`, and baseline `k_tab` data.
 
+### Packaged examples and templates
+
+Users get the same starting experience as the kema-meter example file
+(`src/guiskindose/example_data/kerma_meter/` — packaged CSV plus README plus a GUI download button):
+
+- a **filled example** and a **blank template** for each accepted source, packaged under
+  `example_data/equipment_profiles/`: JSON, CSV/TSV, XLSX (vatabular shapes identical, see §4), plus a
+  short README with the column/field dictionary and the CLI/GUI usage;
+- an Equipment Profiles card action to download the example and the template, in browser mode via
+  `ui.download()` and in native mode via the OS save dialog (the mechanism already used by
+  `gui/tabs/corrections.py:174-188`);
+- in-app help mirroring that README;
+- every packaged example loads through the real loader in tests, and each invalid example fails with
+  its stable error code, so the shipped files cannot drift from the schema.
+
+All packaged content is synthetic — fictional equipment labels, factors, and dates. No station names,
+serial numbers, source paths, or site-identifying notes appear in any example or template.
+
 ### Shared ingestion safeguards
 
 1. Allowlist `.json`, `.csv`, `.tsv`, and `.xlsx`; reject executable/native-object deserialization.

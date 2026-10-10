@@ -49,11 +49,18 @@ Work:
 - [ ] Publish the canonical profile field table: required stable `profile_id`; manufacturer/models; separate explicit
       aliases; independently optional coordinate/transmission domains with at least one non-empty; partial coordinate
       leaves; transmission evidence/source/date; bounded notes; unknown fields rejected (decisions 3, 6, 8, 12, 16).
-- [ ] Lock source schemas (decision 4): nested JSON document; ONE flat tabular model shared by CSV/TSV and XLSX
+ - [ ] Lock source schemas (decision 4): nested JSON document; ONE flat tabular model shared by CSV/TSV and XLSX
       (strict `record_type` rows, same column set, one sheet, sheet selectable for multi-sheet workbooks);
-      canonical in-memory GUI submission; canonical JSON payload per stored revision. Provide one valid example per
-      file format and invalid cross-format examples.
-- [ ] Lock the separate user-store schema and migration policy: record/revision IDs, canonical payload, profile/hash/
+      canonical in-memory GUI submission; canonical JSON payload per stored revision.
+ - [ ] Author the packaged starting material under `example_data/equipment_profiles/`: a filled example and a
+      blank template for JSON, CSV/TSV, and XLSX, plus a README with the field/column dictionary and CLI/GUI
+      usage. Mirror the kema-meter precedent (`src/guiskindose/example_data/kema_meter/`). Content is synthetic:
+      fictional labels/factors/dates, no station, serial, paths, or site-identifying notes. XLSX is an opaque
+      container, so its examples enter the approved-asset inventory with hash-pinned human clearance before
+      merge; CSV/TSV/JSON are scanned as text.
+ - [ ] Author invalid examples (malformed, wrong schema version, unknown fields, duplicate claim, out-of-extent
+      row, unsupported suffix) with the stable error code each must produce.
+ - [ ] Lock the separate user-store schema and migration policy: record/revision IDs, canonical payload, profile/hash/
       active-set metadata, timestamps, transactions, uniqueness, and corruption handling (decision 5).
 - [ ] Set exact maximum file bytes, XLSX expanded/member/sheet limits, aggregate 10,000-row ceiling, profile/alias
       counts, ID lengths, and text lengths. The row ceiling follows `src/guiskindose/kerma_correction.py:42,324-362`.
@@ -219,14 +226,20 @@ Work:
       or both.
 - [ ] Limit “save session correction as profile” to equipment-design values (table origin baseline, translation/angle
       signs, axis swap). Never persist patient offsets or study-specific nudges; do not infer a reusable value silently.
-- [ ] Export canonical JSON through atomic native writes (`Path.replace()`) or browser download. Export is explicit;
+ - [ ] Export canonical JSON through atomic native writes (`Path.replace()`) or browser download. Export is explicit;
       default run/rich exports remain path/note-free.
-- [ ] Before final activation show manufacturer/model, profile/source/match level, each coordinate value and inheritance
+ - [ ] Add "Download example" and "Download blank template" actions to the Equipment Profiles card, browser mode via
+      `ui.download()` and native mode via the OS save dialog, reusing the mechanism in
+      `src/guiskindose/gui/tabs/corrections.py:174-188`. Serve the packaged files from `example_data/equipment_profiles/`.
+ - [ ] Add in-app help for profile authoring: field/column dictionary, the filled example annotated, and the
+      measured-vs-estimated evidence rule, matching the packaged README.
+ - [ ] Before final activation show manufacturer/model, profile/source/match level, each coordinate value and inheritance
       source, transmission evidence/source/status, and interpolation/clamping/fallback/partial notices.
 
 Exit criteria: NiceGUI tests cover every input source, manual coordinate and transmission entry, new model, alias,
 wildcard acknowledgement, conflicts, active/unused, coordinate-only partial, transmission-only partial, fully specified,
-mixed exams, store version/save/reload, JSON export/reload, post-load rollback, and browser download. Patient-specific
+mixed exams, store version/save/reload, JSON export/reload, post-load rollback, and browser download. Every packaged
+example loads through the real loader and every invalid example fails with its locked error code. Patient-specific
 values cannot enter a reusable profile.
 
 Docs in this phase: GUI help and required UI-copy/help-registry/glossary/feature-matrix sources; run sync and registry checks.
@@ -236,12 +249,13 @@ Docs in this phase: GUI help and required UI-copy/help-registry/glossary/feature
 **Goal.** Reconcile documentation, prove packaged behavior, and archive the completed plan.
 
 Work:
-- [ ] Document explicit SQLite coexistence. A `k_tab`-only extraction utility remains deferred unless separately
+ - [ ] Document explicit SQLite coexistence. A `k_tab`-only extraction utility remains deferred unless separately
       required; it must never claim to migrate custom HVL or medium data.
-- [ ] Reconcile behavior docs already updated by earlier phases; update release notes, maintenance evidence, support/
+ - [ ] Reconcile behavior docs already updated by earlier phases; update release notes, maintenance evidence, support/
       privacy guidance, and the documentation catalog.
-- [ ] Run packaged-wheel clean-directory proof and final API/CLI/GUI/store/export parity and no-profile numerical suites.
-- [ ] Record phase evidence, mark this plan complete, move it to `dev-docs/plans/archive/`, and update catalog links.
+ - [ ] Run packaged-wheel clean-directory proof — including that `example_data/equipment_profiles/` ships in the wheel
+      and its examples still load — and final API/CLI/GUI/store/export parity and no-profile numerical suites.
+ - [ ] Record phase evidence, mark this plan complete, move it to `dev-docs/plans/archive/`, and update catalog links.
 
 Exit criteria: all acceptance criteria have automated evidence; full validation and wheel proof pass; privacy gates pass;
 user-only smoke tasks are recorded; the active plan is ready to archive.
