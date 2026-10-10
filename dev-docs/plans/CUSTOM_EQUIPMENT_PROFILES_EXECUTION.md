@@ -49,9 +49,10 @@ Work:
 - [ ] Publish the canonical profile field table: required stable `profile_id`; manufacturer/models; separate explicit
       aliases; independently optional coordinate/transmission domains with at least one non-empty; partial coordinate
       leaves; transmission evidence/source/date; bounded notes; unknown fields rejected (decisions 3, 6, 8, 12, 16).
-- [ ] Lock source schemas (decision 4): nested JSON document; CSV/TSV `record_type` rows; XLSX named `profiles`,
-      `coordinates`, and `transmission` sheets; canonical in-memory GUI submission; canonical JSON payload per stored
-      revision. Provide one valid example per file format and invalid cross-format examples.
+- [ ] Lock source schemas (decision 4): nested JSON document; ONE flat tabular model shared by CSV/TSV and XLSX
+      (strict `record_type` rows, same column set, one sheet, sheet selectable for multi-sheet workbooks);
+      canonical in-memory GUI submission; canonical JSON payload per stored revision. Provide one valid example per
+      file format and invalid cross-format examples.
 - [ ] Lock the separate user-store schema and migration policy: record/revision IDs, canonical payload, profile/hash/
       active-set metadata, timestamps, transactions, uniqueness, and corruption handling (decision 5).
 - [ ] Set exact maximum file bytes, XLSX expanded/member/sheet limits, aggregate 10,000-row ceiling, profile/alias

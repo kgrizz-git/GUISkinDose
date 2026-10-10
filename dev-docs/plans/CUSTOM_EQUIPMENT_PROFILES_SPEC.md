@@ -81,8 +81,7 @@ paths, not lossy shortcuts.
 | Source | v1 contract |
 |---|---|
 | JSON | One document with `schema_version` and bounded `profiles[]`; nested coordinate and transmission blocks preserve every field. |
-| CSV/TSV | UTF-8 table with strict `record_type` (`profile`, `coordinate`, `transmission`) and allowlisted columns. Metadata repeated for a `profile_id` must agree; blank cells mean omitted fields only where the schema allows. |
-| XLSX | Strict named sheets `profiles`, `coordinates`, and `transmission`; `profiles` is required and at least one domain sheet is non-empty. Sheet names, columns, and cross-sheet keys are validated. |
+| CSV/TSV, XLSX | **One flat tabular model, identical in both formats** (the kerma-loader precedent, `src/guiskindose/kerma_correction.py:345-362`): a strict `record_type` column (`profile`, `coordinate`, `transmission`) plus the allowlisted columns for each record type, one row per record. CSV/TSV is one table; XLSX is the same table on one sheet (first sheet by default, sheet selectable for multi-sheet workbooks). Metadata repeated for a `profile_id` must agree; blank cells mean omitted fields only where the schema allows. |
 | GUI entry | The Equipment Profiles form authors coordinate leaves and transmission rows directly. Validation and preview occur before the entry can be activated or saved. No source file is required. |
 | User profile store | A separate local SQLite database in GUISkinDose's user-owned application-data area stores canonical JSON payloads, `profile_id`, schema version, revision, hashes, and timestamps. Users can save, version, enable, export, and reload records. |
 
@@ -245,7 +244,8 @@ Acceptance:
 1. 2026-10-09 — Coordinate identity and transforms remain once per homogeneous exam/frame in v1.
 2. 2026-10-09 — Canonical `manufacturer` joins `model` in normalized data; legacy omissions warn.
 3. 2026-10-09 — Exact aliases are explicit and separate; only manufacturer-scoped model wildcards exist.
-4. 2026-10-10 — JSON is canonical, while CSV/TSV, XLSX, GUI entry, and a local user profile database are first-class sources.
+4. 2026-10-10 — JSON is canonical, while CSV/TSV, XLSX, GUI entry, and a local user profile database are
+   first-class sources; CSV/TSV and XLSX share one flat tabular model rather than two shapes.
 5. 2026-10-10 — The user profile SQLite store is separate from immutable bundled data and `corrections_db_path`.
 6. 2026-10-10 — Coordinate blocks are partial at leaf-field granularity and inherit through custom/bundled/wildcard/Default candidates with per-field provenance.
 7. 2026-10-10 — Transmission rows are sparse overlays; uncovered nodes/queries retain baseline interpolation, clamping, and fallback with user notification.
