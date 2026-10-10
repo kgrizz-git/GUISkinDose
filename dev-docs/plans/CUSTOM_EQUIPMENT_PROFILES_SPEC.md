@@ -39,7 +39,8 @@ validated lookup semantics established by the preceding plans.
 - Kerma-meter correction already supports validated user files keyed by individual equipment and
   tube; it is a loading/validation precedent but remains a distinct calibration concept (§4).
 - `k_tab` baseline lookup matches on model (plus a de-spaced spelling) and the literal
-  acquisition-plane string, scanning the table per event.
+  acquisition-plane string, filtering the loaded frame inside the event loop (one table load, not a
+  per-event SQL round trip).
 
 ## 3. What a profile contains
 
@@ -123,23 +124,35 @@ precedence complexity).
     bundled wildcard > warned Default. A custom wildcard may replace a bundled exact only with an
     explicit override declaration and a pre-calculation acknowledgement (and by a hard CLI error
     unless an opt-in flag is given).
-  - **Transmission:** `k_tab_mode: estimate` ignores profile rows entirely; measured modes resolve
-    eligible custom **measured** rows first, then the selected baseline provider (bundled table or
-    explicit SQLite), then the existing interpolation/clamping/fallback chain. Custom **estimated**
-    rows fill coverage gaps by default and never silently replace a measured row.
+  - **Transmission:** `k_tab_mode: estimate` ignores profile rows entirely. Measured modes overlay
+    eligible custom **measured** rows on the selected baseline table (the bundled
+    `correction_table_and_pad_attenuation` frame, or the one an explicit `corrections_db_path`
+    supplies) and then hand the merged frame to the existing lookup/interpolator. Custom **estimated**
+    rows fill coverage gaps by default and never replace a measured row from either source.
   - **Session transforms:** always applied after the reusable profile baseline, exactly once.
   - File order never silently resolves a duplicate claim; canonical duplicates fail at load, and GUI
     enable/disable or an explicit override declaration resolves them.
-- [ ] Transmission grid composition: custom **measured** nodes overlay the baseline nodes at identical
-  (manufacturer/model, plane, kVp, Cu, Al) coordinates before **one** interpolation pass, so a sparse
-  custom row can never clamp across a region the baseline already supports. Custom nodes never extend
-  the baseline's range; a query outside all measured coverage clamps at the nearest baseline node and
-  is labelled as clamped. Custom **estimated** nodes only fill coordinates with no measured node from
-  either source. Mixed grids resolve in one pass and are labelled `source: mixed`.
-- [ ] Transmission status is reported as **two orthogonal dimensions** — source
-  (`custom_measured` | `custom_estimated` | `baseline` | `mixed` | `fallback`) and numerical
-  resolution (`exact` | `interpolated` | `clamped`) — because the existing `k_tab_statuses` carries
-  only the resolution-style outcome.
+- [ ] Transmission overlay semantics (the join is **not** a manufacturer join — the attenuation table
+  has no manufacturer column):
+  - the custom join key is canonical **model** (including the existing de-spaced spelling), the
+    literal `acquisition_plane`, kVp, Cu, and Al, exactly as `corrections.calculate_k_tab()` matches
+    today;
+  - a custom **measured** row replaces (never adds beside) a baseline node at the same key, and may
+    not introduce nodes outside the baseline table's kVp/Cu/Al extents — such a row is a load error,
+    so a sparse custom row can never clamp across a region the baseline already supports;
+  - a custom **estimated** row may occupy only in-extent coordinates that have no measured node from
+    either source;
+  - with an explicit `corrections_db_path`, a custom row whose key already exists in that
+    database's attenuation table is a **load error**; non-overlapping custom rows may still overlay
+    that table.
+- [ ] Transmission grid resolution: after the overlay, run **one** call to the existing interpolator —
+  snap Al to the nearest measured Al, then clamp-interpolate on the (kVp × Cu) pivot. No new joint 3D
+  interpolant, and no-profile numbers must not move. A query outside the baseline extents clamps to
+  the nearest baseline node and is reported as `clamped`.
+- [ ] Transmission status keeps the engine's per-event list (`exact` | `interpolated` | `clamped`, plus
+  the existing `estimated`, `no_device`, `invalid_inherited`, and `fallback`) and adds a **source**
+  dimension beside it (`custom_measured` | `custom_estimated` | `baseline` | `mixed`), summarised per
+  exam — the per-event statuses are never collapsed into `source: fallback`.
 - [ ] Every active, dose-affecting custom value is reported before calculation and recorded in
   exports — not only shadows of bundled exact matches: translation offset/direction, rotation
   direction, axis swap, field-size mode, and custom `k_tab` rows. A custom profile replacing the
@@ -191,21 +204,23 @@ precedence complexity).
 
 ## 8. Migration and compatibility
 
-- [ ] Keep bundled profiles immutable and unchanged by user imports.
+- [ ] Keep bundled profiles immutable and unchanged by user imports, and keep global estimated
+  `k_tab` (`k_tab_mode: estimate` / `k_tab_val`) as the explicit coarse override it already is,
+  clearly labeled as applying to all table-intersected events and bypassing profile rows.
 - [ ] Convert existing Python custom normalization input into the shared profile representation or
   provide a documented compatibility adapter, and migrate the hidden run-configuration profile route
   onto the same loader.
-- [ ] Keep global estimated `k_tab` as an explicit coarse override, clearly labeled as applying to
-  all table-intersected events.
 - [ ] **Do not deprecate `corrections_db_path` in this feature.** An explicit SQLite source currently
   replaces HVL, `k_med`, and `k_tab` tables; profiles replace only the coordinate and transmission
-  customization. Document coexistence and define the outcome when profile transmission rows and an
-  explicit database claim the same key (recommended: reject the combination). Any migration utility
-  extracts only `correction_table_and_pad_attenuation` and states plainly that it cannot migrate
-  custom HVL or medium data.
-- [ ] Default exports and run configurations record profile ID, schema version, content hash, match
-  level, and active values — no profile paths, individual-unit identifiers, or unrestricted note
-  text. Full profile export is a distinct, explicit user action.
+  customization. Any migration utility extracts only `correction_table_and_pad_attenuation` and states
+  plainly that it cannot migrate custom HVL or medium data.
+- [ ] Default exports and run configurations record profile ID, schema version, per-profile and
+  whole-document content hashes, match level, row evidence status, and the dose-affecting profile
+  parameters actually in force (offsets, axis signs, swap, `field_size_mode`, transmission factors).
+  They carry **no** profile paths, free-text notes, station/serial identifiers, or the raw RDSR
+  manufacturer/model strings — those raw strings stay behind the existing `include_identifiers` gate,
+  and a match record's `matched_input_key` is the canonical key only. Full profile export is a
+  distinct, explicit user action.
 
 ## 9. Tests and acceptance criteria
 
@@ -244,12 +259,22 @@ sign-off in its decision log.
 5. Custom estimated rows fill missing measured coverage; they do not replace measured rows.
 6. A custom manufacturer-scoped model wildcard needs an explicit override declaration (and a CLI
    opt-in flag) to replace a bundled exact profile.
-7. Profile rows plus explicit SQLite claiming the same `k_tab` key: reject the combination.
+7. Transmission overlay: custom measured rows replace bundled `correction_table_and_pad_attenuation`
+   nodes at the same canonical **model** (including the existing de-spaced spelling), literal plane,
+   kVp, Cu, and Al, then go through today's Al-snap plus (kVp × Cu) clamped interpolator. They must not
+   add nodes outside that baseline's kVp/Cu/Al extents. Manufacturer is a coordinate-match field, not a
+   `k_tab` join column. If `corrections_db_path` is set, a custom transmission row whose key also
+   exists in that database's attenuation table is a load error; non-overlapping custom rows may still
+   overlay that table. `k_tab_mode=estimate` ignores profile rows entirely.
 8. One JSON file may define several independent profiles; cross-file load order affects diagnostics
    and serialization only, never precedence, because duplicates are errors.
 9. A row is "measured" only with a stated measurement source/date; otherwise it is "estimated".
-10. Default exports/run configs carry profile ID, schema version, content hashes, match level, active
-    values, and row evidence status; paths, individual-unit keys, and free-text notes never appear.
+10. Default exports/run configs carry `profile_id`, schema version, per-profile and whole-document
+    hashes, match level, evidence status, and the dose-affecting profile parameters in force (offsets,
+    signs, swap, `field_size_mode`, transmission factors). They do not carry profile paths, free-text
+    notes, station/serial identifiers, or the raw RDSR manufacturer/model strings — those raw strings
+    stay behind the existing `include_identifiers` gate, and `matched_input_key` is the canonical key
+    only.
 11. The coordinate-only slice is import-before-load only; the full v1 supports atomic post-load
     activation with rollback (not an unload/reload-only workflow).
 12. Comments are bounded, sanitized, local-only audit metadata.
@@ -260,13 +285,14 @@ sign-off in its decision log.
     carry at least one.
 16. `profile_id` is required, user-supplied, unique, and stable; content hashing is per profile, with
     a separate whole-document hash for run-state and export provenance.
-14. Custom HVL / `k_med` support is a separate future feature before any SQLite sunset is announced.
-15. The coordinate block and the transmission block are independently optional; every profile must
-    carry at least one.
-16. `profile_id` is required, user-supplied, unique, and stable; content hashing is per profile, with
-    a separate whole-document hash for run-state and export provenance.
-17. Custom measured nodes overlay baseline nodes before one interpolation pass; custom nodes never
-    extend the baseline range.
+17. After the overlay in decision 7, run **one** call to the existing interpolator: snap Al to the
+    nearest measured Al, then clamp-interpolate on (kVp, Cu) — no new joint 3D interpolant. Custom
+    estimated nodes may occupy only in-extent coordinates that have no measured node from either
+    source. A query outside the baseline extents clamps to the nearest baseline node and is `clamped`,
+    even if a custom row exists outside that extent (that row is rejected at load). Exam-level source
+    may be `mixed`; per-event resolution stays `exact` | `interpolated` | `clamped`, and the current
+    non-grid statuses stay: `estimated` (estimate mode), `no_device`, `invalid_inherited`, and
+    `fallback`.
 18. Profile paths resolve relative to the settings file's directory (CLI: working directory) and are
     never serialized into settings exports, run configurations, or rich exports by default.
 19. Run state and rich export bump their schema versions when structured profile provenance is added;

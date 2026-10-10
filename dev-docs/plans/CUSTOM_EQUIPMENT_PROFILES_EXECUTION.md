@@ -42,7 +42,26 @@ format. Dependencies: none (documentation phase, runs on a docs branch).
 
 Work:
 - [ ] Sign off (or amend) each of the 20 decisions in spec §10 and copy the final wording into the
-      decision log below. No "recommended" or "or the Phase 0 answer" language may remain.
+      decision log below. No "recommended" or "or the Phase 0 answer" language may remain, and
+      decision 11 is already final (coordinate-only slice import-before-load; full v1 owns atomic
+      post-load activation).
+- [ ] Lock the transmission key as **canonical model (incl. de-spaced spelling) + literal
+      `acquisition_plane` + kVp + Cu + Al** — exactly what `corrections.calculate_k_tab()` matches
+      today. Manufacturer is a coordinate-match field, never a `k_tab` join column (the attenuation
+      table has no manufacturer column).
+- [ ] Lock the overlay and interpolation rules (spec decisions 7 and 17): custom measured rows replace
+      baseline nodes at the same key and never extend the baseline kVp/Cu/Al extents (out-of-extent
+      rows are a load error); custom estimated rows only fill unmeasured in-extent coordinates; after
+      the overlay, **one** call to the existing interpolator (Al snap, then (kVp × Cu)
+      clamp-interpolation); a custom row colliding with an explicit-SQLite attenuation key is a load
+      error; `k_tab_mode: estimate` ignores profile rows.
+- [ ] Lock the status vocabulary: per-event `exact` | `interpolated` | `clamped` plus the existing
+      `estimated` | `no_device` | `invalid_inherited` | `fallback`, with an added per-exam **source**
+      dimension (`custom_measured` | `custom_estimated` | `baseline` | `mixed`) — no collapsing.
+- [ ] Lock the privacy/export matrix per spec decision 10, including that `matched_input_key` is the
+      canonical key only and raw RDSR manufacturer/model strings stay behind `include_identifiers`.
+- [ ] Lock hash canonicalization rules (key order, float formatting) so per-profile and document
+      hashes are reproducible across platforms.
 - [ ] Lock the JSON schema: `schema_version`, bounded `profiles[]`, required unique stable
       `profile_id`, `manufacturer_aliases` / `model_aliases`, coordinate block, inline transmission
       rows, provenance block; unknown fields rejected; coordinate and transmission blocks
@@ -51,15 +70,12 @@ Work:
       hash, and whole-document hash semantics.
 - [ ] Rename "manufacturer wildcard" to **manufacturer-scoped model wildcard** everywhere; define
       alias structures and their collisions with the bundled hardcoded manufacturer aliases.
-- [ ] Lock transmission grid composition: custom measured nodes overlay baseline nodes before one
-      interpolation pass; custom nodes never extend the baseline range; custom estimated nodes fill
-      only unmeasured coordinates; two orthogonal status dimensions (source + resolution).
 - [ ] Define profile path resolution (settings-relative; CLI working-directory) and the CLI wildcard
       acknowledgement mechanism (opt-in flag, else hard error).
 - [ ] Confirm the Phase 3 post-load strategy: coordinate-only slice is import-before-load; full v1
-      supports atomic post-load re-normalization with rollback (revise spec decision 11 to match).
-- [ ] Write the byte/row/text bounds and the exact error-code vocabulary (including
-      `unsupported_profile_capability`).
+      supports atomic post-load re-normalization with rollback (decision 11; spec already matches).
+- [ ] Write the byte/row/text bounds and the exact error-code vocabulary, including
+      `unsupported_profile_capability` and the explicit-SQLite same-key rejection code.
 - [ ] Author one complete valid example profile plus four invalid examples, and the signed schema
       field table.
 
@@ -73,7 +89,8 @@ Exit criteria: decision log complete; schema field table and example JSON checke
 Work:
 - [ ] New module (e.g. `equipment_profiles.py`): validate the required stable `profile_id`; parse and
       validate the v1 JSON document; bounds; unknown-field rejection; canonical identifier
-      normalization; duplicate/conflict detection across files; per-profile and document hashes.
+      normalization (manufacturer/model key canonicalization, hash key order and float formatting);
+      duplicate/conflict detection across files; per-profile and document hashes.
 - [ ] Read bounded bytes once, hash and parse those same bytes, and retain an immutable snapshot for
       the run.
 - [ ] Add the canonical manufacturer field to the normalized contract
@@ -87,6 +104,10 @@ Work:
 - [ ] Distinguish syntax validation of aliases/wildcards/transmission blocks from whether the running
       build supports applying them; capability errors are stable and testable.
 - [ ] Privacy-safe errors: codes, row indices, field names, counts only.
+- [ ] Tests that a custom profile matches only its exact canonical manufacturer plus its own
+      `manufacturer_aliases` — custom matching must not reuse `_manufacturer_matches`, which pulls in
+      the bundled hardcoded Siemens/Philips/GE alias sets; bundled profiles keep today's alias table.
+- [ ] `CHANGELOG.md`: a new normalized column is user-visible even when no dose number changes.
 
 Exit criteria: unit tests for schema versions, ranges, duplicates, aliases, wildcards, mixed
 identities, unknown fields, content hashing, deterministic multi-file loading, and privacy-safe error
@@ -113,6 +134,10 @@ Work:
       the first-class loader in this phase; bump `RUN_STATE_SCHEMA_VERSION` with a compatibility
       reader for old normalization-profile documents; store a privacy-safe active-value snapshot plus
       expected profile hashes, never profile paths.
+- [ ] Applying `equipment_profiles` to sessions that already have exams loaded is **refused** in this
+      phase (persisting a profile snapshot is fine) — that is Phase 3's atomic path. Today a run-state
+      import can re-parse after load, and multi-exam/DICOM does not rebuild; shipping application on
+      that path would create the stale-frame bug Phase 3 owns.
 - [ ] Settings serialization for `equipment_profiles`: default settings exports and run configs
       contain no profile paths; CLI settings-path round-trip tests.
 - [ ] GUI: import **before data load** only; validation preview; matched profile and structured match
@@ -164,30 +189,39 @@ Docs in this phase: persistence schema/migration notes, post-load activation hel
 documented grid-composition rule, preserving every existing behavior.
 
 Work:
-- [ ] Effective-grid construction per the Phase 0 decision: custom measured nodes overlay baseline
-      nodes before one interpolation pass; custom nodes never extend the baseline range (out-of-range
-      clamps at the nearest baseline node, labelled clamped); custom estimated nodes fill only
-      unmeasured coordinates; single pass labelled `source: mixed` when both contribute.
-- [ ] Row resolution order: custom measured → baseline provider (bundled table or explicit SQLite) →
-      existing interpolation/clamping/fallback chain; `k_tab_mode: estimate` ignores profile rows;
-      reject profile rows plus explicit SQLite claiming the same key (Phase 0 decision).
+- [ ] Effective-grid construction per the Phase 0 decision (spec decision 7): custom measured nodes
+      replace baseline nodes at the same canonical model + literal plane + kVp + Cu + Al key; rows
+      outside the baseline kVp/Cu/Al extents are a load error (so a sparse custom row can never clamp
+      across a region the baseline supports); custom estimated nodes fill only unmeasured in-extent
+      coordinates.
+- [ ] Resolution per spec decision 17: overlay, then **one** call to the existing
+      interpolator/lookup helper on the merged frame — Al snap, then (kVp × Cu) clamp-interpolation.
+      No new joint 3D interpolant; no-profile numbers must not move. Manufacturer is never a `k_tab`
+      join column.
+- [ ] With explicit `corrections_db_path`: a custom row whose key already exists in that database's
+      attenuation table is a **load error**, not an overlay result; non-overlapping custom rows may
+      still overlay that table. `k_tab_mode: estimate` ignores profile rows entirely.
 - [ ] Keep all three `k_tab_mode` states, plane identity (A/B/single), and the `check_table_hits()`
       application semantics exactly as they are.
-- [ ] Report both status dimensions per exam (source; exact/interpolated/clamped) in the Calculate
-      tab, Results, and every export; extend rich export's per-exam `k_tab_statuses` with profile
+- [ ] Exports keep the engine's per-event status list (`exact` | `interpolated` | `clamped` plus
+      `estimated` | `no_device` | `invalid_inherited` | `fallback`) and add the source dimension
+      (`custom_measured` | `custom_estimated` | `baseline` | `mixed`) beside it, summarised per exam in
+      the Calculate tab and Results; extend rich export's per-exam `k_tab_statuses` with profile
       provenance and structured match records; bump `RICH_EXPORT_SCHEMA_VERSION` with a compatibility
       test; add additive public dict/JSON fields with object- and serialized-form tests.
+- [ ] Must not merge ahead of the Phase 3 Calculate-preview cache-key change (profile revision/hash in
+      the key); state that ordering constraint in the PR.
 - [ ] Pre-calculation report of every active dose-affecting custom value; loaded-but-unused profiles
       listed without a dose warning.
 - [ ] Numerical proof: a custom transmission row changes only cells where `table_hits` is true and
       no-profile PSD goldens are unchanged.
 
-Exit criteria: tests cover exact / interpolated / clamped / custom-measured / custom-estimated /
-baseline / mixed / fallback outcomes, sparse and partial grids, outside-range queries, mixed-source
-interpolation, same-node collisions with bundled and explicit-SQLite nodes, A/B/single, explicit
-SQLite coexistence, mixed exams, and no-profile golden parity. **Do not split** row resolution, dose
-application, status propagation, warnings, and export provenance — a hidden custom dose change
-without its audit trail is unacceptable.
+Exit criteria: tests cover exact / interpolated / clamped plus the existing `estimated` / `no_device`
+/ `invalid_inherited` / `fallback` outcomes, custom-measured and custom-estimated rows, baseline,
+mixed, sparse and partial grids, out-of-extent rows rejected at load, same-key collisions with
+explicit-SQLite nodes rejected at load, A/B/single, explicit SQLite coexistence, mixed exams, and
+no-profile golden parity. **Do not split** row resolution, dose application, status propagation,
+warnings, and export provenance — a hidden custom dose change without its audit trail is unacceptable.
 
 Docs in this phase: `PSD_CALCULATION_ALGORITHM.md`, correction-data reference, calculation help,
 output schema, `CHANGELOG.md`.
@@ -198,7 +232,9 @@ output schema, `CHANGELOG.md`.
 
 Work:
 - [ ] Import with validation preview; activation, removal, conflict UI; per-exam use matrix
-      (custom/bundled/default coordinate match and custom/baseline/fallback transmission counts).
+      (custom/bundled/default coordinate match and custom/baseline/fallback transmission counts). The
+      card states plainly that transmission rows, `field_size_mode`, and `detector_side_length` are
+      authored by JSON import — there is no in-app grid editor.
 - [ ] Profile export/reload with atomic native writes (`Path.replace()`) and the browser download
       fallback; export is a distinct explicit action.
 - [ ] "Save session correction as profile" limited to the exact reusable field list — table origin,
@@ -274,6 +310,22 @@ Each code phase (1–5) runs and records:
   source-snapshot, cache-key, and CLI-acknowledgement risks are covered; (9) this file is named as an
   execution plan (not `_PLAN.md`), gets its own catalog row, keeps only unperformed user-only smokes
   in `TO_DO.md`, and defers the SQLite extraction utility instead of marking it optional.
+- 2026-10-09 — third review (cursor/grok-4.7, plan mode), verdict "approve with edits", encoded here:
+  (a) the overlay/vs-SQLite rules are now one algorithm — custom measured rows replace baseline nodes
+  on the existing model + literal plane + kVp + Cu + Al key, never extend the baseline extents, and a
+  same-key collision with an explicit `corrections_db_path` attenuation table is a load error rather
+  than an overlay result; (b) resolution is one call to the existing Al-snap + (kVp × Cu)
+  clamp-interpolator on the merged frame, with no new 3D interpolant and manufacturer excluded from
+  the transmission join; (c) the per-event status list keeps `estimated`, `no_device`,
+  `invalid_inherited`, and `fallback` beside `exact` / `interpolated` / `clamped`, with source added as
+  a separate per-exam dimension; (d) default provenance is canonical-key only — raw RDSR
+  manufacturer/model strings stay behind `include_identifiers`; (e) Phase 2 may persist a profile
+  snapshot but must refuse applying `equipment_profiles` to already-loaded exams (Phase 3 owns that
+  atomic path); (f) Phase 1 tests that custom manufacturer matching never reuses
+  `_manufacturer_matches`, and Phase 1 owns a `CHANGELOG.md` entry for the new normalized column;
+  (g) Phase 4 must not merge ahead of the Phase 3 preview cache-key change; (h) the Equipment Profiles
+  card states that transmission rows are JSON-imported, not edited in-app; (i) the duplicated spec
+  decisions 14–16 were removed and decision 11 confirmed final.
 - Phase 0 decisions: pending maintainer sign-off (record each here as decided).
 
 ## Risks
