@@ -8,7 +8,7 @@ Builds on: [archive/KERMA_METER_CORRECTION_FACTORS_PLAN.md](KERMA_METER_CORRECTI
 (shipped engine, file loader, identity resolution) and
 [archive/CORRECTION_SAFETY_AND_TUBE_IDENTITY_PLAN.md](CORRECTION_SAFETY_AND_TUBE_IDENTITY_PLAN.md).
 Related: [TO_DO.md](../../TO_DO.md) — *Independent per-plane geometry*;
-[CUSTOM_EQUIPMENT_PROFILES_PLAN.md](../CUSTOM_EQUIPMENT_PROFILES_PLAN.md) (separate concept; do not merge).
+[CUSTOM_EQUIPMENT_PROFILES_SPEC.md](../CUSTOM_EQUIPMENT_PROFILES_SPEC.md) (separate concept; do not merge).
 
 ## Progress (2026-10-06)
 

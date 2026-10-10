@@ -22,7 +22,7 @@ be archived.
 - [ ] **Manual Smokes** — native-window and Windows file-dialog passes remain for the user; see
    "Manual Smokes" in Active Work.
 - [ ] **Reusable custom equipment profiles** — See "Correction-data modernization
-  roadmap" in Active Work / [CUSTOM_EQUIPMENT_PROFILES_PLAN.md](plans/CUSTOM_EQUIPMENT_PROFILES_PLAN.md).
+  roadmap" in Active Work / [CUSTOM_EQUIPMENT_PROFILES_SPEC.md](plans/CUSTOM_EQUIPMENT_PROFILES_SPEC.md).
 - [ ] **Geometry-driven support transmission** — See the correction-data roadmap in
   Active Work / [GEOMETRY_DRIVEN_SUPPORT_TRANSMISSION_PLAN.md](plans/GEOMETRY_DRIVEN_SUPPORT_TRANSMISSION_PLAN.md).
 
@@ -34,7 +34,7 @@ be archived.
   fix shipped (Phases A–D, 2026-09-19;
   [packaging/provenance master plan](plans/CORRECTION_DATA_PACKAGING_AND_PROVENANCE_PLAN.md)).
   Remaining delivery:
-  1. **Separate future feature (see Next Up):** [reusable custom equipment/model profiles](plans/CUSTOM_EQUIPMENT_PROFILES_PLAN.md).
+  1. **Separate future feature (see Next Up):** [reusable custom equipment/model profiles](plans/CUSTOM_EQUIPMENT_PROFILES_SPEC.md).
   2. **Separate research/physics work:** [closed-volume table/pad intersection and evidence-gated path-length transmission](plans/GEOMETRY_DRIVEN_SUPPORT_TRANSMISSION_PLAN.md).
 - [ ] **Manual Smokes** — user-only passes that remain. The agent-run browser smokes for all of these
   features completed 2026-10-07; evidence is in [MAINTENANCE_LOG.md](MAINTENANCE_LOG.md) and the smoke
@@ -61,7 +61,7 @@ be archived.
   `filtration_added_mmcu`, `filtration_added_mmal`, `k_patient_support` (in `(0, 1]`), `comment`. For now, copy
   that table into a SQLite file and point `corrections_db_path` at it (validated read-only). **Goal:** document
   this how-to, then let users supply the rows as a profile file (see
-  [CUSTOM_EQUIPMENT_PROFILES_PLAN.md](plans/CUSTOM_EQUIPMENT_PROFILES_PLAN.md)). **Acceptance:** how-to in the
+  [CUSTOM_EQUIPMENT_PROFILES_SPEC.md](plans/CUSTOM_EQUIPMENT_PROFILES_SPEC.md)). **Acceptance:** how-to in the
   help pages; unit tests for a user-supplied row set.
 - [ ] **Explore additional phantoms** — keep expanding anthropomorphic coverage beyond the shipped MPFB v1
   catalog (Phases 0–4 complete; see
