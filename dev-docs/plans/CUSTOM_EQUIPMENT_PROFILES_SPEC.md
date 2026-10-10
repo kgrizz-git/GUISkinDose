@@ -1,7 +1,7 @@
 # Custom Equipment Profiles — Design Spec
 
 Status: **Design spec**, reviewed 2026-10-09 (kiro/gpt-5.6-sol). Execution plan:
-[CUSTOM_EQUIPMENT_PROFILES_EXECUTION_PLAN.md](CUSTOM_EQUIPMENT_PROFILES_EXECUTION_PLAN.md)
+[CUSTOM_EQUIPMENT_PROFILES_EXECUTION.md](CUSTOM_EQUIPMENT_PROFILES_EXECUTION.md)
 Created: 2026-09-08 · renamed from `CUSTOM_EQUIPMENT_PROFILES_PLAN.md` on 2026-10-09
 Parent roadmap: [CORRECTION_DATA_AND_SUPPORT_TRANSMISSION_PLAN.md](CORRECTION_DATA_AND_SUPPORT_TRANSMISSION_PLAN.md)
 Dependencies:
@@ -85,16 +85,24 @@ precedence complexity).
 
 - [ ] **v1 is one self-contained JSON document.** No CSV sidecar in v1: a sidecar complicates
   atomicity, path traversal, relocation, hashing, and provenance. Document shape:
-  `schema_version`, bounded `profiles[]` each with a stable `profile_id`, an optional alias list,
-  a coordinate block, inline transmission-row objects, and a provenance block (source/reference,
+  `schema_version`, bounded `profiles[]` each with a stable `profile_id`, alias lists, a coordinate
+  block, inline transmission-row objects, and a provenance block (source/reference,
   `evidence_status` per row, dates, bounded notes).
+- [ ] The **coordinate block and the transmission block are independently optional**, but every
+  profile must carry at least one non-empty block. This is what lets the coordinate-only release
+  ship before transmission support exists.
 - [ ] The coordinate block is backward-compatible with the bundled entry fields: `manufacturer`,
   `models`, `translation_offset`, `translation_direction`, `rotation_direction`, `field_size_mode`,
   `detector_side_length`, and optional `swap_lateral_longitudinal`. `profile_id`, aliases,
   provenance, and transmission rows are new profile-schema fields, not bundled normalization fields.
 - [ ] Reject unknown fields in v1 (add them deliberately in later schema versions).
-- [ ] Manufacturer/model matching with aliases, and an optional manufacturer wildcard only when
-  deliberately declared (mirrors the bundled GE wildcard).
+- [ ] Matching: exact manufacturer plus exact or `"*"` model — the bundled convention is a
+  **manufacturer-scoped model wildcard** (exact manufacturer `GE Healthcare`, model `"*"`), not a
+  manufacturer wildcard. Aliases are two separate, explicitly declared lists,
+  `manufacturer_aliases` and `model_aliases`; profile aliases never silently merge with the bundled
+  hardcoded manufacturer aliases in `settings/normalization_settings.py`.
+- [ ] `profile_id` is required, user-supplied, unique within a load, and stable across runs; content
+  hashing is per profile, with a separate whole-document hash for run-state and export provenance.
 - [ ] Transmission rows keyed by the minimum scientifically justified identity: manufacturer/model,
   tube/plane when required, kVp, Cu, Al. "Support profile" as a separate key is **removed** from v1
   unless given a concrete definition.
@@ -111,9 +119,10 @@ precedence complexity).
 - [ ] Canonicalize manufacturer/model/tube identifiers without silently merging ambiguous aliases.
 - [ ] Never mutate bundled data or the source profile during a run.
 - [ ] Resolution uses **two independent ladders**, not one:
-  - **Coordinates:** custom exact > bundled exact > custom wildcard > bundled wildcard > warned
-    Default. A custom wildcard may replace a bundled exact only with an explicit override
-    declaration and a pre-calculation acknowledgement.
+  - **Coordinates:** custom exact > bundled exact > custom manufacturer-scoped model wildcard >
+    bundled wildcard > warned Default. A custom wildcard may replace a bundled exact only with an
+    explicit override declaration and a pre-calculation acknowledgement (and by a hard CLI error
+    unless an opt-in flag is given).
   - **Transmission:** `k_tab_mode: estimate` ignores profile rows entirely; measured modes resolve
     eligible custom **measured** rows first, then the selected baseline provider (bundled table or
     explicit SQLite), then the existing interpolation/clamping/fallback chain. Custom **estimated**
@@ -121,6 +130,16 @@ precedence complexity).
   - **Session transforms:** always applied after the reusable profile baseline, exactly once.
   - File order never silently resolves a duplicate claim; canonical duplicates fail at load, and GUI
     enable/disable or an explicit override declaration resolves them.
+- [ ] Transmission grid composition: custom **measured** nodes overlay the baseline nodes at identical
+  (manufacturer/model, plane, kVp, Cu, Al) coordinates before **one** interpolation pass, so a sparse
+  custom row can never clamp across a region the baseline already supports. Custom nodes never extend
+  the baseline's range; a query outside all measured coverage clamps at the nearest baseline node and
+  is labelled as clamped. Custom **estimated** nodes only fill coordinates with no measured node from
+  either source. Mixed grids resolve in one pass and are labelled `source: mixed`.
+- [ ] Transmission status is reported as **two orthogonal dimensions** — source
+  (`custom_measured` | `custom_estimated` | `baseline` | `mixed` | `fallback`) and numerical
+  resolution (`exact` | `interpolated` | `clamped`) — because the existing `k_tab_statuses` carries
+  only the resolution-style outcome.
 - [ ] Every active, dose-affecting custom value is reported before calculation and recorded in
   exports — not only shadows of bundled exact matches: translation offset/direction, rotation
   direction, axis swap, field-size mode, and custom `k_tab` rows. A custom profile replacing the
@@ -143,10 +162,19 @@ precedence complexity).
   a repeatable `--equipment-profile PATH` and an `equipment_profiles` settings key).
 - [ ] GUI import, validation preview, enable/disable, and removal controls, in a dedicated
   discoverable Equipment Profiles card showing active / unused / conflict states.
-- [ ] **Activation and staleness:** the first slice allows profile import only before data load. Any
-  later post-load activation must atomically re-normalize every affected exam, rebuild the pristine
-  baseline, recompute detected origins, reapply session overrides, clear results and preview caches,
-  and refresh all tabs — or roll back. Activation and invalidation are one inseparable change.
+- [ ] **Activation and staleness:** the coordinate-only slice allows profile import only before data
+  load. The full feature supports post-load activation, which must atomically re-normalize every
+  affected exam, rebuild the pristine baseline, recompute detected origins, reapply session
+  overrides, clear results and preview caches, and refresh all tabs — or roll back. Activation and
+  invalidation are one inseparable change, and an unavailable or unreadable source leaves profile
+  state, normalized frames, overrides, and results exactly as they were.
+- [ ] A run reads profile bytes **once**, hashes and parses those same bytes, and uses that immutable
+  in-memory snapshot for the whole run. GUI mutation is blocked while a calculation is busy, profile
+  identity (revision/hash) participates in the Calculate preview cache key, and any profile change
+  invalidates cached previews.
+- [ ] Profile paths in a settings file resolve relative to that settings file's directory; CLI paths
+  resolve against the working directory. Profile paths are never written into settings exports, run
+  configurations, or rich exports by default.
 - [ ] Before calculation, show:
   - actual manufacturer/model/tube identity;
   - matched profile and match level (structured record, per exam);
@@ -200,35 +228,55 @@ Acceptance:
 4. API, CLI, GUI, and exports agree on match and precedence.
 5. A run without custom profiles remains numerically unchanged.
 
-## 10. Open questions
+## 10. Decisions recorded for Phase 0 sign-off
 
-Resolved in the execution plan's Phase 0 decision log; the recommended answers below come from the
-2026-10-09 review and still need maintainer sign-off:
+These are the decisions the 2026-10-09 design and plan reviews converged on. They are treated as the
+working answers unless the maintainer changes one; Phase 0 of the execution plan records the final
+sign-off in its decision log.
 
 1. Coordinate identity is once per homogeneous exam in v1 (per-event transforms redesign is out of
    scope).
-2. `manufacturer` becomes a canonical normalized field, with a warned model-only compatibility path
-   for legacy normalized tables.
-3. `models[]` holds canonical exact keys; aliases are a separate, explicitly declared list.
+2. `manufacturer` becomes a canonical normalized field — always emitted by raw normalization,
+   optional-but-warned for legacy normalized tables.
+3. `models[]` holds canonical exact keys; `manufacturer_aliases` and `model_aliases` are separate,
+   explicitly declared lists that never silently merge with the bundled hardcoded aliases.
 4. "Support profile" is removed from v1 unless given a concrete definition.
 5. Custom estimated rows fill missing measured coverage; they do not replace measured rows.
-6. A custom manufacturer wildcard needs an explicit override declaration to replace a bundled exact.
-7. Profile rows plus explicit SQLite claiming the same `k_tab` key: recommend rejecting the
-   combination.
-8. One JSON file may define several independent profiles; cross-file load order is never meaningful
-   because duplicates are errors.
+6. A custom manufacturer-scoped model wildcard needs an explicit override declaration (and a CLI
+   opt-in flag) to replace a bundled exact profile.
+7. Profile rows plus explicit SQLite claiming the same `k_tab` key: reject the combination.
+8. One JSON file may define several independent profiles; cross-file load order affects diagnostics
+   and serialization only, never precedence, because duplicates are errors.
 9. A row is "measured" only with a stated measurement source/date; otherwise it is "estimated".
-10. Default exports/run configs carry profile ID, schema version, content hash, match level, active
+10. Default exports/run configs carry profile ID, schema version, content hashes, match level, active
     values, and row evidence status; paths, individual-unit keys, and free-text notes never appear.
-11. v1 requires unload/reload rather than automatic source re-reading after load.
+11. The coordinate-only slice is import-before-load only; the full v1 supports atomic post-load
+    activation with rollback (not an unload/reload-only workflow).
 12. Comments are bounded, sanitized, local-only audit metadata.
 13. "Save session correction as profile" covers equipment-design decisions only (table origin, axis
     signs), not field-size settings that the GUI session cannot express.
 14. Custom HVL / `k_med` support is a separate future feature before any SQLite sunset is announced.
+15. The coordinate block and the transmission block are independently optional; every profile must
+    carry at least one.
+16. `profile_id` is required, user-supplied, unique, and stable; content hashing is per profile, with
+    a separate whole-document hash for run-state and export provenance.
+14. Custom HVL / `k_med` support is a separate future feature before any SQLite sunset is announced.
+15. The coordinate block and the transmission block are independently optional; every profile must
+    carry at least one.
+16. `profile_id` is required, user-supplied, unique, and stable; content hashing is per profile, with
+    a separate whole-document hash for run-state and export provenance.
+17. Custom measured nodes overlay baseline nodes before one interpolation pass; custom nodes never
+    extend the baseline range.
+18. Profile paths resolve relative to the settings file's directory (CLI: working directory) and are
+    never serialized into settings exports, run configurations, or rich exports by default.
+19. Run state and rich export bump their schema versions when structured profile provenance is added;
+    old normalization-profile documents keep a compatibility reader.
+20. Per-exam match records are immutable snapshots with a `domain` field (coordinate vs transmission),
+    not mutable fields on `NormalizationSettings`.
 
 ## 11. Execution plan
 
-[CUSTOM_EQUIPMENT_PROFILES_EXECUTION_PLAN.md](CUSTOM_EQUIPMENT_PROFILES_EXECUTION_PLAN.md) carries
+[CUSTOM_EQUIPMENT_PROFILES_EXECUTION.md](CUSTOM_EQUIPMENT_PROFILES_EXECUTION.md) carries
 the phased implementation, exit criteria, progress log, and decision log. Expected SemVer impact is a
 minor release; user docs, help/UI registries, `CHANGELOG.md`, maintenance log, feature inventory, and
 privacy documentation are updated where profile ingestion/export changes require it.

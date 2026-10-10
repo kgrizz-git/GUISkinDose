@@ -23,7 +23,7 @@ be archived.
    "Manual Smokes" in Active Work.
 - [ ] **Reusable custom equipment profiles** — spec + phased execution plan ready to implement:
    [CUSTOM_EQUIPMENT_PROFILES_SPEC.md](plans/CUSTOM_EQUIPMENT_PROFILES_SPEC.md) /
-   [CUSTOM_EQUIPMENT_PROFILES_EXECUTION_PLAN.md](plans/CUSTOM_EQUIPMENT_PROFILES_EXECUTION_PLAN.md);
+   [CUSTOM_EQUIPMENT_PROFILES_EXECUTION.md](plans/CUSTOM_EQUIPMENT_PROFILES_EXECUTION.md);
    next step is Phase 0 sign-off (see the plan's decision log).
 - [ ] **Geometry-driven support transmission** — See the correction-data roadmap in
   Active Work / [GEOMETRY_DRIVEN_SUPPORT_TRANSMISSION_PLAN.md](plans/GEOMETRY_DRIVEN_SUPPORT_TRANSMISSION_PLAN.md).
@@ -37,7 +37,7 @@ be archived.
   [packaging/provenance master plan](plans/CORRECTION_DATA_PACKAGING_AND_PROVENANCE_PLAN.md)).
   Remaining delivery:
   1. **Separate future feature (see Next Up):** [reusable custom equipment/model profiles](plans/CUSTOM_EQUIPMENT_PROFILES_SPEC.md)
-     ([execution plan](plans/CUSTOM_EQUIPMENT_PROFILES_EXECUTION_PLAN.md)).
+     ([execution plan](plans/CUSTOM_EQUIPMENT_PROFILES_EXECUTION.md)).
   2. **Separate research/physics work:** [closed-volume table/pad intersection and evidence-gated path-length transmission](plans/GEOMETRY_DRIVEN_SUPPORT_TRANSMISSION_PLAN.md).
 - [ ] **Manual Smokes** — user-only passes that remain. The agent-run browser smokes for all of these
   features completed 2026-10-07; evidence is in [MAINTENANCE_LOG.md](MAINTENANCE_LOG.md) and the smoke
