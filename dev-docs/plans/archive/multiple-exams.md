@@ -1,5 +1,10 @@
 # Multiple Exams Plan
 
+> **Status: archived.** Core, CLI, GUI Phases 1–2.5 and the Data Table / Settings follow-ups shipped.
+> Browser GUI smoke **done 2026-10-07** (headless Playwright): multi-file DICOM + Radimetrics upload
+> → exam list → calculate → per-exam accordion and aggregate map render, including per-exam offsets.
+> The native (pywebview) and Windows file-dialog passes remain in `TO_DO.md` Manual Smokes.
+
 ## Objective
 
 Allow MyPySkinDose to process multiple exams (studies/procedures) in a single run across four input scenarios:
@@ -22,12 +27,12 @@ Each exam gets its own dose map and PSD. A per-exam patient offset is supported.
 | CLI multi-file / mixed-format support, `--aggregate` flag | ✅ Complete |
 | Recursion → iteration refactor | ✅ Complete (`96ce63b`) |
 | Unit tests | ✅ Complete (18 tests) |
-| GUI Phase 1 — single-file upload, auto-split, exam list, results accordion | 🔧 Bugs fixed; needs smoke test |
-| GUI Phase 2.1 — multi-file/mixed-format upload accumulation, per-exam list with remove | ✅ Complete; needs smoke test |
-| GUI Phase 2.2 — per-exam coordinate transform overrides | ✅ Complete; needs smoke test |
-| GUI Phase 2.3 — per-exam patient-offset overrides | ✅ Complete; needs smoke test |
-| GUI Phase 2.5 — manual per-exam table-origin override | ✅ Complete; needs smoke test |
-| GUI Phase 2.4 — per-exam convention overrides (axis-direction sign flips) | ✅ Complete; needs smoke test |
+| GUI Phase 1 — single-file upload, auto-split, exam list, results accordion | 🔧 Bugs fixed; browser smoke done 2026-10-07 |
+| GUI Phase 2.1 — multi-file/mixed-format upload accumulation, per-exam list with remove | ✅ Complete; browser smoke done 2026-10-07 |
+| GUI Phase 2.2 — per-exam coordinate transform overrides | ✅ Complete; browser smoke done 2026-10-07 |
+| GUI Phase 2.3 — per-exam patient-offset overrides | ✅ Complete; browser smoke done 2026-10-07 |
+| GUI Phase 2.5 — manual per-exam table-origin override | ✅ Complete; browser smoke done 2026-10-07 |
+| GUI Phase 2.4 — per-exam convention overrides (axis-direction sign flips) | ✅ Complete; browser smoke done 2026-10-07 |
 | Integration tests — multi-file / mixed-format / multi-study end-to-end | ✅ Complete |
 
 ---
@@ -127,7 +132,7 @@ Element-wise summation is valid because all exams use fresh `Phantom` instances 
 - [x] Upload tab: "Loaded Exams" summary table (study ID, event count, status) when `is_multi_exam`
 - [x] Results tab: per-exam accordion with PSD (`.PSD`), Air Kerma (`.AirKerma`), event count *(Bug 3 fixed: was calling `.get()` on `PySkinDoseOutput`)*
 - [x] Per-exam "Show Dose Map" dialog serializes `PySkinDoseOutput.to_dict()` before rendering *(Bug 3 fixed)*
-- [ ] End-to-end smoke test: upload multi-study CSV → exam list populated → calculate → accordion renders → aggregate map renders
+- [x] End-to-end smoke test: upload multi-study CSV → exam list populated → calculate → accordion renders → aggregate map renders — browser (Playwright) done 2026-10-07 with DICOM + Radimetrics examples; native pywebview / Windows passes remain in `TO_DO.md`
 
 > **Phase 1 limitation (by design, D7):** a second upload replaces the first. Users with multiple separate files should merge them into a single CSV/XLSX with a study-ID column, or use the CLI.
 
@@ -486,7 +491,7 @@ So Phase 2.4 shipped as **per-exam axis-direction sign flips** (`flip_tx` / `fli
 - [x] Integration test: two example RDSR files via `analyze_multiple_input_files()` → correct `MultiExamResult` (aggregate = element-wise sum; PSD = max) (`test_multi_exam.py::TestMultiExamIntegration`)
 - [x] Integration test: mixed-format run (1 DICOM + 1 CSV) via `analyze_multiple_input_files()` (`test_multi_exam.py::TestMultiExamIntegration`)
 - [x] Integration test: multi-study tabular CSV end-to-end through `analyze_input_file()` (auto-split → `MultiExamResult`; `total_events` = Σ per-exam) (`test_multi_exam.py::TestMultiExamIntegration`)
-- [ ] GUI smoke test: multi-study CSV upload → exam list → calculate → accordion + aggregate map render *(manual; not automatable without the NiceGUI runtime)*
+- [x] GUI smoke test: multi-study CSV upload → exam list → calculate → accordion + aggregate map render *(browser/Playwright done 2026-10-07; native pywebview + Windows passes remain in `TO_DO.md`)*
 
 ---
 

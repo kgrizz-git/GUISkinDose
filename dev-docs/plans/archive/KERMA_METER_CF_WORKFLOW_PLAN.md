@@ -65,9 +65,12 @@ Browser GUI smokes (2026-10-07, headless Playwright), all passed unless noted:
   used (A / B / single)" beside the plane-code rows, which are relabelled "(CID 10003)" because they describe only
   the coded identity.
 
-Remaining:
-- Manual passes still to do: the new Corrections tab and dialog in the native (pywebview) window, the Windows
-  native save dialog, and a visual check of the DOCX and PDF reports.
+Remaining (user-only):
+- Native (pywebview) window pass of the new Corrections tab, the factor dialog, and the transmission
+  info icon.
+- Windows native save dialog for "Download example calibration file".
+- Done 2026-10-07 (browser, LibreOffice render): DOCX and PDF visual checks — PDF page rendered, tables
+  inside margins, Dose by tube readable, images present.
 - Archived 2026-10-07; the open passes are tracked in `TO_DO.md` → Manual Smokes.
 
 Answered (2026-10-07): the Radimetrics `(A)`/`(B)` columns are per-event values, and each real row sits on one

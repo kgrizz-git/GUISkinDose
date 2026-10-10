@@ -1,8 +1,11 @@
 # Rich Report Export — Master Plan
 
-_Status: **Phases 1–6 shipped** (XLSX + PDF + HTML + DOCX, GUI modal, CLI flags). Phase 7 leftovers and
-manual save smoke are **deferred** in [TO_DO.md](../TO_DO.md) (Deferred Until Needed)._  
-_Last updated: 2026-07-30_  
+_Status: **Phases 1–6 shipped** (XLSX + PDF + HTML + DOCX, GUI modal, CLI flags). Phase 4 browser save
+smoke **done 2026-10-07** (3-exam run: HTML, XLSX, DOCX and PDF all download and open — HTML with 5
+images and no paths, XLSX 7 sheets, DOCX 12 tables / 5 images, PDF 9 pages; DOCX converted with
+LibreOffice renders cleanly). Phase 7 leftovers and the native/Windows save smoke are **deferred** in
+[TO_DO.md](../TO_DO.md) (Deferred Until Needed / Manual Smokes)._  
+_Last updated: 2026-10-09_  
 _Supersedes draft [RICH_EXPORT_SPEC.md](archive/RICH_EXPORT_SPEC.md) and folds in prior ad-hoc assessments_
 
 ## Implementation status (2026-07-02)
@@ -20,7 +23,8 @@ Docs: CHANGELOG + FEATURE_INVENTORY §7.7 updated; draft spec archived. Tests:
 **Remaining (deferred, low priority):** Phase 7 leftovers — multi-exam image-cap GUI toggle (7.1),
 deeper PDF/DOCX tagged-a11y (7.2, HTML already has `alt`), localization-string extraction (7.3),
 Results-tab `k_med` alignment (7.4, separate PR), and per-tab GUI help (no export help loader exists
-today). Phase 4 manual browser/native save smoke (4.3.x) needs a human. Minor code deferrals: XLSX
+today). Phase 4 browser save smoke (4.3.x) **ran 2026-10-07**; the native pywebview and Windows
+file-dialog passes still need a human (TO_DO.md Manual Smokes). Minor code deferrals: XLSX
 explicit `cell.number_format` (values are pre-formatted strings); browser `showSaveFilePicker()`
 progressive enhancement (baseline `ui.download()` fallback is implemented and is the required
 behavior). GUI native "Open file / Open folder" success actions (4.2.7) are **implemented**
@@ -514,9 +518,9 @@ Writers consume `ExportPayload` only. Implement `render_*_bytes(payload) -> byte
 
 ### 4.3 Phase 4 manual smoke
 
-- [ ] **4.3.1** Single-exam DICOM RDSR → XLSX + PDF from Export tab.
-- [ ] **4.3.2** Tabular input (Radimetrics or DoseTrack fixture) → XLSX with provenance block.
-- [ ] **4.3.3** Multi-exam (2 exams) → Summary sheet columns + cumulative PSD.
+- [x] **4.3.1** Single-exam DICOM RDSR → XLSX + PDF from Export tab. *(browser modal exercised 2026-10-07 on a 3-exam run; single-exam XLSX also end-to-end on the CLI path — `test_export_cli.py::test_cli_export_xlsx`)*
+- [x] **4.3.2** Tabular input (Radimetrics or DoseTrack fixture) → XLSX with provenance block. *(Radimetrics biplane example, browser, 2026-10-07: HTML + XLSX carry the Dose-by-tube table with no labels or paths)*
+- [x] **4.3.3** Multi-exam (2 exams) → Summary sheet columns + cumulative PSD. *(browser modal, 3 exams, 2026-10-07)*
 - [ ] **4.3.4** Simulate kaleido failure → export completes with notice, no crash.
 - [ ] **4.3.5** Browser-mode GUI on Chromium-family browser: `showSaveFilePicker()` path works when available.
 - [ ] **4.3.6** Browser-mode GUI fallback: download starts with generated filename and explanatory toast when save-picker support is unavailable; native mode shows path/Browse controls.
@@ -606,7 +610,8 @@ Writers consume `ExportPayload` only. Implement `render_*_bytes(payload) -> byte
 - [x] Phase 1–3 unit tests green in CI. (Plus Phase 5 CLI/HTML tests — 25 total.)
 - [x] New dependencies only via `export` optional extra (+ existing `openpyxl`, `kaleido`).
 - [x] Existing JSON/dict export schema remains backward compatible (payload is separate; no `PySkinDoseOutput.to_dict()` change).
-- [ ] Manual browser/native save smoke (Phase 4.3.x) — pending human verification.
+- [x] Manual browser save smoke (Phase 4.3.x) — browser modal done 2026-10-07 (3-exam run: HTML, XLSX, DOCX and PDF all download and open; DOCX converts cleanly through LibreOffice).
+- [ ] Native (pywebview) and Windows native file-dialog save smoke (Phase 4.3.x) — user-only; tracked in [TO_DO.md](../TO_DO.md) Manual Smokes.
 
 ---
 
