@@ -1,10 +1,10 @@
 # Custom Equipment Profiles — Execution Plan
 
-Status: **Active — Phase 0 in progress; core implementation blocked on contract decisions**
+Status: **Active — Phase 0 in progress; fallback and sparse-data rules agreed**
 Design authority: [CUSTOM_EQUIPMENT_PROFILES_SPEC.md](CUSTOM_EQUIPMENT_PROFILES_SPEC.md) (reviewed 2026-10-10)
 Created: 2026-10-09 · plan updated 2026-10-10
 Parent roadmap: [CORRECTION_DATA_AND_SUPPORT_TRANSMISSION_PLAN.md](CORRECTION_DATA_AND_SUPPORT_TRANSMISSION_PLAN.md)
-Delivery: implement on feature branches after Phase 0 sign-off; no direct-to-`main` work. Keep calculation,
+Delivery: implement each slice on feature branches after its applicable Phase 0 locks; no direct-to-`main` work. Keep calculation,
 GUI, and persistence slices independently reviewable, but do not split any atomicity or audit contract named below.
 
 ## Objective
@@ -23,7 +23,7 @@ as a distinct read-only legacy correction source (decision 17; current source re
 - Coordinate selection remains once per homogeneous exam/frame (decision 1); canonical `manufacturer` joins the
   normalized contract (decision 2).
 - Missing supported coordinate leaves and transmission rows inherit and notify. Unsupported, invalid, ambiguous,
-  out-of-extent, or conflicting content fails closed (decisions 6, 7, and 15).
+  out-of-original-extent rows for an existing model/plane, or conflicting content fails closed (decisions 6, 7, and 15).
 - Every source passes through one canonical model, validator, resolver, hashing implementation, and immutable
   activation snapshot. Source adapters cannot implement their own precedence or weaker validation.
 - Dose-affecting activation and provenance are inseparable. Phase 4 cannot merge before Phase 3's atomic activation,
@@ -47,11 +47,11 @@ Work:
 - [ ] Sign off all 20 decisions in spec §11 without changing their meaning implicitly in code. Record amendments in
       both documents before implementation.
 - [ ] Publish the canonical profile field table: required stable `profile_id`; manufacturer/models; separate explicit
-      aliases; independently optional coordinate/transmission domains with at least one non-empty; partial coordinate
+      manufacturer alias lists and model alias-to-target maps; independently optional coordinate/transmission domains with at least one non-empty; partial coordinate
       leaves; transmission evidence/source/date; bounded notes; unknown fields rejected (decisions 3, 6, 8, 12, 16).
  - [ ] Lock source schemas (decision 4): nested JSON document; ONE flat tabular model shared by CSV/TSV and XLSX
-      (strict `record_type` rows, same column set, one sheet, sheet selectable for multi-sheet workbooks);
-      canonical in-memory GUI submission; canonical JSON payload per stored revision.
+      (strict `record_type` rows, one implicit-v1 shape, one selected sheet); explicit alias-to-model maps,
+      single-model shorthand, and optional `promote_coordinate_wildcard` per spec §§3–5; canonical GUI/store values.
 - [ ] Complete the packaged starting material under `example_data/equipment_profiles/`: filled examples and
       blank templates for JSON, CSV/TSV, and XLSX, plus a README with the field/column dictionary and planned
       CLI/GUI usage. The JSON/CSV files and README are authored; TSV/XLSX remain outstanding, and the schema
@@ -78,7 +78,7 @@ Work:
       verified at `src/guiskindose/corrections.py:327-380`; the attenuation header has no manufacturer column
       (`src/guiskindose/table_data/correction_table_and_pad_attenuation.csv:1`).
 - [ ] Lock stable error codes, including malformed/oversized input, unsupported source/schema/capability, duplicate
-      claim, alias ambiguity, wildcard acknowledgement required, out-of-extent row, explicit-SQLite collision,
+      claim, alias ambiguity, wildcard acknowledgement required, existing-model out-of-extent row, explicit-SQLite collision,
       store conflict/corruption, and activation rollback.
 - [ ] Lock privacy/export fields (decision 13): manufacturer/model and canonical `matched_input_key` are default-safe;
       station/serial retain `include_identifiers` for per-event output and never enter logs; notes and profile paths are
@@ -88,50 +88,51 @@ Work:
 - [ ] Define the exact pre-calculation, Calculate, Results, and export representations for field inheritance,
       transmission partial coverage, active/unused profiles, and structured immutable match records (decision 20).
 
-### Phase 0 unresolved blockers — open, do not close in docs
+### Resolution rules agreed 2026-10-10
 
-These four contract decisions are **unresolved** and block Phase 1's core package. They require scientific and
-schema decisions before implementation; nothing below is settled by this plan, and no
-baseline model mapping is added here.
+The maintainer accepted these rules after clarifying that missing custom coverage must retain current
+handling. They amend spec decisions 3, 4, 8, 9, 10, and 11; implementation must follow spec §§3–7.
 
-1. **No-baseline new-model transmission bounds.** The "custom rows may not extend a baseline model/plane grid's
-   kVp/Cu/Al extents" rule (spec §7) presumes a baseline grid exists. The packaged attenuation table covers
-   only `AXIOM-Artis` and `AlluraClarity`, so the fictional `DemoScope 2000` / `DemoScope Biplane 4000` in the
-   packaged example have **no baseline grid at all**. Open: may a no-baseline model supply an unconstrained grid,
-   must it declare extents explicitly, or is it rejected — and do the new-model tests and the fictional packaged
-   example describe the same contract either way?
-2. **Sparse overlay rectangular-grid completion / NaN policy.** Each selected Al slice needs a usable kVp × Cu
-   grid, while custom rows are sparse. An offline reproduction found that a complete 2 × 2 synthetic grid
-   **plus one in-extent intermediate node** creates 4 missing pivot cells, and `_lookup_pivot` returns
-   `(nan, 'interpolated')`. Open:
-   is the composite grid completed first (by what rule — carried, interpolated, or hard error), or does a missing
-   pivot fail the query? This is a scientific contract decision, not a code change.
-3. **Authoritative baseline measured/estimated classification, including `invalid_inherited` nodes.** A custom
-   `measured` node replaces a same-key baseline node and `estimated` fills only nodes with no measured value from
-   either source. It is not yet authoritative which class a *baseline* node belongs to, nor how baseline nodes
-   carrying `invalid_inherited` are classified. Until that is fixed, "replace" versus "fill" cannot be decided
-   deterministically per node.
-4. **Multi-model alias mapping, wildcard promotion, override syntax, and tabular version encoding.** One profile
-   may carry several canonical model keys plus separate explicit alias lists. Unspecified: how many models may
-   map from one profile and how alias lists are resolved across them; the declaration syntax and
-   acknowledgement/CLI-opt-in mechanism that promotes a custom wildcard above a bundled exact; how an explicit
-   override is expressed when two enabled profiles claim the same slot; and how CSV/TSV/XLSX encode
-   `schema_version`.
+1. **Original lookup table and new models.** The baseline grid means the existing packaged or explicit-SQLite
+   transmission rows for a model/plane. Keep those rows intact for ordinary lookup. Extent restrictions apply
+   only when that model/plane has original rows. New models accept valid custom exact rows and complete custom
+   interpolation slices; uncovered or out-of-custom-range queries retain current unknown-model/plane handling.
+2. **Sparse additions cannot damage usable lookup.** Existing-node replacements participate in interpolation.
+   Additional rows are exact-match-only unless they complete a rectangular kVp × Cu slice. Never invent missing
+   factors. Choose a complete interpolation grid before lookup; otherwise use the intact original table.
+   Preserve Al snapping and the existing 2-D algorithm. The reproduced hole/NaN case is a regression fixture,
+   not a reason to reject sparse profiles or silently discard usable original coverage.
+3. **Evidence and validity are independent.** Original evidence is `measured`, `estimated`, or `unknown`, from
+   reviewed provenance. Custom measured rows may replace packaged nodes; estimated rows may fill absent/invalid
+   nodes or replace estimated nodes, but cannot replace valid measured/unknown nodes. Report ignored rows.
+   Explicit-SQLite same-key collisions still error. Inventory/classify inherited evidence before Phase 4;
+   unknown must remain available when provenance cannot be established.
+4. **Identity and source shape.** Each model alias explicitly targets one canonical model; non-empty flat lists
+   remain shorthand for a single exact model. Canonical maps use JSON objects; tabular cells may contain quoted
+   JSON maps. Coordinate wildcard promotion requires `promote_coordinate_wildcard: true` plus GUI acknowledgement
+   or CLI `--allow-equipment-profile-wildcard-promotion`. Reject conflicting enabled claimants and require
+   disabling one; no extra conflict-override syntax. The current tabular shape is implicit v1; reject unsupported
+   fields/versions. Missing transmission filtration values are invalid; explicit zero means no added filtration.
 
-Exit criteria: signed decision list; schemas and examples parse mechanically; limits/error catalog/privacy matrix are
-complete; **all four unresolved blockers above are decided and their consequences written into the spec before
-Phase 0 exits**; no open semantic question blocks Phase 1. Phase 0 is **not** signed off today.
+Remaining Phase 0 work is executable schema/limit/error/hash/store contracts and fixtures, not deciding those
+four rules again. Lock the common and coordinate contracts before their Phase 1/2 slices. Transmission-specific
+implementation fixtures, evidence classification, grid eligibility, and fallback provenance must be verified
+before Phase 4; they do not block independent coordinate work. Unsupported transmission capabilities still
+fail closed in the coordinate-only slice. Do not mark incomplete Phase 0 items signed off automatically.
+
+Exit criteria: the applicable schema, bounds, error catalog, hashes, privacy matrix, and fixtures are locked
+for each implementation slice; no unresolved contract in that slice is hidden by fallback. All domains must
+meet their locks before full v1 release.
 
 ## Phase 1 — Canonical model, source adapters, store, and identity contract
 
 **Goal.** Parse every non-GUI source and produce immutable validated profile sets without changing calculations.
 
 Work:
-- [ ] **BLOCKED on the Phase 0 contract decisions above.** Add a small core package for canonical profile/domain
-      records, source provenance, validation, hashing, conflict detection, compiled match indexes, and stable
-      errors. Do not start this until the four blockers are decided: the core encodes whichever transmission
-      bounds, grid-completion, classification, and alias/wildcard/override rules Phase 0 locks, so writing it
-      first would enshrine an unresolved contract. No calculation or GUI imports in the core.
+- [ ] Add the canonical model, validation, hashing, conflict detection, indexes, and stable errors after
+      the applicable Phase 0 common/coordinate contracts are locked. Keep transmission eligibility/resolution
+      separate so its later evidence/grid verification does not hold coordinate work. No calculation or GUI
+      imports in the core; no activation of unsupported domains.
 - [ ] Implement JSON, CSV/TSV, and XLSX adapters. Read bounded file bytes once, hash and parse the same snapshot;
       preflight XLSX container expansion/sheets/rows/text before materialization. Match the kerma loader's accepted
       suffix family (`src/guiskindose/kerma_correction.py:348-376`) without sharing kerma-specific factor rules.
@@ -183,7 +184,7 @@ Work:
       never paths, notes, station, or serial.
 - [ ] Own the **old run-state compatibility reader** here and nowhere else: this phase is the single place that
       reads pre-feature run-state normalization-profile documents and maps them into the shared loader
-      (spec §10, decision 18). Phase 3 does **not** re-open it.
+      (spec §10, decision 18). Phase 3 extends it only for newly supported capabilities.
 - [ ] Refuse application to already-loaded exams in this slice. Importing or persisting a candidate is allowed, but
       Phase 3 owns safe post-load activation.
 - [ ] Pin exact expected Tx/Ty/Tz, angle signs, swap, field size, detector size, structured match, inheritance notice,
@@ -229,13 +230,22 @@ Docs in this phase: lifecycle, wildcard acknowledgement, store recovery, and pos
 **Goal.** Sparse measured/estimated rows compose with the selected baseline without changing no-profile behavior.
 
 Work:
-- [ ] Build the effective grid on canonical model + literal plane + kVp + Cu + Al. Packaged custom measured nodes may
-      replace same-key packaged nodes; custom estimated nodes fill only in-extent nodes with no measured value.
-- [ ] Preserve row-level fallback: uncovered nodes remain baseline; uncovered model/plane queries retain current
-      interpolation/clamping/fallback. Reject out-of-extent rows. For explicit `corrections_db_path`, reject every
-      same-key custom/SQLite collision and allow only non-overlapping in-extent rows (decisions 7, 8, 10).
-- [ ] Overlay first, then call one existing Al-snap + kVp × Cu clamp-interpolator. Do not create a second pass or 3-D
-      interpolant. Manufacturer never joins attenuation rows (decision 11).
+- [ ] Classify inherited evidence from reviewed provenance as measured/estimated/unknown; keep validity
+      separate. Do not infer measurements from table presence. Test protected valid unknown nodes, replacement
+      of invalid inherited nodes, and ignored custom estimated rows (decision 8).
+- [ ] Build eligible exact matches and per-Al interpolation slices on canonical model + literal plane + kVp +
+      Cu + Al. Measured custom rows may replace packaged nodes; estimated rows fill absent/invalid nodes or
+      replace estimated packaged nodes, preserving valid measured/unknown values. Record eligibility and reasons.
+- [ ] Retain the immutable original table. Existing-node replacements participate in its grid; additional rows
+      participate only when their new axes form a complete usable rectangular slice. Otherwise keep them
+      exact-match-only and use ordinary original lookup for uncovered queries. No synthesized factors or pivot
+      holes; no loss of usable original interpolation from sparse additions (decisions 7 and 11).
+- [ ] For an existing model/plane reject out-of-original-extent rows. For a new model/plane accept exact custom
+      rows and complete custom slices, interpolate only within custom coverage, and preserve current unknown
+      handling outside it. Keep explicit-SQLite same-key collisions as errors (decision 10).
+- [ ] Select one eligible grid before calling the existing Al-snap + kVp × Cu interpolator. Preserve the original
+      path where custom coverage is unusable; never add a 3-D interpolant or invent missing grid cells.
+      Manufacturer never joins attenuation rows (decision 11).
 - [ ] Keep all `k_tab_mode` states. Estimate mode ignores profile rows. Preserve plane A/B/single and application only
       to table-hit cells (`src/guiskindose/calculate_dose/add_correction_and_event_dose_to_output.py:99-102`).
 - [ ] Preserve per-event `exact`/`interpolated`/`clamped` plus `estimated`/`no_device`/`invalid_inherited`/`fallback`
@@ -250,7 +260,11 @@ Work:
 Exit criteria: transmission-only partial, fully specified, and mixed coordinate+transmission profiles are covered;
 partial notices and exports agree; tests include measured/estimated/baseline/mixed, sparse grids, exact/interpolated/
 clamped and every existing non-grid status, out-of-extent rejection, explicit-SQLite collision/coexistence, A/B/single,
-mixed exams, and no-profile parity. Resolution, dose use, notices, status, and provenance land together.
+mixed exams, and no-profile parity. Include a 2 × 2 original grid plus an isolated intermediate node:
+exact custom lookup works, uncovered lookup retains original interpolation, and no non-finite factor escapes.
+Also prove complete expanded slices affect interpolation, new-model range limits retain current handling,
+and single-node profiles do not cover arbitrary beam qualities. Resolution, dose use, notices, status, and
+provenance land together.
 
 Docs in this phase: PSD algorithm, correction-data reference, calculation/results help, output schema, and `CHANGELOG.md`.
 
@@ -330,14 +344,22 @@ gets macOS/Linux and Windows manual evidence as applicable.
   transmission bounds for a model with no baseline grid; sparse-overlay rectangular-grid completion/NaN policy
   with a reproduced `(nan, 'interpolated')` case; authoritative baseline measured/estimated classification
   including `invalid_inherited` nodes; multi-model alias mapping / wildcard promotion / override syntax /
-  tabular version encoding). Phase 1's core package is gated on them. The Phase 2/Phase 3 contradiction over the
+  tabular version encoding). This initial broad hold is superseded by the agreement below. The Phase 2/Phase 3 contradiction over the
   old run-state compatibility reader was resolved by assigning it wholly to Phase 2.
+
+- 2026-10-10 — Maintainer accepted the recommended fallback, new-model, sparse-grid, evidence, and schema
+  rules. Updated spec decisions and Phase 4 proof obligations; replaced the blanket core hold with per-slice
+  contract locks. Common/coordinate work can proceed after its own locks; runtime implementation remains pending.
 
 ## Decision log
 
 - 2026-10-10 — Phase 0 implements the authoritative 20 decisions in spec §11; later changes amend the spec first.
 - 2026-10-10 — The four Phase 0 blockers above are recorded as **unresolved** pending owner decisions; this plan
-  does not resolve scientific policy and adds no baseline model mapping.
+  did not resolve policy or add baseline model mappings; this open status is superseded by the agreement below.
+
+- 2026-10-10 — Rules agreed in spec §§3–7. Missing custom coverage retains original handling; sparse additions
+  cannot corrupt usable original interpolation. Preserve valid unknown evidence and explicit-SQLite collision
+  errors. Remaining Phase 0 engineering locks are tracked per slice, not waived.
 
 ## Risks and mitigations
 

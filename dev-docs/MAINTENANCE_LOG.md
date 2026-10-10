@@ -10,6 +10,12 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ### Changed
 
+- **Equipment-profile fallback decisions** (2026-10-10) — amended the spec and execution plan so missing
+  custom coverage retains ordinary lookup, new-model rows work without an original table, and sparse
+  additions cannot damage usable interpolation. Defined protected unknown evidence, alias targets,
+  wildcard promotion and implicit-v1 tabular rules; replaced the blanket implementation hold with
+  per-slice contract locks. Example README synchronized; runtime behavior is unchanged.
+
 - **Equipment-profile design readiness** (2026-10-10) — reviewed the spec and execution phases,
   recorded unresolved Phase 0 contracts before calculation changes, and clarified the synthetic
   example documentation. Added guidance to split large PRs while preserving atomic audit and

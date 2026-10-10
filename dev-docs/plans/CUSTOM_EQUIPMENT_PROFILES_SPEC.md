@@ -1,8 +1,8 @@
 # Custom Equipment Profiles — Design Spec
 
-Status: **Design approved for Phase 0 contract lock; implementation sign-off pending.** Four contract decisions remain
-unresolved and are recorded as blockers in
-[CUSTOM_EQUIPMENT_PROFILES_EXECUTION.md](CUSTOM_EQUIPMENT_PROFILES_EXECUTION.md) (Phase 0). Reviewed 2026-10-10.
+Status: **Design approved for Phase 0 contract lock; resolution rules amended 2026-10-10.**
+Missing custom coverage retains current handling. Remaining schema, limit, hash, and error-code work is tracked in
+[CUSTOM_EQUIPMENT_PROFILES_EXECUTION.md](CUSTOM_EQUIPMENT_PROFILES_EXECUTION.md) (Phase 0).
 Execution plan: [CUSTOM_EQUIPMENT_PROFILES_EXECUTION.md](CUSTOM_EQUIPMENT_PROFILES_EXECUTION.md)
 Created: 2026-09-08 · renamed from `CUSTOM_EQUIPMENT_PROFILES_PLAN.md` on 2026-10-09
 Parent roadmap: [CORRECTION_DATA_AND_SUPPORT_TRANSMISSION_PLAN.md](CORRECTION_DATA_AND_SUPPORT_TRANSMISSION_PLAN.md)
@@ -61,9 +61,12 @@ keys, optional explicit aliases, bounded provenance, and at least one non-empty 
 | Coordinates | `translation_offset.{x,y,z}`, `translation_direction.{x,y,z}`, `rotation_direction.{Ap1,Ap2,Ap3,At1,At2,At3}`, `swap_lateral_longitudinal`, `field_size_mode`, `detector_side_length` | Reusable equipment baseline; every leaf is independently optional and resolved by §6 |
 | Transmission | rows of `device_model`, literal `acquisition_plane`, `kvp_kv`, `filtration_added_mmcu`, `filtration_added_mmal`, `k_patient_support`, `evidence_status`, source/date, bounded comment | Sparse nodes overlaid by §7; factors are finite and in `(0, 1]` |
 
-`manufacturer_aliases` and `model_aliases` are separate explicit lists. They never silently inherit the
-bundled hardcoded alias sets. The only wildcard is model `"*"` under an exact manufacturer; there is no
-manufacturer wildcard. Unknown fields are rejected.
+`manufacturer_aliases` is an explicit list; canonical `model_aliases` maps each alias to exactly one model
+in `models`. A non-empty flat alias list is accepted as shorthand only for a profile with one exact model;
+the current single-model examples remain valid. Empty lists mean no aliases. Multi-model profiles must use
+an explicit alias-to-model map; ambiguous or wildcard targets fail validation. Aliases never silently
+inherit the bundled hardcoded alias sets. The only wildcard is model `"*"` under an exact manufacturer;
+there is no manufacturer wildcard. Unknown fields are rejected.
 
 `field_size_mode` is dose-affecting. `detector_side_length` is reported as visualization-only. Session
 patient offsets and per-exam table-origin adjustments apply after the profile baseline and never become
@@ -86,6 +89,15 @@ paths, not lossy shortcuts.
 | CSV/TSV, XLSX | **One flat tabular model, identical in both formats** (the kerma-loader precedent, `src/guiskindose/kerma_correction.py:345-362`): a strict `record_type` column (`profile`, `coordinate`, `transmission`) plus the allowlisted columns for each record type, one row per record. CSV/TSV is one table; XLSX is the same table on one sheet (first sheet by default, sheet selectable for multi-sheet workbooks). Metadata repeated for a `profile_id` must agree; blank cells mean omitted fields only where the schema allows. |
 | GUI entry | The Equipment Profiles form authors coordinate leaves and transmission rows directly. Validation and preview occur before the entry can be activated or saved. No source file is required. |
 | User profile store | A separate local SQLite database in GUISkinDose's user-owned application-data area stores canonical JSON payloads, `profile_id`, schema version, revision, hashes, and timestamps. Users can save, version, enable, export, and reload records. |
+
+Tabular headers identify the v1 shape; no version column is required, and the adapter emits canonical
+`schema_version: 1`. Unsupported fields/shapes and JSON versions are rejected, never guessed into a new
+version. `model_aliases` accepts the existing `|`-separated single-model shorthand, or a JSON object in one
+properly quoted cell for explicit alias-to-model mappings. The optional profile-row column
+`promote_coordinate_wildcard` accepts `true`/`false`; absent or blank means false. The same optional Boolean
+exists in JSON and is valid only for a coordinate profile whose `models` is `["*"]`. These additions do not
+require changing the current 19-column examples. Transmission filtration values must be explicit finite,
+non-negative numbers; use `0` for no added filtration, never an empty cell.
 
 The store is not the bundled correction provider and never mutates package data. It is also not
 `corrections_db_path`; that read-only legacy path remains an independent explicit source for HVL,
@@ -146,10 +158,12 @@ Default coordinate candidate order is:
 4. bundled manufacturer-scoped model wildcard;
 5. warned Default.
 
-An explicitly declared custom wildcard may be promoted above a bundled exact only after pre-calculation
-GUI acknowledgement or a CLI opt-in flag. File order never breaks ties. Canonically duplicate claims,
-ambiguous aliases, and two enabled profiles claiming the same custom slot are load/activation errors unless
-the user disables one or uses a schema-defined explicit override.
+A custom coordinate wildcard with `promote_coordinate_wildcard: true` may rank above a bundled exact
+only after GUI acknowledgement or CLI `--allow-equipment-profile-wildcard-promotion`. Neither the declaration
+nor the acknowledgement alone suffices; missing acknowledgement is an activation error. Promotion never
+outranks a custom exact. File order never breaks ties. Canonically duplicate claims, ambiguous aliases,
+and two enabled profiles claiming the same custom slot fail activation. Disable one conflicting profile;
+v1 has no additional conflict-override syntax.
 
 Every exam receives immutable structured match records, separate by `domain`, with `profile_id`, `source`
 (`custom`, `bundled`, `default`), `level` (`exact`, `wildcard`, `default`), canonical
@@ -175,35 +189,66 @@ A fully specified profile is labeled `complete match` and has no partial warning
 
 ## 7. Partial transmission coverage and precedence
 
+The **original lookup table** (also called the baseline grid) is the data used without custom profiles:
+the packaged attenuation table or the table selected by explicit `corrections_db_path`. For each model and
+literal plane, it contains transmission factors indexed by kVp, Cu, and Al. It is an existing data source,
+not a new measurement requirement. Keep an immutable copy for ordinary lookup and fallback.
+
 Transmission uses a separate ladder:
 
-1. `k_tab_mode=estimate` ignores profile and measured-table rows.
-2. Otherwise select the packaged baseline attenuation table or the table from an explicit
-   `corrections_db_path`.
-3. Overlay eligible custom nodes on the key **canonical model + literal acquisition plane + kVp + Cu +
-   Al**. Manufacturer is match provenance, not a table join column.
-4. Run one existing Al-snap plus kVp × Cu clamp-interpolator over the composite grid.
-5. Preserve today's no-device/invalid/fallback behavior for models, planes, or queries without usable
-   coverage.
+1. `k_tab_mode=estimate` ignores all profile rows and retains today's estimate behavior.
+2. Otherwise select the original lookup table and resolve eligible custom rows on **canonical model +
+   literal plane + kVp + Cu + Al**. Manufacturer is provenance, not a table join column.
+3. Use an eligible custom exact match first, preserving existing query rounding/key semantics.
+4. For non-exact queries use the existing Al-snap and kVp × Cu interpolator only on a complete usable
+   selected Al slice. Existing-node replacements participate in normal interpolation. Additional sparse
+   nodes remain exact-match-only until their new axes form a complete rectangular slice; they must not
+   introduce empty pivot cells into the original grid. Never invent or auto-fill measurements.
+5. When custom interpolation coverage is unusable or incomplete, use ordinary lookup against the intact
+   original table. Preserve its interpolation, clamping, invalid-value, no-device, and mode-dependent
+   fallback handling. A sparse addition must not turn a usable original lookup into an invalid result.
 
-A custom measured node replaces a packaged baseline node at the same key; a custom estimated node only
-fills an in-extent key with no measured node from either source. Uncovered nodes remain baseline nodes, and
-uncovered model/plane queries retain baseline interpolation, clamping, and fallback. A mixed interpolation
-may use both custom and baseline nodes and is reported as source `mixed`.
+A usable interpolation slice contains one valid finite factor at every kVp × Cu axis combination;
+degenerate one-axis and one-node slices retain the existing interpolator's behavior. Compile complete
+slices and exact-only additions before calculation so event resolution never constructs a pivot with holes.
+Choose one eligible interpolation grid before lookup; do not interpolate sparse rows and then treat a NaN
+as new missing baseline data. Original inherited invalid rows retain their existing handling unless a
+valid eligible custom row replaces them. Unexpected non-finite results cannot propagate into dose.
 
-Custom rows may not extend a baseline model/plane grid's kVp/Cu/Al extents. With explicit
-`corrections_db_path`, any custom row colliding with that database's attenuation key is a load error;
-non-overlapping in-extent rows may overlay it. Overlay never mutates either source.
+For a model/plane with original rows, custom nodes must remain inside that model/plane's original
+kVp/Cu/Al extents. For a **new model/plane with no original rows**, accept valid custom rows without a
+baseline-extent requirement: exact rows work immediately, complete custom slices may interpolate within
+the custom kVp/Cu range and supported Al range, and uncovered queries use today's unknown-model/plane
+handling. Do not extrapolate or clamp a new model's custom grid beyond its supported range. A single node
+provides exact coverage, not coverage of every beam quality. Missing coverage is valid and reported.
+
+### Evidence and node ownership
+
+Custom rows declare `measured` or `estimated`; measured rows require source and date. Original rows have
+reviewed evidence classification `measured`, `estimated`, or `unknown`. Unknown provenance stays unknown;
+do not infer measured evidence merely because a value exists or a comment contains a suggestive word.
+Keep value validity separate from evidence classification.
+
+- A custom measured row may replace a same-key packaged measured, estimated, or unknown row.
+- A custom estimated row may fill an absent/invalid packaged node or replace a packaged estimated node.
+  It must not replace a valid packaged measured or unknown node; retain that node and report the unused
+  custom row and reason. Valid unknown values are protected without relabeling them as measurements.
+- An invalid inherited value is not usable measured coverage. An eligible valid custom row may replace it;
+  otherwise preserve today's `invalid_inherited` and mode-dependent fallback handling.
+- With explicit `corrections_db_path`, every same-key custom/SQLite collision remains a load error,
+  regardless of evidence or validity. Non-overlapping in-extent additions are allowed. A model/plane absent
+  from the explicit table follows the new-model rules. Neither input source is mutated.
 
 Per-event status remains `exact`/`interpolated`/`clamped` or existing `estimated`/`no_device`/
-`invalid_inherited`/`fallback`. A separate per-exam source dimension is `custom_measured`,
-`custom_estimated`, `baseline`, or `mixed`. Sparse custom coverage produces a concrete partial-coverage
-notice before calculation and in Calculate, Results, and exports, naming custom versus inherited row counts
-and affected model/plane—not station/serial.
+`invalid_inherited`/`fallback`. Per-exam source is separate: `custom_measured`, `custom_estimated`,
+`baseline`, or `mixed`. Record inherited evidence, exact-only versus interpolation-eligible nodes, actual
+contributing sources, ignored-row reasons, and custom versus inherited query counts. Sparse coverage gets
+a concrete notice before calculation and in Calculate, Results, and exports; loaded-but-unused rows are
+listed without a dose warning. Manufacturer/model may be named, never station/serial.
 
-Missing rows fall back and notify. Unsupported capability, out-of-extent rows, invalid factors,
-duplicate/conflicting claims, ambiguous aliases/wildcards, and explicit-SQLite same-key collisions fail
-closed. A staged build must reject, not ignore, a valid field or domain it cannot yet apply.
+Missing rows fall back and notify. Unsupported capability, out-of-extent rows for an existing model/plane,
+invalid custom factors, duplicate/conflicting claims, ambiguous aliases/wildcards, and explicit-SQLite
+same-key collisions fail closed. A staged build must reject, not ignore, a domain it cannot yet apply.
 
 ## 8. API, CLI, GUI, and atomic lifecycle
 
@@ -263,16 +308,16 @@ Acceptance:
 
 1. 2026-10-09 — Coordinate identity and transforms remain once per homogeneous exam/frame in v1.
 2. 2026-10-09 — Canonical `manufacturer` joins `model` in normalized data; legacy omissions warn.
-3. 2026-10-09 — Exact aliases are explicit and separate; only manufacturer-scoped model wildcards exist.
+3. 2026-10-10 — Each model alias names one canonical target; single-model lists are shorthand. Only manufacturer-scoped coordinate model wildcards exist.
 4. 2026-10-10 — JSON is canonical, while CSV/TSV, XLSX, GUI entry, and a local user profile database are
-   first-class sources; CSV/TSV and XLSX share one flat tabular model rather than two shapes.
+   first-class sources; tabular formats share one implicit-v1 flat shape, with explicit alias maps and optional wildcard promotion.
 5. 2026-10-10 — The user profile SQLite store is separate from immutable bundled data and `corrections_db_path`.
 6. 2026-10-10 — Coordinate blocks are partial at leaf-field granularity and inherit through custom/bundled/wildcard/Default candidates with per-field provenance.
 7. 2026-10-10 — Transmission rows are sparse overlays; uncovered nodes/queries retain baseline interpolation, clamping, and fallback with user notification.
-8. 2026-10-09 — Measured rows require source/date; estimated rows fill only unmeasured in-extent nodes.
-9. 2026-10-09 — A custom wildcard may outrank a bundled exact only by explicit declaration and acknowledgement/CLI opt-in.
-10. 2026-10-09 — The transmission key is canonical model + literal plane + kVp + Cu + Al; explicit-SQLite key collisions and out-of-extent rows error.
-11. 2026-10-09 — Overlay precedes one existing Al-snap/kVp × Cu interpolator; per-event status and per-exam source remain separate.
+8. 2026-10-10 — Measured rows require source/date; estimated custom rows fill absent/invalid or estimated packaged nodes, preserving valid measured/unknown nodes.
+9. 2026-10-10 — Coordinate wildcard promotion requires `promote_coordinate_wildcard` plus GUI acknowledgement or CLI opt-in; custom conflicts require disabling a claimant.
+10. 2026-10-10 — The transmission key is model + plane + kVp + Cu + Al; explicit-SQLite collisions error. Existing model/plane extents bound additions; new models accept rows with uncovered queries retaining current handling.
+11. 2026-10-10 — Exact sparse additions are usable; interpolate only complete eligible Al slices with the existing 2-D algorithm, otherwise use intact original lookup. Status and source remain separate.
 12. 2026-10-10 — Stable user-supplied profile IDs, canonical per-profile hashes, source hashes, revisions, and active-set hashes define provenance without paths.
 13. 2026-10-10 — Manufacturer/model are not identifiers; station/serial keep the identifier gate and never enter logs.
 14. 2026-10-09 — Full v1 post-load activation is atomic across profile state, normalization, overrides, results, and caches.
