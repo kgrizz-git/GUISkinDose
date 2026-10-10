@@ -1,308 +1,264 @@
 # Custom Equipment Profiles — Design Spec
 
-Status: **Design spec**, reviewed 2026-10-09 (kiro/gpt-5.6-sol). Execution plan:
-[CUSTOM_EQUIPMENT_PROFILES_EXECUTION.md](CUSTOM_EQUIPMENT_PROFILES_EXECUTION.md)
+Status: **Design approved for Phase 0 implementation lock** (reviewed 2026-10-10)
+Execution plan: [CUSTOM_EQUIPMENT_PROFILES_EXECUTION.md](CUSTOM_EQUIPMENT_PROFILES_EXECUTION.md)
 Created: 2026-09-08 · renamed from `CUSTOM_EQUIPMENT_PROFILES_PLAN.md` on 2026-10-09
 Parent roadmap: [CORRECTION_DATA_AND_SUPPORT_TRANSMISSION_PLAN.md](CORRECTION_DATA_AND_SUPPORT_TRANSMISSION_PLAN.md)
-Dependencies:
-[archive/CORRECTION_SAFETY_AND_TUBE_IDENTITY_PLAN.md](archive/CORRECTION_SAFETY_AND_TUBE_IDENTITY_PLAN.md)
-and [CORRECTION_DATA_PACKAGING_AND_PROVENANCE_PLAN.md](CORRECTION_DATA_PACKAGING_AND_PROVENANCE_PLAN.md)
+Dependencies: [Correction safety and tube identity](archive/CORRECTION_SAFETY_AND_TUBE_IDENTITY_PLAN.md) and
+[correction data packaging and provenance](CORRECTION_DATA_PACKAGING_AND_PROVENANCE_PLAN.md)
 
 ## 1. Objective
 
-Let users add validated, reusable equipment/model profiles for coordinate normalization and
-patient-support transmission without editing bundled files or rebuilding/replacing the complete
-correction database.
+Let physicists add validated, reusable equipment/model profiles for coordinate normalization and
+patient-support transmission without editing bundled files or replacing the full correction database.
+Profiles may come from JSON, CSV/TSV, XLSX, an in-app form, or a separate local user-owned database.
 
-This spec does not implement a new path-length attenuation model. Custom transmission rows use the
-validated lookup semantics established by the preceding plans.
+This feature does not introduce a path-length attenuation model. It composes custom transmission rows
+with the existing validated lookup behavior.
 
-## 2. Current state
+## 2. Verified implementation baseline
 
-- Coordinate normalization ships bundled manufacturer/model profiles in
-  `src/guiskindose/normalization_settings.json` (Siemens AXIOM-Artis, Philips Allura Clarity, the GE
-  wildcard, Default), read through `settings/normalization_settings.py`.
-- Coordinate profile selection is **once per exam/frame, not per event**: `update_used_settings()`
-  reads manufacturer and model from the first row, selects one profile, and the normalizer applies it
-  to the whole frame. An input whose raw rows carry conflicting equipment identities must be split
-  into exams or rejected before normalization; v1 does not redesign per-event transforms.
-- Python callers can pass custom `NormalizationSettings`, but ordinary settings JSON, CLI, and GUI do
-  not expose a persistent profile file. The GUI's hidden run-configuration route (`gui/run_state.py`,
-  `gui/settings_builder.py`) imports a normalization-profile list and should be migrated onto the
-  first-class profile loader.
-- Normalized frames currently carry `model`; `manufacturer` is not part of the normalized contract.
-  v1 adds a canonical manufacturer field (with a warned legacy compatibility path) plus a stable
-  `profile_id` for reporting and exports.
-- Custom `k_tab` is limited to one global estimated transmission (`k_tab_mode: estimate` /
-  `k_tab_val`; the shipped default is `measured_with_fallback`) or a full replacement SQLite database
-  (`corrections_db_path`, which also supplies HVL and `k_med` tables).
-- Kerma-meter correction already supports validated user files keyed by individual equipment and
-  tube; it is a loading/validation precedent but remains a distinct calibration concept (§4).
-- `k_tab` baseline lookup matches on model (plus a de-spaced spelling) and the literal
-  acquisition-plane string, filtering the loaded frame inside the event loop (one table load, not a
-  per-event SQL round trip).
+- Bundled coordinate profiles contain Siemens and Philips exact matches, a GE manufacturer-scoped model
+  wildcard, and Default (`src/guiskindose/normalization_settings.json:4-106`). Matching reads manufacturer
+  and model from row 0, tries exact model then `"*"`, and finally Default
+  (`src/guiskindose/settings/normalization_settings.py:137-172`); selection is therefore once per
+  homogeneous exam/frame, not per event.
+- The selected coordinate entry supplies translation offset/direction, rotation direction,
+  `field_size_mode`, `detector_side_length`, and the optional lateral/longitudinal swap
+  (`src/guiskindose/settings/normalization_settings.py:201-209`). `field_size_mode` selects the field-size
+  calculation (`src/guiskindose/geom_calc.py:20-83`) and the resulting dimensions shape the beam and hit
+  mask (`src/guiskindose/beam_class.py:249-272`, `src/guiskindose/beam_class.py:313-340`).
+  `detector_side_length` only sizes the plotted detector cuboid
+  (`src/guiskindose/beam_class.py:275-291`) and is visualization-only.
+- The normalized-input contract currently requires `model`, not `manufacturer`
+  (`src/guiskindose/input_adapters/normalized.py:26`). v1 adds canonical `manufacturer`, with a warned
+  compatibility path for legacy normalized tables.
+- Kerma-meter calibration is the file-loader precedent: it accepts `.csv`, `.tsv`, `.xlsx`, and `.json`,
+  rejects unsupported suffixes, empty input, missing required columns, and inputs above 10,000 rows
+  (`src/guiskindose/kerma_correction.py:42`, `src/guiskindose/kerma_correction.py:324-376`). It presents
+  equipment/tube pairs to prompt/UI (`src/guiskindose/kerma_correction.py:205-212`) while warnings report
+  counts rather than equipment labels (`src/guiskindose/kerma_correction.py:600-622`).
+- `k_tab` matches model (including the de-spaced spelling) plus literal acquisition plane
+  (`src/guiskindose/corrections.py:327-331`), then snaps Al and clamp-interpolates the kVp × Cu grid
+  (`src/guiskindose/corrections.py:344-380`). The packaged attenuation header has model, plane, kVp, Cu,
+  Al, and factor but no manufacturer (`src/guiskindose/table_data/correction_table_and_pad_attenuation.csv:1`).
+  Its per-event statuses are `exact`, `interpolated`, `clamped`, `estimated`, `no_device`,
+  `invalid_inherited`, and `fallback` (`src/guiskindose/corrections.py:54-66`). The factor is applied only
+  to table-hit cells (`src/guiskindose/calculate_dose/add_correction_and_event_dose_to_output.py:99-102`).
+- Run state currently gates manufacturer/model with identifiers (`src/guiskindose/gui/run_state.py:155-178`)
+  and already provides snapshot/restore primitives for atomic rollback (`src/guiskindose/gui/run_state.py:400-427`).
+  This spec deliberately narrows the former privacy rule (§9) while retaining the rollback principle.
 
-## 3. What a profile contains
+## 3. Scope and profile model
 
-A profile file is one user-owned, versioned JSON document describing **one or more equipment
-models**. It has three parts: metadata/provenance, a coordinate-normalization block, and a
-patient-support transmission block.
+A profile has a required stable `profile_id`, schema version, manufacturer, one or more canonical model
+keys, optional explicit aliases, bounded provenance, and at least one non-empty domain:
 
-| Profile field | Engine hook (today) | Applied when |
-|---------------|--------------------|--------------|
-| `manufacturer`, `models[]`, `aliases[]` | `normalize_manufacturer_key` / `normalize_model_key` in `settings/normalization_settings.py` | Coordinate selection occurs **once per homogeneous exam/frame** using its canonical manufacturer/model identity; mixed coordinate identities are split or rejected before normalization |
-| `translation_offset` (x/y/z, cm) + `translation_direction` (±) | `settings/translation_offset.py`, `rdsr_normalizer.py`, tabular adapters | Table-origin rebasing for every event of the frame; **re-bases the whole table geometry** |
-| `rotation_direction` (Ap1..At3, ±) | `NormalizationSettings.update_used_settings` | Per-event angle sign convention |
-| `swap_lateral_longitudinal` | `NormalizationSettings.swap_lateral_longitudinal` (GE) | Raw longitudinal/lateral readout mapping, per event |
-| `field_size_mode` (`CFA`/`ASD`) | `geom_calc` field-area scaling | Changes beam extent (`FS_lat`/`FS_long`), hit selection, field area, `k_bs`, `k_med`, and which cells receive `k_isq` |
-| `detector_side_length` | `beam_class` detector geometry | Detector visualization only — **not** dose-affecting; reported separately from dose-affecting fields |
-| transmission rows: `device_model`, `acquisition_plane` (`Single Plane`/`Plane A`/`Plane B`), `kvp_kv`, `filtration_added_mmcu`, `filtration_added_mmal`, `k_patient_support` ∈ (0, 1], `comment` | `corrections.calculate_k_tab()` reading the `correction_table_and_pad_attenuation` table | Dose accumulation; the factor is applied only to hit cells classified by the current `check_table_hits()` table-surface intersection, and the scalar represents **combined table-and-pad** transmission (no pad-specific or path-length model) |
+| Domain | Optional fields | Effect |
+|---|---|---|
+| Coordinates | `translation_offset.{x,y,z}`, `translation_direction.{x,y,z}`, `rotation_direction.{Ap1,Ap2,Ap3,At1,At2,At3}`, `swap_lateral_longitudinal`, `field_size_mode`, `detector_side_length` | Reusable equipment baseline; every leaf is independently optional and resolved by §6 |
+| Transmission | rows of `device_model`, literal `acquisition_plane`, `kvp_kv`, `filtration_added_mmcu`, `filtration_added_mmal`, `k_patient_support`, `evidence_status`, source/date, bounded comment | Sparse nodes overlaid by §7; factors are finite and in `(0, 1]` |
 
-Transmission rows are the user-supplied counterpart of
-`table_data/correction_table_and_pad_attenuation.csv`. Each row must carry a measured/estimated
-status (`evidence_status: measured | estimated`) and a bounded source note; unmeasured guesses are
-not accepted silently — the UI and exports label the status, the same way kerma-meter CFs do today.
+`manufacturer_aliases` and `model_aliases` are separate explicit lists. They never silently inherit the
+bundled hardcoded alias sets. The only wildcard is model `"*"` under an exact manufacturer; there is no
+manufacturer wildcard. Unknown fields are rejected.
 
-The global estimated override (`k_tab_mode: estimate` / `k_tab_val`, which applies one value to every
-table-intersected event) stays exactly where it is: a coarse session override that bypasses all
-measured tables, not a profile concept.
+`field_size_mode` is dose-affecting. `detector_side_length` is reported as visualization-only. Session
+patient offsets and per-exam table-origin adjustments apply after the profile baseline and never become
+patient-specific profile data.
 
-Cut from v1 (reserved for a later schema version): `anode_angle_deg` (needs the angle-aware HVL
-lookup backlog item first) and the individual-equipment transmission key (unresolved privacy and
-precedence complexity).
+Out of scope: kerma-meter CFs; `k_bs`; `k_med`; the HVL grid; `k_isq`; below-floor-kVp policy; phantom
+scaling; custom HVL/medium tables; `anode_angle_deg`; and individual-equipment transmission keys.
+Kerma calibration has different identity, validity-period, and factor rules. The global
+`k_tab_mode=estimate`/`k_tab_val` remains a coarse session override that bypasses transmission profiles.
 
-## 4. What a profile deliberately does NOT contain
+## 4. Input and persistence model
 
-| Data | Where it lives | Why it is not a profile field |
-|------|----------------|------------------------------|
-| Kerma-meter correction factors | user calibration file (`kerma_correction.py`): `equipment`, `tube`, `correction_factor`, optional `valid_from`/`valid_to` | Equipment × tube **calibration** records with validity periods, not equipment design properties. Profiles may share generic safe file-reading utilities only — never CF identity or factor validation (kerma CFs need only be finite and positive and may exceed 1.0; support transmission must be in (0, 1]). |
-| Backscatter `k_bs`, medium `k_med` | `correction_medium_and_backscatter` table, keyed by (field side length, kVp, HVL) | Keyed by beam/field geometry, not by equipment. An equipment key would be a category error. |
-| HVL grid | `hvl_combined`, keyed by (kVp, filtration, anode angle) | Beam-quality keyed; only the anode angle is a device attribute, and that is deferred to a later schema version. |
-| `k_isq`, inverse-square, below-floor kVp policy, phantom scaling | settings / geometry | Neither equipment-keyed nor vendor-convention data. |
-| Per-case patient / table-origin nudges | Geometry tab per-exam sliders, Settings → Per-exam corrections | Session decisions for one study, applied **after** the reusable profile baseline. A profile supplies the per-equipment default; the session override still wins for that run. |
-| Custom HVL / `k_med` tables | explicit `corrections_db_path` | Out of profile scope; see §8 on SQLite coexistence. |
+Every source adapter produces the same immutable canonical profile set before matching or calculation.
+JSON is the canonical full-fidelity interchange form; the other paths are first-class authoring and load
+paths, not lossy shortcuts.
 
-## 5. Profile model and file format
+| Source | v1 contract |
+|---|---|
+| JSON | One document with `schema_version` and bounded `profiles[]`; nested coordinate and transmission blocks preserve every field. |
+| CSV/TSV | UTF-8 table with strict `record_type` (`profile`, `coordinate`, `transmission`) and allowlisted columns. Metadata repeated for a `profile_id` must agree; blank cells mean omitted fields only where the schema allows. |
+| XLSX | Strict named sheets `profiles`, `coordinates`, and `transmission`; `profiles` is required and at least one domain sheet is non-empty. Sheet names, columns, and cross-sheet keys are validated. |
+| GUI entry | The Equipment Profiles form authors coordinate leaves and transmission rows directly. Validation and preview occur before the entry can be activated or saved. No source file is required. |
+| User profile store | A separate local SQLite database in GUISkinDose's user-owned application-data area stores canonical JSON payloads, `profile_id`, schema version, revision, hashes, and timestamps. Users can save, version, enable, export, and reload records. |
 
-- [ ] **v1 is one self-contained JSON document.** No CSV sidecar in v1: a sidecar complicates
-  atomicity, path traversal, relocation, hashing, and provenance. Document shape:
-  `schema_version`, bounded `profiles[]` each with a stable `profile_id`, alias lists, a coordinate
-  block, inline transmission-row objects, and a provenance block (source/reference,
-  `evidence_status` per row, dates, bounded notes).
-- [ ] The **coordinate block and the transmission block are independently optional**, but every
-  profile must carry at least one non-empty block. This is what lets the coordinate-only release
-  ship before transmission support exists.
-- [ ] The coordinate block is backward-compatible with the bundled entry fields: `manufacturer`,
-  `models`, `translation_offset`, `translation_direction`, `rotation_direction`, `field_size_mode`,
-  `detector_side_length`, and optional `swap_lateral_longitudinal`. `profile_id`, aliases,
-  provenance, and transmission rows are new profile-schema fields, not bundled normalization fields.
-- [ ] Reject unknown fields in v1 (add them deliberately in later schema versions).
-- [ ] Matching: exact manufacturer plus exact or `"*"` model — the bundled convention is a
-  **manufacturer-scoped model wildcard** (exact manufacturer `GE Healthcare`, model `"*"`), not a
-  manufacturer wildcard. Aliases are two separate, explicitly declared lists,
-  `manufacturer_aliases` and `model_aliases`; profile aliases never silently merge with the bundled
-  hardcoded manufacturer aliases in `settings/normalization_settings.py`.
-- [ ] `profile_id` is required, user-supplied, unique within a load, and stable across runs; content
-  hashing is per profile, with a separate whole-document hash for run-state and export provenance.
-- [ ] Transmission rows keyed by the minimum scientifically justified identity: manufacturer/model,
-  tube/plane when required, kVp, Cu, Al. "Support profile" as a separate key is **removed** from v1
-  unless given a concrete definition.
-- [ ] A complete valid example document and several invalid examples ship with the spec/plan evidence.
+The store is not the bundled correction provider and never mutates package data. It is also not
+`corrections_db_path`; that read-only legacy path remains an independent explicit source for HVL,
+`k_med`, and baseline `k_tab` data.
 
-## 6. Loading, validation, and precedence
+### Shared ingestion safeguards
 
-- [ ] Treat profile files as untrusted input: allowlisted extensions, bounded bytes/rows/text, strict
-  schema, finite/ranged values, duplicate rejection, and no executable deserialization. Row/byte
-  bounds mirror the kerma-file loader (`_MAX_TABLE_ROWS`).
-- [ ] Reject non-finite, non-positive, and greater-than-one transmission values. Values above `1.0`
-  are unphysical for a patient support and produce unsupported dose inflation, so they must not be
-  accepted as a user override.
-- [ ] Canonicalize manufacturer/model/tube identifiers without silently merging ambiguous aliases.
-- [ ] Never mutate bundled data or the source profile during a run.
-- [ ] Resolution uses **two independent ladders**, not one:
-  - **Coordinates:** custom exact > bundled exact > custom manufacturer-scoped model wildcard >
-    bundled wildcard > warned Default. A custom wildcard may replace a bundled exact only with an
-    explicit override declaration and a pre-calculation acknowledgement (and by a hard CLI error
-    unless an opt-in flag is given).
-  - **Transmission:** `k_tab_mode: estimate` ignores profile rows entirely. Measured modes overlay
-    eligible custom **measured** rows on the selected baseline table (the bundled
-    `correction_table_and_pad_attenuation` frame, or the one an explicit `corrections_db_path`
-    supplies) and then hand the merged frame to the existing lookup/interpolator. Custom **estimated**
-    rows fill coverage gaps by default and never replace a measured row from either source.
-  - **Session transforms:** always applied after the reusable profile baseline, exactly once.
-  - File order never silently resolves a duplicate claim; canonical duplicates fail at load, and GUI
-    enable/disable or an explicit override declaration resolves them.
-- [ ] Transmission overlay semantics (the join is **not** a manufacturer join — the attenuation table
-  has no manufacturer column):
-  - the custom join key is canonical **model** (including the existing de-spaced spelling), the
-    literal `acquisition_plane`, kVp, Cu, and Al, exactly as `corrections.calculate_k_tab()` matches
-    today;
-  - a custom **measured** row replaces (never adds beside) a baseline node at the same key, and may
-    not introduce nodes outside the baseline table's kVp/Cu/Al extents — such a row is a load error,
-    so a sparse custom row can never clamp across a region the baseline already supports;
-  - a custom **estimated** row may occupy only in-extent coordinates that have no measured node from
-    either source;
-  - with an explicit `corrections_db_path`, a custom row whose key already exists in that
-    database's attenuation table is a **load error**; non-overlapping custom rows may still overlay
-    that table.
-- [ ] Transmission grid resolution: after the overlay, run **one** call to the existing interpolator —
-  snap Al to the nearest measured Al, then clamp-interpolate on the (kVp × Cu) pivot. No new joint 3D
-  interpolant, and no-profile numbers must not move. A query outside the baseline extents clamps to
-  the nearest baseline node and is reported as `clamped`.
-- [ ] Transmission status keeps the engine's per-event list (`exact` | `interpolated` | `clamped`, plus
-  the existing `estimated`, `no_device`, `invalid_inherited`, and `fallback`) and adds a **source**
-  dimension beside it (`custom_measured` | `custom_estimated` | `baseline` | `mixed`), summarised per
-  exam — the per-event statuses are never collapsed into `source: fallback`.
-- [ ] Every active, dose-affecting custom value is reported before calculation and recorded in
-  exports — not only shadows of bundled exact matches: translation offset/direction, rotation
-  direction, axis swap, field-size mode, and custom `k_tab` rows. A custom profile replacing the
-  Default profile is also dose-affecting. Loaded-but-unused profiles are listed separately, without
-  a dose warning.
-- [ ] Detect conflicts between multiple custom profiles (two profiles claiming the same
-  manufacturer/model) before calculation and require explicit resolution — never a silent merge.
-- [ ] Report matching through a **structured match record** (the runtime currently exposes only
-  `Matched` / `Fallback`, which is not enough): `profile_id`, `source = custom | bundled | default`,
-  `level = exact | wildcard | default`, `matched_input_key`, and `affected_event_count`, kept
-  separate from `k_tab` statuses (exact / interpolated / clamped / fallback). Results are shown per
-  exam before aggregate totals.
-- [ ] Transmission resolution is served from an index compiled by canonical
-  manufacturer/model/plane — not a per-event full-table scan, given the row bound.
+1. Allowlist `.json`, `.csv`, `.tsv`, and `.xlsx`; reject executable/native-object deserialization.
+2. Read each file once into bounded bytes, hash those bytes, and parse that same snapshot. XLSX ZIP
+   members, sheet count, aggregate rows, and text cells are bounded before materialization.
+3. Apply a 10,000 aggregate-row ceiling (the kerma precedent), finite/ranged numeric validation,
+   bounded profiles/aliases/text, strict fields and sheets, and canonical duplicate/conflict checks.
+4. A GUI submission is copied into an immutable canonical snapshot before validation. A database load
+   uses one read transaction and immutable selected revisions. Calculation never follows a mutable form
+   or re-queries changing records.
+5. Exact byte/text/profile limits and stable error codes are locked in Phase 0 and shared by all adapters;
+   no adapter receives a weaker validation path.
 
-## 7. API, CLI, and GUI
+### Hashes and provenance
 
-- [ ] One shared profile loader used by Python API, settings JSON, CLI, and GUI.
-- [ ] CLI/settings options for one or more profile paths with deterministic precedence (for example
-  a repeatable `--equipment-profile PATH` and an `equipment_profiles` settings key).
-- [ ] GUI import, validation preview, enable/disable, and removal controls, in a dedicated
-  discoverable Equipment Profiles card showing active / unused / conflict states.
-- [ ] **Activation and staleness:** the coordinate-only slice allows profile import only before data
-  load. The full feature supports post-load activation, which must atomically re-normalize every
-  affected exam, rebuild the pristine baseline, recompute detected origins, reapply session
-  overrides, clear results and preview caches, and refresh all tabs — or roll back. Activation and
-  invalidation are one inseparable change, and an unavailable or unreadable source leaves profile
-  state, normalized frames, overrides, and results exactly as they were.
-- [ ] A run reads profile bytes **once**, hashes and parses those same bytes, and uses that immutable
-  in-memory snapshot for the whole run. GUI mutation is blocked while a calculation is busy, profile
-  identity (revision/hash) participates in the Calculate preview cache key, and any profile change
-  invalidates cached previews.
-- [ ] Profile paths in a settings file resolve relative to that settings file's directory; CLI paths
-  resolve against the working directory. Profile paths are never written into settings exports, run
-  configurations, or rich exports by default.
-- [ ] Before calculation, show:
-  - actual manufacturer/model/tube identity;
-  - matched profile and match level (structured record, per exam);
-  - coordinate axis/sign/origin rules;
-  - transmission source and measured/estimated status;
-  - interpolation/clamping/fallback status.
-- [ ] Allow users to save a session correction as a reusable profile only after supplying required
-  identity and provenance fields, and only for equipment-design decisions (table origin, axis signs),
-  never for patient-specific positioning.
-- [ ] Provide export/reload of profiles and an audit summary.
-- [ ] Privacy classification applies to every profile field: safe audit metadata, sensitive
-  identifier, or never-exported source detail. Logs and errors carry error codes, row indices, field
-  names, and counts only — never raw station/serial labels, source paths, or free-text notes.
+Canonical serialization uses UTF-8 JSON, sorted keys, normalized finite numbers, and no insignificant
+whitespace. Each profile has a SHA-256 canonical content hash; each activation has an active-set hash.
+File inputs additionally retain a hash of the exact bytes parsed. JSON/tabular files have a source-document
+hash; GUI entries use their canonical entry-snapshot hash; database loads use a selected-revision-set hash.
+Exports record `source_kind`, schema version, profile/revision ID, profile hash, active-set hash, and the
+applicable source hash—never a source path. Saving the same canonical profile to the store does not change
+its profile hash.
 
-## 8. Migration and compatibility
+## 5. Identity, matching, and conflicts
 
-- [ ] Keep bundled profiles immutable and unchanged by user imports, and keep global estimated
-  `k_tab` (`k_tab_mode: estimate` / `k_tab_val`) as the explicit coarse override it already is,
-  clearly labeled as applying to all table-intersected events and bypassing profile rows.
-- [ ] Convert existing Python custom normalization input into the shared profile representation or
-  provide a documented compatibility adapter, and migrate the hidden run-configuration profile route
-  onto the same loader.
-- [ ] **Do not deprecate `corrections_db_path` in this feature.** An explicit SQLite source currently
-  replaces HVL, `k_med`, and `k_tab` tables; profiles replace only the coordinate and transmission
-  customization. Any migration utility extracts only `correction_table_and_pad_attenuation` and states
-  plainly that it cannot migrate custom HVL or medium data.
-- [ ] Default exports and run configurations record profile ID, schema version, per-profile and
-  whole-document content hashes, match level, row evidence status, and the dose-affecting profile
-  parameters actually in force (offsets, axis signs, swap, `field_size_mode`, transmission factors).
-  They carry **no** profile paths, free-text notes, station/serial identifiers, or the raw RDSR
-  manufacturer/model strings — those raw strings stay behind the existing `include_identifiers` gate,
-  and a match record's `matched_input_key` is the canonical key only. Full profile export is a
-  distinct, explicit user action.
+Coordinate identity is canonical manufacturer/model for one homogeneous exam. Raw normalization always
+emits both; legacy normalized tables may omit manufacturer only through a warning-bearing compatibility
+rule. Mixed coordinate identities in one frame are split before normalization or rejected.
 
-## 9. Tests and acceptance criteria
+Default coordinate candidate order is:
 
-- [ ] Unit tests: schema versions, aliases, precedence, duplicates, invalid factors, wildcard
-  handling, conflict resolution, unknown fields, content hashing, privacy-safe errors, and
-  compatibility adapters.
-- [ ] API/CLI/GUI parity tests using synthetic, non-identifying profiles.
-- [ ] Tests for new model, model alias, exact vs wildcard, A/B/single, unknown identity, profile
-  conflict, and mixed matched/unmatched exams (including excluded/failed exams).
-- [ ] Golden parity when no custom profile is active.
-- [ ] Export round-trip and privacy-safe diagnostic tests, including API/CLI/GUI/rich-export parity
-  for structured match records and content-hash provenance.
-- [ ] Manual GUI smoke for import, preview, activation, correction source, save, and reload.
+1. custom exact manufacturer/model;
+2. bundled exact manufacturer/model;
+3. custom manufacturer-scoped model wildcard;
+4. bundled manufacturer-scoped model wildcard;
+5. warned Default.
+
+An explicitly declared custom wildcard may be promoted above a bundled exact only after pre-calculation
+GUI acknowledgement or a CLI opt-in flag. File order never breaks ties. Canonically duplicate claims,
+ambiguous aliases, and two enabled profiles claiming the same custom slot are load/activation errors unless
+the user disables one or uses a schema-defined explicit override.
+
+Every exam receives immutable structured match records, separate by `domain`, with `profile_id`, `source`
+(`custom`, `bundled`, `default`), `level` (`exact`, `wildcard`, `default`), canonical
+`matched_input_key`, affected event count, revision/hash, and field/row source detail.
+
+## 6. Partial coordinate profiles and notification
+
+Coordinate resolution is **per leaf field**, not all-or-nothing. For each leaf, walk the candidate ladder
+independently and take the first supplied value. Thus a custom exact profile containing only
+`swap_lateral_longitudinal` inherits offset, directions, rotations, field-size mode, and detector size from
+the bundled exact match, then wildcard, then Default. Nested x/y/z and angle entries inherit independently.
+The effective profile is materialized once per exam and records the source profile/level/hash for every leaf.
+
+Missing content is valid inheritance, not an error. Before calculation, any custom match with inherited
+leaves produces a per-exam notice:
+
+> Partial match — fields inherited from bundled/Default: `translation_offset` from bundled exact
+> `AXIOM-Artis`; `rotation_direction.Ap2` from Default.
+
+The notice names every inherited field and source, appears in pre-calculation review and the Calculate and
+Results summaries, and is recorded in dict/JSON/rich exports. It is warning/audit information, not a block.
+A fully specified profile is labeled `complete match` and has no partial warning.
+
+## 7. Partial transmission coverage and precedence
+
+Transmission uses a separate ladder:
+
+1. `k_tab_mode=estimate` ignores profile and measured-table rows.
+2. Otherwise select the packaged baseline attenuation table or the table from an explicit
+   `corrections_db_path`.
+3. Overlay eligible custom nodes on the key **canonical model + literal acquisition plane + kVp + Cu +
+   Al**. Manufacturer is match provenance, not a table join column.
+4. Run one existing Al-snap plus kVp × Cu clamp-interpolator over the composite grid.
+5. Preserve today's no-device/invalid/fallback behavior for models, planes, or queries without usable
+   coverage.
+
+A custom measured node replaces a packaged baseline node at the same key; a custom estimated node only
+fills an in-extent key with no measured node from either source. Uncovered nodes remain baseline nodes, and
+uncovered model/plane queries retain baseline interpolation, clamping, and fallback. A mixed interpolation
+may use both custom and baseline nodes and is reported as source `mixed`.
+
+Custom rows may not extend a baseline model/plane grid's kVp/Cu/Al extents. With explicit
+`corrections_db_path`, any custom row colliding with that database's attenuation key is a load error;
+non-overlapping in-extent rows may overlay it. Overlay never mutates either source.
+
+Per-event status remains `exact`/`interpolated`/`clamped` or existing `estimated`/`no_device`/
+`invalid_inherited`/`fallback`. A separate per-exam source dimension is `custom_measured`,
+`custom_estimated`, `baseline`, or `mixed`. Sparse custom coverage produces a concrete partial-coverage
+notice before calculation and in Calculate, Results, and exports, naming custom versus inherited row counts
+and affected model/plane—not station/serial.
+
+Missing rows fall back and notify. Unsupported capability, out-of-extent rows, invalid factors,
+duplicate/conflicting claims, ambiguous aliases/wildcards, and explicit-SQLite same-key collisions fail
+closed. A staged build must reject, not ignore, a valid field or domain it cannot yet apply.
+
+## 8. API, CLI, GUI, and atomic lifecycle
+
+One loader/resolver serves Python, settings JSON, CLI, GUI, and the user store. CLI/settings accept one or
+more profile files plus stored profile IDs; CLI paths resolve from the working directory and settings paths
+from the settings file's directory. Deterministic input order affects diagnostics/serialization only.
+
+The GUI Equipment Profiles card supports file import, manual coordinate and transmission entry, validation
+preview, stored-profile browsing, save/version/reload, enable/disable/remove, conflict resolution, and
+explicit canonical JSON export. It shows active, unused, complete, partial, and conflicting profiles.
+
+Post-load activation is one transaction for file, GUI-memory, and database sources: snapshot the candidate
+source; validate and resolve all conflicts; re-normalize every affected exam; rebuild pristine baselines;
+recompute detected origins; reapply session overrides exactly once; rebuild profile/transmission indexes;
+clear results and previews; include active-set revision/hash in cache keys; and refresh all tabs. Any failure
+rolls profile state, frames, origins, overrides, results, and caches back to the prior snapshot. Mutation is
+blocked while calculation is busy. The Phase 2 thin slice may allow import-before-load only; full v1 must
+ship atomic post-load activation.
+
+## 9. Privacy and export policy
+
+| Data | Default export/run config | Identifier opt-in | Logs |
+|---|---|---|---|
+| Manufacturer and model, including canonical `matched_input_key` | Included; equipment design data, not identifiers | Not required | May be shown |
+| Station name and serial number | Excluded from per-event output | Included only through existing `include_identifiers` gate | Never; counts/event indices only |
+| Profile ID, schema/revision, hashes, match level, active values, inheritance/source summary | Included | Not required | IDs/status/counts allowed |
+| Profile source path | Never included; replaced by provenance/hashes | Full profile export is separate, but run provenance still omits paths | Never |
+| Bounded free-text notes/source detail | Excluded | Included only by explicit full-profile export | Never |
+
+Manufacturer/model may appear by default in dialogs, exports, provenance, run configurations, and logs.
+Station/serial remain potentially site-identifying. Errors use stable codes, row indices, field names, and
+counts without paths, station/serial values, or notes.
+
+## 10. Compatibility and acceptance
+
+Bundled profiles remain immutable. Python custom `NormalizationSettings` and old run-state normalization
+profiles receive a documented compatibility reader/adapter. Structured profile provenance bumps run-state
+and rich-export schema versions with backward readers. Explicit SQLite is not deprecated; any future
+migration utility can extract only its attenuation table and cannot migrate custom HVL or medium data.
+
+Required tests include schema/adapters/bounds/hashes, aliases/wildcards/conflicts, privacy-safe diagnostics,
+atomic rollback, API/CLI/GUI/store parity, and no-profile numerical goldens. At minimum, end-to-end tests
+cover: (a) a coordinate-only partial profile and inherited-field notice, (b) a transmission-only partial
+profile and baseline-row notice, and (c) a fully specified profile with no partial notice, each through
+exports and reload. A/B/single planes, exact/interpolated/clamped and all existing non-grid statuses,
+explicit SQLite coexistence, mixed exams, unused profiles, and table-hit-only dose changes are mandatory.
 
 Acceptance:
 
-1. Users can add a model without editing package files or SQLite.
-2. The active coordinate origin and transmission source are visible before dose calculation, per exam.
-3. Invalid or ambiguous profiles cannot silently alter dose.
-4. API, CLI, GUI, and exports agree on match and precedence.
-5. A run without custom profiles remains numerically unchanged.
+1. Users can create/load profiles from every supported source and persist/reload them without editing package data.
+2. Effective coordinate fields, transmission source, inherited fields/rows, and evidence are visible per exam before calculation.
+3. Missing coverage inherits and notifies; invalid, unsupported, ambiguous, or conflicting content cannot alter dose.
+4. API, CLI, GUI, stored records, run state, and exports agree on values, precedence, hashes, and provenance.
+5. Runs without custom profiles remain numerically unchanged.
 
-## 10. Decisions recorded for Phase 0 sign-off
+## 11. Decisions
 
-These are the decisions the 2026-10-09 design and plan reviews converged on. They are treated as the
-working answers unless the maintainer changes one; Phase 0 of the execution plan records the final
-sign-off in its decision log.
-
-1. Coordinate identity is once per homogeneous exam in v1 (per-event transforms redesign is out of
-   scope).
-2. `manufacturer` becomes a canonical normalized field — always emitted by raw normalization,
-   optional-but-warned for legacy normalized tables.
-3. `models[]` holds canonical exact keys; `manufacturer_aliases` and `model_aliases` are separate,
-   explicitly declared lists that never silently merge with the bundled hardcoded aliases.
-4. "Support profile" is removed from v1 unless given a concrete definition.
-5. Custom estimated rows fill missing measured coverage; they do not replace measured rows.
-6. A custom manufacturer-scoped model wildcard needs an explicit override declaration (and a CLI
-   opt-in flag) to replace a bundled exact profile.
-7. Transmission overlay: custom measured rows replace bundled `correction_table_and_pad_attenuation`
-   nodes at the same canonical **model** (including the existing de-spaced spelling), literal plane,
-   kVp, Cu, and Al, then go through today's Al-snap plus (kVp × Cu) clamped interpolator. They must not
-   add nodes outside that baseline's kVp/Cu/Al extents. Manufacturer is a coordinate-match field, not a
-   `k_tab` join column. If `corrections_db_path` is set, a custom transmission row whose key also
-   exists in that database's attenuation table is a load error; non-overlapping custom rows may still
-   overlay that table. `k_tab_mode=estimate` ignores profile rows entirely.
-8. One JSON file may define several independent profiles; cross-file load order affects diagnostics
-   and serialization only, never precedence, because duplicates are errors.
-9. A row is "measured" only with a stated measurement source/date; otherwise it is "estimated".
-10. Default exports/run configs carry `profile_id`, schema version, per-profile and whole-document
-    hashes, match level, evidence status, and the dose-affecting profile parameters in force (offsets,
-    signs, swap, `field_size_mode`, transmission factors). They do not carry profile paths, free-text
-    notes, station/serial identifiers, or the raw RDSR manufacturer/model strings — those raw strings
-    stay behind the existing `include_identifiers` gate, and `matched_input_key` is the canonical key
-    only.
-11. The coordinate-only slice is import-before-load only; the full v1 supports atomic post-load
-    activation with rollback (not an unload/reload-only workflow).
-12. Comments are bounded, sanitized, local-only audit metadata.
-13. "Save session correction as profile" covers equipment-design decisions only (table origin, axis
-    signs), not field-size settings that the GUI session cannot express.
-14. Custom HVL / `k_med` support is a separate future feature before any SQLite sunset is announced.
-15. The coordinate block and the transmission block are independently optional; every profile must
-    carry at least one.
-16. `profile_id` is required, user-supplied, unique, and stable; content hashing is per profile, with
-    a separate whole-document hash for run-state and export provenance.
-17. After the overlay in decision 7, run **one** call to the existing interpolator: snap Al to the
-    nearest measured Al, then clamp-interpolate on (kVp, Cu) — no new joint 3D interpolant. Custom
-    estimated nodes may occupy only in-extent coordinates that have no measured node from either
-    source. A query outside the baseline extents clamps to the nearest baseline node and is `clamped`,
-    even if a custom row exists outside that extent (that row is rejected at load). Exam-level source
-    may be `mixed`; per-event resolution stays `exact` | `interpolated` | `clamped`, and the current
-    non-grid statuses stay: `estimated` (estimate mode), `no_device`, `invalid_inherited`, and
-    `fallback`.
-18. Profile paths resolve relative to the settings file's directory (CLI: working directory) and are
-    never serialized into settings exports, run configurations, or rich exports by default.
-19. Run state and rich export bump their schema versions when structured profile provenance is added;
-    old normalization-profile documents keep a compatibility reader.
-20. Per-exam match records are immutable snapshots with a `domain` field (coordinate vs transmission),
-    not mutable fields on `NormalizationSettings`.
-
-## 11. Execution plan
-
-[CUSTOM_EQUIPMENT_PROFILES_EXECUTION.md](CUSTOM_EQUIPMENT_PROFILES_EXECUTION.md) carries
-the phased implementation, exit criteria, progress log, and decision log. Expected SemVer impact is a
-minor release; user docs, help/UI registries, `CHANGELOG.md`, maintenance log, feature inventory, and
-privacy documentation are updated where profile ingestion/export changes require it.
+1. 2026-10-09 — Coordinate identity and transforms remain once per homogeneous exam/frame in v1.
+2. 2026-10-09 — Canonical `manufacturer` joins `model` in normalized data; legacy omissions warn.
+3. 2026-10-09 — Exact aliases are explicit and separate; only manufacturer-scoped model wildcards exist.
+4. 2026-10-10 — JSON is canonical, while CSV/TSV, XLSX, GUI entry, and a local user profile database are first-class sources.
+5. 2026-10-10 — The user profile SQLite store is separate from immutable bundled data and `corrections_db_path`.
+6. 2026-10-10 — Coordinate blocks are partial at leaf-field granularity and inherit through custom/bundled/wildcard/Default candidates with per-field provenance.
+7. 2026-10-10 — Transmission rows are sparse overlays; uncovered nodes/queries retain baseline interpolation, clamping, and fallback with user notification.
+8. 2026-10-09 — Measured rows require source/date; estimated rows fill only unmeasured in-extent nodes.
+9. 2026-10-09 — A custom wildcard may outrank a bundled exact only by explicit declaration and acknowledgement/CLI opt-in.
+10. 2026-10-09 — The transmission key is canonical model + literal plane + kVp + Cu + Al; explicit-SQLite key collisions and out-of-extent rows error.
+11. 2026-10-09 — Overlay precedes one existing Al-snap/kVp × Cu interpolator; per-event status and per-exam source remain separate.
+12. 2026-10-10 — Stable user-supplied profile IDs, canonical per-profile hashes, source hashes, revisions, and active-set hashes define provenance without paths.
+13. 2026-10-10 — Manufacturer/model are not identifiers; station/serial keep the identifier gate and never enter logs.
+14. 2026-10-09 — Full v1 post-load activation is atomic across profile state, normalization, overrides, results, and caches.
+15. 2026-10-10 — Missing supported content inherits and notifies; bad, conflicting, ambiguous, or unsupported content fails closed.
+16. 2026-10-10 — Notes stay bounded/local by default, and GUI profile saving excludes patient-specific positioning.
+17. 2026-10-09 — Explicit `corrections_db_path` remains supported and is not the user profile store.
+18. 2026-10-09 — Structured provenance bumps run-state/rich-export schemas; old normalization-profile documents retain a reader.
+19. 2026-10-09 — Kerma CFs, backscatter/medium, HVL, `anode_angle_deg`, and individual-equipment profile keys remain out of scope.
+20. 2026-10-09 — Per-exam coordinate/transmission match records are immutable snapshots, not mutable `NormalizationSettings` fields.

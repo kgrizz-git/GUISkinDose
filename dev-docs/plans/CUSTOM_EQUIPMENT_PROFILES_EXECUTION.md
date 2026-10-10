@@ -1,342 +1,293 @@
 # Custom Equipment Profiles — Execution Plan
 
-Status: **Active — not started.** Derived from the design spec
-[CUSTOM_EQUIPMENT_PROFILES_SPEC.md](CUSTOM_EQUIPMENT_PROFILES_SPEC.md) (reviewed twice by
-kiro/gpt-5.6-sol, 2026-10-09).
-Created: 2026-10-09 · spec review applied 2026-10-09 · plan review applied 2026-10-09
+Status: **Active — not started**
+Design authority: [CUSTOM_EQUIPMENT_PROFILES_SPEC.md](CUSTOM_EQUIPMENT_PROFILES_SPEC.md) (reviewed 2026-10-10)
+Created: 2026-10-09 · plan updated 2026-10-10
 Parent roadmap: [CORRECTION_DATA_AND_SUPPORT_TRANSMISSION_PLAN.md](CORRECTION_DATA_AND_SUPPORT_TRANSMISSION_PLAN.md)
-Delivery: feature branch off current `main` once Phase 0 is signed off; Phases 2, 4, and 5 each land as
-their own PR with green CI. No direct-to-`main` work.
+Delivery: implement on feature branches after Phase 0 sign-off; no direct-to-`main` work. Keep calculation,
+GUI, and persistence slices independently reviewable, but do not split any atomicity or audit contract named below.
 
 ## Objective
 
-Implement user-supplied, validated equipment/model profiles that change two things and nothing else:
-coordinate normalization (vendor table-origin and axis conventions) and patient-support transmission
-(`k_tab`) rows. Kerma-meter correction factors, backscatter/medium data, and the HVL grid stay out of
-scope; explicit custom SQLite is not deprecated.
+Implement validated reusable profiles for (1) equipment coordinate conventions and (2) patient-support
+transmission. Users can load JSON, CSV/TSV, or XLSX; enter both domains manually in the GUI; and save/version/
+reload profiles in a separate local user-owned SQLite store. JSON remains canonical full-fidelity interchange.
 
-## v1 scope cuts
+Kerma-meter correction, backscatter/medium, HVL, `anode_angle_deg`, and individual-equipment profile keys remain
+out of scope (spec decision 19). Bundled data stays immutable, and explicit `corrections_db_path` remains supported
+as a distinct read-only legacy correction source (decision 17; current source resolution is
+`src/guiskindose/corrections.py:33-46`).
 
-- No `anode_angle_deg` profile field (waits for the angle-aware HVL lookup backlog item).
-- No individual-equipment transmission key (privacy + precedence complexity, deferred to a later
-  schema version).
-- No CSV sidecar; one self-contained JSON document per file.
-- Coordinate profile selection stays once per homogeneous exam/frame; no per-event transform redesign.
-- No deprecation of `corrections_db_path`.
-- Coordinate post-load import is out of the coordinate-only slice (Phase 2); the full feature adds it
-  atomically in Phase 3.
+## Delivery rules
+
+- Coordinate selection remains once per homogeneous exam/frame (decision 1); canonical `manufacturer` joins the
+  normalized contract (decision 2).
+- Missing supported coordinate leaves and transmission rows inherit and notify. Unsupported, invalid, ambiguous,
+  out-of-extent, or conflicting content fails closed (decisions 6, 7, and 15).
+- Every source passes through one canonical model, validator, resolver, hashing implementation, and immutable
+  activation snapshot. Source adapters cannot implement their own precedence or weaker validation.
+- Dose-affecting activation and provenance are inseparable. Phase 4 cannot merge before Phase 3's atomic activation,
+  result invalidation, and profile-aware cache key.
+- Files created by implementation should respect repository modularity; split source modules before they approach
+  the harness size limit. Update behavior docs in the phase that changes behavior, not only at release.
 
 ## Acceptance criteria
 
-1. Users can add a model without editing package files or SQLite.
-2. The active coordinate origin and transmission source are visible before dose calculation, per exam.
-3. Invalid or ambiguous profiles cannot silently alter dose — including a profile whose contents the
-   running build cannot yet apply.
-4. API, CLI, GUI, and exports agree on match and precedence.
-5. A run without custom profiles remains numerically unchanged (golden parity).
+1. Every supported source can create/load a profile; GUI/database values persist and reload without package edits.
+2. Effective coordinate leaves, inherited sources, transmission coverage, and evidence are visible per exam before calculation.
+3. Missing coverage inherits with a concrete notice; bad or unresolved content cannot silently alter dose.
+4. API, CLI, GUI, user store, run state, and exports agree on precedence, values, hashes, and provenance.
+5. Runs without active custom profiles remain numerically unchanged.
 
-## Phase 0 — Scope and schema lock
+## Phase 0 — Contract and schema lock
 
-**Goal.** Resolve every semantic decision before code exists, so later phases never renegotiate the
-format. Dependencies: none (documentation phase, runs on a docs branch).
+**Goal.** Turn the spec into signed schemas, examples, limits, and error codes before implementation.
 
 Work:
-- [ ] Sign off (or amend) each of the 20 decisions in spec §10 and copy the final wording into the
-      decision log below. No "recommended" or "or the Phase 0 answer" language may remain, and
-      decision 11 is already final (coordinate-only slice import-before-load; full v1 owns atomic
-      post-load activation).
-- [ ] Lock the transmission key as **canonical model (incl. de-spaced spelling) + literal
-      `acquisition_plane` + kVp + Cu + Al** — exactly what `corrections.calculate_k_tab()` matches
-      today. Manufacturer is a coordinate-match field, never a `k_tab` join column (the attenuation
-      table has no manufacturer column).
-- [ ] Lock the overlay and interpolation rules (spec decisions 7 and 17): custom measured rows replace
-      baseline nodes at the same key and never extend the baseline kVp/Cu/Al extents (out-of-extent
-      rows are a load error); custom estimated rows only fill unmeasured in-extent coordinates; after
-      the overlay, **one** call to the existing interpolator (Al snap, then (kVp × Cu)
-      clamp-interpolation); a custom row colliding with an explicit-SQLite attenuation key is a load
-      error; `k_tab_mode: estimate` ignores profile rows.
-- [ ] Lock the status vocabulary: per-event `exact` | `interpolated` | `clamped` plus the existing
-      `estimated` | `no_device` | `invalid_inherited` | `fallback`, with an added per-exam **source**
-      dimension (`custom_measured` | `custom_estimated` | `baseline` | `mixed`) — no collapsing.
-- [ ] Lock the privacy/export matrix per spec decision 10, including that `matched_input_key` is the
-      canonical key only and raw RDSR manufacturer/model strings stay behind `include_identifiers`.
-- [ ] Lock hash canonicalization rules (key order, float formatting) so per-profile and document
-      hashes are reproducible across platforms.
-- [ ] Lock the JSON schema: `schema_version`, bounded `profiles[]`, required unique stable
-      `profile_id`, `manufacturer_aliases` / `model_aliases`, coordinate block, inline transmission
-      rows, provenance block; unknown fields rejected; coordinate and transmission blocks
-      independently optional with at least one required.
-- [ ] Define `profile_id` ownership (required, user-supplied, unique, stable), per-profile content
-      hash, and whole-document hash semantics.
-- [ ] Rename "manufacturer wildcard" to **manufacturer-scoped model wildcard** everywhere; define
-      alias structures and their collisions with the bundled hardcoded manufacturer aliases.
-- [ ] Define profile path resolution (settings-relative; CLI working-directory) and the CLI wildcard
-      acknowledgement mechanism (opt-in flag, else hard error).
-- [ ] Confirm the Phase 3 post-load strategy: coordinate-only slice is import-before-load; full v1
-      supports atomic post-load re-normalization with rollback (decision 11; spec already matches).
-- [ ] Write the byte/row/text bounds and the exact error-code vocabulary, including
-      `unsupported_profile_capability` and the explicit-SQLite same-key rejection code.
-- [ ] Author one complete valid example profile plus four invalid examples, and the signed schema
-      field table.
+- [ ] Sign off all 20 decisions in spec §11 without changing their meaning implicitly in code. Record amendments in
+      both documents before implementation.
+- [ ] Publish the canonical profile field table: required stable `profile_id`; manufacturer/models; separate explicit
+      aliases; independently optional coordinate/transmission domains with at least one non-empty; partial coordinate
+      leaves; transmission evidence/source/date; bounded notes; unknown fields rejected (decisions 3, 6, 8, 12, 16).
+- [ ] Lock source schemas (decision 4): nested JSON document; CSV/TSV `record_type` rows; XLSX named `profiles`,
+      `coordinates`, and `transmission` sheets; canonical in-memory GUI submission; canonical JSON payload per stored
+      revision. Provide one valid example per file format and invalid cross-format examples.
+- [ ] Lock the separate user-store schema and migration policy: record/revision IDs, canonical payload, profile/hash/
+      active-set metadata, timestamps, transactions, uniqueness, and corruption handling (decision 5).
+- [ ] Set exact maximum file bytes, XLSX expanded/member/sheet limits, aggregate 10,000-row ceiling, profile/alias
+      counts, ID lengths, and text lengths. The row ceiling follows `src/guiskindose/kerma_correction.py:42,324-362`.
+- [ ] Lock canonical serialization and SHA-256 rules for floats, key order, omitted values, per-profile hashes,
+      exact-file-byte hashes, GUI snapshot hashes, stored selected-revision-set hashes, and active-set hashes
+      (decision 12).
+- [ ] Lock coordinate leaf resolution and provenance: default candidate order; explicit wildcard promotion; nested
+      x/y/z and angle leaves; `complete match` versus concrete `partial match` notice (decisions 6 and 9).
+- [ ] Lock the transmission key, extents, measured/estimated overlay, explicit-SQLite collision rule, one-interpolator
+      composition, row fallback, and status/source dimensions (decisions 7, 8, 10, 11). The current key/interpolator is
+      verified at `src/guiskindose/corrections.py:327-380`; the attenuation header has no manufacturer column
+      (`src/guiskindose/table_data/correction_table_and_pad_attenuation.csv:1`).
+- [ ] Lock stable error codes, including malformed/oversized input, unsupported source/schema/capability, duplicate
+      claim, alias ambiguity, wildcard acknowledgement required, out-of-extent row, explicit-SQLite collision,
+      store conflict/corruption, and activation rollback.
+- [ ] Lock privacy/export fields (decision 13): manufacturer/model and canonical `matched_input_key` are default-safe;
+      station/serial retain `include_identifiers` for per-event output and never enter logs; notes and profile paths are
+      omitted by default. This intentionally replaces the current manufacturer/model gating at
+      `src/guiskindose/gui/run_state.py:155-178`.
+- [ ] Lock run-state/rich-export schema bumps and old-profile compatibility reader (decision 18).
+- [ ] Define the exact pre-calculation, Calculate, Results, and export representations for field inheritance,
+      transmission partial coverage, active/unused profiles, and structured immutable match records (decision 20).
 
-Exit criteria: decision log complete; schema field table and example JSON checked syntactically
-(executable loader tests begin in Phase 1); no open question blocks Phase 1.
+Exit criteria: signed decision list; schemas and examples parse mechanically; limits/error catalog/privacy matrix are
+complete; no open semantic question blocks Phase 1.
 
-## Phase 1 — Core profile loader, identity contract, and match model
+## Phase 1 — Canonical model, source adapters, store, and identity contract
 
-**Goal.** A strict, side-effect-free loader plus a compiled resolver. No calculation changes yet.
+**Goal.** Parse every non-GUI source and produce immutable validated profile sets without changing calculations.
 
 Work:
-- [ ] New module (e.g. `equipment_profiles.py`): validate the required stable `profile_id`; parse and
-      validate the v1 JSON document; bounds; unknown-field rejection; canonical identifier
-      normalization (manufacturer/model key canonicalization, hash key order and float formatting);
-      duplicate/conflict detection across files; per-profile and document hashes.
-- [ ] Read bounded bytes once, hash and parse those same bytes, and retain an immutable snapshot for
-      the run.
-- [ ] Add the canonical manufacturer field to the normalized contract
-      (`input_adapters/normalized.py` schema) and every raw adapter; emit it for every raw-normalized
-      frame; accept a missing manufacturer only through the warned legacy-normalized path.
-- [ ] Structured, immutable per-exam match records (`profile_id`, `source`, `level`,
-      `matched_input_key`, `affected_event_count`, `domain = coordinate | transmission`) — not mutable
-      fields on `NormalizationSettings`.
-- [ ] Compile a transmission index by canonical manufacturer/model/plane, with a performance
-      assertion that event resolution never executes a full frame filter per event.
-- [ ] Distinguish syntax validation of aliases/wildcards/transmission blocks from whether the running
-      build supports applying them; capability errors are stable and testable.
-- [ ] Privacy-safe errors: codes, row indices, field names, counts only.
-- [ ] Tests that a custom profile matches only its exact canonical manufacturer plus its own
-      `manufacturer_aliases` — custom matching must not reuse `_manufacturer_matches`, which pulls in
-      the bundled hardcoded Siemens/Philips/GE alias sets; bundled profiles keep today's alias table.
-- [ ] `CHANGELOG.md`: a new normalized column is user-visible even when no dose number changes.
+- [ ] Add a small core package for canonical profile/domain records, source provenance, validation, hashing, conflict
+      detection, compiled match indexes, and stable errors. No calculation or GUI imports in the core.
+- [ ] Implement JSON, CSV/TSV, and XLSX adapters. Read bounded file bytes once, hash and parse the same snapshot;
+      preflight XLSX container expansion/sheets/rows/text before materialization. Match the kerma loader's accepted
+      suffix family (`src/guiskindose/kerma_correction.py:348-376`) without sharing kerma-specific factor rules.
+- [ ] Implement an in-memory adapter for already-structured GUI/API values. It deep-copies and canonicalizes one
+      submission before validation so later form mutation cannot alter an activation candidate.
+- [ ] Implement the local user-store repository: initialize/migrate in the per-user app-data area; transactional
+      create/version/read/list/enable/delete; optimistic revision checks; payload/hash verification; bounded queries;
+      no coupling to bundled tables or `corrections_db_path`.
+- [ ] Load stored revisions in one read transaction and materialize an immutable selected-revision snapshot. Test that
+      file → store → canonical JSON preserves profile hashes while source/revision provenance changes appropriately.
+- [ ] Add canonical `manufacturer` to every raw-normalized frame and the normalized adapter contract; warn for legacy
+      normalized data lacking it. Keep mixed coordinate identities split/rejected before matching.
+- [ ] Add immutable per-exam coordinate/transmission match records with domain, profile/revision, source/level,
+      canonical matched key, affected count, hashes, and leaf/row provenance—not mutable fields on
+      `NormalizationSettings` (decision 20).
+- [ ] Compile coordinate indexes by canonical manufacturer/model and transmission indexes by canonical model/literal
+      plane. Assert event resolution does not scan the full user table per event.
+- [ ] Detect canonical duplicates and conflicts across all source kinds before activation. Input order may affect only
+      deterministic diagnostics and serialization.
+- [ ] Emit privacy-safe errors containing codes, source-kind tokens, row/sheet indices, field names, and counts. Paths,
+      station/serial values, and notes never enter errors/logs; manufacturer/model may appear (decision 13).
 
-Exit criteria: unit tests for schema versions, ranges, duplicates, aliases, wildcards, mixed
-identities, unknown fields, content hashing, deterministic multi-file loading, and privacy-safe error
-text; the existing suite is green with no numeric change. **Do not split** validation, conflict
-detection, and match provenance — they are one contract.
+Exit criteria: adapter/store/model tests cover versions, bounds, malformed containers, unknown fields, factors,
+aliases, wildcards, duplicates, hashes, deterministic multi-source loading, revision conflicts/corruption, normalized
+manufacturer compatibility, and privacy-safe diagnostics; existing tests remain green with no numerical change.
+Validation, conflict detection, hashing, and match provenance land together.
 
-Docs in this phase: normalized-contract description, architecture/data-flow references, schema
-examples.
+Docs in this phase: schema/reference examples, normalized contract, architecture/data flow, store backup/migration notes,
+and `CHANGELOG.md` for the new normalized column.
 
 ## Phase 2 — Coordinate-profile thin vertical slice
 
-**Goal.** One exact custom manufacturer/model coordinate profile working end to end. This is the
-first independently shippable slice.
+**Goal.** Exact custom coordinate matches, including leaf-level inheritance, work end to end. Initial activation is
+import-before-data-load only.
 
 Work:
-- [ ] Wire the loader into settings JSON (`equipment_profiles`) and a repeatable CLI flag (e.g.
-      `--equipment-profile PATH`), preserving the coordinate precedence table.
-- [ ] Fail closed with `unsupported_profile_capability` when a loaded profile relies on aliases,
-      manufacturer-scoped model wildcards, or non-empty transmission rows — those land in Phases 3
-      and 4, so they must not load-and-ignore.
-- [ ] CLI coordinate `transform_meta` is non-empty (ID, schema version, hashes, match level, active
-      values) in this phase, not Phase 4.
-- [ ] Migrate the hidden run-configuration route (`gui/run_state.py`, `gui/settings_builder.py`) onto
-      the first-class loader in this phase; bump `RUN_STATE_SCHEMA_VERSION` with a compatibility
-      reader for old normalization-profile documents; store a privacy-safe active-value snapshot plus
-      expected profile hashes, never profile paths.
-- [ ] Applying `equipment_profiles` to sessions that already have exams loaded is **refused** in this
-      phase (persisting a profile snapshot is fine) — that is Phase 3's atomic path. Today a run-state
-      import can re-parse after load, and multi-exam/DICOM does not rebuild; shipping application on
-      that path would create the stale-frame bug Phase 3 owns.
-- [ ] Settings serialization for `equipment_profiles`: default settings exports and run configs
-      contain no profile paths; CLI settings-path round-trip tests.
-- [ ] GUI: import **before data load** only; validation preview; matched profile and structured match
-      level per exam; profile provenance in run configuration and rich exports.
-- [ ] Pin the synthetic fixture's exact expected `Tx/Ty/Tz`, angle, field-size, match-record, and
-      export-provenance values, and assert them via API, CLI, and GUI.
+- [ ] Wire canonical profile inputs into Python API, settings JSON, repeatable CLI file options, XLSX sheet selection,
+      and stored profile IDs. Settings-relative and working-directory path rules follow spec §8; paths never serialize.
+- [ ] Resolve every coordinate leaf independently through custom exact → bundled exact → custom wildcard → bundled
+      wildcard → Default. In this slice only custom exact is enabled; reject alias/wildcard/transmission capabilities
+      with `unsupported_profile_capability`, never ignore them.
+- [ ] Preserve the dose distinction: `field_size_mode` is dose-affecting; `detector_side_length` is visualization-only
+      (`src/guiskindose/geom_calc.py:20-83`, `src/guiskindose/beam_class.py:275-291`).
+- [ ] Materialize per-leaf source provenance and issue the per-exam `partial match — fields inherited from
+      bundled/Default` notice naming fields and sources. Show it before calculation and in Calculate, Results, dict/JSON,
+      and rich exports. Fully specified profiles show `complete match` without the warning.
+- [ ] Migrate the hidden run-configuration normalization list to the shared loader; bump run-state schema; read old
+      documents; store IDs/schema/revisions/hashes/match/active values and manufacturer/model by default, never paths,
+      notes, station, or serial.
+- [ ] Refuse application to already-loaded exams in this slice. Importing or persisting a candidate is allowed, but
+      Phase 3 owns safe post-load activation.
+- [ ] Pin exact expected Tx/Ty/Tz, angle signs, swap, field size, detector size, structured match, inheritance notice,
+      and export provenance across API/CLI/GUI test seams.
 
-Exit criteria: identical normalized values and match records through API, CLI, and GUI for the shared
-fixture; no-profile golden parity; capability fail-closed tests; per-exam baseline and override values
-asserted in a named UI surface and in export payloads; privacy-safe run-state round-trip tests.
+Exit criteria: coordinate-only partial and fully specified synthetic profiles produce identical values/provenance
+across API, CLI, file formats, and stored reload; partial notices name every inherited leaf/source; no-profile golden
+parity holds; unsupported capabilities fail closed; privacy-safe run-state round trips.
 
-Docs in this phase: settings/CLI/API references, run-configuration help, feature inventory,
-`AGENTS.md`, `CHANGELOG.md`.
+Docs in this phase: settings/CLI/API, run-configuration help, calculation review surfaces, feature inventory,
+`AGENTS.md`, and `CHANGELOG.md`.
 
-## Phase 3 — Profile lifecycle and compatibility
+## Phase 3 — Matching lifecycle and atomic post-load activation
 
-**Goal.** Aliases, deliberate wildcards, multiple files, enable/disable/remove, and atomic post-load
-activation.
+**Goal.** Complete coordinate matching and make activation safe for file, GUI-memory, and database sources.
 
 Work:
-- [ ] Alias matching (`manufacturer_aliases`, `model_aliases`); manufacturer-scoped model wildcards
-      with an explicit override declaration plus pre-calculation acknowledgement (GUI) or the CLI
-      opt-in flag, before they may replace a bundled exact.
-- [ ] Multiple disjoint files with deterministic load order affecting diagnostics/serialization only;
-      conflicts fail before any mutation.
-- [ ] Compatibility adapter for callers passing custom `NormalizationSettings` directly.
-- [ ] Post-load activation: read profile bytes once, hash, parse, and re-normalize atomically —
-      DICOM, single-tabular, and multi-file sessions each covered; rebuild the pristine baseline,
-      recompute detected origins, reapply session overrides exactly once, clear results and preview
-      caches (profile revision/hash in the Calculate preview cache key), and refresh all tabs — or
-      roll back. An unavailable or unreadable source leaves profile state, normalized frames,
-      overrides, and results unchanged.
-- [ ] Busy-state guard blocks profile mutation while a calculation runs.
-- [ ] Fault-injection tests for each rollback point (read, parse, normalize, override reapplication,
-      tab refresh, rollback), asserting `base_data`, detected origin, overrides, result state,
-      input/profile revision, and preview caches always end fully old or fully new — never mixed.
+- [ ] Add explicit manufacturer/model aliases and manufacturer-scoped model wildcards. A wildcard that outranks a
+      bundled exact requires schema declaration plus GUI acknowledgement or CLI opt-in (decisions 3 and 9).
+- [ ] Support multiple disjoint sources and enable/disable/remove. Resolve every conflict before any live mutation.
+- [ ] Add the direct-`NormalizationSettings` compatibility adapter and old run-state profile reader.
+- [ ] Implement one atomic activation coordinator: freeze candidate source/revisions; validate; snapshot state;
+      re-normalize every affected DICOM, single-tabular, and multi-file exam; rebuild pristine baselines; recompute
+      detected origins; reapply session overrides exactly once; rebuild indexes; clear results/previews; include
+      profile revision/active-set hash in cache keys; refresh tabs; commit—or restore everything.
+- [ ] Reuse/extend the snapshot/restore principle already present at `src/guiskindose/gui/run_state.py:400-427`.
+      Unavailable files, stale store revisions, unreadable records, and any later fault leave the old profiles, frames,
+      origins, overrides, results, and caches unchanged.
+- [ ] Block profile mutation while a calculation is busy and reject stale preview/calculation revisions.
+- [ ] Fault-inject file read, store read, parse, conflict resolution, normalization, override reapplication, index/cache
+      rebuild, tab refresh, commit, and rollback. Assert state always ends wholly old or wholly new.
 
-Exit criteria: conflicts fail before mutation; fault injection covers read/parse/normalize/override/
-refresh/rollback for DICOM, single-tabular, and multi-file sessions; post-load change either fully
-re-normalizes or rolls back; session transforms reapplied exactly once; mixed matched/fallback exams
-correctly attributed per exam. **Do not split** post-load activation, re-normalization, rollback, and
-result invalidation.
+Exit criteria: aliases/wildcards behave identically across sources; conflicts fail before mutation; every source kind
+passes post-load success/rollback tests for DICOM, single-tabular, and multi-file sessions; overrides apply once;
+mixed custom/bundled/Default exams and partial notices remain correctly attributed. Activation, re-normalization,
+invalidation, and rollback are one merge unit.
 
-Docs in this phase: persistence schema/migration notes, post-load activation help.
+Docs in this phase: lifecycle, wildcard acknowledgement, store recovery, and post-load activation help.
 
 ## Phase 4 — Custom patient-support transmission
 
-**Goal.** Overlay validated profile transmission rows on the selected baseline provider with a
-documented grid-composition rule, preserving every existing behavior.
+**Goal.** Sparse measured/estimated rows compose with the selected baseline without changing no-profile behavior.
 
 Work:
-- [ ] Effective-grid construction per the Phase 0 decision (spec decision 7): custom measured nodes
-      replace baseline nodes at the same canonical model + literal plane + kVp + Cu + Al key; rows
-      outside the baseline kVp/Cu/Al extents are a load error (so a sparse custom row can never clamp
-      across a region the baseline supports); custom estimated nodes fill only unmeasured in-extent
-      coordinates.
-- [ ] Resolution per spec decision 17: overlay, then **one** call to the existing
-      interpolator/lookup helper on the merged frame — Al snap, then (kVp × Cu) clamp-interpolation.
-      No new joint 3D interpolant; no-profile numbers must not move. Manufacturer is never a `k_tab`
-      join column.
-- [ ] With explicit `corrections_db_path`: a custom row whose key already exists in that database's
-      attenuation table is a **load error**, not an overlay result; non-overlapping custom rows may
-      still overlay that table. `k_tab_mode: estimate` ignores profile rows entirely.
-- [ ] Keep all three `k_tab_mode` states, plane identity (A/B/single), and the `check_table_hits()`
-      application semantics exactly as they are.
-- [ ] Exports keep the engine's per-event status list (`exact` | `interpolated` | `clamped` plus
-      `estimated` | `no_device` | `invalid_inherited` | `fallback`) and add the source dimension
-      (`custom_measured` | `custom_estimated` | `baseline` | `mixed`) beside it, summarised per exam in
-      the Calculate tab and Results; extend rich export's per-exam `k_tab_statuses` with profile
-      provenance and structured match records; bump `RICH_EXPORT_SCHEMA_VERSION` with a compatibility
-      test; add additive public dict/JSON fields with object- and serialized-form tests.
-- [ ] Must not merge ahead of the Phase 3 Calculate-preview cache-key change (profile revision/hash in
-      the key); state that ordering constraint in the PR.
-- [ ] Pre-calculation report of every active dose-affecting custom value; loaded-but-unused profiles
+- [ ] Build the effective grid on canonical model + literal plane + kVp + Cu + Al. Packaged custom measured nodes may
+      replace same-key packaged nodes; custom estimated nodes fill only in-extent nodes with no measured value.
+- [ ] Preserve row-level fallback: uncovered nodes remain baseline; uncovered model/plane queries retain current
+      interpolation/clamping/fallback. Reject out-of-extent rows. For explicit `corrections_db_path`, reject every
+      same-key custom/SQLite collision and allow only non-overlapping in-extent rows (decisions 7, 8, 10).
+- [ ] Overlay first, then call one existing Al-snap + kVp × Cu clamp-interpolator. Do not create a second pass or 3-D
+      interpolant. Manufacturer never joins attenuation rows (decision 11).
+- [ ] Keep all `k_tab_mode` states. Estimate mode ignores profile rows. Preserve plane A/B/single and application only
+      to table-hit cells (`src/guiskindose/calculate_dose/add_correction_and_event_dose_to_output.py:99-102`).
+- [ ] Preserve per-event `exact`/`interpolated`/`clamped` plus `estimated`/`no_device`/`invalid_inherited`/`fallback`
+      (`src/guiskindose/corrections.py:54-66`). Add separate per-exam source
+      `custom_measured`/`custom_estimated`/`baseline`/`mixed`.
+- [ ] Show transmission partial coverage before calculation and in Calculate, Results, dict/JSON, and rich exports:
+      custom versus inherited node/query counts, model/plane, evidence, statuses, and hashes. Loaded-but-unused rows are
       listed without a dose warning.
-- [ ] Numerical proof: a custom transmission row changes only cells where `table_hits` is true and
-      no-profile PSD goldens are unchanged.
+- [ ] Bump rich-export schema and preserve backward reading/additive public output fields.
+- [ ] Prove custom factors change only table-hit cells and no-profile PSD goldens remain unchanged.
 
-Exit criteria: tests cover exact / interpolated / clamped plus the existing `estimated` / `no_device`
-/ `invalid_inherited` / `fallback` outcomes, custom-measured and custom-estimated rows, baseline,
-mixed, sparse and partial grids, out-of-extent rows rejected at load, same-key collisions with
-explicit-SQLite nodes rejected at load, A/B/single, explicit SQLite coexistence, mixed exams, and
-no-profile golden parity. **Do not split** row resolution, dose application, status propagation,
-warnings, and export provenance — a hidden custom dose change without its audit trail is unacceptable.
+Exit criteria: transmission-only partial, fully specified, and mixed coordinate+transmission profiles are covered;
+partial notices and exports agree; tests include measured/estimated/baseline/mixed, sparse grids, exact/interpolated/
+clamped and every existing non-grid status, out-of-extent rejection, explicit-SQLite collision/coexistence, A/B/single,
+mixed exams, and no-profile parity. Resolution, dose use, notices, status, and provenance land together.
 
-Docs in this phase: `PSD_CALCULATION_ALGORITHM.md`, correction-data reference, calculation help,
-output schema, `CHANGELOG.md`.
+Docs in this phase: PSD algorithm, correction-data reference, calculation/results help, output schema, and `CHANGELOG.md`.
 
-## Phase 5 — Full GUI authoring and persistence workflow
+## Phase 5 — GUI authoring and persistence workflow
 
-**Goal.** A discoverable Equipment Profiles card a physicist can actually use.
+**Goal.** A physicist can complete every profile workflow without editing a file.
 
 Work:
-- [ ] Import with validation preview; activation, removal, conflict UI; per-exam use matrix
-      (custom/bundled/default coordinate match and custom/baseline/fallback transmission counts). The
-      card states plainly that transmission rows, `field_size_mode`, and `detector_side_length` are
-      authored by JSON import — there is no in-app grid editor.
-- [ ] Profile export/reload with atomic native writes (`Path.replace()`) and the browser download
-      fallback; export is a distinct explicit action.
-- [ ] "Save session correction as profile" limited to the exact reusable field list — table origin,
-      `Tx/Ty/Tz` directions, `Tx↔Tz` swap, angle signs — with patient offsets and session-only
-      field-size settings explicitly excluded; required identity/provenance fields.
+- [ ] Build a discoverable Equipment Profiles card with JSON/CSV/TSV/XLSX import, validation preview, active/unused/
+      complete/partial/conflict states, per-exam use matrix, enable/disable/remove, and atomic activation.
+- [ ] Build manual editors for every v1 coordinate leaf and for adding/editing/removing transmission rows, including
+      measured/estimated evidence, source/date, bounded notes, inline validation, and inherited-field/coverage preview.
+- [ ] Add local-store browsing, save-as-new/version, optimistic conflict handling, reload, enable, delete confirmation,
+      and corruption/recovery messaging. Saving requires identity/provenance and may target store, canonical JSON export,
+      or both.
+- [ ] Limit “save session correction as profile” to equipment-design values (table origin baseline, translation/angle
+      signs, axis swap). Never persist patient offsets or study-specific nudges; do not infer a reusable value silently.
+- [ ] Export canonical JSON through atomic native writes (`Path.replace()`) or browser download. Export is explicit;
+      default run/rich exports remain path/note-free.
+- [ ] Before final activation show manufacturer/model, profile/source/match level, each coordinate value and inheritance
+      source, transmission evidence/source/status, and interpolation/clamping/fallback/partial notices.
 
-Exit criteria: automated NiceGUI GUI tests cover new model, wildcard, alias, conflict, active/unused
-rows, mixed exams, save/reload, post-load activation, and download behavior; patient offsets cannot
-become reusable equipment properties. Native (pywebview) and Windows file-dialog checks are manual
-smokes (below), not this phase's gate.
+Exit criteria: NiceGUI tests cover every input source, manual coordinate and transmission entry, new model, alias,
+wildcard acknowledgement, conflicts, active/unused, coordinate-only partial, transmission-only partial, fully specified,
+mixed exams, store version/save/reload, JSON export/reload, post-load rollback, and browser download. Patient-specific
+values cannot enter a reusable profile.
 
-Docs in this phase: Equipment Profiles GUI help plus `dev-docs/ui_copy.json`,
-`dev-docs/help_registry.json`, `dev-docs/feature_doc_matrix.json`, and `dev-docs/glossary.json`
-updates (run both sync scripts and the help/UI-copy/feature-matrix checks).
+Docs in this phase: GUI help and required UI-copy/help-registry/glossary/feature-matrix sources; run sync and registry checks.
 
-## Phase 6 — Legacy migration, documentation, and release proof
+## Phase 6 — Release proof and plan closure
 
-**Goal.** Ship cleanly and prove it.
+**Goal.** Reconcile documentation, prove packaged behavior, and archive the completed plan.
 
 Work:
-- [ ] Document SQLite coexistence; the `k_tab`-only extraction utility is **deferred to
-      `TO_DO.md`** unless the maintainer makes it required for this release (then it needs its own
-      tests and docs).
-- [ ] Final documentation reconciliation only — behavior docs already landed with their phases.
-- [ ] Packaged-wheel clean-directory proof via `scripts/verify_distribution.py` (name the expected
-      assertions in the PR); privacy/log tests containing no labels or paths.
+- [ ] Document explicit SQLite coexistence. A `k_tab`-only extraction utility remains deferred unless separately
+      required; it must never claim to migrate custom HVL or medium data.
+- [ ] Reconcile behavior docs already updated by earlier phases; update release notes, maintenance evidence, support/
+      privacy guidance, and the documentation catalog.
+- [ ] Run packaged-wheel clean-directory proof and final API/CLI/GUI/store/export parity and no-profile numerical suites.
+- [ ] Record phase evidence, mark this plan complete, move it to `dev-docs/plans/archive/`, and update catalog links.
 
-Exit criteria: API/CLI/GUI/export parity suite passes; no-profile numerical goldens pass; wheel proof
-passes; privacy gates pass; each phase's validation evidence recorded in the maintenance log when that
-phase lands; this plan records its own evidence and is ready to archive under
-`dev-docs/plans/archive/`.
+Exit criteria: all acceptance criteria have automated evidence; full validation and wheel proof pass; privacy gates pass;
+user-only smoke tasks are recorded; the active plan is ready to archive.
 
 ## Manual smokes (tracked, not phase gates)
 
-Browser-mode smokes are automated NiceGUI tests inside their phases. The user-only passes are added to
-`TO_DO.md` → Manual Smokes when the code lands: native (pywebview) import/activation and the Windows
-native file dialogs. Completed browser evidence is recorded in this plan and the maintenance log, not
-in `TO_DO.md`.
+Automate browser-mode behavior in Phases 2–5. When implementation lands, add only the user-only passes to
+`dev-docs/TO_DO.md` → Manual Smokes: native pywebview import/manual authoring/store activation and Windows native
+open/save dialogs. Record completed automated browser evidence in this plan and the maintenance log, not as manual debt.
 
 ## Validation required for every code phase
 
-Each code phase (1–5) runs and records:
+Each code phase records the smallest targeted tests plus the applicable shared gates:
 
-- targeted unit/integration tests plus the full `python -m pytest` suite;
-- `python -m compileall src/guiskindose`;
-- `python -m ruff check src tests`;
-- `basedpyright`;
-- `uv run --extra dev --extra gui --locked python scripts/check_complexity.py`;
-- `python scripts/check_file_sizes.py`;
-- `pytest tests/gui -n auto` for GUI-touching phases;
-- privacy and doc-impact checks (`check_sensitive_content.py`, `privacy_admission.py`,
-  `check_doc_freshness.py`, help/UI-copy/feature-matrix checks, agent guidance);
-- `python -m build` plus `scripts/verify_distribution.py` where packaging changes.
+- targeted unit/integration tests and full `python -m pytest`;
+- `python -m compileall src/guiskindose` and `python -m ruff check src tests`;
+- `basedpyright` and `uv run --extra dev --extra gui --locked python scripts/check_complexity.py`;
+- `python scripts/check_file_sizes.py`; GUI phases also run `pytest tests/gui -n auto`;
+- privacy admission/sensitive-content checks and privacy-safe log/error tests;
+- `python scripts/check_doc_freshness.py` plus affected help/UI-copy/feature-matrix/agent-guidance checks;
+- `python -m build` and `python scripts/verify_distribution.py` when packaging changes.
+
+Phase-specific tests must assert values and serialized forms, not only UI text. Cross-platform-sensitive native behavior
+gets macOS/Linux and Windows manual evidence as applicable.
 
 ## Progress log
 
-- 2026-10-09 — plan written from the reviewed spec; Phase 0 checklist expanded after the plan review;
-  no implementation started.
+- 2026-10-10 — Design and execution documents aligned; implementation not started.
 
 ## Decision log
 
-- 2026-10-09 — spec review (kiro/gpt-5.6-sol): per-frame coordinate matching, the
-  manufacturer/`profile_id` contract, two precedence ladders, atomic activation/invalidation, a
-  JSON-only format, the privacy/export matrix, and SQLite coexistence are now encoded in the spec.
-- 2026-10-09 — plan review (kiro/gpt-5.6-sol), verdict "approve with edits", encoded here:
-  (1) coordinate and transmission blocks are independently optional and the coordinate slice fails
-  closed on unsupported capabilities; (2) Phase 3 owns atomic post-load activation, reconciled with
-  spec decision 11; (3) transmission grid composition is a single interpolation pass with two status
-  dimensions; (4) `profile_id`, alias structures, manufacturer-scoped model wildcard terminology,
-  hashes, path resolution, and immutable per-exam match records are Phase 0 locks; (5) run-state and
-  rich-export schema bumps belong to Phases 2 and 4; (6) every phase gets objective exit criteria and
-  the shared validation block; (7) docs/changelog move to the phase that changes behavior; (8) race,
-  source-snapshot, cache-key, and CLI-acknowledgement risks are covered; (9) this file is named as an
-  execution plan (not `_PLAN.md`), gets its own catalog row, keeps only unperformed user-only smokes
-  in `TO_DO.md`, and defers the SQLite extraction utility instead of marking it optional.
-- 2026-10-09 — third review (cursor/grok-4.7, plan mode), verdict "approve with edits", encoded here:
-  (a) the overlay/vs-SQLite rules are now one algorithm — custom measured rows replace baseline nodes
-  on the existing model + literal plane + kVp + Cu + Al key, never extend the baseline extents, and a
-  same-key collision with an explicit `corrections_db_path` attenuation table is a load error rather
-  than an overlay result; (b) resolution is one call to the existing Al-snap + (kVp × Cu)
-  clamp-interpolator on the merged frame, with no new 3D interpolant and manufacturer excluded from
-  the transmission join; (c) the per-event status list keeps `estimated`, `no_device`,
-  `invalid_inherited`, and `fallback` beside `exact` / `interpolated` / `clamped`, with source added as
-  a separate per-exam dimension; (d) default provenance is canonical-key only — raw RDSR
-  manufacturer/model strings stay behind `include_identifiers`; (e) Phase 2 may persist a profile
-  snapshot but must refuse applying `equipment_profiles` to already-loaded exams (Phase 3 owns that
-  atomic path); (f) Phase 1 tests that custom manufacturer matching never reuses
-  `_manufacturer_matches`, and Phase 1 owns a `CHANGELOG.md` entry for the new normalized column;
-  (g) Phase 4 must not merge ahead of the Phase 3 preview cache-key change; (h) the Equipment Profiles
-  card states that transmission rows are JSON-imported, not edited in-app; (i) the duplicated spec
-  decisions 14–16 were removed and decision 11 confirmed final.
-- Phase 0 decisions: pending maintainer sign-off (record each here as decided).
+- 2026-10-10 — Phase 0 implements the authoritative 20 decisions in spec §11; later changes amend the spec first.
 
-## Risks
+## Risks and mitigations
 
-- A custom profile silently changing dose: mitigated by the dose-affecting pre-calc report, the two
-  independent precedence ladders, capability fail-closed errors, and export provenance.
-- Stale loaded data after a profile change: mitigated by import-before-load in Phase 2 and the atomic
-  activation/invalidation rule with fault injection in Phase 3.
-- A source changing between validation and calculation: mitigated by read-once/hash/parse of the same
-  bytes and the immutable run snapshot.
-- Privacy leakage through free-text notes or paths: mitigated by the field-level export matrix,
-  bounded/sanitized notes, code-only error text, and never-serialized profile paths.
-- Performance of transmission lookup with large user tables: mitigated by the compiled index in
-  Phase 1, the row bound, and the per-event performance assertion.
+- **Silent dose change:** independent coordinate/transmission ladders, concrete pre-calc partial notices, fail-closed
+  conflicts/capabilities, table-hit proof, and serialized provenance.
+- **Stale or mixed session:** import-before-load thin slice, then one atomic coordinator with immutable snapshots,
+  profile-aware cache keys, busy guard, and fault-injected rollback.
+- **Source changes after validation:** exact file bytes, GUI submission, or selected database revisions are frozen and
+  hashed; calculation consumes only that snapshot.
+- **Adapter drift:** every source maps to one canonical validator/resolver; parity fixtures compare canonical hashes,
+  matches, notices, and outputs.
+- **Store damage or concurrent edits:** transactions, schema migrations, optimistic revisions, bounded reads, payload
+  hash verification, backups/recovery guidance, and no mutation of bundled or legacy correction data.
+- **Privacy/path leakage:** manufacturer/model are explicitly safe; station/serial remain gated and absent from logs;
+  paths/notes stay out of default exports and diagnostics.
+- **Sparse-grid misunderstanding:** node ownership, mixed interpolation source, inherited counts, and per-event status
+  remain separate and visible.
+- **Lookup cost:** bounded rows, compiled model/plane indexes, cached composite pivots, and a no-full-scan assertion.
