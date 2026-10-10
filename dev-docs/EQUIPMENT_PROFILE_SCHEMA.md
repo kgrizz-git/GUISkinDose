@@ -214,6 +214,68 @@ filtration cell is `blank_disallowed_cell` — it is not read as zero. Dates are
 Overlay precedence, evidence ownership, grid eligibility, and fallback are **already agreed** in spec §7 and are
 not redefined here.
 
+## 6A. Flat tabular shape (CSV / TSV)
+
+Tabular sources are one flat table holding exactly the 19 columns of the packaged example, in any order,
+optionally plus `promote_coordinate_wildcard`. The authoritative field dictionary — column names, applicability,
+units, and blank meaning — is the packaged `src/guiskindose/example_data/equipment_profiles/README.md`, which is
+identical for every tabular format. This section restates only the rules the parser enforces, so it never
+disagrees with the README. The shape is **implicit v1**: there is no version column, and an adapter emits
+`schema_version: 1`.
+
+`record_type` selects which columns a row may use (both apply to every row regardless of `record_type`):
+
+| `record_type` | May use |
+|---|---|
+| `profile` | `profile_id`, `manufacturer`, `models`, `manufacturer_aliases`, `model_aliases`, `source`, `notes`, `promote_coordinate_wildcard` |
+| `coordinate` | `profile_id`, `field`, `value` |
+| `transmission` | `profile_id`, `source`, `device_model`, `acquisition_plane`, `kvp_kv`, `filtration_added_mmcu`, `filtration_added_mmal`, `k_patient_support`, `evidence_status`, `date`, `comment` |
+
+A value in any other column for that row's `record_type` is `unknown_field` naming only that column.
+
+**Header rules.** Exactly the 19 columns, optionally plus the promotion column. Duplicate column names are
+`duplicate_json_key` and unknown names are `unknown_field`; **neither echoes the offending column name** — the
+error carries the column index as its count. Missing columns are `missing_required_field`. Column order is free.
+
+**Row rules.** Every row must have exactly `len(header)` cells, else `malformed_tabular`. Unknown `record_type`
+values are `unknown_field` and never echo the value.
+
+**Blank semantics.** A blank cell means *omitted* for an optional field. A blank cell in a column required by the
+row's `record_type` is `blank_required_cell`. Filtration is the explicit exception: a blank
+`filtration_added_mmcu` or `filtration_added_mmal` is `blank_disallowed_cell` — use an explicit `0`. A blank
+`source`, `notes`, or `comment` is omitted text, so a `measured` row with a blank `source` is
+`missing_required_field` rather than a blank-cell error.
+
+**Shared `source` column.** On a `profile` row it is `provenance.source`; on a `transmission` row it is that
+row's evidence `source`. They are different fields with the same column name.
+
+**Cell lexical forms.** Numeric cells must parse to a finite double: `NaN`, `Infinity`, `1e999`, and underscored
+forms such as `8_0` are `invalid_number`, and a boolean is never a number. Boolean cells accept only the exact
+forms `true` and `false`. Sign cells accept only `+` and `-`. A null-like string (`null`, `None`) is literal
+text, not omission. List cells use `|` as the separator; a `model_aliases` cell whose first non-space character
+is `{` must be a properly quoted JSON object, rejected as `malformed_tabular` if it does not parse and
+`duplicate_json_key` if it repeats a key. Pipes never appear inside a JSON map cell.
+
+**Grouping.** Rows are grouped by `profile_id`; rows may appear in any order, so a group's `profile` row may
+follow its `coordinate` and `transmission` rows. A group with no `profile` row at all is an orphan and fails
+`missing_required_field`. Repeated `profile` rows for one `profile_id` may agree; disagreement is
+`conflicting_profile_metadata`. A repeated coordinate leaf fails `duplicate_json_key` even when identical —
+there is no last-write-wins. A repeated transmission key fails through the canonical cross-profile check, even
+when identical.
+
+**Source equivalence.** A tabular document is assembled into the same canonical document mapping the JSON
+adapter produces, so a filled CSV/TSV and the equivalent JSON have identical profile hashes, leaf values, and
+transmission values, while their raw source hashes differ. The source kind on every adapter failure is `csv` or
+`tsv`, never `json`.
+
+**Bounds.** Bounded read of `MAX_SOURCE_BYTES + 1` bytes in one call (no stat-then-read race); strict UTF-8 with
+an optional BOM and no unpaired surrogates; SHA-256 over the exact bytes read, before decoding. The aggregate
+logical-row ceiling (a tabular row is exactly one logical row) is enforced **while accumulating rows, before any
+profile object is built**, and the profile-count ceiling is enforced when a new group appears.
+
+Adapters use only the standard library — no third-party reader, no DataFrame materialization — and read the
+decoded byte snapshot once.
+
 ## 7. Canonical serialization and hashes
 
 Canonical form is UTF-8 JSON with recursively sorted keys, compact separators, and no insignificant whitespace.

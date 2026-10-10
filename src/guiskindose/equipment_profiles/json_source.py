@@ -28,7 +28,7 @@ from typing import Any
 
 from guiskindose.equipment_profiles.canonical import source_bytes_hash
 from guiskindose.equipment_profiles.constants import (
-    ACCEPTED_SOURCE_SUFFIXES,
+    JSON_SOURCE_SUFFIXES,
     MAX_AGGREGATE_ROWS,
     MAX_JSON_DEPTH,
     MAX_PROFILES,
@@ -217,14 +217,14 @@ def parse_json_file(path: str | os.PathLike[str]) -> ParsedDocument:
     to a single value-free ``unreadable_source`` error.
     """
     candidate = Path(path)
-    if candidate.suffix.lower() not in ACCEPTED_SOURCE_SUFFIXES:
+    if candidate.suffix.lower() not in JSON_SOURCE_SUFFIXES:
         raise EquipmentProfileError(
             ProfileErrorCode.UNSUPPORTED_SOURCE_SUFFIX, source_kind=SOURCE_KIND_JSON
         )
     try:
         with candidate.open("rb") as handle:
             raw = handle.read(MAX_SOURCE_BYTES + 1)
-    except OSError:
+    except (OSError, ValueError):
         raise EquipmentProfileError(ProfileErrorCode.UNREADABLE_SOURCE, source_kind=SOURCE_KIND_JSON) from None
     if len(raw) > MAX_SOURCE_BYTES:
         raise EquipmentProfileError(

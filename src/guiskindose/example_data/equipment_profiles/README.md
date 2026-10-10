@@ -126,7 +126,8 @@ The 19-column examples use the implicit v1 tabular shape. An optional profile-ro
 `promote_coordinate_wildcard` accepts `true`/`false` (blank/absent means false). Promotion also requires GUI
 acknowledgement or CLI `--allow-equipment-profile-wildcard-promotion`; it never resolves conflicting custom
 claimants. Disable one conflicting profile. JSON aliases can be an explicit alias-to-model object; the existing
-single-model list remains valid shorthand. Numeric limits, errors, and canonical hashes still need Phase 0 lock.
+single-model list remains valid shorthand. Numeric limits, errors, and canonical hashes are specified in
+`dev-docs/EQUIPMENT_PROFILE_SCHEMA.md`.
 
 ### Blank templates are not loadable
 
@@ -137,9 +138,10 @@ error naming the row and field. Fill in at least one domain before loading.
 
 ## Loading a profile
 
-**Not yet available.** The loader, GUI card, CLI option, and profile store described below are **planned and
-unimplemented**. Nothing in this folder is wired into any calculation path today, so none of these files loads
-yet — they are authored starting material for the feature, not a working import. See
+**Not yet available from the application.** An internal, inert parser now handles the JSON and CSV/TSV shapes
+described above, but it is not wired to any feature: no option opens these files and nothing reads a profile into
+a calculation. The GUI card, CLI option, and profile store described below are **planned and unimplemented**, and
+there is no way to load or activate a profile from the application today. See
 [dev-docs/plans/CUSTOM_EQUIPMENT_PROFILES_EXECUTION.md](../../../../dev-docs/plans/CUSTOM_EQUIPMENT_PROFILES_EXECUTION.md)
 for status.
 
@@ -162,6 +164,5 @@ through the existing `include_identifiers` opt-in.
 > still has to publish executable schemas, limits, errors, and hash rules. These files remain authoring
 > examples until tested against the real loader.
 
-Also note that these JSON and CSV files (plus the blank templates) are authored but **unverified against a real
-loader** — no loader exists yet. TSV and XLSX variants are still outstanding, and packaging of this folder into
-the wheel is not done.
+Also note that these JSON, and CSV files (plus the blank templates) are authored but **unverified against a real
+loader**. TSV and XLSX variants are still outstanding, and packaging of this folder into the wheel is not done.

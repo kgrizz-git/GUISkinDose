@@ -169,6 +169,10 @@ Work:
 - [ ] Implement JSON, CSV/TSV, and XLSX adapters. Read bounded file bytes once, hash and parse the same snapshot;
       preflight XLSX container expansion/sheets/rows/text before materialization. Match the kerma loader's accepted
       suffix family (`src/guiskindose/kerma_correction.py:348-376`) without sharing kerma-specific factor rules.
+      **Progress: JSON, CSV, and TSV adapters are implemented and inert**
+      (`json_source.py`, `csv_source.py`, `tsv_source.py`, `tabular_common.py`), covering bounded reads, strict
+      headers and row widths, record-type applicability, ordering-independent grouping, and canonical equivalence
+      with the JSON adapter. **XLSX remains outstanding.**
 - [ ] Implement an in-memory adapter for already-structured GUI/API values. It deep-copies and canonicalizes one
       submission before validation so later form mutation cannot alter an activation candidate.
 - [ ] Implement the local user-store repository: initialize/migrate in the per-user app-data area; transactional
@@ -439,6 +443,25 @@ gets macOS/Linux and Windows manual evidence as applicable.
   logical-row ceiling itself, and early count checks plus a traversal node budget bound work before a deep or
   broad mapping is walked; (9) a `CHANGELOG.md` entry was added for the inert experimental core and the
   Phase 1 item is explicitly **not** checked off complete.
+
+- 2026-10-10 — **CSV and TSV adapters landed** for the tabular slice, still inert. `tabular_common.py` holds the
+  shared primitives (strict UTF-8 with optional BOM and no unpaired surrogates, strict header validation that
+  never echoes a duplicate or unknown column name, row-width and record-type applicability checks, scalar/list/
+  alias-map cell parsing) and `csv_source.py` / `tsv_source.py` are thin delegations that differ only in
+  delimiter and accepted suffix. Both assemble the same canonical document mapping the JSON adapter produces, so
+  the packaged CSV and the packaged JSON have identical profile hashes, leaf values, and transmission values
+  while their raw source hashes differ. Grouping is two-pass so coordinate and transmission rows may precede
+  their `profile` row; repeated `profile` metadata may agree and disagreement fails `conflicting_profile_metadata`
+  while a repeated coordinate leaf fails `duplicate_json_key` even when identical. Tabular cells accept only the
+  exact boolean forms `true`/`false`, reject `NaN`/`Infinity`/`1e999`/`8_0` and booleans as numbers, treat blank
+  filtration as `blank_disallowed_cell`, and treat null-like strings as literal text. Every adapter failure
+  carries source kind `csv`/`tsv`, never `json`, and no raw cell, unknown column, file path, or nested cause.
+  Bounds run during row accumulation, before any profile object is built. Implemented with the standard library
+  only — no third-party reader and no DataFrame materialization — reading the decoded byte snapshot once. The
+  flat-column table and tabular rules are restored in
+  [EQUIPMENT_PROFILE_SCHEMA.md](../EQUIPMENT_PROFILE_SCHEMA.md) §6A, with the packaged README named as the
+  authoritative field dictionary. **Still outstanding:** XLSX, the user store, indexes, normalization, API, CLI,
+  GUI, store wiring, packaged TSV fixtures, and `MANIFEST.in` inclusion.
 
 ## Decision log
 

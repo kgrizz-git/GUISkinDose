@@ -10,6 +10,26 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ### Changed
 
+- **Equipment-profile CSV and TSV adapters (inert)** (2026-10-10) — added
+  `src/guiskindose/equipment_profiles/tabular_common.py` (shared primitives: strict UTF-8 with optional BOM and
+  no unpaired surrogates, strict header validation that never echoes a duplicate or unknown column name,
+  row-width and record-type applicability checks, scalar/list/alias-map cell parsing) plus thin CSV and TSV
+  adapters differing only in delimiter and accepted suffix. Both assemble the same canonical document mapping
+  the JSON adapter produces, so the packaged CSV and packaged JSON have identical profile hashes, leaf values,
+  and transmission values while their raw source hashes differ. Grouping is two-pass so coordinate and
+  transmission rows may precede their `profile` row; repeated `profile` metadata may agree and disagreement
+  fails `conflicting_profile_metadata`, while a repeated coordinate leaf fails `duplicate_json_key` even when
+  identical. Tabular cells accept only the exact boolean forms `true`/`false`, reject `NaN`, `Infinity`,
+  `1e999`, `8_0` and booleans as numbers, treat blank filtration as `blank_disallowed_cell`, and treat
+  null-like strings as literal text. Every adapter failure carries source kind `csv`/`tsv` rather than `json`,
+  and no raw cell, unknown column, file path, or nested exception cause is included. Bounds are enforced during
+  row accumulation, before any profile object is built. Implemented with the standard library only — no
+  third-party reader and no DataFrame materialization — reading the decoded byte snapshot once.
+  `dev-docs/EQUIPMENT_PROFILE_SCHEMA.md` §6A restores the flat-column record-type table and blank semantics,
+  naming the packaged README as the authoritative field dictionary; the plan records the JSON/CSV/TSV adapters
+  as implemented and inert with XLSX still outstanding. No application, normalization, calculation, GUI, CLI,
+  store, or packaging file was touched, and no source value, example, or scan baseline changed.
+
 - **Equipment-profile JSON/core fixes and CHANGELOG entry** (2026-10-10) — fixed nine commit-blocking
   defects in `src/guiskindose/equipment_profiles/` found on review, with no application or numerical
   change: canonical `model_aliases` now serializes as a JSON object `{alias: target}` (resolving map

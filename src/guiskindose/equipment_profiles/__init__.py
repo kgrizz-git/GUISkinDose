@@ -42,6 +42,11 @@ from guiskindose.equipment_profiles.constants import (
     COORDINATE_BLOCKS,
     COORDINATE_LEAF_COUNT,
     EVIDENCE_STATUSES,
+    FLAT_COLUMNS,
+    FLAT_COLUMNS_BY_RECORD_TYPE,
+    FLAT_PROMOTION_COLUMN,
+    FLAT_REQUIRED_COLUMNS_BY_RECORD_TYPE,
+    IMPLEMENTED_SOURCE_KINDS,
     MAX_AGGREGATE_ROWS,
     MAX_ALIASES,
     MAX_JSON_DEPTH,
@@ -52,12 +57,16 @@ from guiskindose.equipment_profiles.constants import (
     MAX_SOURCE_TEXT,
     MAX_TRANSMISSION_ROWS,
     MAX_XLSX_SHEETS,
+    RECORD_TYPES,
     SCHEMA_VERSION,
     SIGN_VALUES,
+    SOURCE_KIND_CSV,
     SOURCE_KIND_JSON,
     SOURCE_KIND_MEMORY,
+    SOURCE_KIND_TSV,
     SOURCE_KINDS,
 )
+from guiskindose.equipment_profiles.csv_source import parse_csv_bytes, parse_csv_file
 from guiskindose.equipment_profiles.errors import (
     RESERVED_CODES,
     EquipmentProfileError,
@@ -65,18 +74,20 @@ from guiskindose.equipment_profiles.errors import (
     error_codes,
     is_implemented_code,
 )
+from guiskindose.equipment_profiles.json_source import (
+    ParsedDocument,
+    parse_json_bytes,
+    parse_json_file,
+    parse_memory_document,
+)
 from guiskindose.equipment_profiles.keys import (
     is_wildcard_model,
     normalize_manufacturer_key,
     normalize_model_key,
 )
 from guiskindose.equipment_profiles.loading import (
-    ParsedDocument,
     ProfileSet,
     combine_documents,
-    parse_json_bytes,
-    parse_json_file,
-    parse_memory_document,
 )
 from guiskindose.equipment_profiles.matches import (
     CoordinateMatchRecord,
@@ -95,6 +106,7 @@ from guiskindose.equipment_profiles.models import (
     TransmissionRow,
     coordinate_leaf_values,
 )
+from guiskindose.equipment_profiles.tsv_source import parse_tsv_bytes, parse_tsv_file
 from guiskindose.equipment_profiles.validation import validate_document
 
 __all__ = [
@@ -103,6 +115,11 @@ __all__ = [
     "COORDINATE_BLOCKS",
     "COORDINATE_LEAF_COUNT",
     "EVIDENCE_STATUSES",
+    "FLAT_COLUMNS",
+    "FLAT_COLUMNS_BY_RECORD_TYPE",
+    "FLAT_PROMOTION_COLUMN",
+    "FLAT_REQUIRED_COLUMNS_BY_RECORD_TYPE",
+    "IMPLEMENTED_SOURCE_KINDS",
     "MAX_AGGREGATE_ROWS",
     "MAX_ALIASES",
     "MAX_JSON_DEPTH",
@@ -113,12 +130,15 @@ __all__ = [
     "MAX_SOURCE_TEXT",
     "MAX_TRANSMISSION_ROWS",
     "MAX_XLSX_SHEETS",
+    "RECORD_TYPES",
     "RESERVED_CODES",
     "SCHEMA_VERSION",
     "SIGN_VALUES",
     "SOURCE_KINDS",
+    "SOURCE_KIND_CSV",
     "SOURCE_KIND_JSON",
     "SOURCE_KIND_MEMORY",
+    "SOURCE_KIND_TSV",
     "UNSUPPORTED_CAPABILITIES",
     # Matches
     "CoordinateMatchRecord",
@@ -156,9 +176,13 @@ __all__ = [
     "normalize_manufacturer_key",
     "normalize_model_key",
     "order_leaf_provenance",
+    "parse_csv_bytes",
+    "parse_csv_file",
     "parse_json_bytes",
     "parse_json_file",
     "parse_memory_document",
+    "parse_tsv_bytes",
+    "parse_tsv_file",
     "profile_hash",
     "source_bytes_hash",
     "supported_profiles",

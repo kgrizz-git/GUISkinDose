@@ -171,7 +171,7 @@ SOURCE_KIND_GUI = "gui"
 SOURCE_KIND_STORE = "store"
 
 #: Source kinds with an implemented adapter in the current core slice.
-IMPLEMENTED_SOURCE_KINDS = (SOURCE_KIND_JSON, SOURCE_KIND_MEMORY)
+IMPLEMENTED_SOURCE_KINDS = (SOURCE_KIND_JSON, SOURCE_KIND_MEMORY, SOURCE_KIND_CSV, SOURCE_KIND_TSV)
 
 #: Every documented source kind. The rest are reserved for their adapters.
 SOURCE_KINDS = (
@@ -184,8 +184,91 @@ SOURCE_KINDS = (
     SOURCE_KIND_STORE,
 )
 
-#: File suffixes accepted by the implemented file adapter.
-ACCEPTED_SOURCE_SUFFIXES = (".json",)
+#: File suffixes accepted by the implemented JSON file adapter.
+JSON_SOURCE_SUFFIXES = (".json",)
+
+#: File suffix -> source kind for the implemented tabular file adapters.
+TABULAR_SUFFIX_TO_KIND = {
+    ".csv": SOURCE_KIND_CSV,
+    ".tsv": SOURCE_KIND_TSV,
+}
+
+# --- Flat tabular shape (RFC 4180-style single table) -----------------------------------
+
+RECORD_TYPE_PROFILE = "profile"
+RECORD_TYPE_COORDINATE = "coordinate"
+RECORD_TYPE_TRANSMISSION = "transmission"
+
+#: The only accepted ``record_type`` values.
+RECORD_TYPES = (RECORD_TYPE_PROFILE, RECORD_TYPE_COORDINATE, RECORD_TYPE_TRANSMISSION)
+
+#: Columns of the flat tabular table, in packaged-example order. Exactly these are required.
+FLAT_COLUMNS = (
+    "record_type",
+    "profile_id",
+    "manufacturer",
+    "models",
+    "manufacturer_aliases",
+    "model_aliases",
+    "source",
+    "notes",
+    "field",
+    "value",
+    "device_model",
+    "acquisition_plane",
+    "kvp_kv",
+    "filtration_added_mmcu",
+    "filtration_added_mmal",
+    "k_patient_support",
+    "evidence_status",
+    "date",
+    "comment",
+)
+
+#: The optional profile-row column; when present the header holds these plus ``FLAT_COLUMNS``.
+FLAT_PROMOTION_COLUMN = "promote_coordinate_wildcard"
+
+#: Column names an error field path may use for a tabular source: the flat columns, the optional
+#: promotion column, and the three ``record_type`` tokens. Nothing else, so no raw cell content leaks.
+FLAT_FIELD_PATH_VOCABULARY = frozenset(
+    set(FLAT_COLUMNS) | {FLAT_PROMOTION_COLUMN} | set(RECORD_TYPES)
+)
+
+#: Which flat columns may carry a value on each ``record_type``. Every other column must be blank on that row.
+#: ``record_type`` and ``profile_id`` are applicable to every row type.
+FLAT_COLUMNS_BY_RECORD_TYPE: dict[str, frozenset[str]] = {
+    RECORD_TYPE_PROFILE: frozenset(
+        {"record_type", "profile_id", "manufacturer", "models", "manufacturer_aliases",
+         "model_aliases", "source", "notes", FLAT_PROMOTION_COLUMN}
+    ),
+    RECORD_TYPE_COORDINATE: frozenset({"record_type", "profile_id", "field", "value"}),
+    RECORD_TYPE_TRANSMISSION: frozenset(
+        {"record_type", "profile_id", "source", "device_model", "acquisition_plane", "kvp_kv",
+         "filtration_added_mmcu", "filtration_added_mmal", "k_patient_support",
+         "evidence_status", "date", "comment"}
+    ),
+}
+
+#: Columns that must be non-blank on their record type. Anything else may be blank.
+FLAT_REQUIRED_COLUMNS_BY_RECORD_TYPE: dict[str, frozenset[str]] = {
+    RECORD_TYPE_PROFILE: frozenset({"record_type", "profile_id", "manufacturer", "models"}),
+    RECORD_TYPE_COORDINATE: frozenset({"record_type", "profile_id", "field", "value"}),
+    RECORD_TYPE_TRANSMISSION: frozenset(
+        {"record_type", "profile_id", "device_model", "acquisition_plane", "kvp_kv",
+         "filtration_added_mmcu", "filtration_added_mmal", "k_patient_support", "evidence_status"}
+    ),
+}
+
+#: Columns where a blank cell is explicitly not "zero"/"absent" and is an error.
+FLAT_BLANK_DISALLOWED_COLUMNS = frozenset({"filtration_added_mmcu", "filtration_added_mmal"})
+
+#: Separator for flat list cells (models and alias lists). Only lists use it; JSON map cells do not.
+FLAT_LIST_SEPARATOR = "|"
+
+#: Strict boolean lexical forms for flat boolean cells. Nothing else is accepted.
+FLAT_BOOLEAN_TRUE = "true"
+FLAT_BOOLEAN_FALSE = "false"
+FLAT_BOOLEAN_TOKENS = (FLAT_BOOLEAN_TRUE, FLAT_BOOLEAN_FALSE)
 
 # --- Match-record vocabularies ----------------------------------------------------------
 
