@@ -1,6 +1,6 @@
 # Custom Equipment Profiles — Execution Plan
 
-Status: **Active — not started**
+Status: **Active — Phase 0 in progress; core implementation blocked on contract decisions**
 Design authority: [CUSTOM_EQUIPMENT_PROFILES_SPEC.md](CUSTOM_EQUIPMENT_PROFILES_SPEC.md) (reviewed 2026-10-10)
 Created: 2026-10-09 · plan updated 2026-10-10
 Parent roadmap: [CORRECTION_DATA_AND_SUPPORT_TRANSMISSION_PLAN.md](CORRECTION_DATA_AND_SUPPORT_TRANSMISSION_PLAN.md)
@@ -52,12 +52,16 @@ Work:
  - [ ] Lock source schemas (decision 4): nested JSON document; ONE flat tabular model shared by CSV/TSV and XLSX
       (strict `record_type` rows, same column set, one sheet, sheet selectable for multi-sheet workbooks);
       canonical in-memory GUI submission; canonical JSON payload per stored revision.
- - [ ] Author the packaged starting material under `example_data/equipment_profiles/`: a filled example and a
-      blank template for JSON, CSV/TSV, and XLSX, plus a README with the field/column dictionary and CLI/GUI
-      usage. Mirror the kema-meter precedent (`src/guiskindose/example_data/kema_meter/`). Content is synthetic:
-      fictional labels/factors/dates, no station, serial, paths, or site-identifying notes. XLSX is an opaque
-      container, so its examples enter the approved-asset inventory with hash-pinned human clearance before
-      merge; CSV/TSV/JSON are scanned as text.
+- [ ] Complete the packaged starting material under `example_data/equipment_profiles/`: filled examples and
+      blank templates for JSON, CSV/TSV, and XLSX, plus a README with the field/column dictionary and planned
+      CLI/GUI usage. The JSON/CSV files and README are authored; TSV/XLSX remain outstanding, and the schema
+      is preliminary pending the Phase 0 lock. Real-loader validation follows in Phase 1.
+      Mirror the kerma-meter precedent (`src/guiskindose/example_data/kerma_meter/`). Content is synthetic:
+      fictional labels/factors/dates, no station, serial, paths, or site-identifying notes. XLSX needs
+      hash-pinned human clearance in the approved-asset inventory before merge; CSV/TSV/JSON are text-scanned.
+- [ ] Add packaging inclusion before the Phase 5 download actions and packaged-resource tests: `MANIFEST.in`
+      currently has no `example_data/equipment_profiles/` patterns. Phase 6 owns the final installed-wheel
+      clean-directory proof; authoring files in this directory alone does not prove they ship.
  - [ ] Author invalid examples (malformed, wrong schema version, unknown fields, duplicate claim, out-of-extent
       row, unsupported suffix) with the stable error code each must produce.
  - [ ] Lock the separate user-store schema and migration policy: record/revision IDs, canonical payload, profile/hash/
@@ -84,16 +88,50 @@ Work:
 - [ ] Define the exact pre-calculation, Calculate, Results, and export representations for field inheritance,
       transmission partial coverage, active/unused profiles, and structured immutable match records (decision 20).
 
+### Phase 0 unresolved blockers — open, do not close in docs
+
+These four contract decisions are **unresolved** and block Phase 1's core package. They require scientific and
+schema decisions before implementation; nothing below is settled by this plan, and no
+baseline model mapping is added here.
+
+1. **No-baseline new-model transmission bounds.** The "custom rows may not extend a baseline model/plane grid's
+   kVp/Cu/Al extents" rule (spec §7) presumes a baseline grid exists. The packaged attenuation table covers
+   only `AXIOM-Artis` and `AlluraClarity`, so the fictional `DemoScope 2000` / `DemoScope Biplane 4000` in the
+   packaged example have **no baseline grid at all**. Open: may a no-baseline model supply an unconstrained grid,
+   must it declare extents explicitly, or is it rejected — and do the new-model tests and the fictional packaged
+   example describe the same contract either way?
+2. **Sparse overlay rectangular-grid completion / NaN policy.** Each selected Al slice needs a usable kVp × Cu
+   grid, while custom rows are sparse. An offline reproduction found that a complete 2 × 2 synthetic grid
+   **plus one in-extent intermediate node** creates 4 missing pivot cells, and `_lookup_pivot` returns
+   `(nan, 'interpolated')`. Open:
+   is the composite grid completed first (by what rule — carried, interpolated, or hard error), or does a missing
+   pivot fail the query? This is a scientific contract decision, not a code change.
+3. **Authoritative baseline measured/estimated classification, including `invalid_inherited` nodes.** A custom
+   `measured` node replaces a same-key baseline node and `estimated` fills only nodes with no measured value from
+   either source. It is not yet authoritative which class a *baseline* node belongs to, nor how baseline nodes
+   carrying `invalid_inherited` are classified. Until that is fixed, "replace" versus "fill" cannot be decided
+   deterministically per node.
+4. **Multi-model alias mapping, wildcard promotion, override syntax, and tabular version encoding.** One profile
+   may carry several canonical model keys plus separate explicit alias lists. Unspecified: how many models may
+   map from one profile and how alias lists are resolved across them; the declaration syntax and
+   acknowledgement/CLI-opt-in mechanism that promotes a custom wildcard above a bundled exact; how an explicit
+   override is expressed when two enabled profiles claim the same slot; and how CSV/TSV/XLSX encode
+   `schema_version`.
+
 Exit criteria: signed decision list; schemas and examples parse mechanically; limits/error catalog/privacy matrix are
-complete; no open semantic question blocks Phase 1.
+complete; **all four unresolved blockers above are decided and their consequences written into the spec before
+Phase 0 exits**; no open semantic question blocks Phase 1. Phase 0 is **not** signed off today.
 
 ## Phase 1 — Canonical model, source adapters, store, and identity contract
 
 **Goal.** Parse every non-GUI source and produce immutable validated profile sets without changing calculations.
 
 Work:
-- [ ] Add a small core package for canonical profile/domain records, source provenance, validation, hashing, conflict
-      detection, compiled match indexes, and stable errors. No calculation or GUI imports in the core.
+- [ ] **BLOCKED on the Phase 0 contract decisions above.** Add a small core package for canonical profile/domain
+      records, source provenance, validation, hashing, conflict detection, compiled match indexes, and stable
+      errors. Do not start this until the four blockers are decided: the core encodes whichever transmission
+      bounds, grid-completion, classification, and alias/wildcard/override rules Phase 0 locks, so writing it
+      first would enshrine an unresolved contract. No calculation or GUI imports in the core.
 - [ ] Implement JSON, CSV/TSV, and XLSX adapters. Read bounded file bytes once, hash and parse the same snapshot;
       preflight XLSX container expansion/sheets/rows/text before materialization. Match the kerma loader's accepted
       suffix family (`src/guiskindose/kerma_correction.py:348-376`) without sharing kerma-specific factor rules.
@@ -140,9 +178,12 @@ Work:
 - [ ] Materialize per-leaf source provenance and issue the per-exam `partial match — fields inherited from
       bundled/Default` notice naming fields and sources. Show it before calculation and in Calculate, Results, dict/JSON,
       and rich exports. Fully specified profiles show `complete match` without the warning.
-- [ ] Migrate the hidden run-configuration normalization list to the shared loader; bump run-state schema; read old
-      documents; store IDs/schema/revisions/hashes/match/active values and manufacturer/model by default, never paths,
-      notes, station, or serial.
+- [ ] Migrate the hidden run-configuration normalization list to the shared loader; bump run-state schema; read
+      old documents; store IDs/schema/revisions/hashes/match/active values and manufacturer/model by default,
+      never paths, notes, station, or serial.
+- [ ] Own the **old run-state compatibility reader** here and nowhere else: this phase is the single place that
+      reads pre-feature run-state normalization-profile documents and maps them into the shared loader
+      (spec §10, decision 18). Phase 3 does **not** re-open it.
 - [ ] Refuse application to already-loaded exams in this slice. Importing or persisting a candidate is allowed, but
       Phase 3 owns safe post-load activation.
 - [ ] Pin exact expected Tx/Ty/Tz, angle signs, swap, field size, detector size, structured match, inheritance notice,
@@ -163,7 +204,8 @@ Work:
 - [ ] Add explicit manufacturer/model aliases and manufacturer-scoped model wildcards. A wildcard that outranks a
       bundled exact requires schema declaration plus GUI acknowledgement or CLI opt-in (decisions 3 and 9).
 - [ ] Support multiple disjoint sources and enable/disable/remove. Resolve every conflict before any live mutation.
-- [ ] Add the direct-`NormalizationSettings` compatibility adapter and old run-state profile reader.
+- [ ] Add the direct-`NormalizationSettings` compatibility adapter. Extend the Phase 2 run-state reader for
+      newly supported capabilities as needed; its initial backward reader must already ship with the schema bump.
 - [ ] Implement one atomic activation coordinator: freeze candidate source/revisions; validate; snapshot state;
       re-normalize every affected DICOM, single-tabular, and multi-file exam; rebuild pristine baselines; recompute
       detected origins; reapply session overrides exactly once; rebuild indexes; clear results/previews; include
@@ -284,10 +326,18 @@ gets macOS/Linux and Windows manual evidence as applicable.
 ## Progress log
 
 - 2026-10-10 — Design and execution documents aligned; implementation not started.
+- 2026-10-10 — Phase 0 authoring started; core implementation blocked pending four contract decisions (new-model
+  transmission bounds for a model with no baseline grid; sparse-overlay rectangular-grid completion/NaN policy
+  with a reproduced `(nan, 'interpolated')` case; authoritative baseline measured/estimated classification
+  including `invalid_inherited` nodes; multi-model alias mapping / wildcard promotion / override syntax /
+  tabular version encoding). Phase 1's core package is gated on them. The Phase 2/Phase 3 contradiction over the
+  old run-state compatibility reader was resolved by assigning it wholly to Phase 2.
 
 ## Decision log
 
 - 2026-10-10 — Phase 0 implements the authoritative 20 decisions in spec §11; later changes amend the spec first.
+- 2026-10-10 — The four Phase 0 blockers above are recorded as **unresolved** pending owner decisions; this plan
+  does not resolve scientific policy and adds no baseline model mapping.
 
 ## Risks and mitigations
 

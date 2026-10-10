@@ -1,6 +1,8 @@
 # Custom Equipment Profiles — Design Spec
 
-Status: **Design approved for Phase 0 implementation lock** (reviewed 2026-10-10)
+Status: **Design approved for Phase 0 contract lock; implementation sign-off pending.** Four contract decisions remain
+unresolved and are recorded as blockers in
+[CUSTOM_EQUIPMENT_PROFILES_EXECUTION.md](CUSTOM_EQUIPMENT_PROFILES_EXECUTION.md) (Phase 0). Reviewed 2026-10-10.
 Execution plan: [CUSTOM_EQUIPMENT_PROFILES_EXECUTION.md](CUSTOM_EQUIPMENT_PROFILES_EXECUTION.md)
 Created: 2026-09-08 · renamed from `CUSTOM_EQUIPMENT_PROFILES_PLAN.md` on 2026-10-09
 Parent roadmap: [CORRECTION_DATA_AND_SUPPORT_TRANSMISSION_PLAN.md](CORRECTION_DATA_AND_SUPPORT_TRANSMISSION_PLAN.md)
@@ -91,11 +93,11 @@ The store is not the bundled correction provider and never mutates package data.
 
 ### Packaged examples and templates
 
-Users get the same starting experience as the kema-meter example file
+Users get the same starting experience as the kerma-meter example file
 (`src/guiskindose/example_data/kerma_meter/` — packaged CSV plus README plus a GUI download button):
 
 - a **filled example** and a **blank template** for each accepted source, packaged under
-  `example_data/equipment_profiles/`: JSON, CSV/TSV, XLSX (vatabular shapes identical, see §4), plus a
+  `example_data/equipment_profiles/`: JSON, CSV/TSV, XLSX (tabular shapes identical, see §4), plus a
   short README with the column/field dictionary and the CLI/GUI usage;
 - an Equipment Profiles card action to download the example and the template, in browser mode via
   `ui.download()` and in native mode via the OS save dialog (the mechanism already used by
@@ -226,7 +228,7 @@ ship atomic post-load activation.
 | Data | Default export/run config | Identifier opt-in | Logs |
 |---|---|---|---|
 | Manufacturer and model, including canonical `matched_input_key` | Included; equipment design data, not identifiers | Not required | May be shown |
-| Station name and serial number | Excluded from per-event output | Included only through existing `include_identifiers` gate | Never; counts/event indices only |
+| Station name and serial number | Excluded from per-event output | Included only as gated fields in per-event exports through the existing `include_identifiers` gate | Never — counts/event indices only, and the opt-in does not change that |
 | Profile ID, schema/revision, hashes, match level, active values, inheritance/source summary | Included | Not required | IDs/status/counts allowed |
 | Profile source path | Never included; replaced by provenance/hashes | Full profile export is separate, but run provenance still omits paths | Never |
 | Bounded free-text notes/source detail | Excluded | Included only by explicit full-profile export | Never |

@@ -21,6 +21,10 @@ That keeps SemVer and contributor history organized.
 
 ### Changed
 
+- **Equipment-profile starting files** (2026-10-10) — added synthetic JSON/CSV examples and blank
+  templates with authoring guidance. These describe the planned schema; equipment-profile loading,
+  activation, and GUI downloads are not implemented yet.
+
 - **Upload auto-detect failure hint** (2026-10-09) — when auto-detect cannot choose, the Upload
   message says it needs one source's own column and at least two recognized columns, and that it
   stops when two sources both fit. It still asks you to choose a format and upload again.

@@ -10,6 +10,12 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ### Changed
 
+- **Equipment-profile design readiness** (2026-10-10) — reviewed the spec and execution phases,
+  recorded unresolved Phase 0 contracts before calculation changes, and clarified the synthetic
+  example documentation. Added guidance to split large PRs while preserving atomic audit and
+  migration contracts. Accepted only the new synthetic CSV-header heuristic in the phi-scan
+  baseline, preserving all earlier entries and expiry dates.
+
 - **2026-10-07 manual smokes recorded** (2026-10-09) — the agent-run smoke pass for shipped features
   now lives in the plans instead of `TO_DO.md`: multi-exam upload/calculate/per-exam offsets
   ([plans/archive/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN.md](plans/archive/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN.md),
