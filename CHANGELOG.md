@@ -21,6 +21,13 @@ That keeps SemVer and contributor history organized.
 
 ### Changed
 
+- **Equipment maker identity in normalized data** (2026-10-11) — every normalized event frame now
+  carries a `manufacturer` column with the exact equipment-maker spelling (`None` when the source
+  carries none). The `normalized` tabular   schema accepts an optional `manufacturer` column; tables
+  without it load with a warning giving the event count. An exam carrying anything but one
+  maker/model pair is rejected with a value-free error instead of silently using the first pair.
+  Dose results, coordinates, and exports are unchanged (maker/model were already default-safe in reports).
+
 - **Equipment-profile starting files** (2026-10-10) — added synthetic JSON/CSV examples and blank
   templates with authoring guidance. These describe the planned schema; equipment-profile loading,
   activation, and GUI downloads are not implemented yet.

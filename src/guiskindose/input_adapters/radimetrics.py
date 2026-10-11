@@ -449,7 +449,7 @@ def _transform(data_df: pd.DataFrame, ctx: AdapterContext) -> pd.DataFrame:
         unknown = set(data_df["ManufacturerModelName"].dropna().unique()) - _KNOWN_MODELS
         if unknown:
             ctx.warnings.append(
-                f"Radimetrics adapter: unvalidated model(s) {unknown}. "
+                f"Radimetrics adapter: {len(unknown)} unvalidated model(s). "
                 "Column mapping and unit conversions may not be correct. "
                 "Verify results against known-good RDSR output."
             )

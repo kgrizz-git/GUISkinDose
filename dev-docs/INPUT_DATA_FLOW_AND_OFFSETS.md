@@ -83,6 +83,31 @@ A report with no `Manufacturer` or `ManufacturerModelName` (or with values match
 `Default` profile and is reported as `Fallback`. If the settings have no `Default` profile, normalization raises
 `RdsrInputError`.
 
+### Equipment identity in normalized frames (Phase 1, custom profiles)
+
+Every raw-normalized frame carries a canonical `manufacturer` column alongside `model`
+(`rdsr_normalizer._normalize_machine_parameters`): the exact per-event maker spelling, with missing
+identity as `None` — never the strings `"none"`/`"nan"`. Matching still normalizes later with the
+existing key normalizers; coordinates and dose are unchanged, and the vendor-coordinate selection
+(row-0 match, offsets, signs, field-size mode) is untouched.
+
+One frame is one homogeneous exam: `exam_identity.require_homogeneous_identity()` runs inside
+`rdsr_normalizer()` after device-column hardening and before profile selection, so a frame with
+anything but one canonical (manufacturer, model) pair fails closed with a value-free `RdsrInputError`
+(pair count, plus the count of rows without maker identity when nonzero — never maker/model text)
+instead of silently normalizing under the first pair. Distinct canonical makers, same-maker model
+variation, and known+unknown mixes are all rejected: no row borrows another row's identity, and the
+row-0 selection downstream only ever runs on a proven-homogeneous frame. Spelling variants of one
+maker are one maker; distinct canonical keys are mixed even when bundled aliases would unite them
+(alias matching is a Phase 2+ concern). An all-unknown frame stays compatible (legacy model-only
+path). The `normalized` tabular schema recognizes an optional `manufacturer` column and enforces
+the same rule per exam (study-id groups are split first, then checked individually); legacy tables
+without the column load with a count-only warning. DoseTrack maps each row's Equipment Name through
+the established `MODEL2MANUF` rules before the guard, so mixed DoseTrack files fail closed rather
+than collapsing under the first name. Nothing is inferred from profile models/aliases, and no
+custom coordinates are applied. See [INPUT_FIELD_REFERENCE.md](INPUT_FIELD_REFERENCE.md) for the
+column contract and the custom-profile spec §5 for matching.
+
 ### Input hardening and the required-concept contract
 
 `rdsr_input_checks.py` runs inside `rdsr_normalizer()` before any column is read, in this order:

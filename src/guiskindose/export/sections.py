@@ -13,6 +13,7 @@ from guiskindose.constants import (
     KEY_NORMALIZATION_MANUFACTURER,
     KEY_NORMALIZATION_MODEL_NAME,
 )
+from guiskindose.exam_identity import clean_identity_value
 from guiskindose.rotational_envelope import is_disclosed_row
 
 from ._exam_view import ExamView
@@ -32,15 +33,52 @@ _SETTINGS_KEYS = (
 )
 
 
+#: Texts that are missing-value artifacts, never reportable identity.
+_NON_IDENTITY_TEXTS = frozenset({"", "nan", "nat", "none"})
+
+
 def _first_present(df: pd.DataFrame | None, column: str) -> str | None:
+    """First non-blank value of *column*, or ``None`` when absent.
+
+    Missing identity is never stringified into a matchable ``"none"``/``"nan"``:
+    NaN/None/blank cells are skipped, and literal ``"nan"``/``"none"``/``"nat"``
+    texts (case-insensitive ``str(None)``/``str(nan)`` artifacts) are treated
+    as absent. Any other value keeps its exact spelling.
+    """
     if df is None or column not in df.columns:
         return None
     series = df[column].dropna()
     if series.empty:
         return None
-    val = series.iloc[0]
-    text = str(val).strip()
-    return text or None
+    for val in series.tolist():
+        text = str(val).strip()
+        if text and text.casefold() not in _NON_IDENTITY_TEXTS:
+            return text
+    return None
+
+
+def _first_identity_pair(df: pd.DataFrame | None) -> tuple[str | None, str | None]:
+    """Maker/model from one consistent row: the first row with maker identity.
+
+    Maker and model are never assembled from different rows — a maker from one
+    row paired with a model from another would invent an identity pair the exam
+    never had. The model comes from the same row as the maker (``None`` when
+    that row's model is missing); only when no row carries maker identity does
+    the model fall back to the frame's first present model (legacy model-only
+    frames, where there is no maker to contradict).
+    """
+    if df is None:
+        return None, None
+    maker_col = KEY_NORMALIZATION_MANUFACTURER if KEY_NORMALIZATION_MANUFACTURER in df.columns else None
+    model_col = KEY_NORMALIZATION_MODEL_NAME if KEY_NORMALIZATION_MODEL_NAME in df.columns else None
+    if maker_col is not None:
+        makers = df[maker_col].tolist()
+        models = df[model_col].tolist() if model_col is not None else [None] * len(df)
+        for raw_maker, raw_model in zip(makers, models, strict=True):
+            maker = clean_identity_value(raw_maker)
+            if maker is not None:
+                return maker, clean_identity_value(raw_model)
+    return None, _first_present(df, model_col) if model_col is not None else None
 
 
 def serialize_settings(settings: Any) -> dict[str, Any]:
@@ -121,14 +159,19 @@ def non_default_settings(snapshot: dict[str, Any]) -> dict[str, Any]:
 
 
 def equipment_section(exam: ExportExamSource) -> dict[str, str | None]:
-    """Extract equipment details (manufacturer, model, profile) from the exam."""
+    """Extract equipment details (manufacturer, model, profile) from the exam.
+
+    Maker and model come from one consistent row (see
+    :func:`_first_identity_pair`), never assembled across rows.
+    """
     df = exam.normalized_data
     profile = exam.transform_meta.get("normalization_profile")
     if profile is None and exam.provenance is not None:
         profile = exam.provenance.schema_name
+    maker, model = _first_identity_pair(df)
     return {
-        "manufacturer": _first_present(df, KEY_NORMALIZATION_MANUFACTURER),
-        "model": _first_present(df, KEY_NORMALIZATION_MODEL_NAME),
+        "manufacturer": maker,
+        "model": model,
         "normalization_profile": profile,
     }
 

@@ -83,6 +83,7 @@ _TRIGGER_EXCLUSIONS: dict[str, frozenset[str]] = {
     "normalized": frozenset(
         {
             "model",
+            "manufacturer",
             "kvp",
             "acquisition_type",
             "acquisition_plane",

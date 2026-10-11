@@ -8,7 +8,22 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ## [Unreleased]
 
+- Radimetrics unknown-model diagnostics report only the model count; raw equipment names remain local.
+
 ### Changed
+- **Normalized manufacturer identity (Phase 1, no activation)** (2026-10-11) — new
+  `src/guiskindose/exam_identity.py` seam (cleaning, raw/canonical pair listing, descriptive
+  classification, fail-closed guard); `rdsr_normalizer()` emits a canonical `manufacturer` column and
+  rejects anything but one canonical (manufacturer, model) pair per frame before profile selection —
+  distinct makers, same-maker model variation, and known+unknown mixes all fail closed value-free, so
+  row-0 selection only runs on proven-homogeneous frames; `normalized` schema recognizes optional
+  `manufacturer`, materializes all-`None` with a count-only legacy warning when absent/blank, and checks
+  each study-id group individually with opaque positions; DoseTrack maps each row's Equipment Name
+  per-row through `MODEL2MANUF` (no first-name overwrite; count-only unknown warning); export
+  maker/model come from one consistent row; `manufacturer` added to the normalized detection
+  fingerprint as score-only. 63 targeted tests in `tests/unittests/test_exam_identity.py`; full-frame
+  digest regen adds only the `manufacturer` column; golden dose/k_tab, GUI, CLI, and export suites
+  green; ruff, basedpyright, complexity, size, freshness, help-registry, and UI-copy gates clean.
 - **Equipment-profile index review fixes (inert)** (2026-10-11) — hardened `indexes.py` against review:
   bounded sequence intake (`MAX_PROFILES` before copying, bounded materialization, aggregate rows before
   expansion), strict entry context (exact-`str` source kind, exact-`int` revision in `1..MAX_REVISION`,

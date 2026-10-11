@@ -18,11 +18,14 @@ if this page and the adapters disagree, trust the adapters and update this file.
 These **23** names are what `rdsr_normalizer()` produces and what the `normalized` tabular schema
 requires (`NORMALIZED_COLUMN_NAMES` / `NORMALIZED_REQUIRED_COLUMNS` in
 `input_adapters/normalized.py`). Case in the DataFrame matches the “Proper” column.
+`rdsr_normalizer()` additionally emits a canonical `manufacturer` column (see below), so
+raw-normalized frames carry **24** columns; the `normalized` schema accepts `manufacturer` as an
+optional 24th column and materializes it as all-`None` with a count-only legacy warning when absent.
 
 | Proper | Meaning (short) | Typical unit in contract |
 |--------|-----------------|---------------------------|
-| `model` | Equipment model string | — |
-| `DSD` | Source → detector distance | cm |
+| `manufacturer` | Equipment maker string, exact per-event spelling (optional on `normalized` input; always emitted by `rdsr_normalizer()`) | — |
+| `model` | Equipment model string | — || `DSD` | Source → detector distance | cm |
 | `DSI` | Source → isocenter distance | cm |
 | `DID` | Isocenter → detector distance | cm |
 | `DSIRP` | Source → IRP distance | cm |
@@ -41,11 +44,29 @@ requires (`NORMALIZED_COLUMN_NAMES` / `NORMALIZED_REQUIRED_COLUMNS` in
 ### Optional identity columns (kerma-meter CF)
 
 Not required for dose geometry, but used when kerma-meter correction is enabled:
-
 | Proper | Source examples |
 |--------|-----------------|
 | `station_name` | DICOM `StationName`; tabular equipment/room labels when preserved |
 | `device_serial` | DICOM `DeviceSerialNumber` |
+
+### Equipment identity contract (Phase 1, custom profiles)
+
+Coordinate identity is canonical manufacturer/model for one homogeneous exam: one exam carries
+exactly one canonical pair, both axes through the existing key normalizers (no vendor aliases).
+`rdsr_normalizer()` always emits `manufacturer` with the exact per-event maker spelling (`None`
+when the source carries none — never the strings `"none"`/`"nan"`). The `normalized` schema
+recognizes an optional `manufacturer` column (case-insensitive); a missing or entirely blank
+column loads as all-`None` with one count-only warning giving the event count. Anything but one
+canonical pair fails closed with a value-free error (pair count, plus the count of rows without
+maker identity when nonzero — never maker/model text): distinct canonical makers, same-maker
+model variation, and known+unknown mixes are all rejected, so no row silently borrows another
+row's identity. Key spelling variants (case, punctuation, spacing) collapse to one pair; distinct
+canonical keys (e.g. `Siemens` vs `Siemens Healthcare`) are mixed. An all-unknown frame stays
+compatible (legacy model-only path). Study-id groups are checked individually, so pairs may differ
+*across* exams, never *within* one. DoseTrack maps each row's Equipment Name through the
+established `MODEL2MANUF` rules (blank continuations repeat the row above; leading blanks stay
+missing) and is subject to the same guard. Validation and classification live in
+`src/guiskindose/exam_identity.py`. No custom coordinates are applied: this is identity only.
 
 ---
 

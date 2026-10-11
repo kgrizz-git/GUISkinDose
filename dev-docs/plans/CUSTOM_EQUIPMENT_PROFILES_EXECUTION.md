@@ -206,17 +206,33 @@ Work:
       on *any* failure (unexpected errors close safely, cancellation preserved); required revision CAS on update
       plus tombstoned generations against ABA reuse; payload re-parse, re-validation, and re-hash on every read;
       new records start disabled; unsupported capabilities persist but are never activated; enabling validates the
-      would-be enabled set atomically. **Still open in Phase 1:** canonical `manufacturer` in normalized frames,
-      coordinate/transmission indexes, per-exam match-record wiring, and multi-source duplicate detection at
-      activation time.
+      would-be enabled set atomically. **Still open in Phase 1:** per-exam match-record wiring and
+      multi-source duplicate detection at activation time.
 - [x] Load stored revisions in one read transaction and materialize an immutable selected-revision snapshot. Test that
       file → store → canonical JSON preserves profile hashes while source/revision provenance changes appropriately.
       **Implemented and inert**: `selected_snapshot()` loads in one read transaction (empty enabled store yields a
       valid empty snapshot), bounds selection and aggregate rows before materializing payloads, runs the canonical
       conflict check over the selection, and exposes the locked revision-set source hash with `source_kind: "store"`.
       File → store → canonical-JSON reload preserves profile hashes while the source hash changes appropriately.
-- [ ] Add canonical `manufacturer` to every raw-normalized frame and the normalized adapter contract; warn for legacy
-      normalized data lacking it. Keep mixed coordinate identities split/rejected before matching.
+- [x] Add canonical `manufacturer` to every raw-normalized frame and the normalized adapter contract; warn for legacy
+      normalized data lacking it. Keep mixed coordinate identities split/rejected before matching. **Implemented**
+      (`exam_identity.py` seam + `rdsr_normalizer` + `normalized`/`dosetrack` adapters, no activation/matching
+      wiring): every raw-normalized frame carries a canonical `manufacturer` column with the exact per-event
+      maker spelling (`None`, never `"none"`/`"nan"`, when the source carries none); the `normalized` schema
+      recognizes an optional `manufacturer` column and materializes it as all-`None` with one count-only legacy
+      warning when absent or entirely blank. One exam carries exactly one canonical (manufacturer, model) pair,
+      both axes through the existing key normalizers with no vendor aliases: distinct makers, same-maker model
+      variation, and known+unknown mixes all fail closed with value-free diagnostics (pair count plus
+      missing-maker row count, never values), so no row borrows another row's identity and row-0 selection only
+      runs on proven-homogeneous frames; key spelling variants collapse and all-unknown frames stay compatible.
+      DoseTrack maps each row's Equipment Name through the established `MODEL2MANUF` rules (blank continuations
+      repeat the row above; leading blanks stay missing; count-only unknown-name warning) and meets the same
+      guard — no whole-column first-name overwrite. The seam runs inside `rdsr_normalizer()` before profile
+      selection and per study-id group in the `normalized` adapter (opaque `Exam N` positions only; study IDs
+      never enter errors). Export maker/model come from one consistent row. Vendor-coordinate selection,
+      coordinates, dose, and all numeric goldens are unchanged; the full-frame digest regen adds only the
+      `manufacturer` column. **Still open in Phase 1:** per-exam match-record wiring and multi-source duplicate
+      detection at activation time.
 - [ ] Add immutable per-exam coordinate/transmission match records with domain, profile/revision, source/level,
       canonical matched key, affected count, hashes, and leaf/row provenance—not mutable fields on
       `NormalizationSettings` (decision 20).
@@ -230,9 +246,8 @@ Work:
   original numeric row keys; global conflicts detected via the canonical check before publishing; explicit
   aliases and manufacturer-scoped wildcards stored without activation; retrieval bisects sorted key tables
   with no profile traversal; immutable internals; compiled content identical for every source order, with only
-  a conflict diagnostic's `source_kind` following the lead entry; all public reprs value-free. **Still open in
-  Phase 1:** canonical `manufacturer` in normalized frames, per-exam match-record wiring, and multi-source
-  duplicate detection at activation time.
+  a conflict   diagnostic's `source_kind` following the lead entry; all public reprs value-free. **Still open in
+  Phase 1:** per-exam match-record wiring and multi-source duplicate detection at activation time.
 - [ ] Detect canonical duplicates and conflicts across all source kinds before activation. Input order may affect only
       deterministic diagnostics and serialization.
 - [ ] Emit privacy-safe errors containing codes, source-kind tokens, row/sheet indices, field names, and counts. Paths,
@@ -424,6 +439,18 @@ gets macOS/Linux and Windows manual evidence as applicable.
 
 ## Progress log
 
+- 2026-10-11 — **Normalized manufacturer identity landed** (no activation/matching wiring). One exam
+  carries exactly one canonical (manufacturer, model) pair: new `src/guiskindose/exam_identity.py` seam
+  (cleaning, raw/canonical pair listing, descriptive classification, fail-closed guard);
+  `rdsr_normalizer()` emits a canonical `manufacturer` column with exact per-event spellings and rejects
+  distinct makers, same-maker model variation, and known+unknown mixes before profile selection;
+  `normalized` schema recognizes optional `manufacturer`, materializes all-`None` with a count-only
+  legacy warning when absent/blank, and checks each study-id group individually with opaque positions;
+  DoseTrack maps each row's Equipment Name per-row through `MODEL2MANUF` (no first-name overwrite);
+  export identity comes from one consistent row. 63 targeted tests; full-frame digest regen adds only
+  the `manufacturer` column; golden dose/k_tab, GUI (420), CLI, and export suites green. Phase 1 stays
+  incomplete (per-exam match-record wiring and activation-time duplicate detection remain; Phase 2/3 own
+  match-record application/activation).
 - 2026-10-11 — **Index review fixes (still inert).** Corrected the index slice against review: entries are now
   strictly bounded (real-`Sequence` check with strings/bytes/iterables rejected, declared length capped by
   `MAX_PROFILES` before copying, bounded materialization against lying lengths, aggregate logical rows capped
@@ -435,15 +462,15 @@ gets macOS/Linux and Windows manual evidence as applicable.
   mismatch); profiles are ordered by exact ID before the canonical conflict check; all public types carry
   value-free reprs (counts, source-kind tokens, flags, hashes only); the wall-clock timing test is replaced by
   a deterministic no-traversal probe plus sorted-key assertions; permutation tests assert full compiled
-  equality; lookups normalize each key once. 66 targeted tests. Phase 1 stays incomplete (normalized
-  `manufacturer`, per-exam match-record wiring, and activation-time duplicate detection remain).
+  equality; lookups normalize each key once. 66 targeted tests. Phase 1 stays incomplete (per-exam
+  match-record wiring, and activation-time duplicate detection remain).
 - 2026-10-11 — **Compiled lookup indexes landed**, still inert. `indexes.py` compiles immutable coordinate and
   transmission indexes once from validated profiles with source-kind/hash/revision context: coordinates by
   canonical manufacturer/model (exact, alias, and manufacturer-scoped wildcard slots stored without activation),
   transmission by canonical model/literal plane with original numeric row keys in sorted node groups. Global
   conflicts are detected via the canonical check before anything is published; retrieval bisects sorted key
   tables so per-event lookups never scan profiles; internals are tuples only and results are identical
-  regardless of source order. Phase 1 stays incomplete (normalized `manufacturer`, per-exam match-record
+  regardless of source order. Phase 1 stays incomplete (per-exam match-record
   wiring, and activation-time duplicate detection remain).
 - 2026-10-11 — **Store hardening round**: enabled-revision listing uses LEFT JOIN and rejects a missing
   revision instead of silently omitting it from conflict validation; growth caps run in every transaction with
@@ -473,7 +500,7 @@ gets macOS/Linux and Windows manual evidence as applicable.
   read; new records start disabled; unsupported capabilities persist but are never activated; enabling runs the
   canonical conflict check across the would-be enabled set atomically; snapshots load in one read transaction
   with selection/aggregate bounds checked before payloads are read. The revision-set source hash is locked and
-  exposes `source_kind: "store"`. Phase 1 stays incomplete (normalized `manufacturer`, indexes, match-record
+  exposes `source_kind: "store"`. Phase 1 stays incomplete (per-exam match-record
   wiring, and activation-time duplicate detection remain).
 - 2026-10-10 — **XLSX silent-loss fixes**: two defects in the inert XLSX adapter each produced a *successful*
   parse with missing content. A row conversion truncated to the header width, so a populated cell beyond the

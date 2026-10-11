@@ -30,6 +30,7 @@ from .constants import (
     KEY_NORMALIZATION_DISTANCE_SOURCE_ISOCENTER,
     KEY_NORMALIZATION_FILTER_SIZE_ALUMINUM,
     KEY_NORMALIZATION_FILTER_SIZE_COPPER,
+    KEY_NORMALIZATION_MANUFACTURER,
     KEY_NORMALIZATION_MODEL_NAME,
     KEY_NORMALIZATION_STATION_NAME,
     KEY_RDSR_DEVICE_SERIAL,
@@ -48,6 +49,7 @@ from .constants import (
     PLANE_IDENTITY_SOURCE_KIND_NONE,
     PLANE_IDENTITY_SOURCE_KIND_TABULAR_RAW_CODE,
 )
+from .exam_identity import clean_identity_value, require_homogeneous_identity
 from .geom_calc import calculate_field_size
 from .rdsr_input_checks import (
     RdsrInputError as RdsrInputError,
@@ -259,6 +261,12 @@ def rdsr_normalizer_with_source_rows(
     verify_expected_units(data_parsed)
     collapse_duplicate_scalars(data_parsed)
     ensure_device_columns(data_parsed)
+    # Phase 1 identity contract: one homogeneous (manufacturer, model) exam per
+    # frame. Mixed canonical manufacturers fail closed here — before
+    # update_used_settings reads row 0 — so a mixed frame can never silently
+    # normalize under the first pair. Same-maker model variation keeps the
+    # established row-0 selection.
+    require_homogeneous_identity(data_parsed)
 
     settings.normalization_settings.update_used_settings(data_parsed=data_parsed)
 
@@ -280,12 +288,34 @@ def rdsr_normalizer_with_source_rows(
     return data_norm, source_rows
 
 
+def _emit_manufacturer_column(data_parsed: pd.DataFrame, data_norm: pd.DataFrame) -> None:
+    """Emit the canonical internal ``manufacturer`` column (Phase 1 identity contract).
+
+    Exact per-event maker spellings, cleaned so missing identity is ``None``
+    and never the matchable strings ``"none"``/``"nan"``. ``.get`` (not
+    attribute access) so a frame without the column yields all-``None`` rather
+    than raising — the pipeline guarantees it via ``ensure_device_columns``,
+    but unit callers may not.
+    """
+    maker_col = data_parsed.get("Manufacturer")
+    if maker_col is None:
+        data_norm[KEY_NORMALIZATION_MANUFACTURER] = None
+    else:
+        data_norm[KEY_NORMALIZATION_MANUFACTURER] = [
+            clean_identity_value(value) for value in maker_col.tolist()
+        ]
+
+
 def _normalize_machine_parameters(
     data_parsed: pd.DataFrame, data_norm: pd.DataFrame, norm: NormalizationSettings
 ) -> pd.DataFrame:
     """Normalize manufacturer/model and related machine identity fields."""
 
     data_norm[KEY_NORMALIZATION_MODEL_NAME] = data_parsed.ManufacturerModelName
+    # Canonical internal manufacturer column: the exact per-event maker
+    # spelling. Matching normalizes later with the existing key normalizers;
+    # coordinates/dose are unchanged.
+    _emit_manufacturer_column(data_parsed, data_norm)
 
     # Per-unit identity for kerma-meter correction (optional; None when absent).
     if KEY_RDSR_STATION_NAME in data_parsed.columns:
