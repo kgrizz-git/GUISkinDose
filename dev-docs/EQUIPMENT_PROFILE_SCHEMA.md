@@ -713,3 +713,43 @@ provenance, so shipped exact entries are complete and never inherit a wildcard's
 
 Resolver preparation reuses the canonical compiler to revalidate payloads and hashes, reject global conflicts,
 and compare every supplied coordinate claim against the keys and metadata compiled from its profiles.
+
+## 15. Multi-source session assembly (import-before-load preparation)
+
+A session freezes validated custom profiles from file byte snapshots (`json`/`csv`/`tsv`/`xlsx`),
+in-memory documents, and store snapshots into one immutable, conflict-checked, capability-gated
+custom set with a compiled index prepared once for per-exam resolution. Nothing here applies a
+profile to a calculation.
+
+**Requests.** A file request names a path, an optional adapter format (else the file suffix
+routes), and an optional zero-based XLSX sheet index (`None` reads the first sheet; a sheet on
+another format fails). Relative paths resolve against the working directory, or against an
+explicit caller settings base directory; the process directory never changes. Paths coerce
+behind a closed boundary (hostile pathlikes, bytes, and NUL collapse value-free), and adapters
+always receive plain strings. Request collections are bounded before copying (declared lengths
+first, bounded iteration, at most 64 sources including empty snapshots). Malformed requests fail
+`invalid_type`/`invalid_enum` (`sheet` misuse fails closed); unknown suffixes fail
+`unsupported_source_suffix`.
+
+**Assembly order.** Profile/row ceilings (64 profiles, 10,000 rows) accrue incrementally while
+loading and stop before the next source once exceeded; canonical conflicts run across all kinds;
+the capability gate runs before the session becomes usable; then the custom index compiles once,
+the active-set hash covers the combined profiles, and the resolver context prepares once. Any
+failure publishes nothing, so a prior session object is unaffected. An explicitly empty selection
+yields a valid empty custom session resolving bundled/Default.
+
+**Snapshots.** Tuple shapes and the source bound gate traversal; store identity, the locked
+wrapper hash, per-profile hashes, revisions, and the row counter all re-verify against content
+(disagreements report conflicting metadata, like stale compile-time claims). Session payloads use
+the compiler's canonical output — never caller-owned objects.
+
+**Outputs.** Profiles frozen in exact profile-ID order; the prepared custom index; the active-set
+hash; and default-safe provenance per source (`file`/`memory`/`store` kind, adapter format, exact
+file-bytes or locked store-set hash, profile IDs, store revisions, counters — never paths, notes,
+raw text, station, or serial) plus session totals, with source records canonically ordered by
+kind, format, hash, and IDs. Input order affects diagnostics only: reordered inputs assemble
+equal sessions. Per-exam resolution reuses the prepared custom side with no recompiling,
+revalidating, re-reading, or shared mutable caches; a bundled set may arrive compiled or
+prepared. Prepared contexts validate fully at construction (entries, claim tables, lead kind,
+gate), so forged instances fail closed before any exam. New public reprs show counts and kinds
+only — never keys, IDs, labels, or rendered text.

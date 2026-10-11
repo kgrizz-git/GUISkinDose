@@ -108,6 +108,12 @@ MAX_AGGREGATE_ROWS = 10_000
 #: Maximum profile objects per document and per load.
 MAX_PROFILES = 64
 
+#: Maximum source requests (files, memory documents, store snapshots combined)
+#: per session assembly. Each file/memory source already yields at least one
+#: profile, so profile/row ceilings bind content; this binds request fan-out
+#: (including empty snapshots, which carry provenance but no profiles).
+MAX_SOURCES = 64
+
 #: Maximum store revision number accepted as index entry context. Matches the store's rowid ceiling without
 #: importing store internals; the index core never touches SQLite.
 MAX_REVISION = 2**63 - 1

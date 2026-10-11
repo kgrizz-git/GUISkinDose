@@ -21,6 +21,12 @@ That keeps SemVer and contributor history organized.
 
 ### Changed
 
+- **Equipment-profile session assembly (experimental, internal only)** (2026-10-11) — the internal
+  package gains a frozen multi-source session (file snapshots, in-memory documents, store snapshots)
+  with cross-kind conflict checks, capability gating, a compiled index prepared once, and per-exam
+  resolution without recompiling. **Inert like the rest of the package:** nothing reads a session
+  from any feature path, so results, exports, and settings are unchanged.
+
 - **Equipment-profile coordinate resolution core (experimental, internal only)** (2026-10-11) — the
   internal package gains immutable custom-exact coordinate resolution over compiled indexes (custom
   exact → bundled exact → bundled wildcard → Default, per-leaf inheritance, complete/partial

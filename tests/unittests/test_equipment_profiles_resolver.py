@@ -27,8 +27,11 @@ from guiskindose.equipment_profiles import (
     build_profile_indexes,
     bundled_coordinate_set,
     parse_memory_document,
+    prepare_bundled_context,
+    prepare_custom_context,
     profile_hash,
     resolve_coordinate_leaves,
+    resolve_with_prepared,
 )
 
 SETTINGS_PATH = (
@@ -958,3 +961,124 @@ def test_resolver_revalidates_default_vocabulary_even_with_matching_hash() -> No
     with pytest.raises(EquipmentProfileError):
         resolve_coordinate_leaves(identity=identity,
                                   custom=custom, bundled=patched)
+
+
+# ---------------------------------------------------------------------------
+# Public preparation seam: prepare once, resolve per exam without recompiling
+# ---------------------------------------------------------------------------
+
+
+def test_resolve_with_prepared_matches_direct_resolution() -> None:
+    custom = _custom([_profile("seamed", coordinates={"swap_lateral_longitudinal": True})])
+    bundled = _bundled()
+    identity = ExamCoordinateIdentity(manufacturer="Acme Imaging", model="DemoScope 2000", event_count=2)
+    direct = resolve_coordinate_leaves(identity=identity, custom=custom, bundled=bundled)
+    prepared = resolve_with_prepared(
+        identity=identity,
+        custom=prepare_custom_context(custom),
+        bundled=prepare_bundled_context(bundled),
+    )
+    assert prepared == direct
+
+
+def test_prepare_custom_context_rejects_non_index() -> None:
+    with pytest.raises(EquipmentProfileError) as excinfo:
+        prepare_custom_context("not-an-index")
+    assert excinfo.value.code is ProfileErrorCode.INVALID_TYPE
+
+
+def test_prepare_bundled_context_rejects_non_set() -> None:
+    with pytest.raises(EquipmentProfileError) as excinfo:
+        prepare_bundled_context("not-a-set")
+    assert excinfo.value.code is ProfileErrorCode.INVALID_TYPE
+
+
+def test_resolve_with_prepared_rejects_wrong_context_types() -> None:
+    custom = prepare_custom_context(_empty_custom())
+    bundled = prepare_bundled_context(_bundled())
+    identity = ExamCoordinateIdentity(manufacturer="A", model="B", event_count=1)
+    with pytest.raises(EquipmentProfileError) as excinfo:
+        resolve_with_prepared(identity=identity, custom="nope", bundled=bundled)  # type: ignore[arg-type]
+    assert excinfo.value.code is ProfileErrorCode.INVALID_TYPE
+    with pytest.raises(EquipmentProfileError) as excinfo:
+        resolve_with_prepared(identity=identity, custom=custom, bundled="nope")  # type: ignore[arg-type]
+    assert excinfo.value.code is ProfileErrorCode.INVALID_TYPE
+
+
+def test_prepared_contexts_are_immutable_and_counted() -> None:
+    from dataclasses import FrozenInstanceError
+
+    custom = prepare_custom_context(_empty_custom())
+    bundled = prepare_bundled_context(_bundled())
+    assert repr(custom) == "PreparedCustomContext(profiles=0, lead_kind='')"
+    assert "profiles=3" in repr(bundled)
+    assert "has_default=True" in repr(bundled)
+    with pytest.raises(FrozenInstanceError):
+        custom.lead_kind = "json"  # type: ignore[misc]
+
+
+# ---------------------------------------------------------------------------
+# Forged prepared contexts fail closed at construction, not at resolve time
+# ---------------------------------------------------------------------------
+
+
+def test_forged_custom_context_with_dangling_table_rejected() -> None:
+    import dataclasses
+
+    from guiskindose.equipment_profiles import prepare_custom_context
+
+    prepared = prepare_custom_context(_empty_custom())
+    forged = dataclasses.replace(prepared, entries=prepared.entries)
+    assert forged == prepared
+    custom = _custom([_profile("real", coordinates={"detector_side_length": 30.0})])
+    good = prepare_custom_context(custom)
+    table = good.index.coordinates
+    assert len(table.keys) == 1
+    bad_table = dataclasses.replace(table, keys=(("other maker", "other model"),))
+    bad_index = dataclasses.replace(good.index, coordinates=bad_table)
+    with pytest.raises(EquipmentProfileError) as excinfo:
+        dataclasses.replace(good, index=bad_index)
+    assert excinfo.value.code is ProfileErrorCode.INVALID_TYPE
+
+
+def test_forged_custom_context_with_raw_lead_kind_rejected() -> None:
+    import dataclasses
+
+    from guiskindose.equipment_profiles import prepare_custom_context
+
+    good = prepare_custom_context(_empty_custom())
+    with pytest.raises(EquipmentProfileError) as excinfo:
+        dataclasses.replace(good, lead_kind="bogus-kind")
+    assert excinfo.value.code is ProfileErrorCode.INVALID_ENUM
+    with pytest.raises(EquipmentProfileError) as excinfo:
+        dataclasses.replace(good, lead_kind=123)
+    assert excinfo.value.code is ProfileErrorCode.INVALID_ENUM
+
+
+def test_forged_bundled_context_with_invalid_default_rejected() -> None:
+    import dataclasses
+
+    from guiskindose.equipment_profiles import prepare_bundled_context
+    from guiskindose.equipment_profiles.indexes import IndexedProfile
+
+    good = prepare_bundled_context(_bundled())
+    bad_default = IndexedProfile(
+        profile="not-a-profile",  # type: ignore[arg-type]
+        source_kind="json",
+        revision=None,
+        profile_hash="0" * 64,
+    )
+    with pytest.raises(EquipmentProfileError) as excinfo:
+        dataclasses.replace(good, default=bad_default)
+    assert excinfo.value.code is ProfileErrorCode.INVALID_TYPE
+
+
+def test_forged_bundled_context_with_list_entries_rejected() -> None:
+    import dataclasses
+
+    from guiskindose.equipment_profiles import prepare_bundled_context
+
+    good = prepare_bundled_context(_bundled())
+    with pytest.raises(EquipmentProfileError) as excinfo:
+        dataclasses.replace(good, entries=list(good.entries))
+    assert excinfo.value.code is ProfileErrorCode.INVALID_TYPE

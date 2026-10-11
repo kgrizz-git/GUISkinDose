@@ -61,6 +61,7 @@ from guiskindose.equipment_profiles.constants import (
     MAX_SHORT_TEXT,
     MAX_SOURCE_BYTES,
     MAX_SOURCE_TEXT,
+    MAX_SOURCES,
     MAX_TRANSMISSION_ROWS,
     MAX_XLSX_MEMBER_BYTES,
     MAX_XLSX_SHEETS,
@@ -128,6 +129,12 @@ from guiskindose.equipment_profiles.models import (
     TransmissionRow,
     coordinate_leaf_values,
 )
+from guiskindose.equipment_profiles.preparation import (
+    PreparedBundledContext,
+    PreparedCustomContext,
+    prepare_bundled_context,
+    prepare_custom_context,
+)
 from guiskindose.equipment_profiles.profile_store import (
     STORE_FILENAME,
     ProfileStore,
@@ -139,6 +146,14 @@ from guiskindose.equipment_profiles.resolver import (
     NoticeEntry,
     ResolutionNotice,
     resolve_coordinate_leaves,
+    resolve_with_prepared,
+)
+from guiskindose.equipment_profiles.session import (
+    EquipmentProfileSession,
+    FileSource,
+    SessionProvenance,
+    SessionSourceProvenance,
+    assemble_session,
 )
 from guiskindose.equipment_profiles.store_schema import (
     MAX_LIST_LIMIT,
@@ -187,6 +202,7 @@ __all__ = [
     "MAX_REVISION",
     "MAX_REVISIONS_PER_PROFILE",
     "MAX_SHORT_TEXT",
+    "MAX_SOURCES",
     "MAX_SOURCE_BYTES",
     "MAX_SOURCE_TEXT",
     "MAX_STORE_RECORDS",
@@ -220,13 +236,17 @@ __all__ = [
     # Models
     "Coordinates",
     "EquipmentProfileError",
+    "EquipmentProfileSession",
     "ExamCoordinateIdentity",
+    "FileSource",
     "IndexedProfile",
     "LeafProvenance",
     "MatchedInputKey",
     "NoticeEntry",
     # Parsing and loading
     "ParsedDocument",
+    "PreparedBundledContext",
+    "PreparedCustomContext",
     "Profile",
     "ProfileErrorCode",
     "ProfileIndexes",
@@ -236,6 +256,8 @@ __all__ = [
     "ResolutionNotice",
     "RotationDirection",
     "SelectedRevision",
+    "SessionProvenance",
+    "SessionSourceProvenance",
     "StoreSnapshot",
     "StoredRecord",
     "StoredRevision",
@@ -247,6 +269,7 @@ __all__ = [
     "TransmissionRow",
     "active_set_hash",
     "aliases_for_settings_key",
+    "assemble_session",
     "build_leaf_provenance",
     "build_profile_indexes",
     "bundled_coordinate_set",
@@ -278,8 +301,11 @@ __all__ = [
     "parse_tsv_file",
     "parse_xlsx_bytes",
     "parse_xlsx_file",
+    "prepare_bundled_context",
+    "prepare_custom_context",
     "profile_hash",
     "resolve_coordinate_leaves",
+    "resolve_with_prepared",
     "source_bytes_hash",
     "store_source_hash",
     "supported_profiles",

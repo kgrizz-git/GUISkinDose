@@ -285,8 +285,18 @@ Work:
       materialized swap `False`, and a separate `Default`; `equipment_profiles/vendor_aliases.py` is the
       single alias home (settings re-exports). Shared stdlib missing-identity convention lives in
       `keys.clean_identity_text`, reused by the frame seam. No renderer/normalizer/settings mutation and no
-      API/CLI/GUI/store activation wiring — that
-      remains Phase 2 work, so Phase 2 is **not** complete.
+      API/CLI/GUI/store activation wiring.
+- [ ] Assemble a frozen multi-source session (files/memory/store) with import-before-load semantics as
+      core preparation (no wiring): bounded snapshot factory, canonical cross-kind conflicts, capability
+      gate before usability, compiled index + prepared resolver context once, active-set hash, default-safe
+      provenance, per-exam resolution without recompiling. **Landed as core preparation**
+      (`equipment_profiles/session.py` + public prepare/resolve seam in `resolver.py`/`preparation.py`,
+      no renderer/normalizer/settings/API/CLI/GUI/store-activation wiring): request collections bounded
+      before copying with incremental profile/row ceilings and short-circuit; file byte snapshots with
+      SPEC §8 path rules and a closed path boundary; revalidated store snapshots with compiler-output
+      payloads; canonically ordered payload/provenance with input-order diagnostics; validated
+      `__post_init__` prepared contexts with the gate at preparation; per-exam `resolve()` with bundled
+      compiled or prepared and zero recompilation. Phase 2 is **not** complete.
 - [ ] Preserve the dose distinction: `field_size_mode` is dose-affecting; `detector_side_length` is visualization-only
       (`src/guiskindose/geom_calc.py:20-83`, `src/guiskindose/beam_class.py:275-291`).
 - [ ] Materialize per-leaf source provenance and issue the per-exam `partial match — fields inherited from
@@ -452,6 +462,16 @@ gets macOS/Linux and Windows manual evidence as applicable.
 
 ## Progress log
 
+- 2026-10-11 — **Multi-source session assembly landed (core preparation, no wiring).**
+  `equipment_profiles/session.py` freezes file/memory/store sources into one conflict-checked,
+  capability-gated session with a compiled index prepared once; per-exam `resolve()` reuses the
+  prepared custom side with bundled compiled or prepared, no recompiling or re-reading. Request
+  collections bounded before copying with incremental ceilings and short-circuit; closed path
+  boundary; revalidated snapshots with compiler-output payloads; canonical payload/provenance order;
+  validated `__post_init__` contexts with the gate at preparation. 54 targeted tests (hashes,
+  determinism, store stability, conflicts, bounds, gate rollback, paths, sheets, tampering, forged
+  contexts, path attacks, order equality, privacy) plus 9 seam tests. Schema §15 locks the session
+  contract. No renderer/normalizer/settings/API/CLI/GUI/store activation — Phase 2 remains open.
 - 2026-10-11 — **Sonar validation cleanup (no behavior change).** Cleared the 172 equipment-profile
   branch findings: NaN idioms to `math.isnan`, negative-zero normalization to exact `+ 0.0` (bit-verified),
   complexity splits, unused-param/redundant-call removals, exception-test hoisting, specific exception

@@ -11,6 +11,17 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 - Radimetrics unknown-model diagnostics report only the model count; raw equipment names remain local.
 
 ### Changed
+- **Equipment-profile session assembly (inert)** (2026-10-11) — added
+  `src/guiskindose/equipment_profiles/session.py`: `FileSource` requests with SPEC §8 path rules,
+  `assemble_session()` combining file/memory/store sources with bounds before copying, canonical
+  cross-kind conflicts, capability gate, single index compile, active-set hash, default-safe
+  provenance, and per-exam `resolve()` over a prepared custom context (bundled compiled or
+  prepared); public prepare/resolve seam added to `resolver.py`/`preparation.py` with
+  `resolve_coordinate_leaves` preserved as a thin wrapper. Request collections bounded before copying
+  with incremental ceilings; closed path boundary; revalidated snapshots with compiler-output payloads;
+  canonical payload/provenance ordering; validated `__post_init__` contexts gating at preparation.
+  Schema §15 documents the session contract. 54 session and 9 seam targeted tests; ruff, basedpyright, complexity, size, and freshness gates clean. No renderer/
+  normalizer/settings/API/CLI/GUI/store activation wiring.
 - **Sonar validation cleanup (equipment profiles, no behavior change)** (2026-10-11) — cleared the 172
   branch findings from the equipment-profile review without altering parser/privacy limits, immutable
   records, capabilities, or scientific contracts: `math.isnan` for all NaN idioms; negative-zero
