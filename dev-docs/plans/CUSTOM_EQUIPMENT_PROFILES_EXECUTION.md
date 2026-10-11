@@ -105,13 +105,21 @@ Work:
       existing-model out-of-extent row and explicit-SQLite collision — are confirmed alongside their Phase 4
       fixtures; store codes (`store_conflict`, `store_corruption`, `unsupported_store_version`, `store_not_found`,
       `store_unavailable`, `store_limit_exceeded`) are implemented by the Phase 1 store slice.)*
-- [ ] Lock privacy/export fields (decision 13): manufacturer/model and canonical `matched_input_key` are default-safe;
+- [x] Lock privacy/export fields (decision 13): manufacturer/model and canonical `matched_input_key` are default-safe;
       station/serial retain `include_identifiers` for per-event output and never enter logs; notes and profile paths are
-      omitted by default. This intentionally replaces the current manufacturer/model gating at
-      `src/guiskindose/gui/run_state.py:155-178`.
-- [ ] Lock run-state/rich-export schema bumps and old-profile compatibility reader (decision 18).
+      omitted by default. *(Contract locked 2026-10-11 in
+      [EQUIPMENT_PROFILE_RUNSTATE_EXPORT_CONTRACT.md](../EQUIPMENT_PROFILE_RUNSTATE_EXPORT_CONTRACT.md) §§3–4, 8–9.
+      Implementation — including replacing the current manufacturer/model gating at
+      `src/guiskindose/gui/run_state.py:155-178` — remains open.)*
+- [x] Lock run-state/rich-export schema bumps and old-profile compatibility reader (decision 18).
+      *(Contract locked 2026-10-11 in [EQUIPMENT_PROFILE_RUNSTATE_EXPORT_CONTRACT.md](../EQUIPMENT_PROFILE_RUNSTATE_EXPORT_CONTRACT.md)
+      §§2–3, 5–6: run-state 1→2, rich-report 3→4, dict/JSON export stays 3 while additive, v1 readers retained,
+      self-contained reproducibility without reopening stores/files. Emission and application remain open.)*
 - [ ] Define the exact pre-calculation, Calculate, Results, and export representations for field inheritance,
       transmission partial coverage, active/unused profiles, and structured immutable match records (decision 20).
+      *(Contract locked 2026-10-11 in [EQUIPMENT_PROFILE_RUNSTATE_EXPORT_CONTRACT.md](../EQUIPMENT_PROFILE_RUNSTATE_EXPORT_CONTRACT.md)
+      §7: coordinate API shape implemented; coordinate capture contract locked; GUI surfaces, rich-report v4,
+      and run-state v2 implementation remain open. Transmission representations remain unlocked until Phase 4.)*
 
 ### Resolution rules agreed 2026-10-10
 
@@ -139,7 +147,7 @@ handling. They amend spec decisions 3, 4, 8, 9, 10, and 11; implementation must 
    disabling one; no extra conflict-override syntax. The current tabular shape is implicit v1; reject unsupported
    fields/versions. Missing transmission filtration values are invalid; explicit zero means no added filtration.
 
-Remaining Phase 0 work is executable schema/limit/error/hash/store contracts and fixtures, not deciding those
+Remaining Phase 0 work is the still-open per-slice contracts and fixtures, not deciding those
 four rules again. Lock the common and coordinate contracts before their Phase 1/2 slices. Transmission-specific
 implementation fixtures, evidence classification, grid eligibility, and fallback provenance must be verified
 before Phase 4; they do not block independent coordinate work. Unsupported transmission capabilities still
@@ -461,6 +469,13 @@ Phase-specific tests must assert values and serialized forms, not only UI text. 
 gets macOS/Linux and Windows manual evidence as applicable.
 
 ## Progress log
+
+- 2026-10-11 — **Run-state/export contract locked (docs only).** [EQUIPMENT_PROFILE_RUNSTATE_EXPORT_CONTRACT.md](../EQUIPMENT_PROFILE_RUNSTATE_EXPORT_CONTRACT.md)
+  locks decisions 13/18/20 from actual seams: run-state 1→2 (positional per-exam captures with a full effective recipe,
+  validated audit mapping, retained count and versioned geometry checksum), rich-report 3→4, dict/JSON export stays 3 while additive; default-safe maker/model keys vs
+  absent-by-construction station/serial and never-captured notes/paths; v1 readers retained, atomic trial validation and before-load/confirmed-frame
+  restoration; coordinates-only captures; self-contained reproducibility. No run-state/export implementation is complete
+  (§10 open list stands). Phase 2 remains open.
 
 - 2026-10-11 — **Parent API application hardening.** Receipts publish only after geometry
   normalization succeeds, then rebind after final zero-kVp filtering. Analysis verifies normalized

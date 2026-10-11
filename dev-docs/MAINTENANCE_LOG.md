@@ -12,6 +12,12 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ### Changed
 
+- **Run-state/export contract lock (docs only)** (2026-10-11) — new
+  `dev-docs/EQUIPMENT_PROFILE_RUNSTATE_EXPORT_CONTRACT.md` locks SPEC decisions 13/18/20 from actual
+  seams: run-state 1→2, rich-report 3→4, dict/JSON export stays 3 while additive; default-safe maker/model
+  keys vs absent-by-construction station/serial and never-captured notes/paths; v1 readers retained with
+  atomic trial validation and capture restore; coordinates-only captures; self-contained reproducibility. Schema §16, spec,
+  plan, and index link to it. No run-state/export implementation is complete (§10 open list stands).
 - **Equipment API application review** (2026-10-11) — receipts publish after successful geometry
   normalization, rebind after final zero-kVp filtering, and verify normalized numeric geometry plus
   a fresh session resolution before analysis. Added regressions for same-count geometry changes,

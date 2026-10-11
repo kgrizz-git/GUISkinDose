@@ -273,6 +273,10 @@ ship atomic post-load activation.
 
 ## 9. Privacy and export policy
 
+Contract lock (Phase 0, docs only):
+[../EQUIPMENT_PROFILE_RUNSTATE_EXPORT_CONTRACT.md](../EQUIPMENT_PROFILE_RUNSTATE_EXPORT_CONTRACT.md)
+§§3–4, 8–9.
+
 | Data | Default export/run config | Identifier opt-in | Logs |
 |---|---|---|---|
 | Manufacturer and model, including canonical `matched_input_key` | Included; equipment design data, not identifiers | Not required | May be shown |
@@ -286,6 +290,10 @@ Station/serial remain potentially site-identifying. Errors use stable codes, row
 counts without paths, station/serial values, or notes.
 
 ## 10. Compatibility and acceptance
+
+Contract lock (Phase 0, docs only):
+[../EQUIPMENT_PROFILE_RUNSTATE_EXPORT_CONTRACT.md](../EQUIPMENT_PROFILE_RUNSTATE_EXPORT_CONTRACT.md)
+§§2, 5–7, 10.
 
 Bundled profiles remain immutable. Python custom `NormalizationSettings` and old run-state normalization
 profiles receive a documented compatibility reader/adapter. Structured profile provenance bumps run-state
@@ -322,11 +330,11 @@ Acceptance:
 10. 2026-10-10 — The transmission key is model + plane + kVp + Cu + Al; explicit-SQLite collisions error. Existing model/plane extents bound additions; new models accept rows with uncovered queries retaining current handling.
 11. 2026-10-10 — Exact sparse additions are usable; interpolate only complete eligible Al slices with the existing 2-D algorithm, otherwise use intact original lookup. Status and source remain separate.
 12. 2026-10-10 — Stable user-supplied profile IDs, canonical per-profile hashes, source hashes, revisions, and active-set hashes define provenance without paths.
-13. 2026-10-10 — Manufacturer/model are not identifiers; station/serial keep the identifier gate and never enter logs.
+13. 2026-10-10 — Manufacturer/model are not identifiers; station/serial keep the identifier gate and never enter logs. (Contract lock: [run-state/export companion](../EQUIPMENT_PROFILE_RUNSTATE_EXPORT_CONTRACT.md) §4.)
 14. 2026-10-09 — Full v1 post-load activation is atomic across profile state, normalization, overrides, results, and caches.
 15. 2026-10-10 — Missing supported content inherits and notifies; bad, conflicting, ambiguous, or unsupported content fails closed.
 16. 2026-10-10 — Notes stay bounded/local by default, and GUI profile saving excludes patient-specific positioning.
 17. 2026-10-09 — Explicit `corrections_db_path` remains supported and is not the user profile store.
-18. 2026-10-09 — Structured provenance bumps run-state/rich-export schemas; old normalization-profile documents retain a reader.
+18. 2026-10-09 — Structured provenance bumps run-state/rich-export schemas; old normalization-profile documents retain a reader. (Contract lock: [run-state/export companion](../EQUIPMENT_PROFILE_RUNSTATE_EXPORT_CONTRACT.md) §§2–3, 5–6.)
 19. 2026-10-09 — Kerma CFs, backscatter/medium, HVL, `anode_angle_deg`, and individual-equipment profile keys remain out of scope.
-20. 2026-10-09 — Per-exam coordinate/transmission match records are immutable snapshots, not mutable `NormalizationSettings` fields.
+20. 2026-10-09 — Per-exam coordinate/transmission match records are immutable snapshots, not mutable `NormalizationSettings` fields. (Contract lock: [run-state/export companion](../EQUIPMENT_PROFILE_RUNSTATE_EXPORT_CONTRACT.md) §7.)

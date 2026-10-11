@@ -753,3 +753,14 @@ revalidating, re-reading, or shared mutable caches; a bundled set may arrive com
 prepared. Prepared contexts validate fully at construction (entries, claim tables, lead kind,
 gate), so forged instances fail closed before any exam. New public reprs show counts and kinds
 only — never keys, IDs, labels, or rendered text.
+
+## 16. Run-state and rich-export contract (locked companion)
+
+The run-state/rich-export versioning, privacy, backward-reader, representation,
+and reproducibility contract is locked in
+[EQUIPMENT_PROFILE_RUNSTATE_EXPORT_CONTRACT.md](EQUIPMENT_PROFILE_RUNSTATE_EXPORT_CONTRACT.md)
+(Phase 0, docs only): run-state 1→2, rich-report 3→4, dict/JSON export stays 3
+while additive, default-safe maker/model keys vs gated station/serial, old-document
+readers, coordinates-only captures, and the exact open implementation list. That
+companion is normative for the listed slices; no run-state or export
+implementation is complete.
