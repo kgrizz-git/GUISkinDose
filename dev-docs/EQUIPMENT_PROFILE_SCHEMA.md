@@ -273,8 +273,99 @@ an optional BOM and no unpaired surrogates; SHA-256 over the exact bytes read, b
 logical-row ceiling (a tabular row is exactly one logical row) is enforced **while accumulating rows, before any
 profile object is built**, and the profile-count ceiling is enforced when a new group appears.
 
-Adapters use only the standard library — no third-party reader, no DataFrame materialization — and read the
-decoded byte snapshot once.
+Adapters use only the standard library for JSON, CSV, and TSV — no third-party reader and no DataFrame
+materialization — and read the decoded byte snapshot once. The XLSX adapter is the sole exception, and it
+confines its spreadsheet dependency to itself; see §6B.
+
+## 6B. XLSX (OOXML) adapter
+
+XLSX is the same flat table on one sheet. All §6A rules apply unchanged, and the canonical document is
+assembled by the same seam, so a workbook and the equivalent CSV have identical profile hashes, leaf values,
+and transmission values while their raw source hashes differ. This section covers only what differs.
+
+**Dependency containment.** openpyxl is imported *inside* the functions that need it, so a caller that parses
+only JSON, CSV, or TSV never imports the spreadsheet stack. The workbook is opened with `read_only=True`,
+`data_only=False`, `keep_links=False`, and nothing is ever extracted to the filesystem.
+
+**Sheet selection.**
+
+| Workbooks | Selection |
+|---|---|
+| exactly 1 | sheet `0` is the default; an explicit `sheet=0` is also accepted |
+| 2 or more | a selection is mandatory; `sheet=None` is `sheet_required` |
+| out of range, negative, or non-integer | `unknown_sheet` |
+
+More than 16 worksheets is `sheet_limit_exceeded`. Sheet **names are never used for selection, are never
+retained, and never appear in an error** — only the resolved zero-based index does.
+
+**Typed cell policy.**
+
+| Cell | Rule |
+|---|---|
+| number | preserved as a number; an unquoted `true`/`false` is *not* read as the boolean `TRUE` |
+| boolean | accepted only where the schema expects a boolean, normalized once to the exact lexical forms `true`/`false`; a boolean is **never** coerced into `1` for a numeric column |
+| date / datetime | valid **only** in the `date` column; must be exactly midnight of one day, and renders as strict ISO `YYYY-MM-DD`. A date object in any other column is `invalid_date_object`, not a silently stringified value; a time or offset makes it `invalid_date_object` |
+| formula (`data_type='f'`) | `unsafe_formula` — never read as its cached value, and no formula is evaluated |
+| spreadsheet error (`data_type='e'`) | `spreadsheet_error` |
+| string | bounded text, preserved intact; a formula-*looking* string is legitimate text and is not evaluated |
+| blank / `None` | an omitted cell; blank filtration is still `blank_disallowed_cell` |
+
+A number or a boolean is accepted **only** in a column whose schema type is that type: `kvp_kv`,
+`filtration_added_mmcu`, `filtration_added_mmal`, `k_patient_support` (and a coordinate `value` whose leaf is
+numeric), and `promote_coordinate_wildcard` plus the `swap_lateral_longitudinal` coordinate leaf. A number or a
+boolean in an identity or free-text column is a `invalid_type` (an `invalid_number` in a numeric column for a
+boolean) and is never coerced into a string or into `1`. The `value` column's type comes from the row's
+`field` and is resolved per leaf, so a number, boolean, and date are each accepted or rejected by the leaf they
+address. Header cell names must be strings.
+
+A null-like string (`null`, `None`) is literal text, never omission.
+
+**Header rules.** Header cell names must be strings. openpyxl's read-only parser pads every row to the widest
+row, so trailing blank header cells are padding, not column names, and are dropped; a blank header cell
+*inside* the header is kept and rejected as an unknown column name.
+
+**Bounds, applied cheap-first.**
+
+| Bound | Value |
+|---|---|
+| Compressed source bytes | 8,388,608 (8 MiB) |
+| Any single decompressed ZIP member | 33,554,432 (32 MiB) |
+| Sum of all decompressed members | 67,108,864 (64 MiB) |
+| Worksheets offered | 16 |
+| Worksheet preflight rows / columns / cells | 100,000 / 512 / 2,000,000 |
+| Aggregate logical rows of actual profile data | 10,000 |
+| Archive entries accepted at all | 80 |
+
+The archive is opened from the in-memory byte snapshot and preflighted **before** any worksheet is read.
+Declared central-directory sizes are used only as a cheap early reject; every member is then inflated by
+*streaming real decompressed bytes* in chunks and counting them, so a forged `file_size` cannot smuggle a zip
+bomb. Worksheets offered is bounded against the workbook's own catalog.
+
+**Archive hygiene.** Duplicate entry names and directory-spoofing names are `malformed_container`; the entry
+list is bounded. Non-ZIP bytes, corrupt members, and any structural failure are `malformed_container` with the
+raw cause suppressed.
+
+**Bounds are validated before materialization, and no silent truncation is possible.** Every worksheet part
+is parsed with a bounded streaming XML parser that never builds a tree. It ignores the declared `<dimension>`
+for sizing and enforces the row, column, and cell budgets on the coordinates actually present, rejecting
+out-of-range, repeated, and malformed coordinates as `malformed_container`. Declared sizes, DTDs, entity
+declarations, and external entity references are refused, and any parse failure fails closed with a value-free
+error and a suppressed cause. Because the actual bounds are known before the reader runs, the adapter discards
+the reader's own dimension (`reset_dimensions()`) and iterates the real rows: a workbook that **understates**
+its content is read in full, and a workbook that **overstates** it can never allocate padding it does not
+hold. The budgets are then re-enforced on the reader's real iteration before any row is converted. Sheet
+counts come from the workbook's own worksheet catalog, bounded by the sheet ceiling, and never from archive
+part filenames, so nonstandard part naming cannot desynchronize a sheet index.
+
+**Closed error catalog for this adapter.** `malformed_container`, `inflation_limit_exceeded`,
+`unsafe_formula`, `spreadsheet_error`, `invalid_date_object`, `sheet_required`, `unknown_sheet`,
+`sheet_limit_exceeded` — plus the shared codes. Every one carries source kind `xlsx`; none carries a sheet
+name, a path, a cell value, or a library message.
+
+**Outstanding.** A packaged XLSX example and template are **not** shipped. A tracked `.xlsx` binary needs
+hash-pinned human clearance in `dev-docs/approved_asset_inventory.json` before it may be committed, and no such
+clearance has been added. The CSV and JSON examples remain the reference starting material, and the TSV variant
+remains ungenerated.
 
 ## 7. Canonical serialization and hashes
 
@@ -390,6 +481,8 @@ error object's `repr` is value-free.
 Codes: `unsupported_source_suffix`, `unsupported_source_encoding`, `unreadable_source`, `empty_source`,
 `oversized_source`, `row_limit_exceeded`, `profile_limit_exceeded`, `model_limit_exceeded`, `alias_limit_exceeded`,
 `nesting_limit_exceeded`, `malformed_json`, `malformed_tabular`,
+`malformed_container`, `inflation_limit_exceeded`, `unsafe_formula`, `spreadsheet_error`,
+`invalid_date_object`, `sheet_required`, `unknown_sheet`, `sheet_limit_exceeded`,
 `unsupported_schema_version`, `unknown_field`, `duplicate_json_key`, `invalid_type`, `missing_required_field`,
 `blank_required_cell`, `blank_disallowed_cell`, `empty_domain`, `empty_coordinate_block`, `invalid_profile_id`,
 `invalid_manufacturer`, `invalid_model_list`, `alias_ambiguous_target`, `alias_target_mismatch`,
@@ -400,19 +493,37 @@ Codes: `unsupported_source_suffix`, `unsupported_source_encoding`, `unreadable_s
 `unreadable_source` covers a file that cannot be read at all (missing, a directory, or any I/O failure). A path
 is never included in the error, so the failure is indistinguishable by path and only distinguishable by code.
 
-Four further codes are **reserved for later slices and must not be reported as implemented**:
-`sheet_limit_exceeded` (XLSX adapter), `store_corruption` (user store),
-`existing_model_out_of_extent` (transmission bounds), and `explicit_sqlite_collision`
-(explicit `corrections_db_path` coexistence).
-
-## 11. Packaged examples
-
-The packaged `example_data/equipment_profiles/` JSON parses under this contract unchanged: 3 profiles, 16
-coordinate leaves, and 5 transmission rows. The two alias fields on `demo-scope-2000` are accepted shorthand
-arrays (JSON), `demo-scope-wildcard` supplies one nested leaf, `demo-scope-biplane-rows` supplies two
-transmission rows. They remain **unverified against a real loader** until Phase 1, and TSV/XLSX variants and
-`MANIFEST.in` inclusion remain outstanding.
+`unreadable_source` covers a file that cannot be read at all (missing, a directory, or any I/O failure). A path
+is never included in the error, so the failure is indistinguishable by path and only distinguishable by code.
 
 Strings must be encodable as strict UTF-8; escaped unpaired surrogates are rejected with
 `unsupported_source_encoding`. Measured source text must contain non-whitespace content. Traversal bounds
 limit both visited nodes and queued children, so a broad in-memory container cannot grow an unbounded stack.
+`sheet_required`, `unknown_sheet`, and `sheet_limit_exceeded` belong to the XLSX adapter (§6B) and never name a
+sheet; `malformed_container`, `inflation_limit_exceeded`, `unsafe_formula`, `spreadsheet_error`, and
+`invalid_date_object` likewise carry only a source kind, an allowlisted column or `record_type`, an index, and
+a count.
+
+Three further codes are **reserved for later slices and must not be reported as implemented**:
+`store_corruption` (user store), `existing_model_out_of_extent` (transmission bounds), and
+`explicit_sqlite_collision` (explicit `corrections_db_path` coexistence).
+
+## 11. Packaged examples
+
+The packaged example is **verified against the real adapters**: the CSV reads to the same profile hashes as the
+JSON, and an in-memory workbook built from that CSV reads to the same hashes again. Three profiles, 16
+coordinate leaves, and 5 transmission rows in every format; the two alias fields on `demo-scope-2000` are
+accepted shorthand arrays (JSON) or `|`-separated shorthand (tabular), `demo-scope-wildcard` supplies one
+nested leaf, and `demo-scope-biplane-rows` supplies two transmission rows.
+
+The packaged README is the **authoritative field dictionary** for the flat formats: column names, applicability,
+units, and blank meaning. Outstanding for later slices: the packaged TSV and XLSX variants (an XLSX binary needs
+hash-pinned human clearance in `dev-docs/approved_asset_inventory.json` before it may be committed, and no such
+clearance has been added), `MANIFEST.in` inclusion, and the wheel proof.
+
+Worksheet XML preflight resolves namespaces and declared worksheet parts from OOXML content types; every
+reader-selected part must have passed preflight. Row coordinates must increase and stay within the row budget;
+cell coordinates must increase within, and belong to, their containing row. Reader-emitted padding also counts
+toward row/column/cell budgets. Text numeric and boolean cells use the same lexical rules as CSV/TSV; spreadsheet
+number and boolean objects remain restricted to their respective field types. Non-empty whitespace beyond the
+header is an unknown column value, not blank padding.

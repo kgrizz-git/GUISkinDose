@@ -9,7 +9,64 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 ## [Unreleased]
 
 ### Changed
+- **XLSX preflight boundaries** (2026-10-11) — resolve worksheet namespaces and content-type parts before
+  reading; reject mismatched, unordered, and out-of-budget coordinates; bound reader padding; preserve
+  CSV-compatible numeric/boolean text and reject populated extra columns. Regression tests cover prefixed
+  XML, nonstandard worksheet paths, and typed/text canonical equivalence.
 
+### Changed
+
+### Changed
+
+- **Equipment-profile XLSX silent-loss fixes** (2026-10-10) — fixed two silent-loss defects in the inert
+  XLSX adapter, both of which produced a *successful* parse with missing content. First, a row conversion
+  truncated to the header width, so a populated cell beyond the 19-column header — including a formula or a
+  spreadsheet error cell — was silently discarded; populated extra cells now fail the whole load, while blank
+  padding outside the header is still tolerated. Second, openpyxl's read-only parser is dimension-driven, so a
+  workbook rewriting its declared `<dimension>` to `A1:S3` was silently read as one profile and two rows; the
+  adapter now validates every worksheet part with a bounded streaming `expat` parser that ignores the declared
+  dimension for sizing and enforces the row, column, and cell budgets on the coordinates actually present,
+  rejecting out-of-range, repeated, and malformed coordinates, DTDs, entity declarations, and external entity
+  references. With the real bounds known first, the reader's dimension is discarded so an understated workbook
+  is read in full and an overstated one cannot allocate padding it does not hold — no silent truncation in
+  either direction — and the budgets are re-enforced on the reader's actual iteration. Also added a typed-cell
+  policy that accepts a number or boolean only in a column whose schema type is that type (never coercing one
+  into text or into `1`), with the coordinate `value` column resolved per leaf; a sheet-count ceiling read from
+  the workbook's own worksheet catalog rather than archive part filenames; and one documented boundary over the
+  whole untrusted-container path that normalizes any remaining library exception family to
+  `malformed_container` with the cause suppressed and always closes the workbook. The schema contract's
+  inaccurate "dimension truncation is a limitation" claim was removed. Tests cover both silent-loss
+  regressions, understated and inflated dimensions, actual coordinate bounds and tampering, corrupt XML with a
+  valid CRC, the typed-cell policy across every column kind, 20-column promotion headers, extra-cell
+  rejection, and privacy. No binaries, assets, baselines, packaging files, or application code were touched.
+
+### Changed
+
+- **Equipment-profile XLSX adapter (inert)** (2026-10-10) — added
+  `src/guiskindose/equipment_profiles/xlsx_preflight.py` and `xlsx_source.py`. The container is preflighted
+  before any worksheet is read: the archive is opened from the in-memory byte snapshot, the entry list is
+  bounded, duplicate and directory-spoofing entry names are rejected, and every member is inflated by
+  streaming real decompressed bytes in chunks rather than trusting the central directory, so a forged
+  `file_size` cannot smuggle a zip bomb. Worksheets are counted by iterating actual rows, and the sheet index
+  is resolved from an explicit selection (mandatory for a multi-sheet workbook, otherwise sheet `0`).
+  Typed-cell policy: numbers stay numbers, booleans are accepted only where the schema expects one and
+  normalize to `true`/`false` (never coerced into `1` for a numeric column), dates are valid only in the
+  `date` column and must be exactly midnight rendering as strict ISO `YYYY-MM-DD`, formulas are rejected
+  rather than read as their cached value, and spreadsheet error cells are rejected. Typed cells convert
+  straight to the flat text cells the shared CSV seam consumes, so there is no CSV round trip and no second
+  flat parser. openpyxl is imported inside the adapter functions, so a JSON/CSV/TSV-only use never loads the
+  spreadsheet stack. Every failure carries source kind `xlsx` and an allowlisted column, `record_type`, or
+  integer count; sheet names, paths, cell text, and library messages never appear, and raw causes are
+  suppressed. Tests build workbooks in memory or under `tmp_path` so no tracked `.xlsx` binary is committed,
+  and cover CSV-to-workbook canonical equivalence, sheet selection and errors, typed cells, strict
+  headers/rows/types, formulas, errors, bounded snapshots, zip-inflation lies, container corruption, and
+  privacy. Documented limitation: openpyxl's read-only parser is dimension-driven, so a lying declared
+  `<dimension>` can only ever reduce the rows yielded; the budgets are enforced on actual iteration and are
+  authoritative in the unsafe direction, and such a workbook fails closed. The schema contract gained §6B,
+  the plan records the XLSX adapter as implemented-and-inert with the user store as the remaining Phase 1
+  adapter, and the packaged README and index note that the adapter is inert. No application, normalization,
+  calculation, GUI, CLI, store, or packaging file was touched, no `.xlsx` binary was introduced, and no
+  approved-asset inventory or scan baseline edit was made.
 - **Equipment-profile CSV and TSV adapters (inert)** (2026-10-10) — added
   `src/guiskindose/equipment_profiles/tabular_common.py` (shared primitives: strict UTF-8 with optional BOM and
   no unpaired surrogates, strict header validation that never echoes a duplicate or unknown column name,

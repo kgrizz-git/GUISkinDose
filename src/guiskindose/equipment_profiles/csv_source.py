@@ -66,6 +66,15 @@ from guiskindose.equipment_profiles.validation import validate_document
 
 _CSV_DELIMITER = ","
 
+#: Public flat-row seam shared with the XLSX adapter, which supplies the same validated
+#: :class:`ParsedRow` stream instead of serializing back to CSV.
+__all__ = [
+    "logical_rows",
+    "parse_csv_bytes",
+    "parse_csv_file",
+    "rows_to_document",
+]
+
 
 class _ProfileGroup:
     """Mutable accumulator for one ``profile_id`` group, folded into an immutable profile mapping."""
@@ -237,7 +246,7 @@ def _fold_row(group: _ProfileGroup, row: ParsedRow, source_kind: str) -> None:
         group.transmission.append(_transmission_payload(row, source_kind))
 
 
-def _rows_to_document(rows: Iterator[ParsedRow], source_kind: str) -> dict[str, Any]:
+def rows_to_document(rows: Iterator[ParsedRow], source_kind: str) -> dict[str, Any]:
     """Group flat rows into the canonical document mapping.
 
     Grouping is deliberately **two-pass over in-memory row records**, because a group's ``profile`` row may
@@ -310,9 +319,9 @@ def parse_tabular_bytes(raw: bytes, *, delimiter: str, source_kind: str, suffix:
         )
     _read_bounded_bytes(raw, source_kind)
     rows = _rows(raw, delimiter=delimiter, source_kind=source_kind, header_index=1)
-    document = _rows_to_document(rows, source_kind)
+    document = rows_to_document(rows, source_kind)
     return _parsed_document(
-        document, source_kind=source_kind, raw=raw, logical_rows=_logical_rows(document)
+        document, source_kind=source_kind, raw=raw, logical_rows=logical_rows(document)
     )
 
 
@@ -330,13 +339,13 @@ def parse_tabular_file(path: str | os.PathLike[str], *, delimiter: str, source_k
     raw = _bounded_read(candidate, source_kind)
     _read_bounded_bytes(raw, source_kind)
     rows = _rows(raw, delimiter=delimiter, source_kind=source_kind, header_index=1)
-    document = _rows_to_document(rows, source_kind)
+    document = rows_to_document(rows, source_kind)
     return _parsed_document(
-        document, source_kind=source_kind, raw=raw, logical_rows=_logical_rows(document)
+        document, source_kind=source_kind, raw=raw, logical_rows=logical_rows(document)
     )
 
 
-def _logical_rows(document: dict[str, Any]) -> int:
+def logical_rows(document: dict[str, Any]) -> int:
     """Count logical rows for the aggregate ceiling: profiles + coordinate leaves + transmission rows."""
     total = 0
     for entry in document["profiles"]:

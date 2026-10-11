@@ -77,7 +77,7 @@ plan); a fully supplied profile omits nothing. Unknown fields are rejected.
 ## Tabular shape
 
 CSV, TSV, and XLSX use **one** flat table (the same rows and columns in every tabular format; XLSX is the same
-table on one sheet). Each row is one record, selected by `record_type`:
+table on one sheet, chosen by sheet). Each row is one record, selected by `record_type`:
 
 - `profile` — one row per profile: identity (`manufacturer`, `models`, aliases) and provenance. List values use
   `|` as the separator (`DemoScope2000|DS2000`); an empty list is an empty cell.
@@ -164,5 +164,4 @@ through the existing `include_identifiers` opt-in.
 > still has to publish executable schemas, limits, errors, and hash rules. These files remain authoring
 > examples until tested against the real loader.
 
-Also note that these JSON, and CSV files (plus the blank templates) are authored but **unverified against a real
-loader**. TSV and XLSX variants are still outstanding, and packaging of this folder into the wheel is not done.
+Also note: the JSON, CSV, and XLSX files are verified to produce identical profile hashes through the internal parser (a workbook built from the CSV parses to the same profiles as the JSON). The **XLSX adapter is inert** — no GUI, CLI, store, or calculation path uses it, and no application code loads these files. TSV and XLSX packaged variants are still outstanding (a tracked `.xlsx` needs hash-pinned human clearance first), and packaging of this folder into the wheel is not done.

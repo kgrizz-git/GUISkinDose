@@ -29,6 +29,13 @@ class ProfileErrorCode(StrEnum):
     NESTING_LIMIT_EXCEEDED = "nesting_limit_exceeded"
     MALFORMED_JSON = "malformed_json"
     MALFORMED_TABULAR = "malformed_tabular"
+    MALFORMED_CONTAINER = "malformed_container"
+    INFLATION_LIMIT_EXCEEDED = "inflation_limit_exceeded"
+    UNSAFE_FORMULA = "unsafe_formula"
+    SPREADSHEET_ERROR = "spreadsheet_error"
+    INVALID_DATE_OBJECT = "invalid_date_object"
+    SHEET_REQUIRED = "sheet_required"
+    UNKNOWN_SHEET = "unknown_sheet"
     UNSUPPORTED_SCHEMA_VERSION = "unsupported_schema_version"
     UNKNOWN_FIELD = "unknown_field"
     DUPLICATE_JSON_KEY = "duplicate_json_key"
@@ -75,6 +82,13 @@ _MESSAGES: dict[ProfileErrorCode, str] = {
     ProfileErrorCode.NESTING_LIMIT_EXCEEDED: "document nesting exceeds the depth bound",
     ProfileErrorCode.MALFORMED_JSON: "document is not well-formed JSON",
     ProfileErrorCode.MALFORMED_TABULAR: "tabular document is malformed",
+    ProfileErrorCode.MALFORMED_CONTAINER: "spreadsheet container is malformed",
+    ProfileErrorCode.INFLATION_LIMIT_EXCEEDED: "spreadsheet inflation exceeds the budget",
+    ProfileErrorCode.UNSAFE_FORMULA: "cell holds a formula, not a literal value",
+    ProfileErrorCode.SPREADSHEET_ERROR: "cell holds a spreadsheet error value",
+    ProfileErrorCode.INVALID_DATE_OBJECT: "date value is not midnight of a single day",
+    ProfileErrorCode.SHEET_REQUIRED: "a sheet must be selected for a multi-sheet workbook",
+    ProfileErrorCode.UNKNOWN_SHEET: "selected sheet is not present in the workbook",
     ProfileErrorCode.UNSUPPORTED_SCHEMA_VERSION: "schema version is not supported",
     ProfileErrorCode.UNKNOWN_FIELD: "field name is not in the schema",
     ProfileErrorCode.DUPLICATE_JSON_KEY: "object repeats a key",
@@ -107,13 +121,12 @@ _MESSAGES: dict[ProfileErrorCode, str] = {
 }
 
 #: Codes that exist in the vocabulary but are deliberately not implemented yet.
+#: ``sheet_limit_exceeded`` was reserved for the XLSX adapter and is now implemented by the preflight.
 RESERVED_CODES = (
-    ProfileErrorCode.SHEET_LIMIT_EXCEEDED,
     ProfileErrorCode.STORE_CORRUPTION,
     ProfileErrorCode.EXISTING_MODEL_OUT_OF_EXTENT,
     ProfileErrorCode.EXPLICIT_SQLITE_COLLISION,
 )
-
 
 class EquipmentProfileError(Exception):
     """A value-free, stable-coded equipment-profile failure.

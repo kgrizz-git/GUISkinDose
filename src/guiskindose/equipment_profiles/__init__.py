@@ -56,6 +56,7 @@ from guiskindose.equipment_profiles.constants import (
     MAX_SOURCE_BYTES,
     MAX_SOURCE_TEXT,
     MAX_TRANSMISSION_ROWS,
+    MAX_XLSX_MEMBER_BYTES,
     MAX_XLSX_SHEETS,
     RECORD_TYPES,
     SCHEMA_VERSION,
@@ -64,6 +65,7 @@ from guiskindose.equipment_profiles.constants import (
     SOURCE_KIND_JSON,
     SOURCE_KIND_MEMORY,
     SOURCE_KIND_TSV,
+    SOURCE_KIND_XLSX,
     SOURCE_KINDS,
 )
 from guiskindose.equipment_profiles.csv_source import parse_csv_bytes, parse_csv_file
@@ -108,6 +110,7 @@ from guiskindose.equipment_profiles.models import (
 )
 from guiskindose.equipment_profiles.tsv_source import parse_tsv_bytes, parse_tsv_file
 from guiskindose.equipment_profiles.validation import validate_document
+from guiskindose.equipment_profiles.xlsx_source import parse_xlsx_bytes, parse_xlsx_file
 
 __all__ = [
     # Constants
@@ -129,6 +132,7 @@ __all__ = [
     "MAX_SOURCE_BYTES",
     "MAX_SOURCE_TEXT",
     "MAX_TRANSMISSION_ROWS",
+    "MAX_XLSX_MEMBER_BYTES",
     "MAX_XLSX_SHEETS",
     "RECORD_TYPES",
     "RESERVED_CODES",
@@ -139,6 +143,7 @@ __all__ = [
     "SOURCE_KIND_JSON",
     "SOURCE_KIND_MEMORY",
     "SOURCE_KIND_TSV",
+    "SOURCE_KIND_XLSX",
     "UNSUPPORTED_CAPABILITIES",
     # Matches
     "CoordinateMatchRecord",
@@ -183,6 +188,8 @@ __all__ = [
     "parse_memory_document",
     "parse_tsv_bytes",
     "parse_tsv_file",
+    "parse_xlsx_bytes",
+    "parse_xlsx_file",
     "profile_hash",
     "source_bytes_hash",
     "supported_profiles",

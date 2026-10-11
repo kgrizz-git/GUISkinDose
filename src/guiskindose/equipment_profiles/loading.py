@@ -23,6 +23,7 @@ from guiskindose.equipment_profiles.json_source import (
 )
 from guiskindose.equipment_profiles.models import Profile, ProfileSet
 from guiskindose.equipment_profiles.tsv_source import parse_tsv_bytes, parse_tsv_file
+from guiskindose.equipment_profiles.xlsx_source import parse_xlsx_bytes, parse_xlsx_file
 
 __all__ = [
     "ParsedDocument",
@@ -36,6 +37,8 @@ __all__ = [
     "parse_memory_document",
     "parse_tsv_bytes",
     "parse_tsv_file",
+    "parse_xlsx_bytes",
+    "parse_xlsx_file",
 ]
 
 

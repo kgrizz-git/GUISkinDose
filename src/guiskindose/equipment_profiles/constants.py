@@ -135,6 +135,30 @@ MAX_TRAVERSAL_NODES = 250_000
 #: Maximum XLSX sheets a workbook may offer for selection.
 MAX_XLSX_SHEETS = 16
 
+# --- XLSX container and worksheet preflight ---------------------------------------------
+# A compressed upload may sit inside the 8 MiB byte cap and still inflate far past it, so the archive is
+# preflighted by *streaming* real decompressed member bytes rather than trusting central-directory
+# metadata, and the worksheet is counted from actual iteration rather than its declared dimension.
+
+#: Ceiling for any single decompressed ZIP member.
+MAX_XLSX_MEMBER_BYTES = 32 * 1024 * 1024
+
+#: Ceiling for the sum of all decompressed members.
+MAX_XLSX_TOTAL_INFLATED_BYTES = 64 * 1024 * 1024
+
+#: Chunk used while streaming a member so a lying header cannot force one huge allocation.
+XLSX_STREAM_CHUNK_BYTES = 64 * 1024
+
+#: Row, column, and cell budgets enforced while counting an actual worksheet.
+MAX_XLSX_PREFLIGHT_ROWS = 100_000
+MAX_XLSX_PREFLIGHT_COLS = 512
+MAX_XLSX_PREFLIGHT_CELLS = 2_000_000
+
+#: OOXML worksheet part naming. Used only to locate parts inside the archive; sheet *selection* is resolved
+#: from the workbook's own catalog, never from these names.
+WORKSHEET_ENTRY_PREFIX = "xl/worksheets/"
+WORKSHEET_ENTRY_SUFFIX = ".xml"
+
 #: Maximum characters for short identity text (profile_id, manufacturer, model keys, aliases).
 MAX_SHORT_TEXT = 64
 
@@ -192,6 +216,9 @@ TABULAR_SUFFIX_TO_KIND = {
     ".csv": SOURCE_KIND_CSV,
     ".tsv": SOURCE_KIND_TSV,
 }
+
+#: File suffixes accepted by the implemented spreadsheet adapter.
+XLSX_SOURCE_SUFFIXES = (".xlsx",)
 
 # --- Flat tabular shape (RFC 4180-style single table) -----------------------------------
 
