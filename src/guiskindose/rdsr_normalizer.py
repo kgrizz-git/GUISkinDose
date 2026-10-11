@@ -119,7 +119,12 @@ def _dicom_source_kind(cid_backed: pd.Series, has_code: pd.Series, has_meaning: 
     )
 
 
-def rdsr_normalizer(data_parsed: pd.DataFrame, settings: PyskindoseSettings) -> pd.DataFrame:
+def rdsr_normalizer(
+    data_parsed: pd.DataFrame,
+    settings: PyskindoseSettings,
+    *,
+    equipment_receipt_out: list | None = None,
+) -> pd.DataFrame:
     """Normalize RDSR data for PySkinDose compliance.
 
     The caller's ``data_parsed`` is never modified. Zero-dose events with
@@ -133,6 +138,9 @@ def rdsr_normalizer(data_parsed: pd.DataFrame, settings: PyskindoseSettings) -> 
         i.e. output of function rdsr_parser
     settings : PyskindoseSettings
         The PySkinDose settings object containing the normalization settings
+    equipment_receipt_out : list | None
+        Optional list receiving the custom equipment-profile resolution record
+        (when a session is bound on settings), else left untouched.
 
     Returns
     -------
@@ -238,16 +246,25 @@ def rdsr_normalizer(data_parsed: pd.DataFrame, settings: PyskindoseSettings) -> 
     filter_thickness_Al : float
         Aluminum X-ray filter thickness in mm.
     """
-    return rdsr_normalizer_with_source_rows(data_parsed, settings)[0]
+    return rdsr_normalizer_with_source_rows(
+        data_parsed, settings, equipment_receipt_out=equipment_receipt_out
+    )[0]
 
 
 def rdsr_normalizer_with_source_rows(
-    data_parsed: pd.DataFrame, settings: PyskindoseSettings
+    data_parsed: pd.DataFrame,
+    settings: PyskindoseSettings,
+    *,
+    equipment_receipt_out: list | None = None,
 ) -> tuple[pd.DataFrame, list[int]]:
     """Normalize like :func:`rdsr_normalizer`; also return each output row's input position.
 
     Callers that carry extra per-event columns across by position (the tabular
     adapters) need this mapping, because dose-free incomplete events may be dropped.
+
+    When a custom equipment-profile session is bound on ``settings``, the session
+    resolves after filtering and applies before geometry normalization; the
+    resulting record is appended to ``equipment_receipt_out`` when given.
     """
     data_norm = pd.DataFrame()
     # Private copy with positional labels: the caller's frame is never modified,
@@ -270,10 +287,32 @@ def rdsr_normalizer_with_source_rows(
 
     settings.normalization_settings.update_used_settings(data_parsed=data_parsed)
 
+    # Custom equipment-profile session, phase 1 (pre-filter): resolve with the
+    # pre-filter count and apply everything, so required-concept validation
+    # below sees the effective custom field-size mode. The published receipt
+    # always comes from phase 2, after filtering completes.
+    session_applied = False
+    if equipment_receipt_out is not None or (
+        getattr(settings, "equipment_profile_session", None) is not None
+    ):
+        from guiskindose.equipment_resolution import begin_session_application
+
+        session_applied = begin_session_application(data_parsed=data_parsed, settings=settings)
+
     resolve_source_detector_distance(data_parsed)
     data_parsed = enforce_required_concepts(data_parsed, settings.normalization_settings.field_size_mode)
     source_rows = [int(position) for position in data_parsed.index]
     data_parsed = data_parsed.reset_index(drop=True)
+
+    # Phase 2 (post-filter): re-resolve when filtering dropped rows so the
+    # affected count is exact; only this receipt may be published.
+    receipt = None
+    if session_applied:
+        from guiskindose.equipment_resolution import finalize_session_application
+
+        receipt = finalize_session_application(
+            data_parsed=data_parsed, settings=settings, applied=session_applied
+        )
 
     for append_normalization in [
         _normalize_machine_parameters,
@@ -285,6 +324,10 @@ def rdsr_normalizer_with_source_rows(
             data_parsed=data_parsed, data_norm=data_norm, norm=settings.normalization_settings
         )
 
+    if equipment_receipt_out is not None and receipt is not None:
+        from guiskindose.equipment_resolution import bind_receipt_frame
+
+        equipment_receipt_out.append(bind_receipt_frame(receipt, data_norm))
     return data_norm, source_rows
 
 
@@ -483,9 +526,12 @@ def _normalize_table_parameters(
     data_norm["Tz"] = norm.trans_offset.z + norm.trans_dir.z * table_lateral_mm / 10
 
     # Table rotations
-    data_norm["At1"] = norm.rot_dir.At1 * [0] * len(data_norm)
-    data_norm["At2"] = norm.rot_dir.At2 * [0] * len(data_norm)
-    data_norm["At3"] = norm.rot_dir.At3 * [0] * len(data_norm)
+    # Table rotations are always zero here (no table-angle inputs exist); the
+    # previous form multiplied the zero list by the direction sign, which
+    # yields an empty list — and a length crash — for a "-" sign.
+    data_norm["At1"] = [0] * len(data_norm)
+    data_norm["At2"] = [0] * len(data_norm)
+    data_norm["At3"] = [0] * len(data_norm)
 
     return data_norm
 
@@ -554,8 +600,8 @@ def _normalize_beam_parameters(
     # beam angulation
     data_norm["Ap1"] = norm.rot_dir.Ap1 * data_parsed.PositionerPrimaryAngle_deg
     data_norm["Ap2"] = norm.rot_dir.Ap2 * data_parsed.PositionerSecondaryAngle_deg
-    # temp set to zero
-    data_norm["Ap3"] = norm.rot_dir.Ap3 * [0] * len(data_norm)
+    # temp set to zero (see table-angle note above for why no sign factor applies).
+    data_norm["Ap3"] = [0] * len(data_norm)
     # Additive rotational end angles under the same rot_dir convention; None
     # when the source did not populate them (static or angle-less files).
     for parsed_col, sign, norm_col in (

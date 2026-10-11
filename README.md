@@ -244,6 +244,26 @@ print(f"Estimated PSD: {output['psd']:.1f} mGy")
 
 When `settings.output_format` is set to `dict` or `json`, the result can be used programmatically. The exported result includes items such as patient/table/pad data, event geometry, correction factors, dose map data, and peak skin dose. If you already have normalized RDSR data in a pandas `DataFrame`, use `analyze_normalized_data_with_custom_settings_object()` instead.
 
+### Custom equipment profiles (Python API, experimental)
+
+Validated manufacturer/model coordinate profiles can be assembled into a frozen session and bound
+on settings before loading **raw** input (DICOM or raw-shaped tabular). Matching exams apply all
+15 effective coordinate fields before geometry calculation; dict/JSON results report the per-exam
+match, inheritance notice, and session hashes under `equipment_profile_match`:
+
+```python
+from guiskindose.equipment_profiles import assemble_session
+
+session = assemble_session(documents=[{"schema_version": 1, "profiles": [...]}])
+settings = PyskindoseSettings(settings=load_settings_example_json(), equipment_profile_session=session)
+output = analyze_input_file("study.dcm", settings=settings)
+print(output["equipment_profile_match"]["notice"]["text"])
+```
+
+Pre-transformed inputs (`normalized` tables, preparsed `.json`, bare DataFrames) refuse a
+nonempty session instead of silently skipping it. GUI management, CLI flags, and rich-report
+integration are not part of this slice.
+
 **New to GUISkinDose?** Prefer the GUI or the interactive getting-started notebook
 ([docs/source/getting_started/getting_started.ipynb](docs/source/getting_started/getting_started.ipynb);
 run it via `pip install -e ".[notebooks]"` + `python scripts/open_getting_started_notebook.py`, which

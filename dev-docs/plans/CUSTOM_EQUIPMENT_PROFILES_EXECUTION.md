@@ -462,6 +462,28 @@ gets macOS/Linux and Windows manual evidence as applicable.
 
 ## Progress log
 
+- 2026-10-11 — **Parent API application hardening.** Receipts publish only after geometry
+  normalization succeeds, then rebind after final zero-kVp filtering. Analysis verifies normalized
+  numeric geometry and equality with a fresh resolution, including notices and source/revision
+  metadata, before calculation/output. Per-exam output uses the original validated input frame,
+  keeping dose-loop exclusions separate from application coverage. Added four regressions and
+  updated the no-session formatter test seam. Phase 2 remains open.
+
+- 2026-10-11 — **API slice review fixes (import-before-load only).** Effective custom field-size mode
+  now resolves before required-concept validation (ASD↔CFA both directions covered); published
+  records carry final retained counts with empty frames failing closed; `EquipmentApplicationReceipt`
+  binds record/session/identity/count/effective-settings with full boundary validation (wrong
+  session, changed frame/identity/count, forged records, stale settings all fail closed); per-exam
+  restore from validated receipts with cached-summary refresh; latent `sign * [0] * len` crash on
+  negative table/detector angles fixed (values identically zero). Phase 2 remains open.
+- 2026-10-11 — **First API coordinate slice landed (import-before-load only).**
+  `equipment_resolution.py` bridges bound sessions into raw normalization (resolve after filtering,
+  apply all 15 leaves before geometry, records on results — never on `NormalizationSettings`);
+  `PyskindoseSettings` accepts a typed, never-serialized session; dict/JSON results carry
+  `equipment_profile_match`; pre-transformed inputs refuse closed. 24 targeted tests (DICOM/tabular
+  application, all-15, filtering, fallback, parity, notices, reuse, refusals, goldens, privacy).
+  Phase 2 remains open (CLI/settings-source syntax, run-state reader + schema locks, GUI notices,
+  rich reports).
 - 2026-10-11 — **Multi-source session assembly landed (core preparation, no wiring).**
   `equipment_profiles/session.py` freezes file/memory/store sources into one conflict-checked,
   capability-gated session with a compiled index prepared once; per-exam `resolve()` reuses the

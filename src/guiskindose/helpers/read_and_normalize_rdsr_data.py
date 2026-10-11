@@ -17,7 +17,12 @@ from guiskindose.settings import PyskindoseSettings
 logger = logging.getLogger(__name__)
 
 
-def read_and_normalise_rdsr_data(rdsr_filepath: str | None, settings: PyskindoseSettings) -> pd.DataFrame:
+def read_and_normalise_rdsr_data(
+    rdsr_filepath: str | None,
+    settings: PyskindoseSettings,
+    *,
+    equipment_receipt_out: list | None = None,
+) -> pd.DataFrame:
     """Load RDSR event data for downstream dose calculations.
 
     DICOM paths are parsed and normalized; ``.json`` paths are loaded as
@@ -31,6 +36,9 @@ def read_and_normalise_rdsr_data(rdsr_filepath: str | None, settings: Pyskindose
         data directory.
     settings : PyskindoseSettings
         Runtime settings controlling parsing and normalization behavior.
+    equipment_receipt_out : list | None
+        Optional list receiving the custom equipment-profile resolution
+        record (when a session is bound on settings), else left untouched.
 
     Returns
     -------
@@ -50,6 +58,12 @@ def read_and_normalise_rdsr_data(rdsr_filepath: str | None, settings: Pyskindose
 
     # If provided, load preparsed rdsr data in .json format
     if path.suffix.lower() == ".json":
+        from guiskindose.equipment_resolution import check_session_input_compatible
+
+        check_session_input_compatible(
+            schema="preparsed_json",
+            session=getattr(settings, "equipment_profile_session", None),
+        )
         return pd.read_json(path)
 
     # else load RDSR data with pydicom
@@ -59,10 +73,15 @@ def read_and_normalise_rdsr_data(rdsr_filepath: str | None, settings: Pyskindose
     data_parsed = rdsr_parser(data_raw, silence_pydicom_warnings=settings.silence_pydicom_warnings)
 
     # normalized rdsr for compliance with PySkinDose
-    normalized_data = rdsr_normalizer(data_parsed, settings=settings)
+    receipts: list = []
+    normalized_data = rdsr_normalizer(data_parsed, settings=settings, equipment_receipt_out=receipts)
 
     if settings.remove_invalid_rows and (invalid_kvp_rows := len(normalized_data[normalized_data.kVp == 0])):
         print(f"Removing {invalid_kvp_rows} rows with kVp value = 0")
         normalized_data = normalized_data[normalized_data.kVp != 0].reset_index(drop=True)
 
+    if equipment_receipt_out is not None and receipts:
+        from guiskindose.equipment_resolution import bind_receipt_frame
+
+        equipment_receipt_out.append(bind_receipt_frame(receipts[0], normalized_data))
     return normalized_data

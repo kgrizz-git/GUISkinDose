@@ -88,7 +88,8 @@ def test_single_exam_skip_policy_passes_aligned_data_norm_to_export() -> None:
     """Dict export must receive data_norm length matching dose-loop event arrays."""
     captured: dict[str, int] = {}
 
-    def _capture_format(analysis_result, data_norm, patient, table, pad, settings):
+    def _capture_format(analysis_result, data_norm, patient, table, pad, settings, equipment_profile_match=None):
+        assert equipment_profile_match is None
         captured["n_data"] = len(data_norm)
         captured["n_hits"] = len(analysis_result[c.OUTPUT_KEY_HITS])
         return {"psd": 0.0, "events": captured["n_data"]}

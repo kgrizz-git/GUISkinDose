@@ -11,6 +11,23 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 - Radimetrics unknown-model diagnostics report only the model count; raw equipment names remain local.
 
 ### Changed
+
+- **Equipment API application review** (2026-10-11) — receipts publish after successful geometry
+  normalization, rebind after final zero-kVp filtering, and verify normalized numeric geometry plus
+  a fresh session resolution before analysis. Added regressions for same-count geometry changes,
+  well-typed forged notice text, failed normalization publication, and final retained counts.
+- **API slice review fixes** (2026-10-11) — custom field-size mode resolves before required-concept
+  validation; receipts carry final retained counts (empty frames fail closed); new
+  `EquipmentApplicationReceipt` binding validated at analysis boundaries with per-exam restore and
+  summary refresh; fixed a latent crash where negative direction signs emptied hardcoded zero
+  angle lists (`sign * [0] * len`). Covered by new gap tests; goldens unchanged.
+- **First API coordinate slice (import-before-load)** (2026-10-11) — added
+  `src/guiskindose/equipment_resolution.py` (session binding, raw-identity resolution after
+  filtering, all-15 application to live normalization settings, default-safe serialization);
+  typed never-serialized session parameter on `PyskindoseSettings`; resolution threading through
+  the normalizer, adapters, main flows, and dict/JSON outputs; closed refusals for pre-transformed
+  inputs. 24 targeted tests; ruff, basedpyright, complexity, size, and freshness gates clean. No
+  GUI/run-state/CLI-flag/export-catalog changes; Phase 2 remains open.
 - **Equipment-profile session assembly (inert)** (2026-10-11) — added
   `src/guiskindose/equipment_profiles/session.py`: `FileSource` requests with SPEC §8 path rules,
   `assemble_session()` combining file/memory/store sources with bounds before copying, canonical

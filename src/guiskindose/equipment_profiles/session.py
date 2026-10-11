@@ -194,6 +194,10 @@ class EquipmentProfileSession:
             f"sources={len(self.provenance.sources)}, active_set_hash={self.active_set_hash!r})"
         )
 
+    def __deepcopy__(self, memo: dict[int, Any]) -> EquipmentProfileSession:
+        """Share the session on copy: it is fully immutable (tuples and frozen values only)."""
+        return self
+
 
 def _materialize_requests(value: Any, owner: str) -> list[Any]:
     """Copy one request collection under the shared source ceiling.

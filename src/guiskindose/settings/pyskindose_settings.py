@@ -39,6 +39,7 @@ from guiskindose.constants import (
     RUN_ARGUMENTS_OUTPUT_JSON,
     RUN_ARGUMENTS_VALID_OUTPUT_FORMATS,
 )
+from guiskindose.equipment_profiles.session import EquipmentProfileSession
 
 from .kerma_meter_correction_settings import KermaMeterCorrectionSettings
 from .normalization_settings import NormalizationSettings
@@ -108,6 +109,7 @@ class PyskindoseSettings:
         normalization_settings: Path | str | dict | NormalizationSettings | None = None,
         file_result_output_path: str | Path | None = None,
         output_format: str = RUN_ARGUMENTS_OUTPUT_HTML,
+        equipment_profile_session: EquipmentProfileSession | None = None,
     ):
         """Initialize settings class.
 
@@ -117,6 +119,10 @@ class PyskindoseSettings:
             Either a JSON-string or a dictionary containing all the settings
             parameters required to run PySkinDose. See setting_example.json
             in /settings/ for example.
+        equipment_profile_session : EquipmentProfileSession | None
+            Optional frozen custom-profile session bound before input loading.
+            Never serialized: ``to_settings_dict``/``to_json`` exclude it by
+            design so canonical profile content cannot leak into configs.
 
         """
         tmp = json.loads(settings) if isinstance(settings, str) else settings
@@ -195,6 +201,17 @@ class PyskindoseSettings:
         from guiskindose.input_adapters.plane_code_map import parse_plane_code_map
 
         self.dosetrack_plane_code_map = parse_plane_code_map(tmp.get("dosetrack_plane_code_map"))
+
+        # Optional frozen custom-profile session (import-before-load only).
+        # Typed and never serialized: anything else is a programming error.
+        if equipment_profile_session is not None and not isinstance(
+            equipment_profile_session, EquipmentProfileSession
+        ):
+            raise ValueError(
+                "equipment_profile_session must be an EquipmentProfileSession or None, "
+                f"not {type(equipment_profile_session).__name__}."
+            )
+        self.equipment_profile_session: EquipmentProfileSession | None = equipment_profile_session
 
     @property
     def estimate_k_tab(self) -> bool:

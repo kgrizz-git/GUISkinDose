@@ -55,8 +55,7 @@ def normalize_hit_masks(masks: Any) -> list[list[bool]] | None:
 def _plane_identity_column_list(data_norm: pd.DataFrame, column: str, n_events: int) -> list[str]:
     """Return a per-event plane-identity column as strings, or ``[]`` if absent.
 
-    Missing / NaN cells become ``"unknown"`` so dict/JSON export matches the
-    rich-export ``fillna("unknown")`` hardening in ``export/payload.py``.
+    Missing / NaN cells become ``"unknown"``, matching rich-export hardening.
     """
     if n_events == 0 or column not in data_norm.columns:
         return []
@@ -415,8 +414,9 @@ class PySkinDoseOutput:
     rotational_envelope: dict[str, Any] | None = None
     # Per-tube kerma / applied CF / partial-map peak (tube ids only; additive).
     tube_summary: list[dict[str, Any]] | None = None
-    # Candidate-union hit masks (superset of ``hits`` for enveloped events).
-    # Never used to index the correction arrays; see sparse_union_hit_indices().
+    # Optional per-exam custom match, included in dict/JSON when present.
+    equipment_profile_match: dict[str, Any] | None = None
+    # Candidate-union masks: never index correction arrays; see sparse_union_hit_indices().
     hits_union: list[list[bool]] | None = None
 
     # Derived canonical values — legacy uppercase attribute aliases are intentionally absent.
@@ -580,7 +580,7 @@ class PySkinDoseOutput:
         patient = patient_export["patient"]
         if not isinstance(patient, (HumanPhantomOutput, NonHumanPhantomOutput)):
             raise TypeError("patient_export() returned an unsupported patient payload")
-        return {
+        payload = {
             "schema_version": EXPORT_SCHEMA_VERSION,
             "intended_use": INTENDED_USE_NOTICE,
             "psd": self.psd,
@@ -635,6 +635,10 @@ class PySkinDoseOutput:
             },
             "events": self.events.to_dict(),
         }
+        # Preserve the historical no-session key set.
+        if self.equipment_profile_match is not None:
+            payload["equipment_profile_match"] = self.equipment_profile_match
+        return payload
 
     def to_json(self) -> str:
         """Converts the output data into a JSON string
@@ -672,6 +676,7 @@ class ExamResult:
     settings_snapshot: dict[str, Any]
     output: PySkinDoseOutput
     warnings: list[str]
+    equipment_profile_match: dict[str, Any] | None = None
 
 
 @dataclass
@@ -702,6 +707,8 @@ class MultiExamResult:
                 "warnings": exam.warnings,
                 "output": exam.output.to_dict(),
             }
+            if exam.equipment_profile_match is not None:
+                serialized["equipment_profile_match"] = exam.equipment_profile_match
             if include_source_identifiers:
                 serialized["source_file"] = exam.source_file
             exams.append(serialized)
@@ -729,10 +736,9 @@ def format_analysis_result_for_export(
     table: Phantom,
     pad: Phantom,
     settings: PyskindoseSettings,
+    equipment_profile_match: dict[str, Any] | None = None,
 ) -> PySkinDoseOutput | dict[str, Any] | str:
-    """Formats the result of the PySkinDose analysis into a PySkinDoseOutput class instance that has a methods for
-    converting the result to either a dict or a JSON string to facilitate building custom visualizations and for other
-    custom implementations of the PySkinDose calculated data.
+    """Format analysis as an output object, dict, or JSON.
 
     Parameters
     ----------
@@ -748,6 +754,8 @@ def format_analysis_result_for_export(
         An instance of the Phantom class that represents the pad
     settings : PyskindoseSettings
         The instance of the settings class used in the PySkinDose run for the current data
+    equipment_profile_match : dict[str, Any] | None
+        Validated custom equipment-profile match, passed through to dict/JSON.
 
     Returns
     -------
@@ -780,6 +788,7 @@ def format_analysis_result_for_export(
         rotational_envelope=analysis_result.get(OUTPUT_KEY_ROTATIONAL_ENVELOPE),
         tube_summary=analysis_result.get(OUTPUT_KEY_TUBE_SUMMARY),
         hits_union=normalize_hit_masks(analysis_result.get(OUTPUT_KEY_HITS_UNION)),
+        equipment_profile_match=equipment_profile_match,
     )
 
     if settings.output_format == RUN_ARGUMENTS_OUTPUT_DICT:

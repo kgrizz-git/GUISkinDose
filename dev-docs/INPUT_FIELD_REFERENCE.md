@@ -68,6 +68,23 @@ established `MODEL2MANUF` rules (blank continuations repeat the row above; leadi
 missing) and is subject to the same guard. Validation and classification live in
 `src/guiskindose/exam_identity.py`. No custom coordinates are applied: this is identity only.
 
+### Custom equipment sessions (API slice)
+
+A frozen `EquipmentProfileSession` (built with `assemble_session()` from profile files, in-memory
+documents, and/or store snapshots) can be bound on settings (`PyskindoseSettings(...,
+equipment_profile_session=...)` or attribute assignment; never serialized into configs). Raw
+inputs (DICOM plus raw-shaped tabular) then resolve the exam identity against it during
+normalization and apply all 15 effective leaves before geometry calculation; dict/JSON results
+carry `equipment_profile_match` (match record, complete/partial notice, active-set hash, session
+provenance). Pre-transformed inputs — the `normalized` schema, preparsed `.json` frames, or a
+bare DataFrame via `analyze_data()` — refuse closed with a nonempty session, since there are no
+raw fields to re-derive from. Bridging logic lives in `src/guiskindose/equipment_resolution.py`;
+per-exam records travel on `InputAdapterResult`/`ExamResult` and `PySkinDoseOutput`, never on
+`NormalizationSettings`. Analysis checks a typed application receipt against the active session,
+canonical identity, retained event count, normalized numeric geometry, and effective settings.
+Receipts are published only after normalization succeeds; each exam restores its own settings.
+Well-typed records and notices must equal a fresh resolution of the bound session before output.
+
 ---
 
 ## How inputs map into that contract

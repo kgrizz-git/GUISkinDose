@@ -21,6 +21,16 @@ That keeps SemVer and contributor history organized.
 
 ### Changed
 
+- Custom negative table-angle and third positioner-angle direction signs now preserve the zero-angle
+  arrays instead of causing a row-length error during normalization.
+
+- **Custom equipment profiles in Python API results (experimental)** (2026-10-11) — binding a frozen
+  equipment-profile session on settings (`equipment_profile_session=`) applies matching custom
+  coordinates during raw input normalization, with per-exam match records, inheritance notices, and
+  session hashes reported under `equipment_profile_match` in dict/JSON results. Pre-transformed
+  inputs refuse a nonempty session instead of silently skipping it. GUI management, CLI flags, and
+  rich-report integration are not part of this slice.
+
 - **Equipment-profile session assembly (experimental, internal only)** (2026-10-11) — the internal
   package gains a frozen multi-source session (file snapshots, in-memory documents, store snapshots)
   with cross-kind conflict checks, capability gating, a compiled index prepared once, and per-exam

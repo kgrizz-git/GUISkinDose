@@ -330,6 +330,12 @@ def _dispatch_to_adapter(
     implementation guidance; an unrecognised schema raises ValueError.
     """
     if schema == "normalized":
+        from guiskindose.equipment_resolution import check_session_input_compatible
+
+        check_session_input_compatible(
+            schema="normalized",
+            session=getattr(settings, "equipment_profile_session", None),
+        )
         return normalized_adapter.adapt(loaded, original_filename=path.name)
     if schema in ("generic_rdsr_like", "radimetrics", "dosetrack"):
         if settings is None:
