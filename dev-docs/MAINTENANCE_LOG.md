@@ -12,6 +12,15 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ### Changed
 
+- **Captured-application preparation/confirmation (app prep)** (2026-10-11) — new
+  `src/guiskindose/equipment_confirmation.py`: frozen `CapturedApplicationReceipt` plus pure
+  candidate preparation and closed confirmation against confirmed frames (identity/count/
+  geometry-v1/15 fields/labels); `equipment_capture.py` publishes the bounded
+  `frame_geometry_rows` helper (sole existing-file touch). Review fixes: all-rows identity via
+  shared canonical pairs, exact live field types, receipt exact-str method with bounded keys,
+  clone shared-handle verification with closed deepcopy failures. 48 tests; ruff,
+  basedpyright, complexity, size, and freshness gates clean. No session binding, replay,
+  analysis, or export wiring.
 - **Capture codec foundation, review-hardened (standalone)** (2026-10-11) — producer moved
   to `src/guiskindose/equipment_capture.py` and validates the current receipt/frame/settings
   through the public bridge before any digest; core codec imports no bridge/frame/settings code.

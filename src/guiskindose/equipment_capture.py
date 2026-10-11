@@ -57,6 +57,7 @@ __all__ = [
     "capture_to_mapping",
     "envelope_to_json",
     "envelope_to_mapping",
+    "frame_geometry_rows",
     "geometry_digest_v1",
 ]
 
@@ -177,36 +178,37 @@ def envelope_to_json(captures: Sequence[CapturedCoordinates | None]) -> str:
     return canonical_json_bytes(envelope_to_mapping(captures)).decode("utf-8")
 
 
-def _frame_rows(frame: Any, event_count: int) -> list[list[Any]]:
+def frame_geometry_rows(frame: Any, event_count: int) -> list[list[Any]]:
     """Extract ordered geometry rows after declared-count checks.
 
-    The declared length is verified against the validated count and capped
+    The declared length is verified against the expected count and capped
     before any column is read; the zipped rows are then verified back against
     the declared count so short/long columns fail instead of truncating.
+    Failures are closed and value-free.
     """
     try:
         columns = frame.columns
         missing = [name for name in GEOMETRY_COLUMNS_V1 if name not in columns]
     except (AttributeError, TypeError):
-        raise _closed() from None
+        raise _malformed() from None
     if missing:
-        raise _closed()
+        raise _malformed()
     try:
         declared = len(frame)
     except TypeError:
-        raise _closed() from None
+        raise _malformed() from None
     if declared != event_count or declared < 1 or declared > MAX_AGGREGATE_ROWS:
-        raise _closed()
+        raise _malformed()
     try:
         column_values = [_bounded_column(frame[name], declared) for name in GEOMETRY_COLUMNS_V1]
     except (AttributeError, TypeError, ValueError, KeyError):
-        raise _closed() from None
+        raise _malformed() from None
     try:
         rows = [list(values) for values in zip(*column_values, strict=True)]
     except (TypeError, ValueError):
-        raise _closed() from None
+        raise _malformed() from None
     if len(rows) != declared:
-        raise _closed()
+        raise _malformed()
     return rows
 
 
@@ -284,7 +286,7 @@ def capture_from_receipt(*, receipt: Any, frame: Any, settings: Any) -> Captured
         raise _closed()
     if affected != event_count:
         raise _closed()
-    digest = geometry_digest_v1(_frame_rows(frame, event_count))
+    digest = geometry_digest_v1(frame_geometry_rows(frame, event_count))
     body = {
         "match": mapping,
         "effective_coordinates": _recipe_nested(match_fields),

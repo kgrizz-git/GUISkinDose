@@ -470,6 +470,22 @@ gets macOS/Linux and Windows manual evidence as applicable.
 
 ## Progress log
 
+- 2026-10-11 — **Captured-application preparation/confirmation (app prep, no wiring).**
+  New `src/guiskindose/equipment_confirmation.py` (381 lines): pure
+  `prepare_captured_candidate` (validates context, deep-copies the settings home, applies the
+  full 15 stored leaves via public setters plus captured labels/method/summary) and
+  `confirm_captured_application` (frame identity/count/geometry-v1, all 15 live fields plus
+  labels, then frozen receipt + context-identical match mapping; closed codes throughout).
+  Touched `equipment_capture.py` only to publish the bounded `frame_geometry_rows` helper.
+  30 tests on real DICOM/CSV captures (full/partial/default/wildcard/missing-maker, offline
+  reuse, stale frames, per-leaf mismatches, immutability, zero/False). No session binding,
+  replay, analyze/run-state/GUI/CLI/export wiring, or version bumps; restore stays open.
+- 2026-10-11 — **Confirmation review fixes (same chunk).** All-rows identity via shared
+  `canonical_identity_pairs` (row-2 variation and known/unknown mixes reject; spelling variants
+  pass; count enforced before traversal); exact live types (bool swap, ±1 int multipliers,
+  finite non-bool numerics, exact strings — no truthiness/coercion); receipt exact-str method
+  and pre-normalization key length bounds; clone shared-handle verification with closed
+  deepcopy failures and documented factory-vs-authenticity semantics. 48 tests.
 - 2026-10-11 — **Capture codec parent review.** Corrected input-vs-selected identity checks so
   bundled wildcard and Default fallback captures round-trip. Bounded actual row width and frame
   columns, guard JSON bytes/depth/tokens before tree allocation, canonicalize public leaf values,
