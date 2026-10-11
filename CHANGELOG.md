@@ -35,6 +35,13 @@ That keeps SemVer and contributor history organized.
   equipment-profile feature described in
   `dev-docs/plans/CUSTOM_EQUIPMENT_PROFILES_SPEC.md`.
 
+- **Equipment-profile lookup indexes (experimental, internal only)** (2026-10-11) — the same internal
+  package gains immutable compiled coordinate/transmission indexes: single-compilation lookup by canonical
+  manufacturer/model and model/literal plane, with aliases and wildcards stored and global conflicts
+  detected before publishing. Entries are strictly bounded, structurally re-validated through the existing
+  boundary with claimed hashes verified, and all public reprs are value-free. **Inert like the rest of the
+  package:** nothing reads an index from any feature path, so results, exports, and settings are unchanged.
+
 - **Equipment-profile local store (experimental, internal only)** (2026-10-11) — the same internal package
   gains a transactional SQLite user profile store (`equipment_profiles.sqlite3` under `~/.guiskindose/`):
   immutable per-profile revisions with canonical payloads and content hashes, required revision checks on

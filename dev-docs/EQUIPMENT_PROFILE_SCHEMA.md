@@ -608,3 +608,50 @@ re-verified on reads. All SQL is parameterized. Every `sqlite3` failure collapse
 `store_*` code (`store_conflict`, `store_corruption`, `unsupported_store_version`, `store_not_found`,
 `store_unavailable`, `store_limit_exceeded`) with the raw cause suppressed and `source_kind: "store"` on
 every failure.
+
+## 13. Compiled lookup indexes
+
+Indexes are compiled once from validated profiles and answer per-event lookups without scanning profiles.
+They perform no matching precedence, inheritance, interpolation, overlay, or evidence eligibility, and they
+change nothing about the initial activation gate (§5).
+
+**Inputs.** Each entry carries a `Profile` plus its source context: `source_kind`, an optional store
+`revision`, and the claimed canonical `profile_hash`. Nothing is trusted on construction. The input must be a
+real sequence: strings, bytes, and one-shot iterables fail `invalid_type`, a declared length above
+`MAX_PROFILES` (64) fails `profile_limit_exceeded` before anything is copied, and materialization re-checks
+the cap item by item so a lying length cannot force unbounded work.
+
+**Entry context is strictly checked.** `source_kind` must be exactly `str` and a member of the §9 vocabulary
+— a subclass, or any object with a permissive equality, fails `invalid_enum`. `revision` must be exactly
+`int` (booleans rejected) in `1..2**63-1`, or `value_out_of_range`. `profile_hash` must be 64 lowercase hex
+characters, or `invalid_type`.
+
+**Hand-built profiles are re-validated through the existing boundary.** Nested fields must be the exact
+immutable types (tuples, never lists; exact `bool`, never `1`), numbers must be finite non-boolean values
+that survive `float()` (a huge integer fails `invalid_number` in the pre-check, never raw text from the
+serializer), and the canonical mapping is then run through the full document validator — so an unresolvable
+alias target, a bad enum, or an out-of-range value fails with its usual code. The recompiled canonical hash
+must equal the claimed `profile_hash`, or compilation fails `conflicting_profile_metadata`. Re-parsing is
+compile-time validation only; nothing is activated. The aggregate logical-row ceiling (`MAX_AGGREGATE_ROWS`)
+is enforced on the recompiled profiles before any claim is expanded. Global conflicts then run through the
+canonical §8 check *before* anything is published — profiles are ordered by exact `profile_id` first — so
+duplicate IDs, coordinate claims (including alias and wildcard collisions), and transmission keys all fail
+closed with their stable codes.
+
+**Coordinates.** Compiled by canonical manufacturer/model key. Every claim the schema allows is stored —
+exact slots, explicit alias spellings (marked `via_alias`, except an alias spelling identical to its
+canonical target), and manufacturer-scoped `"*"` model wildcards (marked `is_wildcard`) — with the declared
+`promote_coordinate_wildcard` flag recorded but never applied. No built-in vendor aliases are consulted for
+user claims. Retrieval normalizes keys on entry and bisects the sorted slot table, so cost is logarithmic
+in slots, never linear in profiles. A transmission-only profile claims no slot and coexists disjointly.
+
+**Transmission.** Compiled by canonical model key plus the *literal* acquisition plane (never normalized),
+with each plane's nodes ordered by their original `(kVp, Cu, Al)` numeric key. Retrieval normalizes the
+model on entry, compares the plane exactly, and returns the node group (possibly empty) without scanning.
+
+**Invariants.** Storage is tuples only — no mutable mappings are exposed. Successful compilation is
+identical for every source order (full compiled equality holds for all permutations); only a conflict
+diagnostic's `source_kind` follows the lead (first) entry, per the existing conflict semantics. Retrieval
+bisects the sorted key tables, so a per-event lookup resolves with no profiles attached. All failures are
+value-free, and every public repr shows only counts, source-kind tokens, flags, and content hashes — never
+identifiers, model text, provenance, or row content.

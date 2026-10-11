@@ -220,8 +220,19 @@ Work:
 - [ ] Add immutable per-exam coordinate/transmission match records with domain, profile/revision, source/level,
       canonical matched key, affected count, hashes, and leaf/row provenance—not mutable fields on
       `NormalizationSettings` (decision 20).
-- [ ] Compile coordinate indexes by canonical manufacturer/model and transmission indexes by canonical model/literal
-      plane. Assert event resolution does not scan the full user table per event.
+- [x] Compile coordinate indexes by canonical manufacturer/model and transmission indexes by canonical model/literal
+  plane. Assert event resolution does not scan the full user table per event. **Implemented and inert**
+  (`indexes.py`): entries are strictly bounded (real sequence, `MAX_PROFILES`, aggregate rows before
+  expansion), each entry's context is strictly checked (exact-`str` source kind, exact-`int` bounded revision,
+  lowercase-hex hash), and each profile — however built — is structurally gated and revalidated through the
+  existing document boundary with its claimed hash verified (`conflicting_profile_metadata` on mismatch);
+  coordinates resolve by canonical manufacturer/model and transmission by canonical model/literal plane with
+  original numeric row keys; global conflicts detected via the canonical check before publishing; explicit
+  aliases and manufacturer-scoped wildcards stored without activation; retrieval bisects sorted key tables
+  with no profile traversal; immutable internals; compiled content identical for every source order, with only
+  a conflict diagnostic's `source_kind` following the lead entry; all public reprs value-free. **Still open in
+  Phase 1:** canonical `manufacturer` in normalized frames, per-exam match-record wiring, and multi-source
+  duplicate detection at activation time.
 - [ ] Detect canonical duplicates and conflicts across all source kinds before activation. Input order may affect only
       deterministic diagnostics and serialization.
 - [ ] Emit privacy-safe errors containing codes, source-kind tokens, row/sheet indices, field names, and counts. Paths,
@@ -413,6 +424,27 @@ gets macOS/Linux and Windows manual evidence as applicable.
 
 ## Progress log
 
+- 2026-10-11 — **Index review fixes (still inert).** Corrected the index slice against review: entries are now
+  strictly bounded (real-`Sequence` check with strings/bytes/iterables rejected, declared length capped by
+  `MAX_PROFILES` before copying, bounded materialization against lying lengths, aggregate logical rows capped
+  by `MAX_AGGREGATE_ROWS` before claim expansion); entry context is strictly checked (exact-`str` source kind
+  rejecting subclasses and permissive-equality objects, exact-`int` revision in `1..MAX_REVISION` with
+  booleans rejected, lowercase-64-hex hash); every profile is structurally gated (tuples not lists, exact
+  `bool`, finite non-boolean numbers, exact nested model types) and re-run through the existing document
+  validation boundary at compile time with the claimed hash verified (`conflicting_profile_metadata` on
+  mismatch); profiles are ordered by exact ID before the canonical conflict check; all public types carry
+  value-free reprs (counts, source-kind tokens, flags, hashes only); the wall-clock timing test is replaced by
+  a deterministic no-traversal probe plus sorted-key assertions; permutation tests assert full compiled
+  equality; lookups normalize each key once. 66 targeted tests. Phase 1 stays incomplete (normalized
+  `manufacturer`, per-exam match-record wiring, and activation-time duplicate detection remain).
+- 2026-10-11 — **Compiled lookup indexes landed**, still inert. `indexes.py` compiles immutable coordinate and
+  transmission indexes once from validated profiles with source-kind/hash/revision context: coordinates by
+  canonical manufacturer/model (exact, alias, and manufacturer-scoped wildcard slots stored without activation),
+  transmission by canonical model/literal plane with original numeric row keys in sorted node groups. Global
+  conflicts are detected via the canonical check before anything is published; retrieval bisects sorted key
+  tables so per-event lookups never scan profiles; internals are tuples only and results are identical
+  regardless of source order. Phase 1 stays incomplete (normalized `manufacturer`, per-exam match-record
+  wiring, and activation-time duplicate detection remain).
 - 2026-10-11 — **Store hardening round**: enabled-revision listing uses LEFT JOIN and rejects a missing
   revision instead of silently omitting it from conflict validation; growth caps run in every transaction with
   bounded single-integer queries, and total tracked identities (records plus tombstones) are capped at 1024;

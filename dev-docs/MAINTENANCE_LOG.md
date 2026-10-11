@@ -9,6 +9,24 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 ## [Unreleased]
 
 ### Changed
+- **Equipment-profile index review fixes (inert)** (2026-10-11) — hardened `indexes.py` against review:
+  bounded sequence intake (`MAX_PROFILES` before copying, bounded materialization, aggregate rows before
+  expansion), strict entry context (exact-`str` source kind, exact-`int` revision in `1..MAX_REVISION`,
+  lowercase-hex hash), structural pre-checks plus compile-time re-validation through the existing document
+  boundary with claimed-hash verification (`conflicting_profile_metadata` on mismatch), ID-ordered conflict
+  check, value-free reprs on all public types, single-normalization lookups, and deterministic no-traversal
+  and full-equality tests replacing the wall-clock timing test. 66 targeted tests; ruff, basedpyright,
+  complexity, size, and freshness gates clean. No application, GUI, CLI, normalization, or calculation code
+  was touched.
+- **Equipment-profile compiled indexes (inert)** (2026-10-11) — added
+  `src/guiskindose/equipment_profiles/indexes.py`: immutable coordinate/transmission lookup compiled once
+  from validated profiles with source-kind/hash/revision context. Coordinates resolve by canonical
+  manufacturer/model (exact, alias, and manufacturer-scoped wildcard slots stored without activation);
+  transmission resolves by canonical model/literal plane with original numeric row keys in sorted groups.
+  Global conflicts run through the canonical check before publishing; retrieval bisects sorted key tables;
+  internals are tuples only and results are source-order independent. 22 targeted tests cover compilation,
+  retrieval, conflicts, determinism, immutability, lookup cost, and value-free diagnostics. No application,
+  GUI, CLI, normalization, or calculation code was touched.
 - **Equipment-profile first-sheet default** (2026-10-11) — align the XLSX adapter with the source-format
   specification: use the first worksheet unless an index is selected. This supersedes the draft requirement
   for explicit multi-sheet selection; explicit invalid indices still fail closed.

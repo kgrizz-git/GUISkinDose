@@ -108,6 +108,10 @@ MAX_AGGREGATE_ROWS = 10_000
 #: Maximum profile objects per document and per load.
 MAX_PROFILES = 64
 
+#: Maximum store revision number accepted as index entry context. Matches the store's rowid ceiling without
+#: importing store internals; the index core never touches SQLite.
+MAX_REVISION = 2**63 - 1
+
 #: Maximum canonical model keys per profile.
 MAX_MODELS = 32
 

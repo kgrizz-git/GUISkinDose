@@ -52,6 +52,7 @@ from guiskindose.equipment_profiles.constants import (
     MAX_JSON_DEPTH,
     MAX_MODELS,
     MAX_PROFILES,
+    MAX_REVISION,
     MAX_SHORT_TEXT,
     MAX_SOURCE_BYTES,
     MAX_SOURCE_TEXT,
@@ -75,6 +76,17 @@ from guiskindose.equipment_profiles.errors import (
     ProfileErrorCode,
     error_codes,
     is_implemented_code,
+)
+from guiskindose.equipment_profiles.indexes import (
+    CoordinateClaim,
+    CoordinateIndex,
+    CoordinateKey,
+    IndexedProfile,
+    ProfileIndexes,
+    TransmissionIndex,
+    TransmissionKey,
+    TransmissionNode,
+    build_profile_indexes,
 )
 from guiskindose.equipment_profiles.json_source import (
     ParsedDocument,
@@ -149,6 +161,7 @@ __all__ = [
     "MAX_LIST_LIMIT",
     "MAX_MODELS",
     "MAX_PROFILES",
+    "MAX_REVISION",
     "MAX_REVISIONS_PER_PROFILE",
     "MAX_SHORT_TEXT",
     "MAX_SOURCE_BYTES",
@@ -171,18 +184,24 @@ __all__ = [
     "STORE_SCHEMA_VERSION",
     "STORE_SOURCE_KIND",
     "UNSUPPORTED_CAPABILITIES",
+    # Indexes
+    "CoordinateClaim",
+    "CoordinateIndex",
+    "CoordinateKey",
     # Matches
     "CoordinateMatchRecord",
     # Models
     "Coordinates",
     # Errors
     "EquipmentProfileError",
+    "IndexedProfile",
     "LeafProvenance",
     "MatchedInputKey",
     # Parsing and loading
     "ParsedDocument",
     "Profile",
     "ProfileErrorCode",
+    "ProfileIndexes",
     "ProfileSet",
     "ProfileStore",
     "Provenance",
@@ -193,9 +212,13 @@ __all__ = [
     "StoredRevision",
     "TranslationDirection",
     "TranslationOffset",
+    "TransmissionIndex",
+    "TransmissionKey",
+    "TransmissionNode",
     "TransmissionRow",
     "active_set_hash",
     "build_leaf_provenance",
+    "build_profile_indexes",
     # Canonical form and hashes
     "canonical_json_bytes",
     "canonical_profile_dict",
