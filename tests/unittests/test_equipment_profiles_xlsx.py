@@ -300,6 +300,8 @@ def test_worksheet_xml_column_reference_helpers() -> None:
     assert xlsx_xml.column_index("XFD") == 16_384
     assert xlsx_xml.column_index("a1") is None
     assert xlsx_xml.cell_reference("A0") is None
+    assert xlsx_xml.cell_reference("A٣") is None
+    assert xlsx_xml.cell_reference("A1٣") is None
     assert xlsx_xml.cell_reference("ZZZZ") is None
     assert xlsx_xml.cell_reference("XFD1048576") == (1_048_576, 16_384)
 
@@ -316,15 +318,17 @@ def test_actual_row_budget_is_enforced_from_worksheet_xml(monkeypatch: pytest.Mo
 
 def test_actual_column_budget_is_enforced_from_worksheet_xml(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(profile_constants, "MAX_XLSX_PREFLIGHT_COLS", 3)
+    workbook_bytes = _packaged_workbook_bytes()
     with pytest.raises(EquipmentProfileError) as excinfo:
-        parse_xlsx_bytes(_packaged_workbook_bytes())
+        parse_xlsx_bytes(workbook_bytes)
     assert _code(excinfo) is ProfileErrorCode.MALFORMED_CONTAINER
 
 
 def test_actual_cell_budget_is_enforced_from_worksheet_xml(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(profile_constants, "MAX_XLSX_PREFLIGHT_CELLS", 20)
+    workbook_bytes = _packaged_workbook_bytes()
     with pytest.raises(EquipmentProfileError) as excinfo:
-        parse_xlsx_bytes(_packaged_workbook_bytes())
+        parse_xlsx_bytes(workbook_bytes)
     assert _code(excinfo) is ProfileErrorCode.MALFORMED_CONTAINER
 
 
@@ -369,25 +373,29 @@ def test_multi_sheet_workbook_defaults_to_first_sheet() -> None:
 
 
 def test_selected_non_profile_sheet_fails_validation() -> None:
+    workbook_bytes = _multi_sheet_bytes()
     with pytest.raises(EquipmentProfileError) as excinfo:
-        parse_xlsx_bytes(_multi_sheet_bytes(), sheet=1)
+        parse_xlsx_bytes(workbook_bytes, sheet=1)
     assert _code(excinfo) is ProfileErrorCode.UNKNOWN_FIELD
 
 
 def test_out_of_range_sheet_selection_is_unknown_sheet() -> None:
+    workbook_bytes = _multi_sheet_bytes()
     with pytest.raises(EquipmentProfileError) as excinfo:
-        parse_xlsx_bytes(_multi_sheet_bytes(), sheet=9)
+        parse_xlsx_bytes(workbook_bytes, sheet=9)
     assert _code(excinfo) is ProfileErrorCode.UNKNOWN_SHEET
 
+    workbook_bytes = _multi_sheet_bytes()
     with pytest.raises(EquipmentProfileError) as excinfo:
-        parse_xlsx_bytes(_multi_sheet_bytes(), sheet=-1)
+        parse_xlsx_bytes(workbook_bytes, sheet=-1)
     assert _code(excinfo) is ProfileErrorCode.UNKNOWN_SHEET
 
 
 def test_sheet_count_comes_from_the_workbook_catalog(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(profile_constants, "MAX_XLSX_SHEETS", 1)
+    workbook_bytes = _multi_sheet_bytes()
     with pytest.raises(EquipmentProfileError) as excinfo:
-        parse_xlsx_bytes(_multi_sheet_bytes(), sheet=0)
+        parse_xlsx_bytes(workbook_bytes, sheet=0)
     assert _code(excinfo) is ProfileErrorCode.SHEET_LIMIT_EXCEEDED
 
 
@@ -421,28 +429,32 @@ def _mutate(row: int, column: str, value: object) -> Any:
 
 def test_boolean_in_identity_and_free_text_is_a_type_error() -> None:
     for column in ("manufacturer", "model_aliases", "manufacturer_aliases", "notes", "source"):
+        workbook_bytes = _workbook_bytes(_csv_rows()[1:], mutate=_mutate(2, column, True))
         with pytest.raises(EquipmentProfileError) as excinfo:
-            parse_xlsx_bytes(_workbook_bytes(_csv_rows()[1:], mutate=_mutate(2, column, True)))
+            parse_xlsx_bytes(workbook_bytes)
         assert _code(excinfo) is ProfileErrorCode.INVALID_TYPE, column
 
 
 def test_number_in_identity_and_header_is_a_type_error() -> None:
     for column in ("manufacturer", "record_type", "models"):
+        workbook_bytes = _workbook_bytes(_csv_rows()[1:], mutate=_mutate(2, column, 12345))
         with pytest.raises(EquipmentProfileError) as excinfo:
-            parse_xlsx_bytes(_workbook_bytes(_csv_rows()[1:], mutate=_mutate(2, column, 12345)))
+            parse_xlsx_bytes(workbook_bytes)
         assert _code(excinfo) is ProfileErrorCode.INVALID_TYPE, column
 
     header: list[Any] = list(_FLAT_COLUMN_NAMES)
     header[4] = 42
+    workbook_bytes = _workbook_bytes(_csv_rows()[1:], header=header)
     with pytest.raises(EquipmentProfileError) as excinfo:
-        parse_xlsx_bytes(_workbook_bytes(_csv_rows()[1:], header=header))
+        parse_xlsx_bytes(workbook_bytes)
     assert _code(excinfo) is ProfileErrorCode.INVALID_TYPE
 
 
 def test_boolean_in_a_numeric_column_is_an_invalid_number() -> None:
     for column in ("kvp_kv", "filtration_added_mmcu", "filtration_added_mmal", "k_patient_support"):
+        workbook_bytes = _workbook_bytes(_csv_rows()[1:], mutate=_mutate(_tx_row(), column, True))
         with pytest.raises(EquipmentProfileError) as excinfo:
-            parse_xlsx_bytes(_workbook_bytes(_csv_rows()[1:], mutate=_mutate(_tx_row(), column, True)))
+            parse_xlsx_bytes(workbook_bytes)
         assert _code(excinfo) is ProfileErrorCode.INVALID_NUMBER, column
 
 
@@ -473,20 +485,23 @@ def test_boolean_in_a_sign_or_mode_leaf_is_a_type_error() -> None:
         index for index, row in enumerate(_csv_rows(), start=1)
         if row[0] == "coordinate" and row[8] == "translation_direction.x"
     )
+    workbook_bytes = _workbook_bytes(_csv_rows()[1:], mutate=_mutate(sign_row, "value", True))
     with pytest.raises(EquipmentProfileError) as excinfo:
-        parse_xlsx_bytes(_workbook_bytes(_csv_rows()[1:], mutate=_mutate(sign_row, "value", True)))
+        parse_xlsx_bytes(workbook_bytes)
     assert _code(excinfo) is ProfileErrorCode.INVALID_TYPE
 
     mode_row = next(
         index for index, row in enumerate(_csv_rows(), start=1)
         if row[0] == "coordinate" and row[8] == "field_size_mode"
     )
+    workbook_bytes = _workbook_bytes(_csv_rows()[1:], mutate=_mutate(mode_row, "value", 7))
     with pytest.raises(EquipmentProfileError) as excinfo:
-        parse_xlsx_bytes(_workbook_bytes(_csv_rows()[1:], mutate=_mutate(mode_row, "value", 7)))
+        parse_xlsx_bytes(workbook_bytes)
     assert _code(excinfo) is ProfileErrorCode.INVALID_TYPE
 
+    workbook_bytes = _workbook_bytes(_csv_rows()[1:], mutate=_mutate(sign_row, "value", 1))
     with pytest.raises(EquipmentProfileError) as excinfo:
-        parse_xlsx_bytes(_workbook_bytes(_csv_rows()[1:], mutate=_mutate(sign_row, "value", 1)))
+        parse_xlsx_bytes(workbook_bytes)
     assert _code(excinfo) is ProfileErrorCode.INVALID_TYPE
 
 
@@ -502,28 +517,32 @@ def test_dates_are_valid_only_in_the_date_column() -> None:
     )
     assert document.profiles[0].transmission[0].date == "1901-01-01"
 
+    workbook_bytes = _workbook_bytes(_csv_rows()[1:], mutate=_mutate(2, "models", date(2026, 1, 1)))
     with pytest.raises(EquipmentProfileError) as excinfo:
-        parse_xlsx_bytes(_workbook_bytes(_csv_rows()[1:], mutate=_mutate(2, "models", date(2026, 1, 1))))
+        parse_xlsx_bytes(workbook_bytes)
     assert _code(excinfo) in (
         ProfileErrorCode.INVALID_DATE_OBJECT,
         ProfileErrorCode.INVALID_TYPE,
     )
 
+    workbook_bytes = _workbook_bytes(_csv_rows()[1:], mutate=_mutate(_tx_row(), "date", datetime(1901, 1, 1, 12, 0)))
     with pytest.raises(EquipmentProfileError) as excinfo:
         parse_xlsx_bytes(
-            _workbook_bytes(_csv_rows()[1:], mutate=_mutate(_tx_row(), "date", datetime(1901, 1, 1, 12, 0)))
+            workbook_bytes
         )
     assert _code(excinfo) is ProfileErrorCode.INVALID_DATE_OBJECT
 
 
 def test_formula_and_error_cells_are_rejected_everywhere() -> None:
     for column in ("models", "value", "date", "notes"):
+        workbook_bytes = _workbook_bytes(_csv_rows()[1:], mutate=_mutate(2, column, "=1+1"))
         with pytest.raises(EquipmentProfileError) as excinfo:
-            parse_xlsx_bytes(_workbook_bytes(_csv_rows()[1:], mutate=_mutate(2, column, "=1+1")))
+            parse_xlsx_bytes(workbook_bytes)
         assert _code(excinfo) is ProfileErrorCode.UNSAFE_FORMULA, column
 
+    workbook_bytes = _workbook_bytes(_csv_rows()[1:], mutate=_mutate(2, "models", "#DIV/0!"))
     with pytest.raises(EquipmentProfileError) as excinfo:
-        parse_xlsx_bytes(_workbook_bytes(_csv_rows()[1:], mutate=_mutate(2, "models", "#DIV/0!")))
+        parse_xlsx_bytes(workbook_bytes)
     assert _code(excinfo) is ProfileErrorCode.SPREADSHEET_ERROR
 
 
@@ -537,12 +556,14 @@ def _blank_cell(column: str) -> list[list[str]]:
 
 
 def test_blank_filtration_is_rejected() -> None:
+    workbook_bytes = _workbook_bytes(_blank_cell("filtration_added_mmcu"))
     with pytest.raises(EquipmentProfileError) as excinfo:
-        parse_xlsx_bytes(_workbook_bytes(_blank_cell("filtration_added_mmcu")))
+        parse_xlsx_bytes(workbook_bytes)
     assert _code(excinfo) is ProfileErrorCode.BLANK_DISALLOWED_CELL
 
+    workbook_bytes = _workbook_bytes(_blank_cell("filtration_added_mmal"))
     with pytest.raises(EquipmentProfileError) as excinfo:
-        parse_xlsx_bytes(_workbook_bytes(_blank_cell("filtration_added_mmal")))
+        parse_xlsx_bytes(workbook_bytes)
     assert _code(excinfo) is ProfileErrorCode.BLANK_DISALLOWED_CELL
 
 
@@ -563,12 +584,14 @@ def test_duplicate_coordinate_leaf_and_orphan_rules_are_reused() -> None:
     profile_rows = [row for row in _csv_rows()[1:] if row[0] == "profile"]
     duplicate = [*profile_rows, *leaf_rows, leaf_rows[0]]
 
+    workbook_bytes = _workbook_bytes(duplicate)
     with pytest.raises(EquipmentProfileError) as excinfo:
-        parse_xlsx_bytes(_workbook_bytes(duplicate))
+        parse_xlsx_bytes(workbook_bytes)
     assert _code(excinfo) is ProfileErrorCode.DUPLICATE_JSON_KEY
 
+    workbook_bytes = _workbook_bytes(leaf_rows)
     with pytest.raises(EquipmentProfileError) as excinfo:
-        parse_xlsx_bytes(_workbook_bytes(leaf_rows))
+        parse_xlsx_bytes(workbook_bytes)
     assert _code(excinfo) is ProfileErrorCode.MISSING_REQUIRED_FIELD
 
 
@@ -599,8 +622,9 @@ def test_promotion_on_a_non_wildcard_profile_is_rejected() -> None:
         sheet.cell(row=4, column=len(_FLAT_COLUMN_NAMES) + 1, value=True)
 
     rows = [*_wildcard_rows(), *_csv_rows()[1:]]
+    workbook_bytes = _workbook_bytes(rows, header=header, mutate=promote)
     with pytest.raises(EquipmentProfileError) as excinfo:
-        parse_xlsx_bytes(_workbook_bytes(rows, header=header, mutate=promote))
+        parse_xlsx_bytes(workbook_bytes)
     assert _code(excinfo) is ProfileErrorCode.WILDCARD_NOT_PERMITTED
 
 
@@ -622,21 +646,24 @@ def test_duplicate_archive_entry_names_are_rejected() -> None:
         archive.writestr("xl/worksheets/sheet1.xml", "<sheet/>")
         archive.writestr("xl/worksheets/sheet1.xml", "<sheet/>")
 
+    workbook_bytes = buffer.getvalue()
     with pytest.raises(EquipmentProfileError) as excinfo:
-        parse_xlsx_bytes(buffer.getvalue())
+        parse_xlsx_bytes(workbook_bytes)
     assert _code(excinfo) is ProfileErrorCode.MALFORMED_CONTAINER
 
 
 def test_inflation_lying_metadata_is_caught(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(profile_constants, "MAX_XLSX_MEMBER_BYTES", 64)
+    workbook_bytes = _packaged_workbook_bytes()
     with pytest.raises(EquipmentProfileError) as excinfo:
-        xlsx_preflight.preflight_container(_packaged_workbook_bytes())
+        xlsx_preflight.preflight_container(workbook_bytes)
     assert _code(excinfo) is ProfileErrorCode.INFLATION_LIMIT_EXCEEDED
 
     monkeypatch.setattr(profile_constants, "MAX_XLSX_MEMBER_BYTES", 1024 * 1024)
     monkeypatch.setattr(profile_constants, "MAX_XLSX_TOTAL_INFLATED_BYTES", 200)
+    workbook_bytes = _packaged_workbook_bytes()
     with pytest.raises(EquipmentProfileError) as excinfo:
-        xlsx_preflight.preflight_container(_packaged_workbook_bytes())
+        xlsx_preflight.preflight_container(workbook_bytes)
     assert _code(excinfo) is ProfileErrorCode.INFLATION_LIMIT_EXCEEDED
 
 
@@ -702,16 +729,18 @@ def test_workbook_close_failure_does_not_mask_a_parse(monkeypatch: pytest.Monkey
 
 
 def test_no_error_echoes_sheet_names_paths_or_cells() -> None:
+    workbook_bytes = _multi_sheet_bytes()
     with pytest.raises(EquipmentProfileError) as excinfo:
-        parse_xlsx_bytes(_multi_sheet_bytes(), sheet=9)
+        parse_xlsx_bytes(workbook_bytes, sheet=9)
     text = str(excinfo.value) + repr(excinfo.value)
     assert "Profiles" not in text
     assert "Other" not in text
     assert "demo-partial" not in text
     assert "Acme" not in text
 
+    workbook_bytes = _workbook_bytes(_csv_rows()[1:], mutate=_mutate(2, "notes", "=SECRET-NOTE"))
     with pytest.raises(EquipmentProfileError) as excinfo:
-        parse_xlsx_bytes(_workbook_bytes(_csv_rows()[1:], mutate=_mutate(2, "notes", "=SECRET-NOTE")))
+        parse_xlsx_bytes(workbook_bytes)
     assert _code(excinfo) is ProfileErrorCode.UNSAFE_FORMULA
     assert "SECRET-NOTE" not in str(excinfo.value)
     assert "SECRET-NOTE" not in repr(excinfo.value)
@@ -738,7 +767,8 @@ def test_openpyxl_is_not_required_for_json_or_csv_parsing() -> None:
     assert parse_json_bytes(_JSON_PATH.read_bytes()).profiles
     assert parse_csv_bytes(_CSV_PATH.read_bytes()).profiles
     assert "openpyxl" not in sys.modules
-    assert csv_source is not None and json_source is not None
+    assert csv_source is not None
+    assert json_source is not None
 
 
 def test_canonical_import_is_reachable() -> None:
@@ -791,8 +821,9 @@ def test_text_cells_use_the_same_numeric_and_boolean_grammar_as_csv() -> None:
 def test_nonempty_whitespace_extra_column_is_not_discarded() -> None:
     def add_extra(sheet: Any) -> None:
         sheet.cell(row=2, column=20, value=" ")
+    workbook_bytes = _workbook_bytes(mutate=add_extra)
     with pytest.raises(EquipmentProfileError) as excinfo:
-        parse_xlsx_bytes(_workbook_bytes(mutate=add_extra))
+        parse_xlsx_bytes(workbook_bytes)
     assert excinfo.value.code == ProfileErrorCode.UNKNOWN_FIELD
 
 
@@ -811,8 +842,9 @@ def test_nonstandard_worksheet_part_is_still_preflighted(invalid: bool) -> None:
                 payload = payload.replace(b'<row r="2">', b'<row r="999999">')
             target.writestr(new if item.filename == old else item.filename, payload)
     if invalid:
+        workbook_bytes = output.getvalue()
         with pytest.raises(EquipmentProfileError):
-            parse_xlsx_bytes(output.getvalue())
+            parse_xlsx_bytes(workbook_bytes)
     else:
         actual = parse_xlsx_bytes(output.getvalue())
         expected = parse_csv_bytes(_CSV_PATH.read_bytes())

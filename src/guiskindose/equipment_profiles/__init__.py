@@ -20,6 +20,11 @@ unknown key, file path, note, station name, or serial number reaches an error or
 
 from __future__ import annotations
 
+from guiskindose.equipment_profiles.bundled import (
+    BundledCoordinateSet,
+    bundled_coordinate_set,
+    bundled_profile_id,
+)
 from guiskindose.equipment_profiles.canonical import (
     active_set_hash,
     canonical_json_bytes,
@@ -60,6 +65,8 @@ from guiskindose.equipment_profiles.constants import (
     MAX_XLSX_MEMBER_BYTES,
     MAX_XLSX_SHEETS,
     RECORD_TYPES,
+    RESOLUTION_COMPLETE,
+    RESOLUTION_PARTIAL,
     SCHEMA_VERSION,
     SIGN_VALUES,
     SOURCE_KIND_CSV,
@@ -95,6 +102,7 @@ from guiskindose.equipment_profiles.json_source import (
     parse_memory_document,
 )
 from guiskindose.equipment_profiles.keys import (
+    clean_identity_text,
     is_wildcard_model,
     normalize_manufacturer_key,
     normalize_model_key,
@@ -125,6 +133,13 @@ from guiskindose.equipment_profiles.profile_store import (
     ProfileStore,
     default_store_path,
 )
+from guiskindose.equipment_profiles.resolver import (
+    CoordinateResolution,
+    ExamCoordinateIdentity,
+    NoticeEntry,
+    ResolutionNotice,
+    resolve_coordinate_leaves,
+)
 from guiskindose.equipment_profiles.store_schema import (
     MAX_LIST_LIMIT,
     MAX_REVISIONS_PER_PROFILE,
@@ -142,6 +157,11 @@ from guiskindose.equipment_profiles.store_types import (
 )
 from guiskindose.equipment_profiles.tsv_source import parse_tsv_bytes, parse_tsv_file
 from guiskindose.equipment_profiles.validation import validate_document
+from guiskindose.equipment_profiles.vendor_aliases import (
+    GE_MANUFACTURER_ALIASES,
+    MANUFACTURER_ALIASES_BY_SETTINGS_KEY,
+    aliases_for_settings_key,
+)
 from guiskindose.equipment_profiles.xlsx_source import parse_xlsx_bytes, parse_xlsx_file
 
 __all__ = [
@@ -154,7 +174,10 @@ __all__ = [
     "FLAT_COLUMNS_BY_RECORD_TYPE",
     "FLAT_PROMOTION_COLUMN",
     "FLAT_REQUIRED_COLUMNS_BY_RECORD_TYPE",
+    "GE_MANUFACTURER_ALIASES",
     "IMPLEMENTED_SOURCE_KINDS",
+    # Errors
+    "MANUFACTURER_ALIASES_BY_SETTINGS_KEY",
     "MAX_AGGREGATE_ROWS",
     "MAX_ALIASES",
     "MAX_JSON_DEPTH",
@@ -172,6 +195,8 @@ __all__ = [
     "MAX_XLSX_SHEETS",
     "RECORD_TYPES",
     "RESERVED_CODES",
+    "RESOLUTION_COMPLETE",
+    "RESOLUTION_PARTIAL",
     "SCHEMA_VERSION",
     "SIGN_VALUES",
     "SOURCE_KINDS",
@@ -184,19 +209,22 @@ __all__ = [
     "STORE_SCHEMA_VERSION",
     "STORE_SOURCE_KIND",
     "UNSUPPORTED_CAPABILITIES",
+    "BundledCoordinateSet",
     # Indexes
     "CoordinateClaim",
     "CoordinateIndex",
     "CoordinateKey",
     # Matches
     "CoordinateMatchRecord",
+    "CoordinateResolution",
     # Models
     "Coordinates",
-    # Errors
     "EquipmentProfileError",
+    "ExamCoordinateIdentity",
     "IndexedProfile",
     "LeafProvenance",
     "MatchedInputKey",
+    "NoticeEntry",
     # Parsing and loading
     "ParsedDocument",
     "Profile",
@@ -205,6 +233,7 @@ __all__ = [
     "ProfileSet",
     "ProfileStore",
     "Provenance",
+    "ResolutionNotice",
     "RotationDirection",
     "SelectedRevision",
     "StoreSnapshot",
@@ -217,13 +246,17 @@ __all__ = [
     "TransmissionNode",
     "TransmissionRow",
     "active_set_hash",
+    "aliases_for_settings_key",
     "build_leaf_provenance",
     "build_profile_indexes",
+    "bundled_coordinate_set",
+    "bundled_profile_id",
     # Canonical form and hashes
     "canonical_json_bytes",
     "canonical_profile_dict",
     # Capability gate
     "check_initial_capabilities",
+    "clean_identity_text",
     "collect_identity_collisions",
     "combine_documents",
     "coordinate_leaf_values",
@@ -246,6 +279,7 @@ __all__ = [
     "parse_xlsx_bytes",
     "parse_xlsx_file",
     "profile_hash",
+    "resolve_coordinate_leaves",
     "source_bytes_hash",
     "store_source_hash",
     "supported_profiles",

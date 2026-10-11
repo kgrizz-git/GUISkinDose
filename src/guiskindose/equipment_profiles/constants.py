@@ -311,6 +311,12 @@ MATCH_LEVEL_EXACT = "exact"
 MATCH_LEVEL_WILDCARD = "wildcard"
 MATCH_LEVEL_DEFAULT = "default"
 
+#: Resolution notice kinds: every leaf came from the selected candidate
+#: (`complete`), or at least one leaf was inherited from a lower candidate
+#: (`partial`).
+RESOLUTION_COMPLETE = "complete"
+RESOLUTION_PARTIAL = "partial"
+
 # --- Capability tokens (closed vocabulary used by the initial activation gate) ----------
 
 CAPABILITY_MANUFACTURER_ALIAS = "manufacturer_alias"

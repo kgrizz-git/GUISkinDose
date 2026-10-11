@@ -13,6 +13,7 @@ This module owns everything that must stay small, exact, and free of transaction
 
 from __future__ import annotations
 
+import math
 import re
 import sqlite3
 from collections.abc import Sequence
@@ -362,7 +363,8 @@ def parse_stored_payload(text: str) -> Profile:
         raise fail(ProfileErrorCode.STORE_CORRUPTION)
     try:
         size = len(text.encode("utf-8"))
-    except (UnicodeEncodeError, ValueError):
+    except ValueError:
+        # UnicodeEncodeError derives from ValueError; listed separately it is redundant.
         raise fail(ProfileErrorCode.STORE_CORRUPTION) from None
     from guiskindose.equipment_profiles.constants import MAX_SOURCE_BYTES
 
@@ -466,7 +468,7 @@ def _check_number(value: Any) -> None:
         result = float(value)
     except (OverflowError, ValueError):
         raise fail(ProfileErrorCode.INVALID_NUMBER) from None
-    if result != result or result in (float("inf"), float("-inf")):
+    if math.isnan(result) or result in (float("inf"), float("-inf")):
         raise fail(ProfileErrorCode.INVALID_NUMBER)
 
 

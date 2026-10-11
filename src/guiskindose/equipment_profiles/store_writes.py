@@ -9,7 +9,7 @@ operation runs inside the handle's transaction wrapper and rolls back on any fai
 from __future__ import annotations
 
 import sqlite3
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from guiskindose.equipment_profiles import store_schema as _store_schema
 from guiskindose.equipment_profiles.canonical import canonical_json_bytes, canonical_profile_dict, profile_hash
@@ -47,6 +47,39 @@ if TYPE_CHECKING:
     from guiskindose.equipment_profiles.profile_store import ProfileStore
 
 
+def _new_revision_numbers(
+    connection: sqlite3.Connection,
+    profile: Profile,
+    record: Any,
+    expected: int | None,
+) -> tuple[int, int, bool]:
+    """Resolve generation, revision, and enablement for a new-revision write.
+
+    Creating a record expects absence (continuing any tombstoned generation);
+    updating requires the expected current revision. Re-enabling an enabled
+    record is validated against the would-be enabled set before anything is
+    written.
+    """
+    if record is None:
+        if expected is not None:
+            raise store_error(ProfileErrorCode.STORE_CONFLICT)
+        generation, revision = _consume_tombstone(connection, profile.profile_id)
+        _check_record_capacity(connection)
+        _check_identity_capacity_for_create(connection)
+        return generation, revision, False
+    if expected is None:
+        raise store_error(ProfileErrorCode.STORE_CONFLICT)
+    current = read_revision_number(record[2])
+    if current != expected:
+        raise store_error(ProfileErrorCode.STORE_CONFLICT)
+    generation = read_revision_number(record[3]) + 1
+    _check_revision_capacity(connection, profile.profile_id)
+    revision, enabled = current + 1, read_flag(record[1])
+    if enabled:
+        _validate_would_be_enabled(connection, profile, exclude=profile.profile_id)
+    return generation, revision, enabled
+
+
 def save_new_revision(
     store: ProfileStore, profile: Profile, *, expected_current_revision: int | None = None
 ) -> StoredRecord:
@@ -67,55 +100,76 @@ def save_new_revision(
 
     def work(connection: sqlite3.Connection) -> StoredRecord:
         record = fetch_record_row(connection, profile.profile_id)
-        if record is None:
-            if expected is not None:
-                raise store_error(ProfileErrorCode.STORE_CONFLICT)
-            generation, revision = _consume_tombstone(connection, profile.profile_id)
-            _check_record_capacity(connection)
-            _check_identity_capacity_for_create(connection)
-            enabled = False
-        else:
-            if expected is None:
-                raise store_error(ProfileErrorCode.STORE_CONFLICT)
-            current = read_revision_number(record[2])
-            if current != expected:
-                raise store_error(ProfileErrorCode.STORE_CONFLICT)
-            generation = read_revision_number(record[3]) + 1
-            _check_revision_capacity(connection, profile.profile_id)
-            revision, enabled = current + 1, read_flag(record[1])
-            if enabled:
-                _validate_would_be_enabled(connection, profile, exclude=profile.profile_id)
+        generation, revision, enabled = _new_revision_numbers(connection, profile, record, expected)
         created = utc_now_iso()
-        if record is None:
-            connection.execute(
-                "INSERT INTO profile_records(profile_id, enabled, current_revision, generation, "
-                "updated_utc) VALUES (?, 0, ?, ?, ?)",
-                (profile.profile_id, revision, generation, created),
-            )
-        else:
-            connection.execute(
-                "UPDATE profile_records SET current_revision = ?, generation = ?, updated_utc = ? "
-                "WHERE profile_id = ?",
-                (revision, generation, created, profile.profile_id),
-            )
-        try:
-            connection.execute(
-                "INSERT INTO profile_revisions(profile_id, revision, payload_json, profile_hash, "
-                "logical_rows, created_utc) VALUES (?, ?, ?, ?, ?, ?)",
-                (profile.profile_id, revision, payload, content_hash, rows, created),
-            )
-        except sqlite3.Error as exc:
-            raise normalize_db_error(type(exc)) from None
-        return StoredRecord(
-            profile_id=profile.profile_id,
-            enabled=enabled,
-            current_revision=revision,
-            generation=generation,
-            profile_hash=content_hash,
-            updated_utc=created,
+        return _persist_new_revision(
+            connection, profile, record, generation, revision, enabled,
+            payload, content_hash, rows, created,
         )
 
     return store._write(work)
+
+
+def _persist_new_revision(
+    connection: sqlite3.Connection,
+    profile: Profile,
+    record: Any,
+    generation: int,
+    revision: int,
+    enabled: bool,
+    payload: str,
+    content_hash: str,
+    rows: int,
+    created: str,
+) -> StoredRecord:
+    """Write the record and revision rows for a resolved new revision, then return metadata."""
+    if record is None:
+        connection.execute(
+            "INSERT INTO profile_records(profile_id, enabled, current_revision, generation, "
+            "updated_utc) VALUES (?, 0, ?, ?, ?)",
+            (profile.profile_id, revision, generation, created),
+        )
+    else:
+        connection.execute(
+            "UPDATE profile_records SET current_revision = ?, generation = ?, updated_utc = ? "
+            "WHERE profile_id = ?",
+            (revision, generation, created, profile.profile_id),
+        )
+    try:
+        connection.execute(
+            "INSERT INTO profile_revisions(profile_id, revision, payload_json, profile_hash, "
+            "logical_rows, created_utc) VALUES (?, ?, ?, ?, ?, ?)",
+            (profile.profile_id, revision, payload, content_hash, rows, created),
+        )
+    except sqlite3.Error as exc:
+        raise normalize_db_error(type(exc)) from None
+    return StoredRecord(
+        profile_id=profile.profile_id,
+        enabled=enabled,
+        current_revision=revision,
+        generation=generation,
+        profile_hash=content_hash,
+        updated_utc=created,
+    )
+
+
+def _persist_enabled_state(
+    connection: sqlite3.Connection, name: str, enabled: bool, generation: int
+) -> StoredRecord:
+    """Write the enablement/generation update, then return the refreshed metadata."""
+    updated = utc_now_iso()
+    try:
+        connection.execute(
+            "UPDATE profile_records SET enabled = ?, generation = ?, updated_utc = ? "
+            "WHERE profile_id = ?",
+            (1 if enabled else 0, generation + 1, updated, name),
+        )
+    except sqlite3.Error as exc:
+        raise normalize_db_error(type(exc)) from None
+    refreshed = fetch_record_row(connection, name)
+    if refreshed is None:
+        raise store_error(ProfileErrorCode.STORE_CORRUPTION)
+    return record_from_row(connection, refreshed)
 
 
 def _validate_expected(expected: int | None) -> int | None:
@@ -235,6 +289,36 @@ def _validate_would_be_enabled(
     validate_profile_set(tuple(profiles), source_kind=SOURCE_KIND_STORE)
 
 
+def _resolve_enabled_mutation(
+    connection: sqlite3.Connection,
+    name: str,
+    enabled: bool,
+    expected: int | None,
+    wanted_generation: int | None,
+) -> tuple[int, Profile]:
+    """Fetch, expectation-check, and verify the mutation target, validating conflicts.
+
+    Returns the current generation and the verified candidate profile. A
+    missing record, a mismatched expectation, or a conflicting enable all fail
+    closed before anything is written.
+    """
+    record = fetch_record_row(connection, name)
+    if record is None:
+        raise store_error(ProfileErrorCode.STORE_NOT_FOUND)
+    current = read_revision_number(record[2])
+    generation = read_revision_number(record[3])
+    if expected is not None and current != expected:
+        raise store_error(ProfileErrorCode.STORE_CONFLICT)
+    if wanted_generation is not None and generation != wanted_generation:
+        raise store_error(ProfileErrorCode.STORE_CONFLICT)
+    # The current revision is verified on every mutation path, not only when enabling: the returned
+    # metadata carries its hash, so a tampered payload must fail here too.
+    candidate = verified_current_profile(connection, name, current)
+    if enabled:
+        _validate_would_be_enabled(connection, candidate, exclude=name)
+    return generation, candidate
+
+
 def set_enabled(
     store: ProfileStore, profile_id: str, enabled: bool, *, expected_current_revision: int | None = None, expected_generation: int | None = None
 ) -> StoredRecord:
@@ -255,33 +339,8 @@ def set_enabled(
     wanted_generation = _validate_expected(expected_generation)
 
     def work(connection: sqlite3.Connection) -> StoredRecord:
-        record = fetch_record_row(connection, name)
-        if record is None:
-            raise store_error(ProfileErrorCode.STORE_NOT_FOUND)
-        current = read_revision_number(record[2])
-        generation = read_revision_number(record[3])
-        if expected is not None and current != expected:
-            raise store_error(ProfileErrorCode.STORE_CONFLICT)
-        if wanted_generation is not None and generation != wanted_generation:
-            raise store_error(ProfileErrorCode.STORE_CONFLICT)
-        # The current revision is verified on every mutation path, not only when enabling: the returned
-        # metadata carries its hash, so a tampered payload must fail here too.
-        candidate = verified_current_profile(connection, name, current)
-        if enabled:
-            _validate_would_be_enabled(connection, candidate, exclude=name)
-        updated = utc_now_iso()
-        try:
-            connection.execute(
-                "UPDATE profile_records SET enabled = ?, generation = ?, updated_utc = ? "
-                "WHERE profile_id = ?",
-                (1 if enabled else 0, generation + 1, updated, name),
-            )
-        except sqlite3.Error as exc:
-            raise normalize_db_error(type(exc)) from None
-        refreshed = fetch_record_row(connection, name)
-        if refreshed is None:
-            raise store_error(ProfileErrorCode.STORE_CORRUPTION)
-        return record_from_row(connection, refreshed)
+        generation, _candidate = _resolve_enabled_mutation(connection, name, enabled, expected, wanted_generation)
+        return _persist_enabled_state(connection, name, enabled, generation)
 
     return store._write(work)
 

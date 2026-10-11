@@ -11,6 +11,28 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 - Radimetrics unknown-model diagnostics report only the model count; raw equipment names remain local.
 
 ### Changed
+- **Sonar validation cleanup (equipment profiles, no behavior change)** (2026-10-11) — cleared the 172
+  branch findings from the equipment-profile review without altering parser/privacy limits, immutable
+  records, capabilities, or scientific contracts: `math.isnan` for all NaN idioms; negative-zero
+  normalization via exact `+ 0.0` addition (bit-verified, no approximate compares); cognitive-complexity
+  splits in `resolver`/`json_source`/`store_writes`/`dosetrack`; removed unused params, the redundant
+  re-raise, the redundant `list()` call, and the redundant `UnicodeEncodeError`; statement-form depth
+  traversal; tuple-form `endswith`; 121 exception tests hoisted to a single invocation, 6 broad assertions
+  narrowed to `FrozenInstanceError`, 22 composite assertions split. Two `[0-9]` XML-coordinate regexes
+  keep ASCII through explicit `re.ASCII` flags (`\d` alone would admit Unicode digits
+  that `int()` accepts but OOXML forbids). No app wiring; Phase 2 remains open.
+- **Equipment-profile coordinate resolution core (inert)** (2026-10-11) — added
+  `src/guiskindose/equipment_profiles/resolver.py` (stdlib-only, immutable custom-exact ladder with
+  capability gate first, per-leaf inheritance preserving `False`/`0.0`, missing-maker Default bypass,
+  closed fallbacks, `CoordinateMatchRecord` reuse, structured notices),
+  `src/guiskindose/equipment_profiles/bundled.py` (legacy settings → canonical profiles/indexes under
+  `MAX_PROFILES` with order-independent deterministic IDs/hashes, per-entry materialized swap `False`,
+  separate Default), and
+  `src/guiskindose/equipment_profiles/vendor_aliases.py` (single alias home; settings re-exports
+  unchanged names). Shared stdlib missing-identity convention in `keys.clean_identity_text`. Schema §14 documents the resolver contract. 63 targeted tests pin
+  settings-selection parity, miss paths, capability tokens, store context, immutability, and privacy;
+  ruff, basedpyright, complexity, size, and freshness gates clean. No renderer/normalizer/settings
+  mutation and no API/CLI/GUI/store activation wiring.
 - **Normalized manufacturer identity (Phase 1, no activation)** (2026-10-11) — new
   `src/guiskindose/exam_identity.py` seam (cleaning, raw/canonical pair listing, descriptive
   classification, fail-closed guard); `rdsr_normalizer()` emits a canonical `manufacturer` column and

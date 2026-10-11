@@ -448,7 +448,7 @@ Per-exam match records are immutable snapshots, never mutable `NormalizationSett
       "value": "+",
       "source": "bundled",
       "level": "exact",
-      "profile_id": "AXIOM-Artis",
+      "profile_id": "bundled-siemens-axiom-artis",
       "source_kind": "json",
       "revision": null,
       "profile_hash": "<sha256>",
@@ -655,3 +655,61 @@ diagnostic's `source_kind` follows the lead (first) entry, per the existing conf
 bisects the sorted key tables, so a per-event lookup resolves with no profiles attached. All failures are
 value-free, and every public repr shows only counts, source-kind tokens, flags, and content hashes — never
 identifiers, model text, provenance, or row content.
+
+## 14. Custom-exact coordinate resolution (initial slice)
+
+Resolution answers one homogeneous exam with all 15 coordinate leaves over the ladder custom exact →
+bundled exact → bundled manufacturer-scoped wildcard → Default. Later slices extend the ladder with
+custom wildcards, promotion, and transmission; this slice resolves custom exact matches with
+inheritance. Nothing here applies a profile to a calculation.
+
+**Inputs.** An exam identity (raw maker/model spellings plus the fixed per-exam event count), a
+compiled custom index, and a compiled bundled set (exact/wildcard index plus the separate Default
+entry). Both compiled inputs are validated once up front — entry context (exact types, hash shape),
+structural shape (exact immutable containers, canonical leaf value types), recomputed content hashes
+(`conflicting_profile_metadata` on mismatch), and claim tables (parallel tuple keys/claims, every
+claim referencing a prepared entry, otherwise `invalid_type`) — so hand-built or corrupted inputs
+fail closed instead of raising raw errors at lookup time; nothing is re-checked per leaf. Malformed
+identities and inputs fail `invalid_type`; a negative event count fails `value_out_of_range`. Blank,
+`None`, and `"nan"`/`"nat"`/`"none"` identity artifacts of any case all mean missing identity (shared
+stdlib convention in `keys.clean_identity_text`) and yield empty keys — a custom profile literally
+named `"none"` or `"nan"` stays unreachable.
+
+**Gate first.** Every custom profile runs through the initial capability gate with its own source
+kind before anything resolves: alias-, wildcard-, promotion-, and transmission-bearing custom
+profiles fail `unsupported_profile_capability` with the capability token — never silently ignored,
+never partially applied. Bundled entries are not gated: built-in vendor aliases and the wildcard
+ladder belong to the bundled layer, attached only as explicit per-profile `manufacturer_aliases`
+from the shared allowlist.
+
+**Per-leaf walk.** Each leaf walks the full ladder independently and takes the first supplied
+value; `None` never counts as supplied, so explicit `False` and `0.0` survive. Missing maker
+identity bypasses custom exact and both bundled steps for the legacy Default path. A leaf no
+candidate supplies fails `missing_required_field` with the allowlisted block/leaf path — never a
+previous mutable setting. The selected candidate is the highest rung with a claim (custom exact >
+bundled exact > bundled wildcard > Default); `inherited` is `false` only for leaves the selected
+candidate supplied itself, generalizing §9 beyond custom-selected resolutions.
+
+**Records and notices.** The record reuses the §9 shape: all 15 leaves in canonical order,
+`matched_input_key` with canonical keys (empty when missing, never `"none"`/`"nan"`),
+`affected_event_count` fixed per exam, and the selected entry's source kind, revision, and content
+hash on the record and every leaf. The notice is `complete` when every leaf came from the selected
+candidate, else `partial` with one entry per inherited leaf (field, source, level, profile ID, and
+display label — the profile ID for custom profiles, the listed model for bundled ones). Notice text
+names permitted labels only (fields, closed-vocabulary sources/levels, maker/model/profile labels),
+never notes, source paths, or raw source text. New public reprs show counts and closed-vocabulary
+kinds only — never keys, IDs, labels, or rendered text.
+
+**Bundled conversion.** At most `MAX_PROFILES` entries (Default included) are materialized before
+any conversion, with bounded iteration against inaccurate lengths; each model list is capped before
+its profile ID is derived. Legacy settings entries convert to canonical profiles with deterministic
+IDs (`bundled-<maker>-<model>` from canonically sorted model keys, so reordered lists compile
+identically; wildcard models as `wildcard`), validated through the existing
+boundary with `source_kind: "json"`; non-Default entries compile into the conflict-checked index
+while `Default` stays separate as the unconditional fallback (a second `Default` fails
+`duplicate_profile_id`). Omitted `swap_lateral_longitudinal` materializes as `False` on every
+bundled entry, preserving the runtime default — which applies it to each chosen entry — with honest
+provenance, so shipped exact entries are complete and never inherit a wildcard's `True`.
+
+Resolver preparation reuses the canonical compiler to revalidate payloads and hashes, reject global conflicts,
+and compare every supplied coordinate claim against the keys and metadata compiled from its profiles.

@@ -21,6 +21,13 @@ That keeps SemVer and contributor history organized.
 
 ### Changed
 
+- **Equipment-profile coordinate resolution core (experimental, internal only)** (2026-10-11) — the
+  internal package gains immutable custom-exact coordinate resolution over compiled indexes (custom
+  exact → bundled exact → bundled wildcard → Default, per-leaf inheritance, complete/partial
+  notices) plus canonical bundled profiles converted from the shipped normalization settings.
+  **Inert like the rest of the package:** nothing reads a resolution from any feature path, so
+  results, exports, and settings are unchanged.
+
 - **Equipment maker identity in normalized data** (2026-10-11) — every normalized event frame now
   carries a `manufacturer` column with the exact equipment-maker spelling (`None` when the source
   carries none). The `normalized` tabular   schema accepts an optional `manufacturer` column; tables

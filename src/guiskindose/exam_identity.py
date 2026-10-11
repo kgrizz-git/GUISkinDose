@@ -30,11 +30,13 @@ frames at their established per-exam boundary (study-id groups) or reject.
 
 from __future__ import annotations
 
+import math
 from typing import Any
 
 import pandas as pd
 
 from guiskindose.constants import KEY_NORMALIZATION_MANUFACTURER, KEY_NORMALIZATION_MODEL_NAME
+from guiskindose.equipment_profiles.keys import clean_identity_text
 from guiskindose.privacy import opaque_exam_label
 from guiskindose.rdsr_input_checks import RdsrInputError
 from guiskindose.settings.normalization_settings import normalize_manufacturer_key, normalize_model_key
@@ -63,10 +65,6 @@ MISSING_MANUFACTURER = "missing_manufacturer"
 MODEL_VARIATION = "model_variation"
 MIXED_MANUFACTURER = "mixed_manufacturer"
 
-#: Raw texts that are missing-value artifacts, never a real maker or model.
-_BLANK_TEXTS = frozenset({"", "nan", "nat", "none"})
-
-
 def clean_identity_value(value: object) -> str | None:
     """Return the stripped identity text, or ``None`` when it carries no identity.
 
@@ -74,24 +72,22 @@ def clean_identity_value(value: object) -> str | None:
     ``"none"`` artifacts all map to ``None`` so a missing maker or model can
     never stringify into a matchable ``"none"``/``"nan"`` key. Any other value
     keeps its exact spelling (no case folding); matching normalizes later.
+    String handling reuses the shared stdlib convention
+    (:func:`equipment_profiles.keys.clean_identity_text`).
     """
     if value is None:
         return None
-    if isinstance(value, float) and value != value:
+    if isinstance(value, float) and math.isnan(value):
         return None
     if isinstance(value, str):
-        text = value.strip()
-        return None if not text or text.casefold() in _BLANK_TEXTS else text
+        return clean_identity_text(value)
     candidate: Any = value
     try:
         if bool(pd.isna(candidate)):
             return None
     except (TypeError, ValueError):
         return None
-    text = str(value).strip()
-    if not text or text.casefold() in _BLANK_TEXTS:
-        return None
-    return text
+    return clean_identity_text(str(value))
 
 
 def _identity_columns(frame: pd.DataFrame) -> tuple[str, str]:

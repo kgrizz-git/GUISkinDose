@@ -274,6 +274,19 @@ Work:
       with `unsupported_profile_capability`, never ignore them. The capability gate itself is specified in
       [EQUIPMENT_PROFILE_SCHEMA.md](../EQUIPMENT_PROFILE_SCHEMA.md) §5: the parser represents full v1, activation
       checks capabilities separately.
+      **Core preparation landed (no wiring):** `equipment_profiles/resolver.py` resolves all 15 leaves over the
+      initial ladder (custom exact → bundled exact → bundled wildcard → Default) with the capability gate first,
+      per-leaf inheritance preserving `False`/`0.0`, artifact/missing-maker Default bypass (a literally
+      `"none"`/`"nan"`-named custom profile stays unreachable), closed fallbacks, once-validated compiled
+      inputs (context, structure, hashes, claim references), immutable `CoordinateMatchRecord` reuse with
+      correct `inherited` flags, structured complete/partial notices with permitted labels only, and safe
+      counts/kinds-only reprs; `equipment_profiles/bundled.py` converts legacy settings entries to canonical
+      profiles/indexes under `MAX_PROFILES` with order-independent deterministic IDs/hashes, per-entry
+      materialized swap `False`, and a separate `Default`; `equipment_profiles/vendor_aliases.py` is the
+      single alias home (settings re-exports). Shared stdlib missing-identity convention lives in
+      `keys.clean_identity_text`, reused by the frame seam. No renderer/normalizer/settings mutation and no
+      API/CLI/GUI/store activation wiring — that
+      remains Phase 2 work, so Phase 2 is **not** complete.
 - [ ] Preserve the dose distinction: `field_size_mode` is dose-affecting; `detector_side_length` is visualization-only
       (`src/guiskindose/geom_calc.py:20-83`, `src/guiskindose/beam_class.py:275-291`).
 - [ ] Materialize per-leaf source provenance and issue the per-exam `partial match — fields inherited from
@@ -439,6 +452,22 @@ gets macOS/Linux and Windows manual evidence as applicable.
 
 ## Progress log
 
+- 2026-10-11 — **Sonar validation cleanup (no behavior change).** Cleared the 172 equipment-profile
+  branch findings: NaN idioms to `math.isnan`, negative-zero normalization to exact `+ 0.0` (bit-verified),
+  complexity splits, unused-param/redundant-call removals, exception-test hoisting, specific exception
+  types, split assertions, and explicit ASCII regex flags without suppressions. Parser/privacy limits,
+  immutable records, capabilities, and exact scientific contracts preserved; full float-semantics check
+  passes. No app wiring; Phase 2 remains open.
+- 2026-10-11 — **Coordinate resolution core preparation landed (no wiring).** `resolver.py` (stdlib-only,
+  immutable) resolves all 15 leaves over custom exact → bundled exact → bundled wildcard → Default with the
+  capability gate first, per-leaf inheritance, artifact/missing-maker Default bypass, closed fallbacks with a
+  once-validated preparation boundary, `CoordinateMatchRecord` reuse, and structured complete/partial notices;
+  `bundled.py` converts legacy settings entries under `MAX_PROFILES` with order-independent deterministic
+  IDs/hashes, per-entry materialized swap `False`, and bundled-only aliases; `vendor_aliases.py` is the single
+  alias home (settings re-exports); safe reprs throughout. 63 targeted tests pin settings-selection parity
+  (Siemens/Philips/GE-family/Default, all complete), miss paths, partial/zero/False behavior, all five
+  capability tokens, store context, immutability, and privacy. No renderer/normalizer/settings
+  mutation and no API/CLI/GUI/store activation — Phase 2 remains open.
 - 2026-10-11 — **Normalized manufacturer identity landed** (no activation/matching wiring). One exam
   carries exactly one canonical (manufacturer, model) pair: new `src/guiskindose/exam_identity.py` seam
   (cleaning, raw/canonical pair listing, descriptive classification, fail-closed guard);
