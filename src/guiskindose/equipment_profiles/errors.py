@@ -123,6 +123,7 @@ _MESSAGES: dict[ProfileErrorCode, str] = {
 #: Codes that exist in the vocabulary but are deliberately not implemented yet.
 #: ``sheet_limit_exceeded`` was reserved for the XLSX adapter and is now implemented by the preflight.
 RESERVED_CODES = (
+    ProfileErrorCode.SHEET_REQUIRED,
     ProfileErrorCode.STORE_CORRUPTION,
     ProfileErrorCode.EXISTING_MODEL_OUT_OF_EXTENT,
     ProfileErrorCode.EXPLICIT_SQLITE_COLLISION,

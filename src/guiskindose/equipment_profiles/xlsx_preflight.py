@@ -170,8 +170,8 @@ def preflight_container(raw: bytes, *, source_kind: str = SOURCE_KIND_XLSX) -> i
 def resolve_sheet(worksheet_count: int, selected: int | None, *, source_kind: str = SOURCE_KIND_XLSX) -> int:
     """Resolve the zero-based sheet index to read against the workbook's own worksheet count.
 
-    A single-sheet workbook defaults to sheet ``0``. With two or more worksheets a selection is mandatory, so
-    an absent selection is ``sheet_required``. An out-of-range, negative, or non-integer selection is
+    Every workbook defaults to sheet ``0``, as specified by the source-format contract.
+    An out-of-range, negative, or non-integer explicit selection is
     ``unknown_sheet``. Sheet **names are never used here and are never retained**, so no name can reach a
     diagnostic.
     """
@@ -183,8 +183,6 @@ def resolve_sheet(worksheet_count: int, selected: int | None, *, source_kind: st
             ProfileErrorCode.SHEET_LIMIT_EXCEEDED, source_kind=source_kind, count=worksheet_count
         )
     if selected is None:
-        if worksheet_count > 1:
-            raise EquipmentProfileError(ProfileErrorCode.SHEET_REQUIRED, source_kind=source_kind)
         return 0
     if not isinstance(selected, int) or isinstance(selected, bool):
         raise EquipmentProfileError(ProfileErrorCode.UNKNOWN_SHEET, source_kind=source_kind)

@@ -419,8 +419,7 @@ gets macOS/Linux and Windows manual evidence as applicable.
   bounded, duplicate and directory-spoofing entry names are rejected, and every member is inflated by
   *streaming real decompressed bytes* in chunks rather than trusting the central directory, so a forged
   `file_size` cannot smuggle a zip bomb. Worksheets are counted by iterating actual rows, and the sheet index
-  is resolved from an explicit selection (mandatory when a workbook holds two or more sheets, otherwise sheet
-  `0`). `xlsx_source.py` reads only the selected sheet with `read_only=True`, `data_only=False`,
+  defaults to the first worksheet, with an optional explicit index (spec §4). `xlsx_source.py` reads only the selected sheet with `read_only=True`, `data_only=False`,
   `keep_links=False`, converts typed cells to the flat text cells the shared CSV seam consumes (so there is no
   CSV round trip and no second flat parser), and routes the same canonical validation and hashing.
   Typed-cell policy: numbers stay numbers, booleans are accepted only where the schema expects one and

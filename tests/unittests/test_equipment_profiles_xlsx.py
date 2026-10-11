@@ -362,14 +362,10 @@ def _multi_sheet_bytes() -> bytes:
     return buffer.getvalue()
 
 
-def test_multi_sheet_workbook_requires_an_explicit_selection() -> None:
-    with pytest.raises(EquipmentProfileError) as excinfo:
-        parse_xlsx_bytes(_multi_sheet_bytes())
-
-    assert _code(excinfo) is ProfileErrorCode.SHEET_REQUIRED
-    text = str(excinfo.value) + repr(excinfo.value)
-    assert "Profiles" not in text
-    assert "Other" not in text
+def test_multi_sheet_workbook_defaults_to_first_sheet() -> None:
+    default = parse_xlsx_bytes(_multi_sheet_bytes())
+    explicit = parse_xlsx_bytes(_multi_sheet_bytes(), sheet=0)
+    assert active_set_hash(default.profiles) == active_set_hash(explicit.profiles)
 
 
 def test_selected_non_profile_sheet_fails_validation() -> None:
@@ -707,7 +703,7 @@ def test_workbook_close_failure_does_not_mask_a_parse(monkeypatch: pytest.Monkey
 
 def test_no_error_echoes_sheet_names_paths_or_cells() -> None:
     with pytest.raises(EquipmentProfileError) as excinfo:
-        parse_xlsx_bytes(_multi_sheet_bytes())
+        parse_xlsx_bytes(_multi_sheet_bytes(), sheet=9)
     text = str(excinfo.value) + repr(excinfo.value)
     assert "Profiles" not in text
     assert "Other" not in text

@@ -9,6 +9,11 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 ## [Unreleased]
 
 ### Changed
+- **Equipment-profile first-sheet default** (2026-10-11) — align the XLSX adapter with the source-format
+  specification: use the first worksheet unless an index is selected. This supersedes the draft requirement
+  for explicit multi-sheet selection; explicit invalid indices still fail closed.
+
+### Changed
 - **XLSX preflight boundaries** (2026-10-11) — resolve worksheet namespaces and content-type parts before
   reading; reject mismatched, unordered, and out-of-budget coordinates; bound reader padding; preserve
   CSV-compatible numeric/boolean text and reject populated extra columns. Regression tests cover prefixed

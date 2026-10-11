@@ -292,7 +292,7 @@ only JSON, CSV, or TSV never imports the spreadsheet stack. The workbook is open
 | Workbooks | Selection |
 |---|---|
 | exactly 1 | sheet `0` is the default; an explicit `sheet=0` is also accepted |
-| 2 or more | a selection is mandatory; `sheet=None` is `sheet_required` |
+| 2 or more | `sheet=None` selects the first worksheet; an explicit index selects another |
 | out of range, negative, or non-integer | `unknown_sheet` |
 
 More than 16 worksheets is `sheet_limit_exceeded`. Sheet **names are never used for selection, are never
@@ -527,3 +527,6 @@ cell coordinates must increase within, and belong to, their containing row. Read
 toward row/column/cell budgets. Text numeric and boolean cells use the same lexical rules as CSV/TSV; spreadsheet
 number and boolean objects remain restricted to their respective field types. Non-empty whitespace beyond the
 header is an unknown column value, not blank padding.
+
+The first-sheet default follows spec §4. `sheet_required` is reserved for future interfaces that require
+an explicit selection; the file adapter does not raise it.

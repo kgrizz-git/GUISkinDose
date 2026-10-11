@@ -535,8 +535,7 @@ def _guarded_rows(raw: bytes, *, selected: int | None, source_kind: str) -> Iter
 def parse_xlsx_bytes(raw: bytes, *, sheet: int | None = None) -> ParsedDocument:
     """Parse and validate an XLSX profile document from raw bytes.
 
-    ``sheet`` is the zero-based sheet index to read. A single-sheet workbook defaults to sheet ``0``; a
-    workbook with two or more sheets requires an explicit selection, otherwise ``sheet_required``.
+    ``sheet`` is the zero-based sheet index to read; every workbook defaults to its first sheet.
     """
     if not raw:
         raise EquipmentProfileError(ProfileErrorCode.EMPTY_SOURCE, source_kind=SOURCE_KIND_XLSX)
