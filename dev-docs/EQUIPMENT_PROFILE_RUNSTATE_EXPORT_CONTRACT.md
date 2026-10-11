@@ -149,6 +149,11 @@ validation and round-trip fixtures; do not persist an unversioned pandas fingerp
 Import remains synchronous, GUI-light, and offline-safe; candidate normalization and
 publication follow their phase's transaction boundary, not hidden I/O in the reader.
 
+Geometry row counts at any boundary (checksum input, frame extraction, envelope
+emission) are capped at the aggregate-row bound (10,000 retained rows); declared
+lengths are checked before iterating and an actual counter binds iteration even
+for lying lengths.
+
 ## 7. Representations (decision 20)
 
 Match records are immutable snapshots at every surface, never mutable

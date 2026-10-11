@@ -12,6 +12,18 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ### Changed
 
+- **Capture codec foundation, review-hardened (standalone)** (2026-10-11) — producer moved
+  to `src/guiskindose/equipment_capture.py` and validates the current receipt/frame/settings
+  through the public bridge before any digest; core codec imports no bridge/frame/settings code.
+  Immutable construction fully validates with safe reprs and full revalidation on emit; declared-
+  then-actual length caps on geometry/frame/envelope paths; overflow/surrogate/depth/node guards;
+  session kind/format/hash/revision coherence with aggregate totals; notice entry↔leaf
+  cross-checks; producer regressions on real DICOM/CSV normalizer receipts. Parent review additionally
+  fixed input-vs-selected identity validation (Default/wildcard captures), actual geometry row width,
+  bounded column reads, pre-allocation JSON guards, canonical leaf construction, and source-manifest
+  membership. Targeted validation and normal gates cover the final implementation; ruff,
+  basedpyright, complexity, size, and freshness gates clean. No existing bridge/session internals
+  modified; no run-state/GUI/export/CLI wiring or version bumps.
 - **Run-state/export contract lock (docs only)** (2026-10-11) — new
   `dev-docs/EQUIPMENT_PROFILE_RUNSTATE_EXPORT_CONTRACT.md` locks SPEC decisions 13/18/20 from actual
   seams: run-state 1→2, rich-report 3→4, dict/JSON export stays 3 while additive; default-safe maker/model

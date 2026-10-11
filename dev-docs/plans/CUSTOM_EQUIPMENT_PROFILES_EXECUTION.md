@@ -470,6 +470,26 @@ gets macOS/Linux and Windows manual evidence as applicable.
 
 ## Progress log
 
+- 2026-10-11 — **Capture codec parent review.** Corrected input-vs-selected identity checks so
+  bundled wildcard and Default fallback captures round-trip. Bounded actual row width and frame
+  columns, guard JSON bytes/depth/tokens before tree allocation, canonicalize public leaf values,
+  and validate inherited/root/source-manifest coherence. Added independent regressions; codec
+  remains standalone with restore, run-state/export versions, and GUI/CLI wiring still open.
+
+- 2026-10-11 — **Capture codec foundation, review-hardened (standalone, no wiring).**
+  Producer moved to the application layer (`src/guiskindose/equipment_capture.py`) and validates
+  the current receipt/frame/settings through the public bridge before any digest — stale geometry,
+  identity, counts, sessions, live fields, and forged notices all reject; the core codec no longer
+  imports bridge/frame/settings code. Immutable construction fully validates (strict tuples, nested
+  types, recipe/provenance/bounds, checksum recomputation) with value-only-safe reprs; geometry,
+  frame, and envelope paths enforce declared-then-actual length caps; JSON/numeric boundaries cover
+  overflow, surrogates, depth, and node budgets; session provenance enforces kind/format/hash/
+  revision coherence with aggregate totals; notices cross-check entries against inherited leaves.
+  Producer regressions run on real DICOM/CSV normalizer receipts. 36 tests across one test
+  file. Modules: `equipment_profiles/capture.py` (types + construction validation),
+  `capture_checks.py` (scalars, JSON/budget boundary), `capture_codec.py` (parsing),
+  `src/guiskindose/equipment_capture.py` (producer, emission, geometry). No run-state/GUI/
+  export/CLI wiring, no version bumps; restore/calculation remain open (§10 stands).
 - 2026-10-11 — **Run-state/export contract locked (docs only).** [EQUIPMENT_PROFILE_RUNSTATE_EXPORT_CONTRACT.md](../EQUIPMENT_PROFILE_RUNSTATE_EXPORT_CONTRACT.md)
   locks decisions 13/18/20 from actual seams: run-state 1→2 (positional per-exam captures with a full effective recipe,
   validated audit mapping, retained count and versioned geometry checksum), rich-report 3→4, dict/JSON export stays 3 while additive; default-safe maker/model keys vs
