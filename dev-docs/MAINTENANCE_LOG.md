@@ -23,6 +23,43 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ### Changed
 
+- **Equipment-profile store hardening** (2026-10-11) — closed five remaining gaps in the inert store slice:
+  enabled-revision listing uses LEFT JOIN and rejects a missing revision instead of silently omitting it;
+  growth caps run in every transaction via bounded single-integer queries with total identities capped at
+  1024; schema verification compares exact DDL text, forbids extra metadata keys and any trigger/view, and
+  re-runs with a foreign-key violation check inside every transaction; stored payloads are byte-bounded
+  before parsing with all failures normalizing to `store_corruption`; `set_enabled`/`delete_record` accept
+  an optional `expected_generation`. No application, GUI, CLI, normalization, packaging, example, asset, or
+  baseline file was touched.
+### Changed
+
+- **Equipment-profile store review fixes** (2026-10-11) — fixed nine commit-blocking defects in the inert
+  store slice: matched save-CAS now compares after the record lookup (and updating requires an expectation);
+  re-enabling excludes the candidate before appending it; saves to enabled records validate the would-be
+  enabled set before commit; unexpected exceptions roll back, close safely, and normalize closed (reads use
+  plain `BEGIN`, cancellation preserved); payload length/type is queried before the text is fetched and the
+  parsed row count is rechecked; listings verify each payload; rows parse with no coercion; schema verification
+  covers keys, types, constraints, triggers, and views; selections are length-checked before copying with
+  duplicate IDs rejected and all integers range-checked before binding; NUL paths fail closed. The contract now
+  requires CAS on update, bumps a `generation` token on every mutation, and tombstones deletes against ABA
+  reuse. `profile_store.py` stays under the gates via `store_reads.py`/`store_writes.py` operation modules.
+  No application, GUI, CLI, normalization, packaging, example, asset, or baseline file was touched.
+### Changed
+
+- **Equipment-profile local user store (inert)** (2026-10-11) — added
+  `src/guiskindose/equipment_profiles/profile_store.py` (transactional stdlib-`sqlite3` repository) and
+  `store_types.py` (frozen record/revision/snapshot types plus the locked revision-set hash), implementing
+  the new §12 store contract. Fresh-empty creation at store schema version 1 with rejection of
+  unversioned-nonempty, future, and corrupt databases without mutation; `BEGIN IMMEDIATE` writes with
+  rollback; optimistic revision checks; payload re-parse, re-validation, and re-hash on every read; new
+  records start disabled; enable-time canonical conflict validation; one-transaction snapshots with
+  pre-materialization bounds. Five new closed `store_*` codes; `store_corruption` leaves the reserved set.
+  Tests use `tmp_path` only and cover CRUD, two-handle CAS races, rollback, snapshot stability and
+  determinism, conflicts, corruption/version rejection with byte-identical files, privacy, bounds, and
+  default-path purity. No application, GUI, CLI, normalization, packaging, example, asset, or baseline file
+  was touched; Phase 1 stays incomplete.
+### Changed
+
 - **Equipment-profile XLSX silent-loss fixes** (2026-10-10) — fixed two silent-loss defects in the inert
   XLSX adapter, both of which produced a *successful* parse with missing content. First, a row conversion
   truncated to the header width, so a populated cell beyond the 19-column header — including a formula or a

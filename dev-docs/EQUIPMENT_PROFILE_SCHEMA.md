@@ -7,14 +7,13 @@ execution: [plans/CUSTOM_EQUIPMENT_PROFILES_EXECUTION.md](plans/CUSTOM_EQUIPMENT
 
 Implemented today: the stdlib-only core package `src/guiskindose/equipment_profiles/` — immutable canonical
 models, JSON and in-memory parsing, full-v1 structural validation, canonical serialization and hashes,
-across-source duplicate/conflict validation, immutable match-record types, and the initial capability gate.
+across-source duplicate/conflict validation, immutable match-record types, the initial capability gate, the
+CSV/TSV/XLSX adapters, and the local user profile store repository.
 **No application wiring exists.** Profiles are not applied to any dose, normalization, or GUI path in this slice.
 
-**Not in this contract (later slices, do not assume):** the user-store schema and migration policy; run-state and
-rich-export schema version bumps and backward readers; CSV/TSV/XLSX adapters and their fixtures plus
-approved-asset inventory evidence; transmission eligibility, grid completion, and inherited-evidence
-classification (Phase 4); GUI/store/CLI wiring; packaging inclusion in `MANIFEST.in`. Full Phase 0 is
-therefore **not** complete.
+**Not in this contract (later slices, do not assume):** run-state and rich-export schema version bumps and
+backward readers; transmission eligibility, grid completion, and inherited-evidence classification (Phase 4);
+GUI/CLI wiring; packaging inclusion in `MANIFEST.in`. Full Phase 0 is therefore **not** complete.
 
 ## 1. Document envelope
 
@@ -391,8 +390,10 @@ Canonical form is UTF-8 JSON with recursively sorted keys, compact separators, a
 - **Provenance vs source context.** The profile hash covers profile *content*, including `provenance`. It never
   covers source context — source kind, file, source hash, store revision — or any per-leaf provenance. The same
   profile loaded from a JSON file and built in memory has the same profile hash and different source context.
-- **Not yet locked:** the stored selected-revision-set hash. It is specified only as "a hash over the selected
-  revisions", and is deliberately not marked complete anywhere until the store schema lands.
+- **Stored selected-revision-set hash (locked).** The revision-set hash is SHA-256 over the canonical bytes of
+  `{"schema_version": 1, "store_schema_version": 1, "store_id": …, "records": [{profile_id, revision,
+  profile_hash} …]}` with records ordered by exact `profile_id` (§12). It covers the store schema version, the
+  opaque store ID, and the selected records — never filenames, paths, timestamps, or enablement.
 
 ## 8. Cross-profile conflicts
 
@@ -458,8 +459,8 @@ Per-exam match records are immutable snapshots, never mutable `NormalizationSett
 ```
 
 - `source` is `custom` / `bundled` / `default`; `level` is `exact` / `wildcard` / `default`.
-- `source_kind` is `json`, `memory`, `csv`, `tsv`, `xlsx`, `gui`, or `store`. Only `json` and `memory` are
-  implemented in this slice; the rest are reserved for their adapters.
+- `source_kind` is `json`, `memory`, `csv`, `tsv`, `xlsx`, `gui`, or `store`. All but `gui` are
+  implemented; `gui` is reserved for its adapter.
 - `inherited` is `true` for any leaf whose value comes from a candidate other than the selected **custom
   coordinate profile** — including a lower-priority custom wildcard. It is `false` only for leaves the selected
   custom exact profile supplied itself.
@@ -482,13 +483,15 @@ Codes: `unsupported_source_suffix`, `unsupported_source_encoding`, `unreadable_s
 `oversized_source`, `row_limit_exceeded`, `profile_limit_exceeded`, `model_limit_exceeded`, `alias_limit_exceeded`,
 `nesting_limit_exceeded`, `malformed_json`, `malformed_tabular`,
 `malformed_container`, `inflation_limit_exceeded`, `unsafe_formula`, `spreadsheet_error`,
-`invalid_date_object`, `sheet_required`, `unknown_sheet`, `sheet_limit_exceeded`,
+`invalid_date_object`, `unknown_sheet`, `sheet_limit_exceeded`,
 `unsupported_schema_version`, `unknown_field`, `duplicate_json_key`, `invalid_type`, `missing_required_field`,
 `blank_required_cell`, `blank_disallowed_cell`, `empty_domain`, `empty_coordinate_block`, `invalid_profile_id`,
 `invalid_manufacturer`, `invalid_model_list`, `alias_ambiguous_target`, `alias_target_mismatch`,
 `wildcard_not_permitted`, `promotion_not_acknowledged`, `invalid_number`, `invalid_enum`, `invalid_date`,
 `value_out_of_range`, `duplicate_profile_id`, `duplicate_coordinate_claim`, `duplicate_transmission_key`,
-`conflicting_profile_metadata`, `conflicting_profile_claim`, `unsupported_profile_capability`.
+`conflicting_profile_metadata`, `conflicting_profile_claim`, `unsupported_profile_capability`,
+`store_conflict`, `store_corruption`, `unsupported_store_version`, `store_not_found`, `store_unavailable`,
+`store_limit_exceeded`.
 
 `unreadable_source` covers a file that cannot be read at all (missing, a directory, or any I/O failure). A path
 is never included in the error, so the failure is indistinguishable by path and only distinguishable by code.
@@ -499,14 +502,16 @@ is never included in the error, so the failure is indistinguishable by path and 
 Strings must be encodable as strict UTF-8; escaped unpaired surrogates are rejected with
 `unsupported_source_encoding`. Measured source text must contain non-whitespace content. Traversal bounds
 limit both visited nodes and queued children, so a broad in-memory container cannot grow an unbounded stack.
-`sheet_required`, `unknown_sheet`, and `sheet_limit_exceeded` belong to the XLSX adapter (§6B) and never name a
+`unknown_sheet` and `sheet_limit_exceeded` belong to the XLSX adapter (§6B) and never name a
 sheet; `malformed_container`, `inflation_limit_exceeded`, `unsafe_formula`, `spreadsheet_error`, and
 `invalid_date_object` likewise carry only a source kind, an allowlisted column or `record_type`, an index, and
 a count.
 
-Three further codes are **reserved for later slices and must not be reported as implemented**:
-`store_corruption` (user store), `existing_model_out_of_extent` (transmission bounds), and
-`explicit_sqlite_collision` (explicit `corrections_db_path` coexistence).
+Four further codes are **reserved for later slices and must not be reported as implemented**:
+`sheet_required` (future interfaces that require an explicit sheet selection; the file adapter never raises
+it), `existing_model_out_of_extent` (transmission bounds), and `explicit_sqlite_collision`
+(explicit `corrections_db_path` coexistence). `store_corruption` was reserved for the user store and is now
+raised by the store repository (§12).
 
 ## 11. Packaged examples
 
@@ -530,3 +535,76 @@ header is an unknown column value, not blank padding.
 
 The first-sheet default follows spec §4. `sheet_required` is reserved for future interfaces that require
 an explicit selection; the file adapter does not raise it.
+
+## 12. Local user profile store
+
+The store is a **separate, user-owned SQLite database** (spec decisions 5 and 17): never `corrections_db_path`,
+never bundled package data, never a migration target for anything else. Implemented by the stdlib-`sqlite3`
+`src/guiskindose/equipment_profiles/profile_store.py` repository with `store_reads.py`/`store_writes.py`
+operation modules, the `store_schema.py` schema contract, and the `store_types.py` immutable types. No
+application, GUI, CLI, normalization, or dose-path wiring reads it in this slice.
+
+**Identity and location.** The default path is computed purely as
+`Path.home() / ".guiskindose" / "equipment_profiles.sqlite3"` — the same configuration area as
+`gui/window_prefs.py` — with no `mkdir`, no read, and no platform branch; computing it never touches the
+filesystem. Initialization and access are explicit, and tests use `tmp_path` only.
+
+**Schema and versions.** `store_schema_version` is `1`, written to both `PRAGMA user_version` and
+`store_meta.store_schema_version`; the canonical profile schema stays `1`. Tables (verified exactly —
+names, column names and types, primary keys, the revision foreign key, and the absence of triggers and
+views): `store_meta(key, value)`, `profile_records(profile_id, enabled, current_revision, generation,
+updated_utc)`, `profile_revisions(profile_id, revision, payload_json, profile_hash, logical_rows,
+created_utc)`, and `profile_tombstones(profile_id, generation, next_revision)`. Only a fresh empty database
+is created, at version 1. An unknown nonempty unversioned database, a future version, or a corrupt schema is
+rejected with a value-free error **without mutating the file**. Future versions need a real migration later;
+none is pretended here.
+
+**Revisions and metadata.** `store_id` is a random opaque 32-hex identifier recorded once at initialization.
+Revisions are immutable: each stores the canonical profile JSON payload, its content `profile_hash`, a
+positive integer revision, a stored row count, and a UTC timestamp, with a per-record current-revision
+pointer, a monotonically bumped `generation` token, and an enabled flag. Timestamps and enablement are audit
+data, never hashed. No origin filename, path, station name, or serial number is stored. Bounded
+`provenance.source`/`notes` are retained privately inside the payload but are never logged, errored, or
+exported by default.
+
+**API and transactions.** Explicit `initialize()`; `save_new_revision` (strictly type-checked and round-trip
+validated, so no hand-built `Profile` is trusted; a brand-new record starts disabled); `read_revision`
+(current by default); bounded `list_records`; `set_enabled`/`delete_record` with optimistic revision *and*
+generation expectations; and `selected_snapshot`, which loads in **one** read transaction before any mutable
+data escapes. Every write runs in `BEGIN IMMEDIATE` and rolls back on *any* failure — including unexpected
+ones, which additionally close the handle safely — while reads use a plain `BEGIN` so they never take the
+writer lock. A nested or leaked transaction is refused rather than stacked onto. Schema, foreign keys, and
+growth caps are re-verified inside every transaction, so external tampering after initialization fails closed
+on the next operation.
+
+**Explicit revision-CAS contract.** Creating a record expects absence (a supplied expectation conflicts);
+updating an existing record **requires** `expected_current_revision`, so an accidental omission cannot
+overwrite newer content. Enable and delete honor an optional content-revision expectation **and** an optional
+`expected_generation` — an omitted expectation is unconditional caller-controlled behaviour, and GUI layers
+must always pass one. Content CAS alone cannot see metadata-only races, so every mutation also bumps
+`generation`, a deleted ID leaves a tombstone continuing both generation and revision numbering, and
+recreating an ID can never silently reuse a revision number (no ABA reuse). The total tracked identities
+(live records plus tombstones) are bounded at 1024; creating past it fails closed while deleting never does.
+`generation` is exposed on every record for a future metadata compare-and-swap; the current contract does
+not claim enable-race protection beyond content CAS.
+
+**Conflicts.** Saving a candidate with unsupported capabilities persists it but never activates or applies
+it. Enabling runs the canonical conflict check across the would-be enabled set atomically (bounded to 64
+profiles and 10,000 stored rows before any payload loads), so no ambiguous enabled custom claim can result.
+An empty enabled store yields a valid empty snapshot (the empty-document parser is never misused for this).
+
+**Source hash (locked).** The revision-set hash is SHA-256 over the canonical bytes of
+`{"schema_version": 1, "store_schema_version": 1, "store_id": …, "records": [{profile_id, revision,
+profile_hash} …]}` with records ordered by exact `profile_id`. The content `profile_hash` excludes the store
+ID, revision, timestamps, and enablement. A snapshot exposes `source_kind: "store"`, that source hash, and the
+selected revisions for later activation — never a filename or path.
+
+**Bounds, checked before querying or materializing.** At most 64 unique selected IDs (duplicates rejected, IDs
+pattern-checked); at most 10,000 aggregate logical rows (summed from stored per-revision counts before
+payloads are read, rechecked after parsing); 8 MiB per revision payload (length and storage type queried
+before the text is fetched); 256 records and 64 revisions per profile; listing capped at 64 with validated
+offsets; caller integers range-checked to SQLite's 64-bit limits before binding; global growth caps
+re-verified on reads. All SQL is parameterized. Every `sqlite3` failure collapses to a stable value-free
+`store_*` code (`store_conflict`, `store_corruption`, `unsupported_store_version`, `store_not_found`,
+`store_unavailable`, `store_limit_exceeded`) with the raw cause suppressed and `source_kind: "store"` on
+every failure.

@@ -74,8 +74,12 @@ Work:
       files in this directory alone does not prove they ship.
  - [ ] Author invalid examples (malformed, wrong schema version, unknown fields, duplicate claim, out-of-extent
       row, unsupported suffix) with the stable error code each must produce.
- - [ ] Lock the separate user-store schema and migration policy: record/revision IDs, canonical payload, profile/hash/
+ - [x] Lock the separate user-store schema and migration policy: record/revision IDs, canonical payload, profile/hash/
       active-set metadata, timestamps, transactions, uniqueness, and corruption handling (decision 5).
+      *(Locked in [EQUIPMENT_PROFILE_SCHEMA.md](../EQUIPMENT_PROFILE_SCHEMA.md) §12: store schema version 1,
+      four tables (records, revisions, tombstones, meta), immutable revisions with canonical payloads and
+      content hashes, revision pointers, generation tokens, opaque store ID, no origin paths, and the locked
+      revision-set source hash.)*
 - [x] Set exact maximum file bytes, XLSX expanded/member/sheet limits, aggregate 10,000-row ceiling, profile/alias
       counts, ID lengths, and text lengths. The row ceiling follows `src/guiskindose/kerma_correction.py:42,324-362`.
       *(Locked for common/coordinate ingestion in [EQUIPMENT_PROFILE_SCHEMA.md](../EQUIPMENT_PROFILE_SCHEMA.md) §4;
@@ -85,7 +89,7 @@ Work:
       (decision 12). *(Delivered for the common/coordinate boundary in
       [EQUIPMENT_PROFILE_SCHEMA.md](../EQUIPMENT_PROFILE_SCHEMA.md) §7: negative-zero normalization, numeric
       equivalence across JSON and tabular sources, and the profile hash covering content/provenance but never source
-      context. Stored selected-revision-set hashing remains unlocked; specify it before the Phase 1 store slice.)*
+      context. Stored selected-revision-set hashing is now locked (§12) and implemented by the store slice.)*
 - [x] Lock coordinate leaf resolution and provenance: default candidate order; explicit wildcard promotion; nested
       x/y/z and angle leaves; `complete match` versus concrete `partial match` notice (decisions 6 and 9).
       *(Locked in [EQUIPMENT_PROFILE_SCHEMA.md](../EQUIPMENT_PROFILE_SCHEMA.md) §§2, 5, and 9, including the
@@ -99,7 +103,8 @@ Work:
       store conflict/corruption, and activation rollback. *(Common/coordinate catalog locked in
       [EQUIPMENT_PROFILE_SCHEMA.md](../EQUIPMENT_PROFILE_SCHEMA.md) §10. The two transmission-specific codes —
       existing-model out-of-extent row and explicit-SQLite collision — are confirmed alongside their Phase 4
-      fixtures; store conflict/corruption codes are confirmed with the Phase 1 store slice.)*
+      fixtures; store codes (`store_conflict`, `store_corruption`, `unsupported_store_version`, `store_not_found`,
+      `store_unavailable`, `store_limit_exceeded`) are implemented by the Phase 1 store slice.)*
 - [ ] Lock privacy/export fields (decision 13): manufacturer/model and canonical `matched_input_key` are default-safe;
       station/serial retain `include_identifiers` for per-event output and never enter logs; notes and profile paths are
       omitted by default. This intentionally replaces the current manufacturer/model gating at
@@ -144,7 +149,7 @@ fail closed in the coordinate-only slice. Do not mark incomplete Phase 0 items s
 publishes the implementation field model, tabular column set, types/enums/bounds, blank-cell semantics, canonical
 serialization and hash rules, conflict rules, match-record shapes, and error codes for the common and coordinate
 boundary, so the Phase 1 core package and the Phase 2 coordinate slice can proceed. This is **not** full Phase 0
-sign-off. Still outstanding for later slices: the user-store schema and migration policy, run-state and
+sign-off. Still outstanding for later slices: run-state and
 rich-export schema version locks and backward readers, XLSX fixtures and their approved-asset inventory
 evidence, transmission eligibility/evidence/grid fixtures, `MANIFEST.in` packaging inclusion, and the
 invalid-example fixture set with each locked error code.
@@ -167,7 +172,8 @@ Work:
       in-memory parsing, structural validation, canonical serialization and hashes, duplicate/conflict
       validation, match-record types, and the capability gate exist under
       `src/guiskindose/equipment_profiles/` and are inert (no application wiring). **This item is not
-      complete**: adapters, the user store, indexes, and the identity contract still remain.
+      complete**: indexes and the normalized identity contract still remain; adapters and the user store
+      are implemented below.
 - [ ] Implement JSON, CSV/TSV, and XLSX adapters. Read bounded file bytes once, hash and parse the same snapshot;
       preflight XLSX container expansion/sheets/rows/text before materialization. Match the kerma loader's accepted
       suffix family (`src/guiskindose/kerma_correction.py:348-376`) without sharing kerma-specific factor rules.
@@ -187,16 +193,28 @@ Work:
       adapter functions, so a JSON/CSV/TSV-only use never loads the spreadsheet stack, and a single documented
       boundary over the whole untrusted-container path normalizes any remaining library exception family to
       `malformed_container` with the cause suppressed and always closes the workbook. Sheet names, paths, cell
-      text, and unknown keys never reach an error. The user store remains outstanding.
+      text, and unknown keys never reach an error. (The user store landed separately; see below.)
 
 - [ ] Implement an in-memory adapter for already-structured GUI/API values. It deep-copies and canonicalizes one
       submission before validation so later form mutation cannot alter an activation candidate.
-- [ ] Implement the local user-store repository: initialize/migrate in the per-user app-data area; transactional
+- [x] Implement the local user-store repository: initialize/migrate in the per-user app-data area; transactional
       create/version/read/list/enable/delete; optimistic revision checks; payload/hash verification; bounded queries;
-      no coupling to bundled tables or `corrections_db_path`. **Still outstanding** — all four non-GUI file adapters
-      now exist, so this is the only remaining Phase 1 adapter.
-- [ ] Load stored revisions in one read transaction and materialize an immutable selected-revision snapshot. Test that
+      no coupling to bundled tables or `corrections_db_path`. **Implemented and inert** (`profile_store.py` with
+      `store_reads.py`/`store_writes.py` operation modules, `store_schema.py` contract, `store_types.py` types;
+      stdlib `sqlite3` only): explicit initialize-or-verify with fresh-empty creation and rejection of
+      unversioned-nonempty, future, and corrupt databases without mutation; `BEGIN IMMEDIATE` writes with rollback
+      on *any* failure (unexpected errors close safely, cancellation preserved); required revision CAS on update
+      plus tombstoned generations against ABA reuse; payload re-parse, re-validation, and re-hash on every read;
+      new records start disabled; unsupported capabilities persist but are never activated; enabling validates the
+      would-be enabled set atomically. **Still open in Phase 1:** canonical `manufacturer` in normalized frames,
+      coordinate/transmission indexes, per-exam match-record wiring, and multi-source duplicate detection at
+      activation time.
+- [x] Load stored revisions in one read transaction and materialize an immutable selected-revision snapshot. Test that
       file → store → canonical JSON preserves profile hashes while source/revision provenance changes appropriately.
+      **Implemented and inert**: `selected_snapshot()` loads in one read transaction (empty enabled store yields a
+      valid empty snapshot), bounds selection and aggregate rows before materializing payloads, runs the canonical
+      conflict check over the selection, and exposes the locked revision-set source hash with `source_kind: "store"`.
+      File → store → canonical-JSON reload preserves profile hashes while the source hash changes appropriately.
 - [ ] Add canonical `manufacturer` to every raw-normalized frame and the normalized adapter contract; warn for legacy
       normalized data lacking it. Keep mixed coordinate identities split/rejected before matching.
 - [ ] Add immutable per-exam coordinate/transmission match records with domain, profile/revision, source/level,
@@ -395,6 +413,36 @@ gets macOS/Linux and Windows manual evidence as applicable.
 
 ## Progress log
 
+- 2026-10-11 — **Store hardening round**: enabled-revision listing uses LEFT JOIN and rejects a missing
+  revision instead of silently omitting it from conflict validation; growth caps run in every transaction with
+  bounded single-integer queries, and total tracked identities (records plus tombstones) are capped at 1024;
+  schema verification compares exact DDL text, forbids extra metadata keys and any trigger/view, and re-runs
+  with a foreign-key violation check inside every transaction; stored payloads are byte-bounded before parsing
+  and all payload failures normalize to `store_corruption`; `set_enabled`/`delete_record` accept an optional
+  `expected_generation` alongside the content revision. Phase 1 stays incomplete.
+- 2026-10-11 — **Store review fixes**: nine commit-blocking defects fixed in the inert store slice, each
+  with a regression test. A matched save-CAS was rejected before the record lookup (now: validate the argument,
+  then compare after lookup; updating requires `expected_current_revision`); re-enabling an enabled record
+  double-counted its own claim (the candidate is now excluded before its current revision is appended); saving
+  to an enabled record no longer commits a conflicting enabled set (the would-be enabled set is validated
+  before commit); unexpected exceptions now roll back, close safely, and normalize closed instead of leaking a
+  transaction (reads use plain `BEGIN`, cancellation is preserved); payload length and storage type are queried
+  before the text is fetched and the parsed row count is rechecked; listings verify each payload; rows parse
+  with no coercion; schema verification covers primary keys, foreign keys, types, constraints, and triggers;
+  selections are length-checked before copying with duplicate IDs rejected and all integers range-checked
+  before binding; and NUL paths fail closed. The contract now requires CAS on update, bumps a `generation`
+  token on every mutation, and tombstones deletes so revision numbers are never reused. `profile_store.py`
+  stays under the file-size gate via `store_reads.py`/`store_writes.py` operation modules.
+- 2026-10-11 — **Local user profile store landed**, still inert. `profile_store.py` is a transactional
+  stdlib-`sqlite3` repository plus `store_types.py` immutable types, implementing the §12 contract: explicit
+  initialize-or-verify (fresh-empty creation at version 1; unversioned-nonempty, future, and corrupt databases
+  rejected without mutation); `BEGIN IMMEDIATE` writes with rollback on any failure; optimistic
+  `expected_current_revision` checks on save/enable/delete; payload re-parse, re-validation, and re-hash on every
+  read; new records start disabled; unsupported capabilities persist but are never activated; enabling runs the
+  canonical conflict check across the would-be enabled set atomically; snapshots load in one read transaction
+  with selection/aggregate bounds checked before payloads are read. The revision-set source hash is locked and
+  exposes `source_kind: "store"`. Phase 1 stays incomplete (normalized `manufacturer`, indexes, match-record
+  wiring, and activation-time duplicate detection remain).
 - 2026-10-10 — **XLSX silent-loss fixes**: two defects in the inert XLSX adapter each produced a *successful*
   parse with missing content. A row conversion truncated to the header width, so a populated cell beyond the
   19-column header (including a formula or error cell) was discarded; populated extra cells now fail the whole
@@ -517,7 +565,7 @@ gets macOS/Linux and Windows manual evidence as applicable.
   only — no third-party reader and no DataFrame materialization — reading the decoded byte snapshot once. The
   flat-column table and tabular rules are restored in
   [EQUIPMENT_PROFILE_SCHEMA.md](../EQUIPMENT_PROFILE_SCHEMA.md) §6A, with the packaged README named as the
-  authoritative field dictionary. **Still outstanding:** XLSX, the user store, indexes, normalization, API, CLI,
+  authoritative field dictionary. **Still outstanding at the time:** XLSX, the user store, indexes, normalization, API, CLI,
   GUI, store wiring, packaged TSV fixtures, and `MANIFEST.in` inclusion.
 
 ## Decision log

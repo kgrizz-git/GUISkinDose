@@ -62,8 +62,13 @@ class ProfileErrorCode(StrEnum):
     CONFLICTING_PROFILE_METADATA = "conflicting_profile_metadata"
     CONFLICTING_PROFILE_CLAIM = "conflicting_profile_claim"
     UNSUPPORTED_PROFILE_CAPABILITY = "unsupported_profile_capability"
-    # Reserved for later slices; never raised by the current core.
+    STORE_CONFLICT = "store_conflict"
     STORE_CORRUPTION = "store_corruption"
+    UNSUPPORTED_STORE_VERSION = "unsupported_store_version"
+    STORE_NOT_FOUND = "store_not_found"
+    STORE_UNAVAILABLE = "store_unavailable"
+    STORE_LIMIT_EXCEEDED = "store_limit_exceeded"
+    # Reserved for later slices; never raised by the current core.
     EXISTING_MODEL_OUT_OF_EXTENT = "existing_model_out_of_extent"
     EXPLICIT_SQLITE_COLLISION = "explicit_sqlite_collision"
 
@@ -115,16 +120,22 @@ _MESSAGES: dict[ProfileErrorCode, str] = {
     ProfileErrorCode.CONFLICTING_PROFILE_METADATA: "repeated profile metadata disagrees",
     ProfileErrorCode.CONFLICTING_PROFILE_CLAIM: "enabled profiles claim the same slot with different content",
     ProfileErrorCode.UNSUPPORTED_PROFILE_CAPABILITY: "profile capability is not supported by this activation",
-    ProfileErrorCode.STORE_CORRUPTION: "user store content is unreadable (reserved)",
+    ProfileErrorCode.STORE_CONFLICT: "store write conflicts with a newer revision",
+    ProfileErrorCode.STORE_CORRUPTION: "user store content is unreadable",
+    ProfileErrorCode.UNSUPPORTED_STORE_VERSION: "store version is not supported",
+    ProfileErrorCode.STORE_NOT_FOUND: "store record or revision does not exist",
+    ProfileErrorCode.STORE_UNAVAILABLE: "store is unavailable",
+    ProfileErrorCode.STORE_LIMIT_EXCEEDED: "store capacity limit exceeded",
     ProfileErrorCode.EXISTING_MODEL_OUT_OF_EXTENT: "row exceeds the original extents (reserved)",
     ProfileErrorCode.EXPLICIT_SQLITE_COLLISION: "row collides with the explicit correction source (reserved)",
 }
 
 #: Codes that exist in the vocabulary but are deliberately not implemented yet.
 #: ``sheet_limit_exceeded`` was reserved for the XLSX adapter and is now implemented by the preflight.
+#: ``sheet_required`` is reserved for future interfaces that require an explicit sheet selection.
+#: ``store_corruption`` was reserved for the user store and is now raised by the store repository.
 RESERVED_CODES = (
     ProfileErrorCode.SHEET_REQUIRED,
-    ProfileErrorCode.STORE_CORRUPTION,
     ProfileErrorCode.EXISTING_MODEL_OUT_OF_EXTENT,
     ProfileErrorCode.EXPLICIT_SQLITE_COLLISION,
 )

@@ -167,6 +167,16 @@ def _early_envelope_checks(document: Any, source_kind: str) -> None:
             )
 
 
+def check_document_bounds(document: Any, *, source_kind: str) -> None:
+    """Apply the core JSON bounds — envelope counts, then depth and node budget — to any mapping.
+
+    Public seam for the store repository, which must give stored payloads exactly the same treatment as
+    incoming documents. Raises the same closed errors with the caller's source kind.
+    """
+    _early_envelope_checks(document, source_kind)
+    _enforce_depth(document, MAX_JSON_DEPTH, source_kind=source_kind, max_nodes=MAX_TRAVERSAL_NODES)
+
+
 def _parse_document(document: Any, *, source_kind: str) -> ParsedDocument:
     if source_kind not in (SOURCE_KIND_JSON, SOURCE_KIND_MEMORY):
         raise EquipmentProfileError(ProfileErrorCode.UNSUPPORTED_SOURCE_SUFFIX, source_kind=source_kind)
