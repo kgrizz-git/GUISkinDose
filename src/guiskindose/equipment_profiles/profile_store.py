@@ -95,7 +95,11 @@ def _validate_path(path: str | os.PathLike[str]) -> Path:
     """Validate a store path argument without touching the filesystem. Never echoes the path."""
     try:
         text = os.fspath(path)
-    except TypeError:
+    except Exception:
+        # Arbitrary hook failures (a hostile os.PathLike may raise anything
+        # from __fspath__) collapse closed with the cause suppressed.
+        # KeyboardInterrupt and SystemExit are BaseExceptions, so they pass
+        # through untouched.
         raise store_error(ProfileErrorCode.INVALID_TYPE) from None
     if not isinstance(text, str) or "\x00" in text:
         raise store_error(ProfileErrorCode.INVALID_TYPE) from None
@@ -113,12 +117,35 @@ class ProfileStore:
     def __init__(self, path: str | os.PathLike[str]) -> None:
         self._path = _validate_path(path)
         self._connection: sqlite3.Connection | None = None
+        self._read_only = False
 
     @classmethod
     def open(cls, path: str | os.PathLike[str]) -> Self:
         """Construct a handle and initialize it in one explicit step."""
         store = cls(path)
         store.initialize()
+        return store
+
+    @classmethod
+    def open_read_only(cls, path: str | os.PathLike[str]) -> Self:
+        """Open an existing database read-only without creating or migrating anything.
+
+        No parent directories are created, no schema is created, and no
+        journal-mode or migration write runs: the file must already be a
+        version-1 store. Missing, empty, unversioned, foreign, corrupt, and
+        future-version databases fail closed without creating bytes, schema,
+        or parent directories. The connection additionally sets ``PRAGMA
+        query_only = ON``, so every mutation attempt through this handle
+        fails coded. Committed content reads normally, including rows
+        committed through WAL (hence no ``immutable=1``, which would ignore
+        the WAL and read stale content). This open creates no main database,
+        schema, parent directories, journals, or migrations; auxiliary effects
+        (such as ``-shm``/``-wal`` handling) follow SQLite and platform
+        behavior and are not claimed absent. The handle closes its connection
+        on every failure path.
+        """
+        store = cls(path)
+        store._open_read_only()
         return store
 
     def __enter__(self) -> Self:
@@ -141,13 +168,67 @@ class ProfileStore:
 
     # -- lifecycle ----------------------------------------------------------
 
+    def _read_only_uri(self) -> str:
+        """SQLite URI opening this handle's path read-only with safe escaping.
+
+        The path is absolutized (no filesystem probe of the target) and
+        escaped by :meth:`pathlib.Path.as_uri`, so spaces, unicode, ``#``,
+        and ``?`` cannot break URI parsing. Failures stay value-free.
+        """
+        try:
+            uri = self._path.absolute().as_uri()
+        except (OSError, ValueError):
+            raise store_error(ProfileErrorCode.STORE_UNAVAILABLE) from None
+        return f"{uri}?mode=ro"
+
+    def _open_read_only(self) -> None:
+        """Connect read-only and verify without creating, migrating, or locking for write."""
+        try:
+            connection = sqlite3.connect(
+                self._read_only_uri(), timeout=_BUSY_TIMEOUT_SECONDS, isolation_level=None, uri=True
+            )
+        except (OSError, ValueError, sqlite3.Error):
+            raise store_error(ProfileErrorCode.STORE_UNAVAILABLE) from None
+        try:
+            connection.execute("PRAGMA query_only = ON")
+            connection.execute("PRAGMA foreign_keys = ON")
+            version = self._user_version(connection)
+            if version == 0:
+                raise store_error(ProfileErrorCode.STORE_CORRUPTION)
+            if version == 1:
+                verify_schema(connection)
+            else:
+                raise store_error(ProfileErrorCode.UNSUPPORTED_STORE_VERSION)
+        except EquipmentProfileError:
+            with contextlib.suppress(Exception):
+                connection.close()
+            raise
+        except sqlite3.Error as exc:
+            with contextlib.suppress(Exception):
+                connection.close()
+            raise normalize_db_error(type(exc)) from None
+        except (KeyboardInterrupt, SystemExit):
+            with contextlib.suppress(Exception):
+                connection.close()
+            raise
+        except BaseException:
+            with contextlib.suppress(Exception):
+                connection.close()
+            raise store_error(ProfileErrorCode.STORE_CORRUPTION) from None
+        self.close()
+        self._connection = connection
+        self._read_only = True
+
     def initialize(self) -> None:
         """Create a fresh version-1 database or verify an existing one, without mutating a rejected one.
 
         Fresh empty databases are created only at the current schema version. A nonempty unversioned
         database, a future version, or a corrupt schema is rejected with a value-free error and the file is
-        left exactly as found. Re-initializing a handle closes its previous connection first.
+        left exactly as found. Re-initializing a handle closes its previous connection first. A
+        read-only handle refuses coded before touching the filesystem: initialize would reopen it writable.
         """
+        if self._read_only:
+            raise store_error(ProfileErrorCode.STORE_UNAVAILABLE)
         try:
             self._path.parent.mkdir(parents=True, exist_ok=True)
         except OSError:
@@ -224,7 +305,10 @@ class ProfileStore:
         exception — including an unexpected one — rolls the transaction back, closes the handle so no leaked
         transaction can poison later calls, and normalizes to a closed error, except for cancellation, which
         is preserved: ``KeyboardInterrupt`` and ``SystemExit`` roll back, close, and re-raise unchanged.
+        A read-only handle refuses coded before any statement runs, so no write lock is ever attempted.
         """
+        if self._read_only:
+            raise store_error(ProfileErrorCode.STORE_UNAVAILABLE)
         connection = self._require_connection()
         self._guard_reentrancy(connection)
         try:

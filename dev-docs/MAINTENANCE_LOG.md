@@ -12,6 +12,12 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ### Changed
 
+- **CLI existing-store selection** (2026-10-12) — new `ProfileStore.open_read_only`
+  factory plus `--equipment-profile-store` / `--equipment-profile-id` composed in
+  `cli_equipment_profiles`. Review hardening: hostile-hook path boundary, read-only
+  lifetime flag with pre-statement write refusal, normalized cleanup with preserved
+  cancellation, honest WAL wording. 20 tests; ruff, basedpyright, complexity, size,
+  and freshness gates clean. Schema §12 lock; packaged README and contract §10 updated.
 - **CLI coordinate profile file inputs** (2026-10-12) — new `cli_equipment_profiles`
   helper (`--equipment-profile` repeat + `--equipment-profile-sheet`); `prepare_cli_settings`
   moved verbatim to `cli_settings` with session binding (`main.py` at 748 lines, public

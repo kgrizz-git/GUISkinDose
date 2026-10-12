@@ -271,7 +271,10 @@ guiskindose --file-path study.dcm --equipment-profile my_profile.json
 
 Repeat `--equipment-profile` for several files (JSON, CSV, TSV, XLSX; relative paths
 resolve against the working directory); `--equipment-profile-sheet` selects the XLSX
-sheet by name or 0-based index. Assembly failures exit non-zero with a value-free error
+sheet by name or 0-based index. An explicit existing store database composes via
+`--equipment-profile-store` (read-only, never created) with optional repeatable
+`--equipment-profile-id` (current revisions regardless of the enable flag; without IDs,
+all enabled current records apply). Assembly failures exit non-zero with a value-free error
 before any exam input is read. Coordinate-only profiles apply; transmission content,
 wildcards without promotion, and alias maps are rejected by the initial gate.
 

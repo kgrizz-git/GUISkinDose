@@ -28,11 +28,14 @@ That keeps SemVer and contributor history organized.
   `--equipment-profile PATH` (JSON, CSV, TSV, XLSX; relative paths resolve against the
   working directory) assembles one candidate session through the canonical file path and
   binds it before any exam input is read, with optional global `--equipment-profile-sheet`
-  (sheet name or 0-based index; refused when no XLSX profile file is given). Source,
+  (sheet name or 0-based index; refused when no XLSX profile file is given) and explicit
+  read-only store selection via `--equipment-profile-store` (never created) plus repeatable
+  `--equipment-profile-id` (current revisions regardless of the enable flag; without IDs,
+  all enabled current records apply). Source,
   conflict, and capability failures exit non-zero with a value-free error before any exam
   read; refused in `--mode gui`. Coordinate-only profiles apply; transmission content,
-  wildcards without promotion, and alias maps are rejected by the initial gate. Store,
-  settings-JSON, GUI, and rich-report integration are not part of this slice.
+  wildcards without promotion, and alias maps are rejected by the initial gate. Store
+  management commands, settings-JSON, GUI, and rich-report integration are not part of this slice.
 
 - **Captured multi-file input through the public API (experimental)** (2026-10-12) —
   `analyze_multiple_input_files()` accepts positional `equipment_capture_contexts=` (one

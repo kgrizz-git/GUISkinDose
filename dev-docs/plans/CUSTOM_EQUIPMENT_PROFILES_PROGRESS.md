@@ -3,6 +3,26 @@
 Implementation history for the active [execution plan](CUSTOM_EQUIPMENT_PROFILES_EXECUTION.md).
 Scientific requirements and phase acceptance gates remain in that plan and its linked contracts.
 
+- 2026-10-12 — **CLI store review hardening (same chunk).** Hostile path hooks
+  collapse closed at the store boundary; read-only handles carry a lifetime flag
+  (`initialize` refuses coded pre-filesystem, writes refuse before any statement,
+  flag survives close); `_open_read_only` normalizes unexpected failures, preserves
+  cancellation, and always cleans up safely. WAL/aux-files wording corrected (no
+  `immutable=1`; committed WAL reads; aux effects follow platform behavior). 5 new
+  regressions (hostile path, ro-initialize, pre-BEGIN writes via trace callback,
+  verify-failure cleanup, cancellation); 2 unneeded test ignores removed.
+
+- 2026-10-12 — **CLI existing-store selection (experimental).** `--equipment-profile-store`
+  opens an explicit existing database read-only (new `ProfileStore.open_read_only`: `mode=ro`
+  URI plus `query_only`, no creation/migration/writes, existing verify before payloads) with
+  repeatable `--equipment-profile-id` (current revisions regardless of enable flag; without
+  IDs, all enabled currents); one frozen candidate composes files plus a single snapshot
+  with all gates preserved and nothing bound on late failure. 15 tests (read-only contract,
+  ID semantics incl. disabled/current-revision, order/hash/dose parity vs frozen Python
+  snapshots, closed failures with zero exam reads and private stderr, caller/GUI guards).
+  Schema §12 lock, packaged README store status. No migrations, GUI, settings-JSON,
+  store commands, capture, run-state, or export scope.
+
 - 2026-10-12 — **CLI profile-file parent review hardening.** Numeric sheet selectors
   beyond the 16-sheet ceiling fail before profile reads, including arbitrarily long
   numeric arguments; non-numeric names retain exact whitespace. The canonical reader

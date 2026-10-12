@@ -614,6 +614,21 @@ re-verified on reads. All SQL is parameterized. Every `sqlite3` failure collapse
 `store_unavailable`, `store_limit_exceeded`) with the raw cause suppressed and `source_kind: "store"` on
 every failure.
 
+**Read-only factory lock.** `ProfileStore.open_read_only(path)` opens an explicit existing database
+without creating the main database, schema, parent directories, journals, or migrations: the path escapes into a `mode=ro`
+URI (spaces, unicode, `#`, `?` cannot break parsing), the connection sets `query_only = ON` as a
+second safeguard, and empty/unversioned/foreign/corrupt/future databases fail closed (missing or
+unopenable is `store_unavailable`; empty or unversioned content is `store_corruption`; future versions
+stay `unsupported_store_version`). A read-only handle refuses `initialize()` before any filesystem
+access and refuses writes before any statement runs, so no write lock is ever attempted; the
+read-only flag survives `close()`. Version and schema validate through the existing verify path
+before any payload, with per-transaction re-verification unchanged; every mutation attempt through
+the handle fails coded and the handle closes on all failure paths. Committed content — including
+WAL-committed rows — reads normally (`immutable=1` is deliberately unused: it would ignore the
+WAL and read stale content). Auxiliary effects such as `-shm`/`-wal` handling follow SQLite and
+platform behavior and are not claimed absent. No schema redesign or version bump in this
+slice.
+
 ## 13. Compiled lookup indexes
 
 Indexes are compiled once from validated profiles and answer per-event lookups without scanning profiles.

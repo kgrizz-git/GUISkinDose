@@ -247,6 +247,33 @@ def _add_equipment_args(parser: argparse.ArgumentParser) -> None:
         ),
     )
 
+    parser.add_argument(
+        "--equipment-profile-store",
+        required=False,
+        default=None,
+        dest="equipment_profile_store",
+        help=(
+            "Path to an existing equipment-profile store database (read-only; "
+            "never created). Composes with --equipment-profile files into one "
+            "candidate session before any exam input is read. Relative paths "
+            "resolve against the working directory."
+        ),
+    )
+
+    parser.add_argument(
+        "--equipment-profile-id",
+        required=False,
+        default=None,
+        action="append",
+        dest="equipment_profile_id",
+        help=(
+            "Stored profile ID to select at its current revision, regardless of "
+            "its enable flag (requires --equipment-profile-store; repeatable; "
+            "one-run selection, never persisted). Without IDs, all enabled "
+            "current records are used."
+        ),
+    )
+
 
 def import_options_from_args(args: argparse.Namespace) -> TabularImportOptions:
     """Build tabular coordinate import options from parsed CLI arguments."""

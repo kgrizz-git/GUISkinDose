@@ -146,17 +146,21 @@ initial coordinate-only capability gate (see below). Available entry points:
   equipment_profile_session=session)` before loading raw input.
 - **CLI:** `guiskindose --equipment-profile my_profile.json` (repeatable; JSON, CSV, TSV, and
   XLSX accepted; relative paths resolve against the working directory), with optional global
-  `--equipment-profile-sheet` (sheet name or 0-based index) for XLSX workbooks. Assembly
+  `--equipment-profile-sheet` (sheet name or 0-based index) for XLSX workbooks. An explicit
+  existing store database composes via `--equipment-profile-store` (read-only, never created)
+  with optional repeatable `--equipment-profile-id` (current revisions regardless of the enable
+  flag; without IDs, all enabled current records apply). Assembly
   failures exit non-zero with a value-free error before any exam input is read. Refused in
-  `--mode gui`.
-- **Still planned and unimplemented:** GUI import/activation/download, profile-store CLI,
+  `--mode gui`. Save/enable/delete commands, store management, and settings-file session fields
+  are not available from the CLI.
+- **Still planned and unimplemented:** GUI import/activation/download, profile-store management commands,
   and settings-JSON session fields. See
   [dev-docs/plans/CUSTOM_EQUIPMENT_PROFILES_EXECUTION.md](../../../../dev-docs/plans/CUSTOM_EQUIPMENT_PROFILES_EXECUTION.md)
   for status.
 
 The three filled examples above are each rejected **wholesale** under the initial
 coordinate-only gate — no subset is applied from a rejected file. Transmission rows,
-model wildcards without promotion acknowledgement, and manufacturer-alias maps are
+model wildcards without promotion acknowledgement, and manufacturer aliases are
 all beyond the current activation; write exact, coordinate-only, alias-free files
 to load today.
 Blank templates remain invalid until filled (see above).
