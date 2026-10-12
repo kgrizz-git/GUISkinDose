@@ -3,6 +3,25 @@
 Implementation history for the active [execution plan](CUSTOM_EQUIPMENT_PROFILES_EXECUTION.md).
 Scientific requirements and phase acceptance gates remain in that plan and its linked contracts.
 
+- 2026-10-11 — **DICOM replay review fixes (same chunk).** Loader validates the full context
+  before any read (forged counts fail with zero source reads); the normalizer hook enforces
+  the validated context plus the applied recipe/label precondition via reusable
+  `check_captured_candidate` before any geometry runs, so unapplied homes fail closed with no
+  publication; the original field/unit/angle docstring stands restored with a concise capture
+  note appended. 20 tests.
+- 2026-10-11 — **DICOM loader replay from captures (no wiring).** `read_and_normalise_rdsr_data()`
+  takes keyword-only `equipment_capture_context=` for raw DICOM only: conflicts (live session,
+  receipt list, bad types) and preparsed-JSON refusal all fail closed before any I/O; the
+  captured recipe lands on a verified private settings clone before concept validation while
+  live bundled selection, session resolution, and receipt publication are bypassed in a narrow
+  normalizer hook; final confirmation runs only after the existing zero-kVp removal policy.
+  Proven on real Siemens-CFA/Philips-ASD loaders with byte/numeric geometry and PSD/dose-map
+  parity, offline with bundled selection and resolution forcibly broken, plus filter ordering,
+  mode enforcement, tamper, bounds, and caller-preservation regressions. 17 tests. Existing
+  `prepare_replay_settings` lives in `equipment_confirmation.py`; no new module was needed.
+  Main/registry/tabular, run-state, GUI/CLI, rich exports, version bumps, settings-bound
+  fields, and scientific policies remain open.
+
 - 2026-10-11 — **Direct-capture review fixes, multi-exam (same chunk).** Capture preflight now
   prebuilds every exam's final work settings (offsets/downgrade included) with isolation
   verified across root, normalization vectors, phantom, dimension, and patient offset before

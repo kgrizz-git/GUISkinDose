@@ -41,6 +41,15 @@ That keeps SemVer and contributor history organized.
   each `ExamResult` carries its stored match mapping. No raw replay, run-state, GUI, CLI, rich
   reports, version bumps, or settings-bound capture fields in this slice.
 
+- **DICOM loader replay from captures (experimental)** (2026-10-11) —
+  `read_and_normalise_rdsr_data()` accepts a validated `CapturedCoordinates` via the
+  keyword-only `equipment_capture_context=` parameter for raw DICOM inputs: the captured
+  recipe is applied to a private settings clone before concept validation, live bundled
+  selection and session resolution are bypassed, and the post-filter frame is confirmed
+  before it is returned. Conflicts, preparsed JSON, and mismatches fail closed; the returned
+  frame feeds `analyze_data(...equipment_capture_context=...)` directly. No tabular replay,
+  run-state, GUI, CLI, rich exports, version bumps, or settings-bound fields in this slice.
+
 - **Custom equipment profiles in Python API results (experimental)** (2026-10-11) — binding a frozen
   equipment-profile session on settings (`equipment_profile_session=`) applies matching custom
   coordinates during raw input normalization, with per-exam match records, inheritance notices, and

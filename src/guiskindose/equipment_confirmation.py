@@ -64,8 +64,10 @@ _CAPTURE_SETTINGS_ERROR = "Equipment capture cannot be applied to these settings
 
 __all__ = [
     "CapturedApplicationReceipt",
+    "check_captured_candidate",
     "confirm_captured_application",
     "prepare_captured_candidate",
+    "prepare_replay_settings",
 ]
 
 _SIGN_TO_INT = {"+": 1, "-": -1}
@@ -332,6 +334,30 @@ def _validated_context(context: Any) -> CapturedCoordinates:
     return context
 
 
+def prepare_replay_settings(*, context: Any, settings: PyskindoseSettings) -> PyskindoseSettings:
+    """Clone caller settings with isolation verified, then apply the captured recipe.
+
+    Returns the private working clone (never the caller's home) carrying the
+    full 15 stored leaves, captured labels, method flag, and refreshed summary
+    into raw normalization. No session is bound, no source is opened, and
+    nothing is re-resolved: the recipe is captured history, not fresh
+    verification. The caller passes the clone to the capture-aware normalizer,
+    which must skip live bundled selection itself.
+    """
+    checked = _validated_context(context)
+    if getattr(settings, "equipment_profile_session", None) is not None:
+        raise _closed()
+    try:
+        work_settings = copy.deepcopy(settings)
+    except Exception:
+        # Untrusted boundary: the caller owns the settings graph.
+        raise _closed() from None
+    _check_work_isolated(work_settings, settings)
+    candidate = prepare_captured_candidate(context=checked, norm=work_settings.normalization_settings)
+    work_settings.normalization_settings = candidate
+    return work_settings
+
+
 def _candidate_home(norm: Any) -> NormalizationSettings:
     """Require a normalization settings home to clone."""
     if not isinstance(norm, NormalizationSettings):
@@ -591,6 +617,23 @@ def _check_label(live: Any, stored: Any) -> None:
     """Require an exact-string live label equal to its stored spelling."""
     if type(live) is not str or live != stored:
         raise _closed()
+
+
+def check_captured_candidate(candidate: Any, context: Any) -> CapturedCoordinates:
+    """Verify a candidate home carries the capture recipe and labels (no frame).
+
+    Reusable precondition for raw normalization: the full 15 stored leaves,
+    captured labels, and derived method flag must already match, so an
+    unapplied home fails closed before any geometry runs. Frame identity,
+    count, and geometry checks still belong to full confirmation later.
+    """
+    checked = _validated_context(context)
+    if not isinstance(candidate, NormalizationSettings):
+        raise _closed()
+    _check_offsets(candidate, checked)
+    _check_directions(candidate, checked)
+    _check_modes_and_labels(candidate, checked)
+    return checked
 
 
 def confirm_captured_application(

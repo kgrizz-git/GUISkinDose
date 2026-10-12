@@ -1,10 +1,12 @@
 """Normalizes extracted RDSR parameters to GUISkinDose internal formats and coordinates."""
 
 import logging
+from typing import Any
 
 import numpy as np
 import pandas as pd
 
+from guiskindose.equipment_profiles.capture import CapturedCoordinates
 from guiskindose.settings.normalization_settings import NormalizationSettings
 
 from .constants import (
@@ -124,6 +126,7 @@ def rdsr_normalizer(
     settings: PyskindoseSettings,
     *,
     equipment_receipt_out: list | None = None,
+    equipment_capture_context: CapturedCoordinates | None = None,
 ) -> pd.DataFrame:
     """Normalize RDSR data for PySkinDose compliance.
 
@@ -141,6 +144,12 @@ def rdsr_normalizer(
     equipment_receipt_out : list | None
         Optional list receiving the custom equipment-profile resolution record
         (when a session is bound on settings), else left untouched.
+    equipment_capture_context : CapturedCoordinates | None
+        Validated captured-coordinate authority for offline replay. The caller
+        must have applied its recipe to ``settings`` already (see
+        ``prepare_replay_settings``); the normalizer then skips live bundled
+        selection, session resolution, and receipt publication, and never
+        publishes capture evidence. Refused together with a receipt list.
 
     Returns
     -------
@@ -247,8 +256,56 @@ def rdsr_normalizer(
         Aluminum X-ray filter thickness in mm.
     """
     return rdsr_normalizer_with_source_rows(
-        data_parsed, settings, equipment_receipt_out=equipment_receipt_out
+        data_parsed, settings, equipment_receipt_out=equipment_receipt_out,
+        equipment_capture_context=equipment_capture_context,
     )[0]
+
+
+def _check_capture_replay(settings: PyskindoseSettings, equipment_receipt_out: Any, equipment_capture_context: Any) -> None:
+    """Validate capture authority and prepared settings before raw replay work.
+
+    Full context validation plus the recipe/label precondition on the passed
+    settings: an unapplied home fails closed here instead of normalizing
+    under live defaults. No geometry runs yet, so no final confirmation and
+    no publication happen at this point.
+    """
+    from guiskindose.equipment_confirmation import check_captured_candidate
+    from guiskindose.equipment_profiles.capture import (
+        CODE_INVALID_EQUIPMENT_CAPTURE,
+        CapturedCoordinates,
+        CaptureError,
+        validate_constructed_context,
+    )
+
+    if type(equipment_capture_context) is not CapturedCoordinates:
+        raise CaptureError(
+            "Equipment capture context must be a CapturedCoordinates or None.",
+            CODE_INVALID_EQUIPMENT_CAPTURE,
+        )
+    if equipment_receipt_out is not None:
+        raise CaptureError(
+            "Equipment capture replay never publishes receipt records.",
+            CODE_INVALID_EQUIPMENT_CAPTURE,
+        )
+    if getattr(settings, "equipment_profile_session", None) is not None:
+        raise CaptureError(
+            "Equipment capture replay never resolves a live session.",
+            CODE_INVALID_EQUIPMENT_CAPTURE,
+        )
+    try:
+        validate_constructed_context(equipment_capture_context)
+    except (TypeError, AttributeError):
+        raise CaptureError(
+            "Equipment capture context must be a CapturedCoordinates or None.",
+            CODE_INVALID_EQUIPMENT_CAPTURE,
+        ) from None
+    try:
+        check_captured_candidate(settings.normalization_settings, equipment_capture_context)
+    except (TypeError, AttributeError):
+        raise CaptureError(
+            "Equipment capture replay needs its recipe applied to settings first.",
+            CODE_INVALID_EQUIPMENT_CAPTURE,
+        ) from None
 
 
 def rdsr_normalizer_with_source_rows(
@@ -256,6 +313,7 @@ def rdsr_normalizer_with_source_rows(
     settings: PyskindoseSettings,
     *,
     equipment_receipt_out: list | None = None,
+    equipment_capture_context: CapturedCoordinates | None = None,
 ) -> tuple[pd.DataFrame, list[int]]:
     """Normalize like :func:`rdsr_normalizer`; also return each output row's input position.
 
@@ -265,7 +323,16 @@ def rdsr_normalizer_with_source_rows(
     When a custom equipment-profile session is bound on ``settings``, the session
     resolves after filtering and applies before geometry normalization; the
     resulting record is appended to ``equipment_receipt_out`` when given.
+
+    With a validated ``equipment_capture_context``, live bundled selection
+    (``update_used_settings``), session resolution, and receipt publication
+    are all skipped: the caller must have applied the captured recipe to
+    ``settings`` already, and nothing here re-resolves, reads profile files
+    or stores, or publishes capture evidence. A receipt list combined with a
+    capture is refused closed, as is a bound live session.
     """
+    if equipment_capture_context is not None:
+        _check_capture_replay(settings, equipment_receipt_out, equipment_capture_context)
     data_norm = pd.DataFrame()
     # Private copy with positional labels: the caller's frame is never modified,
     # and the surviving index labels are the input positions of the kept events.
@@ -285,19 +352,25 @@ def rdsr_normalizer_with_source_rows(
     # established row-0 selection.
     require_homogeneous_identity(data_parsed)
 
-    settings.normalization_settings.update_used_settings(data_parsed=data_parsed)
+    if equipment_capture_context is None:
+        settings.normalization_settings.update_used_settings(data_parsed=data_parsed)
 
-    # Custom equipment-profile session, phase 1 (pre-filter): resolve with the
-    # pre-filter count and apply everything, so required-concept validation
-    # below sees the effective custom field-size mode. The published receipt
-    # always comes from phase 2, after filtering completes.
-    session_applied = False
-    if equipment_receipt_out is not None or (
-        getattr(settings, "equipment_profile_session", None) is not None
-    ):
-        from guiskindose.equipment_resolution import begin_session_application
+        # Custom equipment-profile session, phase 1 (pre-filter): resolve with the
+        # pre-filter count and apply everything, so required-concept validation
+        # below sees the effective custom field-size mode. The published receipt
+        # always comes from phase 2, after filtering completes.
+        session_applied = False
+        if equipment_receipt_out is not None or (
+            getattr(settings, "equipment_profile_session", None) is not None
+        ):
+            from guiskindose.equipment_resolution import begin_session_application
 
-        session_applied = begin_session_application(data_parsed=data_parsed, settings=settings)
+            session_applied = begin_session_application(data_parsed=data_parsed, settings=settings)
+    else:
+        # Offline replay: the captured recipe is already on settings, so live
+        # bundled selection, session resolution, and receipt publication stay
+        # off. Full authority and prepared-settings checks run first.
+        session_applied = False
 
     resolve_source_detector_distance(data_parsed)
     data_parsed = enforce_required_concepts(data_parsed, settings.normalization_settings.field_size_mode)

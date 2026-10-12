@@ -12,6 +12,21 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ### Changed
 
+- **Captured DICOM replay parent review** (2026-10-11) — capture checks precede raw-frame
+  work, public replay preparation rejects live sessions, and path/settings setup stays outside
+  exception assertions. The focused replay/analysis/confirmation suites passed 92 tests.
+
+- **DICOM loader replay from captures** (2026-10-11) — `read_and_normalise_rdsr_data()` gains
+  keyword-only `equipment_capture_context=` (raw DICOM only): pre-I/O conflict refusals, recipe
+  application on a verified private clone before concept validation, bypassed bundled selection
+  via a narrow `rdsr_normalizer` hook with no receipt publication, and final confirmation after
+  the existing invalid-row policy. New `prepare_replay_settings` in `equipment_confirmation.py`.
+  Review fixes: full pre-I/O context validation, hook-level recipe precondition via reusable
+  candidate checks, restored normalizer field documentation. 20 tests (real-loader parity,
+  offline, filters, tamper, bounds); ruff, basedpyright,
+  complexity, size, and freshness gates clean. Baseline/live loader paths byte-identical. No
+  main/registry/tabular, run-state, GUI/CLI, rich exports, version bumps, or settings-bound
+  fields.
 - **Capture multi-exam parent review** (2026-10-11) — added the shared patient-offset
   regression, isolated exception-test setup, and consumed preflight offsets during calculation.
   The XLSX source-hash test now hashes the exact workbook byte snapshot it parses, avoiding
