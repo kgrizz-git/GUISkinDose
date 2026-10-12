@@ -66,6 +66,14 @@ That keeps SemVer and contributor history organized.
   optional everywhere: absent or non-numeric edges fail closed only under ASD, and CFA inputs
   never need them.
 
+- **Single-file captured input through the public API (experimental)** (2026-10-11) —
+  `analyze_input_file()` and `main()` accept a validated `CapturedCoordinates` via the
+  keyword-only `equipment_capture_context=` parameter for one raw file (DICOM or raw vendor
+  tabular, with schema/sheet/import options carried): conflicts, preparsed JSON, normalized
+  frames, multi-study splits, and plot setup fail closed before any source I/O, and the
+  confirmed frame calculates with the stored match mapping. No aggregation, multi-file, CLI
+  flags, run-state, GUI, rich reports, version bumps, or settings-bound fields in this slice.
+
 - **Custom equipment profiles in Python API results (experimental)** (2026-10-11) — binding a frozen
   equipment-profile session on settings (`equipment_profile_session=`) applies matching custom
   coordinates during raw input normalization, with per-exam match records, inheritance notices, and

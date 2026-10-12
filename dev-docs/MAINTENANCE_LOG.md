@@ -12,6 +12,18 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ### Changed
 
+- **Single-file captured input review fixes** (2026-10-11) — `main` refuses tabular
+  pre-I/O via `analyze_captured_main_input`; set import options on non-tabular paths fail
+  closed pre-I/O; caller settings are deep-copied via `shielded_settings_for_capture`;
+  source read failures neutralize to a closed `CaptureError`. 17 tests; `main.py` at 794
+  lines; ruff, basedpyright, complexity, and size gates clean.
+- **Single-file captured input through the public API** (2026-10-11) — `analyze_input_file`
+  and `main` gain keyword-only `equipment_capture_context=` for one raw file; new
+  `src/guiskindose/equipment_captured_input.py` owns the captured-only orchestration.
+  Preparsed JSON, normalized frames, multi-study splits, and plot setup fail closed. 17
+  tests; ruff, basedpyright, complexity, size, and freshness gates clean. No aggregation,
+  multi-file, CLI flags, run-state, GUI, rich reports, version bumps, or settings-bound
+  fields.
 - **Generic shutter columns for tabular ASD** (2026-10-11) — `generic_rdsr_like` maps four
   optional canonical shutter edges with numeric coercion; missing/invalid edges fail closed
   under ASD, CFA paths unchanged. 8 tests; gates clean. No Radimetrics/DoseTrack guessing,

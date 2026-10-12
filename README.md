@@ -264,6 +264,13 @@ Pre-transformed inputs (`normalized` tables, preparsed `.json`, bare DataFrames)
 nonempty session instead of silently skipping it. GUI management, CLI flags, and rich-report
 integration are not part of this slice.
 
+A validated capture (`CapturedCoordinates`, produced from a prior run) replays one raw input
+file offline through `analyze_input_file(..., equipment_capture_context=...)`
+(raw DICOM or tabular) or `main(..., equipment_capture_context=...)` (DICOM only): no live session is needed or accepted, and the
+returned frame calculates with the stored match mapping. The capture verifies recipe,
+geometry, identity, and count — not authenticity or full raw/dose content hashes. Dose also depends on the input dose and filtration data, phantom, physics, and correction
+settings. Matching captured geometry alone does not guarantee the original dose result.
+
 **New to GUISkinDose?** Prefer the GUI or the interactive getting-started notebook
 ([docs/source/getting_started/getting_started.ipynb](docs/source/getting_started/getting_started.ipynb);
 run it via `pip install -e ".[notebooks]"` + `python scripts/open_getting_started_notebook.py`, which

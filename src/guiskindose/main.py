@@ -21,6 +21,7 @@ from guiskindose.constants import (
 )
 from guiskindose.debug import dprint
 from guiskindose.dev_data import DEVELOPMENT_PARAMETERS
+from guiskindose.equipment_profiles.capture import CapturedCoordinates
 from guiskindose.format_export_data import MultiExamResult, PySkinDoseOutput
 from guiskindose.helpers.parse_settings_to_settings_class import (
     parse_settings_to_settings_class,
@@ -141,6 +142,8 @@ def _print_input_preview(result: Any, exam_index: int, include_sensitive_values:
 def main(
     file_path: str | None = None,
     settings: str | dict | PyskindoseSettings | None = None,
+    *,
+    equipment_capture_context: CapturedCoordinates | None = None,
 ):
     """Run PySkinDose.
 
@@ -161,9 +164,16 @@ def main(
         Setting file in either dict, json string format, or as a
         PyskindoseSettings object. By default, settings_examples.json is
         enabled.
+    equipment_capture_context : CapturedCoordinates | None
+        DICOM-file capture replay only; tabular, JSON, normalized, multi-study, setup refuse.
 
     """
     settings = parse_settings_to_settings_class(settings=settings)
+
+    if equipment_capture_context is not None:
+        from guiskindose.equipment_captured_input import analyze_captured_main_input
+
+        return analyze_captured_main_input(file_path, settings, equipment_capture_context)
 
     # Don't log file_path — RDSR paths/filenames can carry PHI.
     dprint("PROCESSING", "Reading and normalizing RDSR data")
@@ -194,6 +204,7 @@ def analyze_input_file(
     sheet_name: str | int = 0,
     output_format: str = RUN_ARGUMENTS_OUTPUT_DICT,
     import_options: TabularImportOptions | None = None,
+    equipment_capture_context: CapturedCoordinates | None = None,
 ) -> Any:
     """Run PySkinDose from a tabular file (.csv, .tsv, .xlsx) or DICOM/JSON.
 
@@ -218,8 +229,21 @@ def analyze_input_file(
     import_options:
         Optional post-normalization coordinate overrides. Rejected for
         non-tabular paths when any flag is set.
+    equipment_capture_context:
+        Raw-file capture replay only; JSON, normalized, multi-study, setup refuse.
     """
+    if equipment_capture_context is not None and isinstance(settings, PyskindoseSettings):
+        from guiskindose.equipment_captured_input import shielded_settings_for_capture
+
+        settings = shielded_settings_for_capture(settings)
     settings_obj = _settings_with_output_format(settings, output_format)
+    if equipment_capture_context is not None:
+        from guiskindose.equipment_captured_input import analyze_captured_input_file
+
+        return analyze_captured_input_file(
+            file_path, settings=settings_obj, input_schema=input_schema, sheet_name=sheet_name,
+            import_options=import_options, equipment_capture_context=equipment_capture_context,
+        )
     equipment_records: list = []
     input_result = _read_input_for_analysis(
         file_path,

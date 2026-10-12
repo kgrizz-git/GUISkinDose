@@ -3,6 +3,28 @@
 Implementation history for the active [execution plan](CUSTOM_EQUIPMENT_PROFILES_EXECUTION.md).
 Scientific requirements and phase acceptance gates remain in that plan and its linked contracts.
 
+- 2026-10-11 — **Single-file captured input through the public API.**
+  `analyze_input_file` and `main` take keyword-only `equipment_capture_context=` for one raw
+  file (`main`: DICOM only; `analyze_input_file`: DICOM or raw vendor tabular); a new `equipment_captured_input` helper module owns the
+  captured-only orchestration (validate → reject plot setup → route → analyze with the same
+  capture), leaving legacy paths untouched. JSON, normalized, multi-study, and plot-setup
+  inputs fail closed; tabular schema/sheet/options are carried. 14 tests (DICOM/tabular
+  parity, `main`, import options, offline, purity, conflicts, refusals). No aggregation,
+  multi-file, CLI flags, run-state, GUI, rich reports, version bumps, settings-bound fields,
+  or transmission.
+
+- 2026-10-11 — **Single-file captured input review fixes (same chunk).** Set import
+  options on a non-tabular path fail closed pre-I/O in capture mode; `main` refuses tabular
+  pre-I/O through `analyze_captured_main_input` (DICOM-only historical wrapper, fixed
+  schema/options) while `analyze_input_file` stays the raw-table API; caller-owned settings
+  are deep-copied via `shielded_settings_for_capture` so output-format assignment cannot leak
+  on success or failure; source dispatch/read failures neutralize to a closed `CaptureError`
+  from `None`; README/module dose-reproducibility claims corrected by parent review. 20 tests (new main
+  tabular refusal with zero source reads, non-tabular options refusal, caller output-format
+  preservation, self-returning copy rejection, private missing/malformed DICOM errors) plus a pre-existing possibly-unbound loop binding fix; `main.py` at 794
+  lines with orchestration in the helper. Ruff, basedpyright, complexity, and size gates
+  clean.
+
 - 2026-10-11 — **Generic shutter columns for tabular ASD (no wiring).** `generic_rdsr_like`
   maps four optional canonical shutter edges (`Left/Right/Top/BottomShutter_mm`, self-match
   spellings only) with numeric coercion, enabling `field_size_mode: "ASD"` on raw tabular
