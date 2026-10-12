@@ -199,11 +199,14 @@ any mutation or export.
    (`apply_run_state` + trial-build coverage). Owner: Phase 2.
 2. Rich-report v4 per-exam equipment block (collector + writer rows). Owner: Phase 5.
 3. GUI pre-calculation / Calculate / Results equipment surfaces. Owner: Phase 2/3.
-4. CLI wildcard-promotion flag and settings-JSON session fields. Owner: Phase 2.
+4. CLI wildcard-promotion flag. Owner: Phase 2.
    (CLI file-source syntax — repeatable `--equipment-profile` plus
-   `--equipment-profile-sheet` — and explicit read-only store selection
-   (`--equipment-profile-store` plus `--equipment-profile-id`) delivered
-   2026-10-12; the promotion flag and settings-JSON fields stay open.)
+   `--equipment-profile-sheet` — explicit read-only store selection
+   (`--equipment-profile-store` plus `--equipment-profile-id`), and the
+   settings-file `equipment_profiles` block composed with CLI flags into one
+   candidate, delivered 2026-10-12; the promotion flag stays open. Direct
+   `PyskindoseSettings` constructor / `initialize_settings` API wiring stays
+   open for a later chunk.)
 5. Old run-profile compatibility reader beyond today's `normalization_settings`
    handling. Owner: Phase 2 (single owner, nowhere else).
 6. Typed captured authority, versioned geometry/capture checksums, strict validators,

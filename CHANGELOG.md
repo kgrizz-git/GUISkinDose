@@ -24,6 +24,13 @@ That keeps SemVer and contributor history organized.
 - Custom negative table-angle and third positioner-angle direction signs now preserve the zero-angle
   arrays instead of causing a row-length error during normalization.
 
+- **Settings-file equipment profiles on the CLI (experimental)** (2026-10-12) — settings
+  files (and inline JSON/dict configs) accept an optional `equipment_profiles` block
+  (`files` with `path`/`format`/`sheet`, `store` with `path`/`ids`; relative paths resolve
+  against the settings file's directory). CLI flags and the block compose into one candidate
+  assembled once and bound last; invalid blocks fail closed before any exam read; refused
+  in `--mode gui`. Direct constructor wiring stays open.
+
 - **Custom equipment-profile files on the CLI (experimental)** (2026-10-12) — repeatable
   `--equipment-profile PATH` (JSON, CSV, TSV, XLSX; relative paths resolve against the
   working directory) assembles one candidate session through the canonical file path and

@@ -20,6 +20,10 @@ from guiskindose.cli_equipment_profiles import (
     GUI_EQUIPMENT_PROFILES_MESSAGE,
     equipment_profile_args_present,
 )
+from guiskindose.cli_settings import (
+    GUI_SETTINGS_EQUIPMENT_PROFILES_MESSAGE,
+    settings_equipment_block_present,
+)
 from guiskindose.constants import RUN_ARGUMENTS_MODE_GUI
 from guiskindose.debug import configure_logging
 from guiskindose.input_adapters.import_options import (
@@ -222,6 +226,9 @@ def cli() -> None:
             sys.exit(1)
         if equipment_profile_args_present(args):
             print(GUI_EQUIPMENT_PROFILES_MESSAGE, file=sys.stderr)
+            sys.exit(1)
+        if settings_equipment_block_present(args):
+            print(GUI_SETTINGS_EQUIPMENT_PROFILES_MESSAGE, file=sys.stderr)
             sys.exit(1)
         from guiskindose.gui.app import run_gui
 

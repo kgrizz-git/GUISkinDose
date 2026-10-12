@@ -412,7 +412,7 @@ def test_invalid_selector_rejects_before_profile_reads(monkeypatch: pytest.Monke
         reads.append(True)
         raise AssertionError("unexpected profile read")
 
-    monkeypatch.setattr("guiskindose.cli_equipment_profiles.assemble_session", reject_read)
+    monkeypatch.setattr("guiskindose.settings_equipment_profiles.assemble_session", reject_read)
     args = _argv_namespace(["unread-profile.xlsx"], sheet=selector)
     with pytest.raises(UserFacingInputError) as caught:
         equipment_session_from_args(args)

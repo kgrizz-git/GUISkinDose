@@ -12,6 +12,14 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ### Changed
 
+- **Headless CLI settings-JSON wiring** (2026-10-12) — settings-file base capture,
+  transient block strip, single-candidate CLI+config composition in `prepare_cli_settings`,
+  GUI config guard; shared pure-parser seam reused. Parent takeover after the provider
+  rate limit completed pre-construction validation, shared CLI store/ID checks,
+  duplicate-profile JSON rejection, two-store composition, and positive preview/multi
+  regressions. Targeted checks passed; ruff, basedpyright,
+  complexity, size, and freshness gates clean. Companion §4 now describes wired
+  behavior; direct constructor wiring stays open.
 - **Settings-JSON source requests (inert)** (2026-10-12) — new app-layer
   `settings_equipment_profiles` helper (exact request grammar, base-dir path rules,
   pre-I/O validation, read-only store composition). Review fixes: base-resolved

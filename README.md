@@ -278,6 +278,12 @@ all enabled current records apply). Assembly failures exit non-zero with a value
 before any exam input is read. Coordinate-only profiles apply; transmission content,
 wildcards without promotion, and alias maps are rejected by the initial gate.
 
+A settings file may carry its own sources under an `equipment_profiles` block
+(`files` with `path`/`format`/`sheet`, `store` with `path`/`ids`); relative paths
+resolve against the settings file's directory (working directory for inline
+JSON/dict configs). CLI flags and the settings block compose into one candidate
+assembled once and bound last — duplicate claims across sides fail closed.
+
 A validated capture (`CapturedCoordinates`, produced from a prior run) replays one raw input
 file offline through `analyze_input_file(..., equipment_capture_context=...)`
 (raw DICOM or tabular) or `main(..., equipment_capture_context=...)` (DICOM only): no live session is needed or accepted, and the

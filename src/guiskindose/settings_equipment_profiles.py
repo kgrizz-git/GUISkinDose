@@ -1,7 +1,7 @@
-"""Settings-JSON equipment-profile source requests (experimental, inert).
+"""Settings-JSON equipment-profile source requests (experimental).
 
 Parses an explicit optional ``equipment_profiles`` settings block into one
-assembled candidate session. This helper performs no wiring: it never touches
+assembled candidate session. This helper does not bind sessions itself: it never touches
 settings objects, constructors, serialization, or outputs, so request paths
 live transiently in the caller's config only. Exact request grammar::
 
@@ -27,19 +27,20 @@ inferred formats and integer sheet ranges; the store opens only through the
 read-only factory and its frozen snapshot composes with files in one
 :meth:`assemble_session` call, preserving every source, conflict, and
 capability gate. The frozen :class:`_ValidatedRequest` seam carries resolved
-plain paths plus the optional store selection (counts-only repr) for later
-single CLI+config composition. Its construction and assembly stay internal;
-only the parser is the validation boundary, not the dataclass constructor.
+plain paths plus the optional store selection (counts-only repr);
+:func:`_assemble_composed` assembles up to two validated sides once, so a
+single CLI+config candidate shares this path. The seam stays internal; only
+the parser is the validation boundary, not the dataclass constructor.
 
 Failures are :class:`EquipmentProfileError` (never paths, cells, IDs,
-notes, or causes), so a future CLI boundary reuses its existing converter
-unchanged.
+notes, or causes), and the CLI boundary applies its existing value-free converter.
 
 .. note::
-   Later integration must not depend on the ``ValueError``-swallowing
-   fallback in ``parse_settings_to_settings_class``: an invalid
-   ``equipment_profiles`` block has to fail closed instead of falling back
-   to example settings. That fallback is untouched by this chunk.
+   Headless CLI wiring validates the settings block explicitly before the
+   legacy construction runs, so an invalid block fails closed instead of
+   falling back to example settings. The ``ValueError``-swallowing fallback
+   in ``parse_settings_to_settings_class`` is untouched and still applies
+   only to non-profile settings failures.
 """
 
 from __future__ import annotations
@@ -323,15 +324,48 @@ def _parse_request(config: Any, base: Path | None) -> _ValidatedRequest:
     return _ValidatedRequest(files=sources, store_path=store_path, store_ids=selection)
 
 
-def _assemble_request(request: _ValidatedRequest) -> EquipmentProfileSession:
-    """Open the store (if any) and assemble the frozen request into one session."""
-    snapshot = None
-    if request.store_path is not None:
-        with ProfileStore.open_read_only(request.store_path) as store:
-            snapshot = store.selected_snapshot(request.store_ids)
+def _check_composed_bounds(first: _ValidatedRequest | None, second: _ValidatedRequest | None) -> None:
+    """Pure combined file-plus-snapshot gate shared with the assembler.
+
+    Runs before settings construction, mutations, and all profile/store
+    I/O: the total request count across both sides must stay within
+    ``MAX_SOURCES``. Closed and value-free.
+    """
+    files = sum(len(request.files) for request in (first, second) if request is not None)
+    stores = sum(1 for request in (first, second) if request is not None and request.store_path is not None)
+    if files + stores > MAX_SOURCES:
+        raise EquipmentProfileError(
+            ProfileErrorCode.PROFILE_LIMIT_EXCEEDED,
+            source_kind="memory",
+            field_path=("equipment_profiles",),
+            count=files + stores,
+        )
+
+
+def _assemble_composed(
+    first: _ValidatedRequest | None, second: _ValidatedRequest | None
+) -> EquipmentProfileSession | None:
+    """Assemble two validated sides once; None unless a side is present.
+
+    Files concatenate first-side-first (order affects diagnostics only);
+    snapshots open in side order with at most one per side. The combined
+    bound rechecks here so direct callers get the same gate as the early
+    pre-construction check. Duplicate claims across sides fail the canonical
+    conflicts — never deduped or overridden.
+    """
+    sides = [request for request in (first, second) if request is not None]
+    if not sides:
+        return None
+    _check_composed_bounds(first, second)
+    files = [source for request in sides for source in request.files]
+    snapshots = []
+    for request in sides:
+        if request.store_path is not None:
+            with ProfileStore.open_read_only(request.store_path) as store:
+                snapshots.append(store.selected_snapshot(request.store_ids))
     return assemble_session(
-        files=list(request.files),
-        snapshots=[snapshot] if snapshot is not None else [],
+        files=files,
+        snapshots=snapshots,
         settings_base_dir=None,
     )
 
@@ -349,4 +383,4 @@ def equipment_session_from_config(
     if config is None:
         return None
     base = _validated_base(settings_base_dir)
-    return _assemble_request(_parse_request(config, base))
+    return _assemble_composed(None, _parse_request(config, base))

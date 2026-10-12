@@ -3,6 +3,17 @@
 Implementation history for the active [execution plan](CUSTOM_EQUIPMENT_PROFILES_EXECUTION.md).
 Scientific requirements and phase acceptance gates remain in that plan and its linked contracts.
 
+- 2026-10-12 — **Headless CLI settings-JSON source wiring + CLI+config composition.**
+  Settings files/dicts/inline JSON accept an optional `equipment_profiles` block
+  (base = settings-file parent, CWD for inline); CLI flags and the block compose
+  into one candidate assembled once and bound last, with duplicate cross-side
+  claims failing closed. Caller-owned homes stage isolated; raw mappings never
+  mutate and paths never serialize; invalid blocks fail closed before the legacy
+  constructor/fallback; GUI mode refuses configured sources without assembling.
+  Parent takeover completed shared CLI store/ID validation, duplicate-profile JSON
+  rejection, two-store single-assembly and positive preview/multi regressions.
+  Direct constructor wiring stays open.
+
 - 2026-10-12 — **Settings-JSON source request review fixes (same chunk).** Store
   paths resolve against the validated base (no CWD fallback); unsupported
   inferred formats and out-of-ceiling integer sheets fail before any source

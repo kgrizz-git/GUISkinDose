@@ -1,8 +1,9 @@
 # Equipment-profile settings sources (contract companion)
 
 Locks the exact `equipment_profiles` settings-block grammar, the path rules,
-and the future CLI+config composition policy. Implemented (inert, no wiring)
-by `src/guiskindose/settings_equipment_profiles.py`; the stdlib-only core in
+and the headless CLI+config composition policy. Parsing and assembly are owned
+by `src/guiskindose/settings_equipment_profiles.py`; headless binding is owned
+by `src/guiskindose/cli_settings.py`; the stdlib-only core in
 `src/guiskindose/equipment_profiles/` is untouched.
 
 ## 1. Request grammar (exact)
@@ -43,13 +44,13 @@ equipment_profiles = {
   source opens, as does a sheet on a non-XLSX effective format.
 - Every failure is a value-free `EquipmentProfileError` (stable code, source
   kind, row/count only — never paths, cells, IDs, notes, or causes), so a
-  future CLI boundary reuses its existing converter unchanged.
+  CLI boundary converts it to the existing value-free user-facing error.
 
 ## 2. Path rules
 
 File and store paths are exact strings carried transiently in the caller's
 config: they are never written into runtime settings (`to_settings_dict`
-drops the block today since the constructor ignores unknown keys), results,
+receives a transient copy with the block removed in headless preparation), results,
 provenance, errors, or reprs. The explicit base directory validates first
 (hostile hooks, non-path types, bytes, NUL, and surrogates fail closed with
 suppressed causes and no path echo); relative paths then resolve against it
@@ -63,22 +64,24 @@ conflict, and capability gate. A failed candidate publishes nothing.
 
 `_parse_request` freezes the fully validated request (resolved plain file
 sources plus the optional store path/selection, counts-only repr) without
-any I/O; `_assemble_request` opens the store and assembles it. The seam
+profile-source I/O; `_assemble_composed` opens the stores and assembles both sides. The seam
 stays internal; its dataclass constructor does not independently validate,
-so callers must use the parser boundary. Later CLI+config composition
-reuses it: parse each side, merge the
-frozen requests, assemble once.
+so callers must use the parser boundary. CLI+config composition reuses it: parse each side, validate the combined
+source count, then assemble once.
 
-## 4. Future CLI+config composition policy
+## 4. CLI+config composition policy (wired headless)
 
-When wiring lands, compose CLI flags and the settings block into **one**
-candidate assembled once: concatenate file requests (CLI paths first, then
-config paths — order affects diagnostics only), attach at most one snapshot
-per side, validate everything before any I/O, and bind exactly once at the
-end. Never bind or override prematurely: a pre-bound runtime session fails
-closed before any mutation or read, and an absent-everywhere request leaves
-settings untouched. A later integration slice must validate the settings
-block explicitly and fail closed — it must **not** depend on the
-`ValueError`-swallowing fallback in `parse_settings_to_settings_class`,
-which today would silently fall back to example settings instead of
-reporting an invalid block.
+Headless preparation composes CLI flags and the settings block into **one**
+candidate assembled once: file requests concatenate (CLI paths first, then
+config paths — order affects diagnostics only), at most one snapshot per
+side, requests validated before settings construction or profile-source I/O,
+assembled once and bound last. Reading the selected settings file necessarily
+precedes request validation.
+Never bind or override prematurely: a pre-bound runtime session fails
+closed before any mutation or read, caller-owned homes stage on an isolated
+copy, and an absent-everywhere request leaves settings untouched. Duplicate
+claims across sides fail the canonical conflicts — never deduped or
+overridden. The legacy `ValueError` construction fallback still owns
+malformed non-profile settings, but an invalid `equipment_profiles` block
+fails closed first and never falls through it. Direct `PyskindoseSettings`
+constructor / `initialize_settings` API wiring stays open for a later chunk.
