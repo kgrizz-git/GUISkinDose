@@ -752,7 +752,7 @@ def test_no_error_echoes_sheet_names_paths_or_cells() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_openpyxl_is_not_required_for_json_or_csv_parsing() -> None:
+def test_openpyxl_is_not_required_for_json_or_csv_parsing(monkeypatch: pytest.MonkeyPatch) -> None:
     """The adapter must not pull the spreadsheet stack in for a JSON or CSV parse.
 
     The top-level ``guiskindose`` package imports openpyxl through the existing tabular loader, so this drops
@@ -763,7 +763,7 @@ def test_openpyxl_is_not_required_for_json_or_csv_parsing() -> None:
     from guiskindose.equipment_profiles import csv_source, json_source
 
     for name in [name for name in sys.modules if name == "openpyxl" or name.startswith("openpyxl.")]:
-        del sys.modules[name]
+        monkeypatch.delitem(sys.modules, name)
 
     assert parse_json_bytes(_JSON_PATH.read_bytes()).profiles
     assert parse_csv_bytes(_CSV_PATH.read_bytes()).profiles

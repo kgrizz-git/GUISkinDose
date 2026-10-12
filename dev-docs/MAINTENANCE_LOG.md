@@ -12,6 +12,16 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ### Changed
 
+- **Settings-JSON source requests (inert)** (2026-10-12) — new app-layer
+  `settings_equipment_profiles` helper (exact request grammar, base-dir path rules,
+  pre-I/O validation, read-only store composition). Review fixes: base-resolved
+  store paths, pre-open format/sheet gates, validated-request seam, genuine spies.
+  Additional parent-review regressions close store-key lookup, base-string subclass,
+  ID-string subclass, and invalid sheet Unicode boundaries; the XLSX lazy-import
+  test now restores removed modules and sheet spies target the stable adapter seam.
+  Grammar
+  + composition policy in the new settings-sources companion (registered in the docs
+  index); no wiring, no CHANGELOG.
 - **CLI existing-store selection** (2026-10-12) — new `ProfileStore.open_read_only`
   factory plus `--equipment-profile-store` / `--equipment-profile-id` composed in
   `cli_equipment_profiles`. Review hardening: hostile-hook path boundary, read-only

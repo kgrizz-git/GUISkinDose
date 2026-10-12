@@ -3,6 +3,29 @@
 Implementation history for the active [execution plan](CUSTOM_EQUIPMENT_PROFILES_EXECUTION.md).
 Scientific requirements and phase acceptance gates remain in that plan and its linked contracts.
 
+- 2026-10-12 — **Settings-JSON source request review fixes (same chunk).** Store
+  paths resolve against the validated base (no CWD fallback); unsupported
+  inferred formats and out-of-ceiling integer sheets fail before any source
+  opens; base validates first with closed hook/unicode handling; exact-string
+  keys with key-count gates; empty/surrogate paths refused; frozen
+  counts-only-repr `_ValidatedRequest` seam (`_parse_request` pure,
+  `_assemble_request` once) for later CLI+config composition; genuine
+  open/reader spies replace wrong-code-only proofs; compound asserts split.
+  42 tests.
+
+- 2026-10-12 — **Settings-JSON source requests (experimental, inert).** New app-layer
+  `settings_equipment_profiles` helper parses an explicit optional `equipment_profiles`
+  block (`files` with path/format/sheet, `store` with path/ids) into one assembled
+  candidate: exact builtins with a strict key allowlist, no `schema_version` by design,
+  absent → `None` without I/O, explicit empty → empty session. Paths resolve against an
+  explicit base dir (CWD for inline configs); every shape/bound validates before any
+  profile/store I/O; read-only store snapshots compose with files under all gates;
+  request paths never serialize. 42 tests (grammar matrix, parity, base-dir semantics,
+  zero-I/O failures, gates, no-publish, no leaks). Grammar + CLI+config composition
+  policy locked in the settings-sources companion (schema untouched). No constructor,
+  CLI, GUI, or main wiring; the `parse_settings` ValueError-fallback gap is flagged
+  for later integration. No CHANGELOG (no public API).
+
 - 2026-10-12 — **CLI store review hardening (same chunk).** Hostile path hooks
   collapse closed at the store boundary; read-only handles carry a lifetime flag
   (`initialize` refuses coded pre-filesystem, writes refuse before any statement,

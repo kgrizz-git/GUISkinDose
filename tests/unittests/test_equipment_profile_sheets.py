@@ -195,14 +195,16 @@ def test_duplicate_titles_ambiguous_without_forgery() -> None:
 
 
 def _assert_pre_open_rejection(raw: bytes, monkeypatch: pytest.MonkeyPatch) -> None:
+    import guiskindose.equipment_profiles.xlsx_source as xlsx_source
+
     opens: list[bool] = []
-    real_load = openpyxl.load_workbook
+    real_open = xlsx_source._open_workbook
 
-    def _spy_open(*args: Any, **kwargs: Any) -> Any:
+    def _spy_open(raw_bytes: Any, source_kind: str) -> Any:
         opens.append(True)
-        return real_load(*args, **kwargs)
+        return real_open(raw_bytes, source_kind)
 
-    monkeypatch.setattr(openpyxl, "load_workbook", _spy_open)
+    monkeypatch.setattr(xlsx_source, "_open_workbook", _spy_open)
     with pytest.raises(EquipmentProfileError):
         parse_xlsx_bytes(raw, sheet="Anything")
     assert opens == []
@@ -217,6 +219,8 @@ def test_preflight_rejects_before_open(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_sheet_count_rejects_before_open(monkeypatch: pytest.MonkeyPatch) -> None:
     import io
 
+    import guiskindose.equipment_profiles.xlsx_source as xlsx_source
+
     workbook = Workbook()
     for index in range(17):
         sheet = workbook.active if index == 0 else workbook.create_sheet()
@@ -226,16 +230,16 @@ def test_sheet_count_rejects_before_open(monkeypatch: pytest.MonkeyPatch) -> Non
     buffer = io.BytesIO()
     workbook.save(buffer)
     opens: list[bool] = []
-    real_load = openpyxl.load_workbook
+    real_open = xlsx_source._open_workbook
 
-    def _spy_open(*args: Any, **kwargs: Any) -> Any:
+    def _spy_open(raw_bytes: Any, source_kind: str) -> Any:
         opens.append(True)
-        return real_load(*args, **kwargs)
+        return real_open(raw_bytes, source_kind)
 
-    monkeypatch.setattr(openpyxl, "load_workbook", _spy_open)
-    raised_argument_1 = buffer.getvalue()
+    monkeypatch.setattr(xlsx_source, "_open_workbook", _spy_open)
+    raw = buffer.getvalue()
     with pytest.raises(EquipmentProfileError) as excinfo:
-        parse_xlsx_bytes(raised_argument_1, sheet="Sheet16")
+        parse_xlsx_bytes(raw, sheet="Sheet16")
     assert _code(excinfo) is ProfileErrorCode.SHEET_LIMIT_EXCEEDED
     assert opens == []
 
@@ -264,14 +268,16 @@ def test_named_read_uses_single_snapshot(tmp_path: Path, monkeypatch: pytest.Mon
 
 
 def test_workbook_opened_once_per_parse(monkeypatch: pytest.MonkeyPatch) -> None:
+    import guiskindose.equipment_profiles.xlsx_source as xlsx_source
+
     opens: list[bool] = []
-    real_load = openpyxl.load_workbook
+    real_open = xlsx_source._open_workbook
 
-    def _spy_open(*args: Any, **kwargs: Any) -> Any:
+    def _spy_open(raw_bytes: Any, source_kind: str) -> Any:
         opens.append(True)
-        return real_load(*args, **kwargs)
+        return real_open(raw_bytes, source_kind)
 
-    monkeypatch.setattr(openpyxl, "load_workbook", _spy_open)
+    monkeypatch.setattr(xlsx_source, "_open_workbook", _spy_open)
     parse_xlsx_bytes(_two_sheet_bytes(), sheet="PhilipsSheet")
     assert len(opens) == 1
 

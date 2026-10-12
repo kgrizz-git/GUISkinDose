@@ -1,0 +1,352 @@
+"""Settings-JSON equipment-profile source requests (experimental, inert).
+
+Parses an explicit optional ``equipment_profiles`` settings block into one
+assembled candidate session. This helper performs no wiring: it never touches
+settings objects, constructors, serialization, or outputs, so request paths
+live transiently in the caller's config only. Exact request grammar::
+
+    equipment_profiles = {
+        "files": [{"path": str, "format"?: "json"|"csv"|"tsv"|"xlsx",
+                   "sheet"?: int|string}, ...],
+        "store": {"path": str, "ids"?: [str, ...]},
+    }
+
+An absent (``None``) block returns ``None`` without any I/O; an explicit
+empty mapping assembles an empty session. There is deliberately no
+``schema_version``: the grammar is code-versioned and unknown keys fail
+closed, so a version field would promise evolution this slice does not
+implement. Mappings require exact builtin types with exact-string keys
+(str subclasses and hostile key equality are not JSON keys), and key
+counts are gated against the allowlist before any iteration. Paths must be
+non-empty exact strings with valid unicode and no NUL; relative paths
+resolve against the explicit settings base directory — validated first,
+without touching the filesystem — or against the working directory for
+inline JSON/dict configs, and absolute paths ignore the base. Every request
+shape and bound validates fully before any profile or store I/O, including
+inferred formats and integer sheet ranges; the store opens only through the
+read-only factory and its frozen snapshot composes with files in one
+:meth:`assemble_session` call, preserving every source, conflict, and
+capability gate. The frozen :class:`_ValidatedRequest` seam carries resolved
+plain paths plus the optional store selection (counts-only repr) for later
+single CLI+config composition. Its construction and assembly stay internal;
+only the parser is the validation boundary, not the dataclass constructor.
+
+Failures are :class:`EquipmentProfileError` (never paths, cells, IDs,
+notes, or causes), so a future CLI boundary reuses its existing converter
+unchanged.
+
+.. note::
+   Later integration must not depend on the ``ValueError``-swallowing
+   fallback in ``parse_settings_to_settings_class``: an invalid
+   ``equipment_profiles`` block has to fail closed instead of falling back
+   to example settings. That fallback is untouched by this chunk.
+"""
+
+from __future__ import annotations
+
+import os
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
+
+from guiskindose.equipment_profiles import (
+    EquipmentProfileSession,
+    FileSource,
+    ProfileStore,
+    assemble_session,
+)
+from guiskindose.equipment_profiles.constants import (
+    JSON_SOURCE_SUFFIXES,
+    MAX_SOURCES,
+    MAX_XLSX_SHEETS,
+    SOURCE_KIND_CSV,
+    SOURCE_KIND_JSON,
+    SOURCE_KIND_TSV,
+    SOURCE_KIND_XLSX,
+    TABULAR_SUFFIX_TO_KIND,
+    XLSX_SOURCE_SUFFIXES,
+)
+from guiskindose.equipment_profiles.errors import EquipmentProfileError, ProfileErrorCode
+from guiskindose.equipment_profiles.store_schema import normalize_selection
+
+__all__ = ["equipment_session_from_config"]
+
+_BLOCK_FIELDS = ("files", "store")
+_FILE_FIELDS = ("path", "format", "sheet")
+_STORE_FIELDS = ("path", "ids")
+_FILE_FORMATS = (SOURCE_KIND_JSON, SOURCE_KIND_CSV, SOURCE_KIND_TSV, SOURCE_KIND_XLSX)
+_SUFFIX_TO_KIND: dict[str, str] = (
+    dict.fromkeys(JSON_SOURCE_SUFFIXES, SOURCE_KIND_JSON)
+    | dict(TABULAR_SUFFIX_TO_KIND)
+    | dict.fromkeys(XLSX_SOURCE_SUFFIXES, SOURCE_KIND_XLSX)
+)
+
+
+@dataclass(frozen=True, repr=False)
+class _ValidatedRequest:
+    """Frozen pre-I/O request: resolved file sources plus optional store selection.
+
+    Constructed only by :func:`_parse_request` after full validation, so
+    later composition can trust it without revalidating. The repr carries
+    counts only — never paths or IDs.
+    """
+
+    files: tuple[FileSource, ...]
+    store_path: str | None
+    store_ids: tuple[str, ...] | None
+
+    def __repr__(self) -> str:
+        return f"ValidatedRequest(files={len(self.files)}, store={self.store_path is not None})"
+
+
+def _allowlisted(mapping: Any, allowed: tuple[str, ...], field_path: tuple[str, ...]) -> dict[str, Any]:
+    """Require an exact builtin dict with exact-string keys inside the allowlist.
+
+    Exact-type first (subclasses and hostile key equality are not JSON
+    keys), then a fixed key-count gate — exceeding the allowlist guarantees
+    an unknown key, so unbounded maps fail without iteration — then per-key
+    membership. All before any value is read.
+    """
+    if type(mapping) is not dict:
+        raise EquipmentProfileError(
+            ProfileErrorCode.INVALID_TYPE, source_kind="memory", field_path=field_path
+        )
+    if len(mapping) > len(allowed):
+        raise EquipmentProfileError(
+            ProfileErrorCode.UNKNOWN_FIELD, source_kind="memory", field_path=field_path
+        )
+    for key in mapping:
+        if type(key) is not str:
+            raise EquipmentProfileError(
+                ProfileErrorCode.INVALID_TYPE, source_kind="memory", field_path=field_path
+            )
+        if key not in allowed:
+            raise EquipmentProfileError(
+                ProfileErrorCode.UNKNOWN_FIELD, source_kind="memory", field_path=field_path
+            )
+    return mapping
+
+
+def _checked_path(text: Any, field_path: tuple[str, ...]) -> str:
+    """Require an exact non-empty NUL-free valid-unicode string path; never echoes."""
+    if type(text) is not str or text == "" or "\x00" in text:
+        raise EquipmentProfileError(
+            ProfileErrorCode.INVALID_TYPE, source_kind="memory", field_path=field_path
+        )
+    try:
+        text.encode("utf-8")
+    except UnicodeEncodeError:
+        raise EquipmentProfileError(
+            ProfileErrorCode.INVALID_TYPE, source_kind="memory", field_path=field_path
+        ) from None
+    return text
+
+
+def _validated_base(base: Any) -> Path | None:
+    """Validate the explicit base directory without touching the filesystem.
+
+    ``None`` selects working-directory resolution. Hostile hooks, bytes,
+    NUL, and surrogate-carrying text fail closed with suppressed causes and
+    no path echo; `KeyboardInterrupt` and `SystemExit` pass through untouched.
+    """
+    if base is None:
+        return None
+    if type(base) is str:
+        text = base
+    elif isinstance(base, os.PathLike):
+        try:
+            text = os.fspath(base)
+        except Exception:
+            raise EquipmentProfileError(
+                ProfileErrorCode.INVALID_TYPE,
+                source_kind="memory",
+                field_path=("equipment_profiles",),
+            ) from None
+    else:
+        raise EquipmentProfileError(
+            ProfileErrorCode.INVALID_TYPE,
+            source_kind="memory",
+            field_path=("equipment_profiles",),
+        )
+    if type(text) is not str or "\x00" in text:
+        raise EquipmentProfileError(
+            ProfileErrorCode.INVALID_TYPE,
+            source_kind="memory",
+            field_path=("equipment_profiles",),
+        )
+    try:
+        text.encode("utf-8")
+    except UnicodeEncodeError:
+        raise EquipmentProfileError(
+            ProfileErrorCode.INVALID_TYPE,
+            source_kind="memory",
+            field_path=("equipment_profiles",),
+        ) from None
+    return Path(text)
+
+
+def _resolve_request_path(text: str, base: Path | None) -> str:
+    """Resolve validated request text against the base with pure string ops (no I/O)."""
+    candidate = Path(text)
+    if candidate.is_absolute() or base is None:
+        return text
+    return str(base / text)
+
+
+def _checked_sheet(candidate: Any) -> int | str:
+    """Require an exact non-negative int or non-empty exact str sheet selector."""
+    if type(candidate) is int and candidate >= 0:
+        return candidate
+    if type(candidate) is str and candidate != "" and "\x00" not in candidate:
+        try:
+            candidate.encode("utf-8")
+        except UnicodeEncodeError:
+            pass
+        else:
+            return candidate
+    raise EquipmentProfileError(
+        ProfileErrorCode.VALUE_OUT_OF_RANGE,
+        source_kind="memory",
+        field_path=("equipment_profiles", "files"),
+    )
+
+
+def _file_source(entry: Any, base: Path | None) -> FileSource:
+    """Validate one file-request mapping into a resolved ``FileSource`` (no I/O)."""
+    fields = ("equipment_profiles", "files")
+    mapping = _allowlisted(entry, _FILE_FIELDS, fields)
+    if "path" not in mapping:
+        raise EquipmentProfileError(
+            ProfileErrorCode.MISSING_REQUIRED_FIELD, source_kind="memory", field_path=fields
+        )
+    text = _resolve_request_path(_checked_path(mapping["path"], fields), base)
+    source_format: str | None = None
+    if "format" in mapping:
+        if type(mapping["format"]) is not str or mapping["format"] not in _FILE_FORMATS:
+            raise EquipmentProfileError(
+                ProfileErrorCode.INVALID_ENUM, source_kind="memory", field_path=fields
+            )
+        source_format = mapping["format"]
+    sheet: int | str | None = None
+    if "sheet" in mapping:
+        sheet = _checked_sheet(mapping["sheet"])
+    suffix_kind = _SUFFIX_TO_KIND.get(Path(text).suffix.lower())
+    if source_format is None and suffix_kind is None:
+        raise EquipmentProfileError(
+            ProfileErrorCode.UNSUPPORTED_SOURCE_SUFFIX, source_kind="memory", field_path=()
+        )
+    effective = source_format if source_format is not None else suffix_kind
+    if sheet is not None and effective != SOURCE_KIND_XLSX:
+        raise EquipmentProfileError(
+            ProfileErrorCode.INVALID_TYPE, source_kind="memory", field_path=fields
+        )
+    if type(sheet) is int and sheet >= MAX_XLSX_SHEETS:
+        raise EquipmentProfileError(
+            ProfileErrorCode.VALUE_OUT_OF_RANGE, source_kind="memory", field_path=fields
+        )
+    return FileSource(path=text, format=source_format, sheet=sheet)
+
+
+def _store_selection(block: dict[str, Any]) -> tuple[str, ...] | None:
+    """Validate the store ID selector; None when the store block carries none."""
+    if "store" not in block:
+        return None
+    request = _allowlisted(block["store"], _STORE_FIELDS, ("equipment_profiles", "store"))
+    if "ids" not in request:
+        return None
+    raw_ids = request["ids"]
+    if type(raw_ids) not in (list, tuple):
+        raise EquipmentProfileError(
+            ProfileErrorCode.INVALID_TYPE,
+            source_kind="memory",
+            field_path=("equipment_profiles", "store"),
+        )
+    if len(raw_ids) <= MAX_SOURCES and any(type(name) is not str for name in raw_ids):
+        raise EquipmentProfileError(
+            ProfileErrorCode.INVALID_PROFILE_ID, source_kind="memory",
+            field_path=("equipment_profiles", "store"),
+        )
+    return normalize_selection(raw_ids)
+
+
+def _store_path(block: dict[str, Any], base: Path | None) -> str | None:
+    """Validate and resolve the store path; None without a store block."""
+    if "store" not in block:
+        return None
+    fields = ("equipment_profiles", "store")
+    mapping = _allowlisted(block["store"], _STORE_FIELDS, fields)
+    if "path" not in mapping:
+        raise EquipmentProfileError(
+            ProfileErrorCode.MISSING_REQUIRED_FIELD, source_kind="memory", field_path=fields
+        )
+    return _resolve_request_path(_checked_path(mapping["path"], fields), base)
+
+
+def _parse_request(config: Any, base: Path | None) -> _ValidatedRequest:
+    """Validate everything and freeze a no-I/O request for later assembly."""
+    block = _allowlisted(config, _BLOCK_FIELDS, ("equipment_profiles",))
+    raw_files: list[Any] = []
+    if "files" in block:
+        declared = block["files"]
+        if type(declared) not in (list, tuple):
+            raise EquipmentProfileError(
+                ProfileErrorCode.INVALID_TYPE,
+                source_kind="memory",
+                field_path=("equipment_profiles", "files"),
+            )
+        if len(declared) > MAX_SOURCES:
+            raise EquipmentProfileError(
+                ProfileErrorCode.PROFILE_LIMIT_EXCEEDED,
+                source_kind="memory",
+                field_path=("equipment_profiles", "files"),
+                count=len(declared),
+            )
+        for entry in declared:
+            if len(raw_files) >= MAX_SOURCES:
+                raise EquipmentProfileError(
+                    ProfileErrorCode.PROFILE_LIMIT_EXCEEDED,
+                    source_kind="memory",
+                    field_path=("equipment_profiles", "files"),
+                    count=len(raw_files) + 1,
+                )
+            raw_files.append(entry)
+    selection = _store_selection(block)
+    store_path = _store_path(block, base)
+    sources = tuple(_file_source(entry, base) for entry in raw_files)
+    if len(sources) + (1 if store_path is not None else 0) > MAX_SOURCES:
+        raise EquipmentProfileError(
+            ProfileErrorCode.PROFILE_LIMIT_EXCEEDED,
+            source_kind="memory",
+            field_path=("equipment_profiles",),
+            count=len(sources) + 1,
+        )
+    return _ValidatedRequest(files=sources, store_path=store_path, store_ids=selection)
+
+
+def _assemble_request(request: _ValidatedRequest) -> EquipmentProfileSession:
+    """Open the store (if any) and assemble the frozen request into one session."""
+    snapshot = None
+    if request.store_path is not None:
+        with ProfileStore.open_read_only(request.store_path) as store:
+            snapshot = store.selected_snapshot(request.store_ids)
+    return assemble_session(
+        files=list(request.files),
+        snapshots=[snapshot] if snapshot is not None else [],
+        settings_base_dir=None,
+    )
+
+
+def equipment_session_from_config(
+    config: Any,
+    settings_base_dir: str | Path | None = None,
+) -> EquipmentProfileSession | None:
+    """Assemble one candidate session from a settings-JSON source block.
+
+    ``None`` returns ``None`` without touching anything. The base directory
+    validates first; every request then validates fully before any profile
+    or store I/O, and a failed candidate publishes nothing.
+    """
+    if config is None:
+        return None
+    base = _validated_base(settings_base_dir)
+    return _assemble_request(_parse_request(config, base))
