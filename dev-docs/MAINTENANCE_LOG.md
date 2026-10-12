@@ -12,6 +12,20 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ### Changed
 
+- Run-state trial settings validation now uses a fixed error message with the underlying exception suppressed; privacy Semgrep identified the raw exception text after the shared error-class move.
+
+- **Capture codec parent review** (2026-10-12) — exact string keys and envelope
+  modes are checked before equality or membership, closing hostile-object
+  acceptance and raw exception leaks through the run-state boundary.
+
+- **Run-state equipment-envelope boundary** (2026-10-12) — `RunStateError` moved
+  unchanged to `gui/run_state_errors.py` (re-exported; backcompat alias only);
+  inert `gui/run_state_equipment.py` decode/emit wrappers with code translation
+  under a bounded root-gated diagnostic discipline (count-before-decode,
+  budget-first localization, exact-str code gate, no key lookups on hostile
+  keys, untranslated cancellation, no I/O).
+  No writer/application wiring, no version bump. 49 boundary tests; ruff,
+  basedpyright, complexity, size, and freshness gates clean.
 - **Direct Python settings source support** (2026-10-12) — `PyskindoseSettings` /
   `initialize_settings` assemble `equipment_profiles` blocks (keyword-only
   `settings_base_dir`); shared strict-JSON extraction; CLI composes flags+config

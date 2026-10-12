@@ -204,7 +204,7 @@ def _require_mapping(value: Any) -> dict[str, Any]:
 
 def _require_keys(mapping: dict[str, Any], allowed: frozenset[str]) -> None:
     """Require exactly the allowlisted keys — unknown or missing fails."""
-    if set(mapping) != allowed:
+    if len(mapping) != len(allowed) or any(type(key) is not str for key in mapping) or set(mapping) != allowed:
         raise _invalid()
 
 

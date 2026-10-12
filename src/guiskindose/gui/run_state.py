@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
+from guiskindose.gui.run_state_errors import RunStateError
 from guiskindose.gui.run_state_kerma import (
     apply_exam_kerma,
     apply_legacy_k_tab,
@@ -288,20 +289,6 @@ def serialize_run_state(
         for key, value in passthrough.items():
             document.setdefault(key, value)
     return document
-
-
-class RunStateError(ValueError):
-    """Raised when a run-state document cannot be applied.
-
-    Carries a stable machine-readable `code` so callers can map failures to
-    fixed user-facing messages without exposing document text (privacy).
-    Every raise site passes an explicit code; structural problems use
-    "malformed_document" via `_malformed()`.
-    """
-
-    def __init__(self, message: str, code: str = "malformed_document") -> None:
-        super().__init__(message)
-        self.code = code
 
 
 def _malformed(message: str) -> RunStateError:
@@ -729,8 +716,8 @@ def _trial_apply_settings(settings: dict, profiles: Any, app_state: AppState) ->
         trial.normalization_profiles = profiles
     try:
         build_settings(trial)
-    except Exception as exc:
-        raise RunStateError(f"imported settings failed validation: {exc}", code="invalid_settings") from exc
+    except Exception:
+        raise RunStateError("Imported settings failed validation.", code="invalid_settings") from None
 
 
 def apply_run_state(document: dict, app_state: AppState) -> ApplyResult:

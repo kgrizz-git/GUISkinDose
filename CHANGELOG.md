@@ -19,6 +19,10 @@ That keeps SemVer and contributor history organized.
 
 ## [Unreleased]
 
+- Experimental equipment captures reject non-string envelope modes and
+  non-string object keys before comparisons, with value-free errors.
+
+
 ### Changed
 
 - Custom negative table-angle and third positioner-angle direction signs now preserve the zero-angle

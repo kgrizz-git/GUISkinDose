@@ -534,7 +534,7 @@ def parse_envelope(document: Any) -> tuple[CapturedCoordinates | None, ...]:
         raise _unsupported()
     if envelope["schema_version"] != CAPTURE_ENVELOPE_SCHEMA_VERSION:
         raise _unsupported()
-    if envelope["mode"] != CAPTURE_MODE_COORDINATES:
+    if type(envelope["mode"]) is not str or envelope["mode"] != CAPTURE_MODE_COORDINATES:
         raise _invalid()
     raw_captures = envelope["captures"]
     if type(raw_captures) is not list or len(raw_captures) > CAPTURE_MAX_CAPTURES:

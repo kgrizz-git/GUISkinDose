@@ -3,6 +3,22 @@
 Implementation history for the active [execution plan](CUSTOM_EQUIPMENT_PROFILES_EXECUTION.md).
 Scientific requirements and phase acceptance gates remain in that plan and its linked contracts.
 
+- 2026-10-12 — **Run-state equipment-envelope boundary (foundation, inert).**
+  `RunStateError` moved unchanged to `gui/run_state_errors.py` (`gui/run_state`
+  re-exports; identity/codes/messages intact); new `gui/run_state_equipment.py`
+  decodes optional sections to per-exam contexts (`None` = unspecified) and
+  emits canonical envelopes over the existing core codec/producer, translating
+  the three capture codes to fixed value-free `RunStateError`s with opaque exam
+  positions. Diagnostics are bounded and root-gated: count rejects before any
+  entry decodes, the core budget guard pre-empts localization on oversized
+  documents, positions name only fully root-gated aligned envelopes, no key
+  lookup ever touches hostile keys, and translated codes must be exact builtin
+  `str`. Cancellation passes through untranslated; no I/O on either path.
+  No writer/application/rollback wiring; §10 items 1–3 still open.
+  49 boundary tests (incl. zero-traversal spies, hostile-key, deep/broad,
+  cancellation, no-I/O, GUI-light probes); existing run-state validation +
+  GUI round-trip suites green.
+
 - 2026-10-12 — **Direct Python settings source-block support.** `PyskindoseSettings`
   and `initialize_settings` accept `equipment_profiles` blocks (plus keyword-only
   `settings_base_dir`); block+session conflicts refuse closed pre-I/O, invalid blocks

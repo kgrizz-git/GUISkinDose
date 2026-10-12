@@ -213,7 +213,14 @@ any mutation or export.
    single/multi analysis, DICOM/tabular replay, single/multi-file public APIs) —
    **delivered**; open remainder: run-state v2 emission/application round-trip with
    rollback fixtures. Owner: Phase 2 at its boundary (see also item 1). Neither the
-   phase nor items 1–5 are claimed complete by this lock.
+   phase nor items 1–5 are claimed complete by this lock. The inert parse/emit
+   boundary plus `RunStateError` translation (`gui/run_state_equipment.py`,
+   `gui/run_state_errors.py`, 2026-10-12) is delivered as foundation only: no
+   writer, application, or rollback rides on it yet, and it exposes no partial
+   v2 support — the user atomic-migration contract stays whole for the
+   implementing slice. Its diagnostics are bounded and root-gated
+   (count-before-decode, budget-first localization, exact-str code gate), so
+   oversized or hostile documents cannot trigger unbounded second traversals.
 7. Replacing the `run_state.py:155-178` maker/model gate with §4 default-safe
    emission. Owner: the v2 implementing slice.
 
