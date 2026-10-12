@@ -3,6 +3,15 @@
 Implementation history for the active [execution plan](CUSTOM_EQUIPMENT_PROFILES_EXECUTION.md).
 Scientific requirements and phase acceptance gates remain in that plan and its linked contracts.
 
+- 2026-10-11 — **Generic shutter columns for tabular ASD (no wiring).** `generic_rdsr_like`
+  maps four optional canonical shutter edges (`Left/Right/Top/BottomShutter_mm`, self-match
+  spellings only) with numeric coercion, enabling `field_size_mode: "ASD"` on raw tabular
+  input; absent or non-numeric edges fail closed under ASD via existing required-concept
+  enforcement, CFA paths are unchanged. Proven by Philips-DICOM-derived fixtures with
+  numeric geometry parity to the DICOM run (dual-material filtration stays DICOM-only, so dose
+  parity is asserted within the tabular chain). 8 tests. No Radimetrics/DoseTrack guessing,
+  no metadata expansion, no raw columns in normalized output; calibration, profile hashes,
+  and auto-election unchanged.
 - 2026-10-11 — **Tabular replay review fixes (same chunk).** Live import-options receipts
   are rebound to the final post-options frame in production (single preparation shared by
   dispatch and confirmation); the normalizer hook keeps receipt rejection with the pipeline

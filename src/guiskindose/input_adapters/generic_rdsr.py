@@ -45,6 +45,10 @@ GENERIC_RDSR_COLUMN_NAMES: frozenset[str] = frozenset(
         "kvp_kv",
         "doserp_gy",
         "collimatedfieldarea_m2",
+        "leftshutter_mm",
+        "rightshutter_mm",
+        "topshutter_mm",
+        "bottomshutter_mm",
     }
 )
 
@@ -141,6 +145,14 @@ GENERIC_RDSR_PATTERNS: dict[str, list[str]] = {
         "collimated field area",
         "field area",
     ],
+    # Optional collimator shutter edges in mm, exactly as rdsr_parser() spells
+    # them. Self-match only: no unit inference, no vendor-position aliases.
+    # Present values enable field_size_mode "ASD"; absent or blank edges stay
+    # missing and mode-dependent required-concept enforcement decides.
+    "LeftShutter_mm": ["leftshutter mm"],
+    "RightShutter_mm": ["rightshutter mm"],
+    "TopShutter_mm": ["topshutter mm"],
+    "BottomShutter_mm": ["bottomshutter mm"],
     "DoseAreaProduct_Gym2": [
         "doseareaproduct gym2",
         "dose area product gy",
@@ -187,6 +199,10 @@ _NUMERIC_COLUMNS: frozenset[str] = frozenset(
         "DoseRP_Gy",
         "CollimatedFieldArea_m2",
         "DoseAreaProduct_Gym2",
+        "LeftShutter_mm",
+        "RightShutter_mm",
+        "TopShutter_mm",
+        "BottomShutter_mm",
     }
 )
 

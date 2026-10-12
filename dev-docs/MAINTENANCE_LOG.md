@@ -12,6 +12,11 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ### Changed
 
+- **Generic shutter columns for tabular ASD** (2026-10-11) — `generic_rdsr_like` maps four
+  optional canonical shutter edges with numeric coercion; missing/invalid edges fail closed
+  under ASD, CFA paths unchanged. 8 tests; gates clean. No Radimetrics/DoseTrack guessing,
+  metadata expansion, normalized-output changes, calibration/profile changes, or auto-election
+  changes.
 - **Captured tabular replay parent review** (2026-10-11) — existing live receipts are
   validated before coordinate import options and rebound only afterward; corrupt original
   geometry hashes fail before transformation. Captured load/header errors use closed codes

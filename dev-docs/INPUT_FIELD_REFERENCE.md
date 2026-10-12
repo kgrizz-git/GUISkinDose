@@ -109,6 +109,12 @@ Minimum set the `generic_rdsr_like` adapter insists on before calling `rdsr_norm
 `XRayFilterMaterial`, `XRayFilterThicknessMinimum_mm`, `XRayFilterThicknessMaximum_mm`,
 `PositionerPrimaryAngle_deg`, `PositionerSecondaryAngle_deg`, `KVP_kV`, `DoseRP_Gy`.
 
+Optional collimator shutters (millimetres, exact parser spellings) enable
+`field_size_mode: "ASD"` on raw tabular input. These columns are optional for
+CFA and required for ASD; absent or blank edges fail closed under ASD: `LeftShutter_mm`,
+`RightShutter_mm`, `TopShutter_mm`, `BottomShutter_mm` (see
+`generic_rdsr.py` patterns).
+
 Vendor adapters accept many header aliases; use `--input-preview-only` or the GUI import
 preview to see the resolved map and any missing required columns for a given file.
 

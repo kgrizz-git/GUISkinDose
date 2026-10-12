@@ -59,6 +59,13 @@ That keeps SemVer and contributor history organized.
   `CaptureError` codes that survive adapter wrapping. No main-flow, run-state, GUI, CLI, rich
   reports, version bumps, settings-bound fields, or transmission in this slice.
 
+- **Optional shutter columns for generic tabular ASD** (2026-10-11) — the `generic_rdsr_like`
+  adapter maps the four canonical collimator-shutter edges (`LeftShutter_mm`,
+  `RightShutter_mm`, `TopShutter_mm`, `BottomShutter_mm`, millimetres) with numeric coercion,
+  so `field_size_mode: "ASD"` custom profiles work on raw tabular input. The columns stay
+  optional everywhere: absent or non-numeric edges fail closed only under ASD, and CFA inputs
+  never need them.
+
 - **Custom equipment profiles in Python API results (experimental)** (2026-10-11) — binding a frozen
   equipment-profile session on settings (`equipment_profile_session=`) applies matching custom
   coordinates during raw input normalization, with per-exam match records, inheritance notices, and
