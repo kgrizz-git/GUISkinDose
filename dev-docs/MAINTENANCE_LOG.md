@@ -12,6 +12,13 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ### Changed
 
+- **CLI coordinate profile file inputs** (2026-10-12) — new `cli_equipment_profiles`
+  helper (`--equipment-profile` repeat + `--equipment-profile-sheet`); `prepare_cli_settings`
+  moved verbatim to `cli_settings` with session binding (`main.py` at 748 lines, public
+  re-export unchanged). Review fixes: canonical named-sheet seam (single snapshot,
+  preflight before open), strict request bounds, pre-bound refusal with staged caller
+  homes. 17 CLI tests + 12 sheet tests; ruff, basedpyright, complexity, size,
+  and freshness gates clean. Packaged README stale claims corrected; contract §10 heading/item 4 updated.
 - **Captured multi-file input through the public API** (2026-10-12) — new
   `equipment_captured_multi` helper behind `analyze_multiple_input_files(...,
   equipment_capture_contexts=)`; single-file raw loading refactored into the shared

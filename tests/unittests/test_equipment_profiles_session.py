@@ -389,7 +389,7 @@ def test_missing_file_is_value_free(tmp_path: Path) -> None:
         ("not-a-request", ProfileErrorCode.INVALID_TYPE),
         (FileSource(path=123), ProfileErrorCode.INVALID_TYPE),  # type: ignore[arg-type]
         (FileSource(path="a.json", format="bogus"), ProfileErrorCode.INVALID_ENUM),
-        (FileSource(path="a.json", sheet="1"), ProfileErrorCode.VALUE_OUT_OF_RANGE),  # type: ignore[arg-type]
+        (FileSource(path="a.json", sheet="1"), ProfileErrorCode.INVALID_TYPE),
         (FileSource(path="a.json", sheet=-1), ProfileErrorCode.VALUE_OUT_OF_RANGE),
         (FileSource(path="a.csv", sheet=0), ProfileErrorCode.INVALID_TYPE),
     ],

@@ -222,7 +222,8 @@ guiskindose --file-path study.dcm --export-format xlsx --export-path report.xlsx
 Notable flags: `--input-schema` (default `auto` for tabular files), `--input-preview-only`,
 `--export-format {xlsx,pdf,html,docx}`, `--export-path`, `--include-source-identifiers` (opt-in;
 may include PHI-bearing source filenames in reports), `--kerma-meter-correction` and related
-kerma-meter options.
+kerma-meter options, `--equipment-profile` (repeatable custom-profile file) and
+`--equipment-profile-sheet` (XLSX sheet name or 0-based index).
 
 ### Scripted example
 
@@ -261,8 +262,18 @@ print(output["equipment_profile_match"]["notice"]["text"])
 ```
 
 Pre-transformed inputs (`normalized` tables, preparsed `.json`, bare DataFrames) refuse a
-nonempty session instead of silently skipping it. GUI management, CLI flags, and rich-report
+nonempty session instead of silently skipping it. GUI management and rich-report
 integration are not part of this slice.
+
+```bash
+guiskindose --file-path study.dcm --equipment-profile my_profile.json
+```
+
+Repeat `--equipment-profile` for several files (JSON, CSV, TSV, XLSX; relative paths
+resolve against the working directory); `--equipment-profile-sheet` selects the XLSX
+sheet by name or 0-based index. Assembly failures exit non-zero with a value-free error
+before any exam input is read. Coordinate-only profiles apply; transmission content,
+wildcards without promotion, and alias maps are rejected by the initial gate.
 
 A validated capture (`CapturedCoordinates`, produced from a prior run) replays one raw input
 file offline through `analyze_input_file(..., equipment_capture_context=...)`

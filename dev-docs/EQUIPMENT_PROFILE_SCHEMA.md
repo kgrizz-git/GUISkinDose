@@ -291,11 +291,16 @@ only JSON, CSV, or TSV never imports the spreadsheet stack. The workbook is open
 | Workbooks | Selection |
 |---|---|
 | exactly 1 | sheet `0` is the default; an explicit `sheet=0` is also accepted |
-| 2 or more | `sheet=None` selects the first worksheet; an explicit index selects another |
-| out of range, negative, or non-integer | `unknown_sheet` |
+| 2 or more | `sheet=None` selects the first worksheet; an explicit index or exact title selects another |
+| out of range, negative, non-integer, unknown or ambiguous title | `unknown_sheet` |
 
-More than 16 worksheets is `sheet_limit_exceeded`. Sheet **names are never used for selection, are never
-retained, and never appear in an error** — only the resolved zero-based index does.
+More than 16 worksheets is `sheet_limit_exceeded`: standard worksheet-part
+counts are bounded before the reader opens, and the actual reader catalog is bounded
+before title traversal or worksheet row iteration. Sheet **titles resolve against the opened
+workbook's own catalog on the same bounded bytes used for hashing and parsing**
+— exact match only; a title held by more than one worksheet fails closed as
+ambiguous. Titles are transient and never retained: only the resolved zero-based
+index flows on, and no title ever appears in an error.
 
 **Typed cell policy.**
 

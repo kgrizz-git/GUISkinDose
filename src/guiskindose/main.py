@@ -13,14 +13,13 @@ import pandas as pd
 
 from guiskindose.analyze_data import analyze_data, analyze_multiple_exams
 from guiskindose.cli_args import get_argument_parser as _cli_args_get_argument_parser
-from guiskindose.cli_kerma_meter import apply_kerma_meter_cli_flags
+from guiskindose.cli_settings import prepare_cli_settings as prepare_cli_settings
 from guiskindose.constants import (
     RUN_ARGUMENTS_OUTPUT_DICT,
     RUN_ARGUMENTS_OUTPUT_HTML,
     RUN_ARGUMENTS_OUTPUT_JSON,
 )
 from guiskindose.debug import dprint
-from guiskindose.dev_data import DEVELOPMENT_PARAMETERS
 from guiskindose.equipment_profiles.capture import CapturedCoordinates
 from guiskindose.format_export_data import MultiExamResult, PySkinDoseOutput
 from guiskindose.helpers.parse_settings_to_settings_class import (
@@ -35,7 +34,7 @@ from guiskindose.input_adapters.import_options import (
     reject_import_options_for_non_tabular,
     reject_non_tabular_paths,
 )
-from guiskindose.privacy import opaque_exam_label, safe_user_error, safe_warning
+from guiskindose.privacy import opaque_exam_label, safe_warning
 from guiskindose.settings import PyskindoseSettings
 
 if TYPE_CHECKING:
@@ -740,55 +739,6 @@ def print_cli_result(result: Any, *, aggregate_only: bool = False) -> None:
     if hasattr(result, "to_dict"):
         result = result.to_dict()
     print(result if isinstance(result, str) else _json.dumps(result))
-
-
-def prepare_cli_settings(args: "argparse.Namespace") -> PyskindoseSettings:
-    """Build the run settings for a headless CLI invocation, shared by both entry points.
-
-    ``--settings`` may be a path to a JSON file or a JSON string (a path is read,
-    never echoed). With no ``--settings`` the development parameters are used. The
-    kerma-meter flags (including ``--kerma-meter-calibration-date``) and
-    ``--plane-code-map`` are then applied onto the concrete settings object.
-
-    Parameters
-    ----------
-    args : argparse.Namespace
-        Parsed CLI arguments.
-
-    Returns
-    -------
-    PyskindoseSettings
-        Settings ready for ``main()`` / the analyze helpers.
-
-    Raises
-    ------
-    SystemExit
-        If ``--settings`` names a file that does not exist. The message never
-        contains the path.
-    """
-    raw = args.settings
-    if raw is None:
-        logger.warning("No settings specified. Running with development parameters")
-        raw = DEVELOPMENT_PARAMETERS
-    elif isinstance(raw, Path) or (isinstance(raw, str) and not raw.lstrip().startswith("{")):
-        # A path (or a string that is not a JSON object): read it, or fail cleanly.
-        try:
-            is_file = Path(raw).is_file()
-        except OSError:
-            is_file = False
-        if not is_file:
-            raise SystemExit(safe_user_error("settings_file_not_found"))
-        raw = Path(raw).read_text(encoding="utf-8")
-    settings = parse_settings_to_settings_class(settings=raw)
-    if getattr(args, "output_format", None):
-        settings.output_format = args.output_format
-    apply_kerma_meter_cli_flags(settings, args)
-    plane_code_map_raw = getattr(args, "plane_code_map", None)
-    if plane_code_map_raw is not None:
-        from guiskindose.input_adapters.plane_code_map import parse_plane_code_map
-
-        settings.dosetrack_plane_code_map = parse_plane_code_map(plane_code_map_raw)
-    return settings
 
 
 if __name__ == "__main__":

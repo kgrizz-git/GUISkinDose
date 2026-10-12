@@ -193,13 +193,15 @@ value enters a capture until Phase 4 locks and implements those shapes. Unknown 
 unsupported capture mode/capability is rejected during candidate validation before
 any mutation or export.
 
-## 10. Exact incomplete implementation (not started)
+## 10. Exact partial implementation (delivered stack vs still-open)
 
 1. Run-state v2 `equipment` emission (`serialize_run_state`) and application
    (`apply_run_state` + trial-build coverage). Owner: Phase 2.
 2. Rich-report v4 per-exam equipment block (collector + writer rows). Owner: Phase 5.
 3. GUI pre-calculation / Calculate / Results equipment surfaces. Owner: Phase 2/3.
-4. CLI session-source syntax and wildcard-promotion flag. Owner: Phase 2.
+4. CLI wildcard-promotion flag. Owner: Phase 2. (CLI file-source syntax —
+   repeatable `--equipment-profile` plus `--equipment-profile-sheet` — delivered
+   2026-10-12; the promotion flag itself stays open.)
 5. Old run-profile compatibility reader beyond today's `normalization_settings`
    handling. Owner: Phase 2 (single owner, nowhere else).
 6. Typed captured authority, versioned geometry/capture checksums, strict validators,
@@ -211,4 +213,6 @@ any mutation or export.
 7. Replacing the `run_state.py:155-178` maker/model gate with §4 default-safe
    emission. Owner: the v2 implementing slice.
 
-None of the above is marked complete by this lock.
+Items 1–5 and 7 are still open, and no phase is marked complete by this lock;
+item 6 records the delivered capture stack against its still-open run-state
+remainder.

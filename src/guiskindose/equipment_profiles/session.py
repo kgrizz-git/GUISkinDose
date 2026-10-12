@@ -90,14 +90,16 @@ class FileSource:
 
     ``format`` optionally pins the adapter (``json``/``csv``/``tsv``/``xlsx``);
     without it the file suffix routes. ``sheet`` is the zero-based XLSX sheet
-    index (``None`` reads the first sheet) and is rejected on other formats.
+    index or the exact sheet title (``None`` reads the first sheet); titles
+    resolve inside the guarded adapter against the opened workbook's own
+    catalog and are never retained. ``sheet`` is rejected on other formats.
     The path never appears in errors, provenance, or reprs; the repr shows
     validated values only, so unvalidated sentinels render as ``None``.
     """
 
     path: str | os.PathLike[str]
     format: str | None = None
-    sheet: int | None = None
+    sheet: int | str | None = None
 
     def __repr__(self) -> str:
         source_format = self.format if type(self.format) is str and self.format in _FILE_FORMATS else None
@@ -288,7 +290,9 @@ def _check_file_request(request: Any) -> FileSource:
     if not isinstance(request, FileSource):
         raise EquipmentProfileError(ProfileErrorCode.INVALID_TYPE, source_kind="memory", field_path=("files",))
     _coerce_path_text(request.path)
-    if request.sheet is not None and (type(request.sheet) is not int or request.sheet < 0):
+    if request.sheet is not None and not (
+        (type(request.sheet) is int and request.sheet >= 0) or type(request.sheet) is str
+    ):
         raise EquipmentProfileError(
             ProfileErrorCode.VALUE_OUT_OF_RANGE, source_kind="memory", field_path=("sheet",)
         )
@@ -306,7 +310,7 @@ def _resolve_request_path(raw: str, base: Path | None) -> Path:
     return base / candidate
 
 
-def _parse_file_source(resolved: Path, source_format: str, sheet: int | None) -> ParsedDocument:
+def _parse_file_source(resolved: Path, source_format: str, sheet: int | str | None) -> ParsedDocument:
     """Parse one resolved file with its adapter; the path never enters an error."""
     if source_format == SOURCE_KIND_JSON:
         return parse_json_file(str(resolved))

@@ -3,6 +3,41 @@
 Implementation history for the active [execution plan](CUSTOM_EQUIPMENT_PROFILES_EXECUTION.md).
 Scientific requirements and phase acceptance gates remain in that plan and its linked contracts.
 
+- 2026-10-12 — **CLI profile-file parent review hardening.** Numeric sheet selectors
+  beyond the 16-sheet ceiling fail before profile reads, including arbitrarily long
+  numeric arguments; non-numeric names retain exact whitespace. The canonical reader
+  checks its actual catalog count before traversing titles, and direct selection rejects
+  bool/subclass coercion. Regression tests cover private early refusals and exact-title
+  selection. No store selection/settings-JSON/GUI or transmission activation added.
+
+- 2026-10-12 — **CLI coordinate profile file review fixes (same chunk).** Named
+  sheet selection moved into the canonical XLSX/session seam (`FileSource.sheet`
+  takes an exact title or 0-based index; resolution runs inside the guarded
+  adapter against the opened catalog on the same bounded bytes — one file read,
+  preflight before open, duplicates fail closed, names never retained); exact
+  builtin list/tuple paths with declared/bounded ≤64 checks before any copy or
+  I/O, strict `os.fspath` entries, single-try CLI error conversion; pre-bound
+  sessions refused before mutations/I/O with caller-owned homes staged on an
+  isolated copy; strict digit-only indexes with pre-IO negative refusal. 17 CLI
+  tests plus 12 sheet tests (9 canonical seam, 3 CLI sheet selection); schema §6B updated.
+
+- 2026-10-12 — **CLI coordinate profile file inputs (experimental).** Repeatable
+  `--equipment-profile PATH` plus optional global `--equipment-profile-sheet` (name or
+  0-based index; refused with no applicable XLSX file) in `cli_args`; new
+  `cli_equipment_profiles` helper assembles one candidate via canonical `FileSource`
+  (JSON/CSV/TSV/XLSX, CWD-relative, ≤64 requests before profile I/O) and binds it in
+  `prepare_cli_settings` before any exam read — never replacing a bound session, never
+  partially mutating on failure. `EquipmentProfileError` converts at the boundary to
+  fixed value-free `UserFacingInputError` (code/source-kind/row/count only); refused in
+  `--mode gui` before UI launch or profile reads. `prepare_cli_settings` moved verbatim
+  to `cli_settings` (`main.py` 748 lines, re-export keeps the public surface). 17 CLI tests
+  (DICOM full/partial and tabular CFA/ASD parity vs Python sessions, repeats with
+  order-independent hashes, four-format parity, closed failures with zero exam reads
+  and private stderr, strict shapes/bounds, staging, GUI refusal, preview smoke, CWD
+  paths) plus 12 sheet tests (canonical seam + CLI sheet selection).
+  Packaged README stale claims corrected. No wildcard promotion, transmission, store,
+  settings-JSON, GUI, or rich-report scope.
+
 - 2026-10-11 — **Captured multi-file parent review hardening.** File/context counts
   are checked before copying; per-exam baseline snapshots require bounded positional
   list/tuple containers, correct home types, and null capture entries. Baseline clones
