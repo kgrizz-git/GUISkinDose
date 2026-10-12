@@ -33,6 +33,14 @@ That keeps SemVer and contributor history organized.
   a capture with a bound session or receipt fails closed. Multi-exam, run-state, GUI, CLI, and
   rich-report integration are not part of this slice.
 
+- **Direct capture analysis in multi-exam runs (experimental)** (2026-10-11) —
+  `analyze_multiple_exams()` accepts positional `equipment_capture_contexts=` (one validated
+  capture or `None` per exam): live sessions and receipts are rejected up front, every provided
+  capture is validated against its own frame with isolated settings before any exam produces
+  output, per-exam offsets and warning downgrades apply on top of each prepared candidate, and
+  each `ExamResult` carries its stored match mapping. No raw replay, run-state, GUI, CLI, rich
+  reports, version bumps, or settings-bound capture fields in this slice.
+
 - **Custom equipment profiles in Python API results (experimental)** (2026-10-11) — binding a frozen
   equipment-profile session on settings (`equipment_profile_session=`) applies matching custom
   coordinates during raw input normalization, with per-exam match records, inheritance notices, and

@@ -213,7 +213,8 @@ def test_inflated_declared_dimension_cannot_materialize_huge_padding() -> None:
 
 
 def test_untampered_workbook_matches_csv_and_json_canonically() -> None:
-    document = parse_xlsx_bytes(_packaged_workbook_bytes())
+    workbook_bytes = _packaged_workbook_bytes()
+    document = parse_xlsx_bytes(workbook_bytes)
     from_csv = parse_csv_bytes(_CSV_PATH.read_bytes())
     from_json = parse_json_bytes(_JSON_PATH.read_bytes())
 
@@ -223,7 +224,7 @@ def test_untampered_workbook_matches_csv_and_json_canonically() -> None:
         assert profile_hash(left) == profile_hash(right)
     assert active_set_hash(from_json.profiles) == active_set_hash(document.profiles)
     assert active_set_hash(from_csv.profiles) == active_set_hash(document.profiles)
-    assert document.source_hash == source_bytes_hash(_packaged_workbook_bytes())
+    assert document.source_hash == source_bytes_hash(workbook_bytes)
 
 
 # ---------------------------------------------------------------------------

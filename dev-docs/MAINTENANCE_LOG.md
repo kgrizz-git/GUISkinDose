@@ -12,6 +12,20 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ### Changed
 
+- **Capture multi-exam parent review** (2026-10-11) — added the shared patient-offset
+  regression, isolated exception-test setup, and consumed preflight offsets during calculation.
+  The XLSX source-hash test now hashes the exact workbook byte snapshot it parses, avoiding
+  differences between independently generated ZIP timestamps. No scanner or gate changes.
+
+- **Direct capture analysis, multi-exam** (2026-10-11) — `analyze_multiple_exams()` gains
+  keyword-only `equipment_capture_contexts=`: positional capture-or-null entries with shape,
+  alignment, count, and aggregate-event bounds; upfront session/receipt rejection and
+  per-exam prepare/confirm with isolated settings before any production; per-exam offsets and
+  warning downgrades on top of prepared candidates; stored matches into `ExamResult`. Review
+  fixes: final-work preflight with patient-offset isolation, constructor-validator event
+  totals, shared limit constants, honest list/tuple annotation. 24 tests; ruff, basedpyright,
+  complexity, size, and freshness gates clean. No raw replay,
+  run-state, GUI/CLI, rich export, version bumps, or settings-bound fields.
 - **Direct capture analysis, single-exam** (2026-10-11) — `analyze_data()` gains keyword-only
   `equipment_capture_context=`: with a validated capture it rejects live sessions/receipts,
   clones caller settings privately, prepares/confirms via the existing confirmation boundary

@@ -167,7 +167,7 @@ status/source displays remain unlocked until Phase 4.
 | Surface | Shape | State |
 |---|---|---|
 | Pre-calculation / Calculate / Results (GUI) | Effective leaves, inherited sources, notices, active/unused profiles per exam, before calculation | **OPEN** (Phase 2/3) |
-| Python API results | `equipment_profile_match` mapping on dict/JSON (`analyze_data` → `receipt_to_mapping`); single-exam direct-capture analysis via `equipment_capture_context=` (clone, prepare, confirm, stored mapping; multi-exam still open) | Implemented (7b8530e; direct-capture slice 2026-10-11) |
+| Python API results | `equipment_profile_match` mapping on dict/JSON (`analyze_data` → `receipt_to_mapping`); single-exam direct-capture analysis via `equipment_capture_context=` and multi-exam via positional `equipment_capture_contexts=` (clone, prepare, confirm, stored mapping; run-state/GUI still open) | Implemented (7b8530e; direct-capture slices 2026-10-11) |
 | Rich report (`ExportPayload` v4) | Per-exam equipment block: validated match, effective recipe, count and versioned geometry checksum; maker/model default-visible; provenance joins Settings & equipment | **OPEN** (Phase 5) |
 | Run state v2 | §3 capture | **OPEN** (Phase 2) |
 

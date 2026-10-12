@@ -48,13 +48,19 @@ from guiskindose.equipment_profiles.capture import (
     CaptureError,
     validate_constructed_context,
 )
-from guiskindose.equipment_profiles.constants import MAX_AGGREGATE_ROWS, MAX_SHORT_TEXT
+from guiskindose.equipment_profiles.constants import MAX_AGGREGATE_ROWS, MAX_PROFILES, MAX_SHORT_TEXT
 from guiskindose.equipment_profiles.keys import (
     normalize_manufacturer_key,
     normalize_model_key,
 )
 from guiskindose.exam_identity import canonical_identity_pairs
+from guiskindose.input_adapters.models import InputAdapterResult
+from guiskindose.privacy import opaque_exam_label
 from guiskindose.settings.normalization_settings import NormalizationSettings
+from guiskindose.settings.pyskindose_settings import PyskindoseSettings
+
+_CAPTURE_SETTINGS_ERROR = "Equipment capture cannot be applied to these settings."
+
 
 __all__ = [
     "CapturedApplicationReceipt",
@@ -64,6 +70,236 @@ __all__ = [
 
 _SIGN_TO_INT = {"+": 1, "-": -1}
 _MATCHED_SOURCES = ("custom", "bundled")
+
+
+def _check_work_isolated(work_settings: Any, settings: Any) -> None:
+    """Require the working copy isolated from caller-owned mutable state.
+
+    Covers the root home plus every mutable subhome the calculation path can
+    touch: normalization settings, the three coordinate vectors, the phantom,
+    its dimensions (rewritten by plot-mode geometry previews), and the patient
+    offset (rewritten per exam). A self-returning ``__deepcopy__`` (or
+    shared-child hooks) that rebinds the working copy to caller handles would
+    let later assignment mutate the caller, so rejection happens before any
+    setter runs. Ordinary subclasses that copy cleanly pass unchanged. This
+    verifies handle isolation at handoff; it cannot restrain a hostile hook
+    that mutates caller state during its own copy execution.
+    """
+    if not isinstance(work_settings, PyskindoseSettings):
+        raise CaptureError(
+            _CAPTURE_SETTINGS_ERROR,
+            CODE_INVALID_EQUIPMENT_CAPTURE,
+        )
+    try:
+        shared = (
+            work_settings is settings
+            or work_settings.normalization_settings is settings.normalization_settings
+            or work_settings.normalization_settings.trans_offset
+            is settings.normalization_settings.trans_offset
+            or work_settings.normalization_settings.trans_dir
+            is settings.normalization_settings.trans_dir
+            or work_settings.normalization_settings.rot_dir
+            is settings.normalization_settings.rot_dir
+            or work_settings.phantom is settings.phantom
+            or work_settings.phantom.dimension is settings.phantom.dimension
+            or work_settings.phantom.patient_offset is settings.phantom.patient_offset
+        )
+    except AttributeError:
+        raise CaptureError(
+            _CAPTURE_SETTINGS_ERROR,
+            CODE_INVALID_EQUIPMENT_CAPTURE,
+        ) from None
+    if shared:
+        raise CaptureError(
+            _CAPTURE_SETTINGS_ERROR,
+            CODE_INVALID_EQUIPMENT_CAPTURE,
+        )
+
+
+def _validate_capture_contexts(
+    exams: list[InputAdapterResult],
+    contexts: Any,
+) -> list[Any]:
+    """Validate the capture-context argument shape before any calculation.
+
+    Requires an exact builtin list or tuple with exactly one entry per exam
+    (``None`` entries stay baseline), at most ``MAX_PROFILES`` entries, and at
+    most ``MAX_AGGREGATE_ROWS`` aggregate retained events across the provided
+    captures. Strings, mappings, generators, and other shapes fail closed, as
+    do unsupported entry types. Exact builtin containers exclude custom
+    iteration and length hooks; counts are also rechecked after copying.
+    """
+    if type(contexts) not in (list, tuple):
+        raise CaptureError(
+            "Equipment capture contexts must be a list or tuple aligned with the exams.",
+            CODE_INVALID_EQUIPMENT_CAPTURE,
+        )
+    if len(contexts) != len(exams):
+        raise CaptureError(
+            "Equipment capture contexts must align positionally with the exams.",
+            CODE_INVALID_EQUIPMENT_CAPTURE,
+        )
+    if len(contexts) > MAX_PROFILES:
+        raise CaptureError(
+            "Too many equipment capture contexts for one multi-exam run.",
+            CODE_INVALID_EQUIPMENT_CAPTURE,
+        )
+    materialized: list[Any] = []
+    for entry in contexts:
+        if len(materialized) >= MAX_PROFILES:
+            raise CaptureError(
+                "Too many equipment capture contexts for one multi-exam run.",
+                CODE_INVALID_EQUIPMENT_CAPTURE,
+            )
+        if entry is not None and type(entry) is not CapturedCoordinates:
+            raise CaptureError(
+                "Equipment capture contexts must be CapturedCoordinates or None entries.",
+                CODE_INVALID_EQUIPMENT_CAPTURE,
+            )
+        materialized.append(entry)
+    if len(materialized) != len(exams):
+        raise CaptureError(
+            "Equipment capture contexts must align positionally with the exams.",
+            CODE_INVALID_EQUIPMENT_CAPTURE,
+        )
+    _check_capture_event_total(materialized)
+    return materialized
+
+
+def _check_capture_event_total(materialized: list[Any]) -> None:
+    """Bound aggregate retained events across the provided captures.
+
+    Every entry is revalidated through the public constructor validator
+    first, so constructor-bypassed shapes (forged counts, corrupt nesting)
+    fail closed here instead of leaking raw errors from the sum.
+    """
+    total_events = 0
+    for entry in materialized:
+        if entry is not None:
+            validate_constructed_context(entry)
+            total_events += entry.event_count
+            if total_events > MAX_AGGREGATE_ROWS:
+                raise CaptureError(
+                    "Too many captured events for one multi-exam run.",
+                    CODE_INVALID_EQUIPMENT_CAPTURE,
+                )
+
+
+def _prepare_captured_exams(
+    exams: list[InputAdapterResult],
+    contexts: list[Any],
+    settings: PyskindoseSettings,
+    per_exam_offsets: list[list[float]] | None,
+    downgrade_beam_warning: bool,
+) -> list[tuple[PyskindoseSettings, dict[str, Any] | None, list[float]]]:
+    """Validate every provided capture before any exam produces output.
+
+    Rejects any configured live session or per-exam live receipt first, then
+    prebuilds each exam's final work settings — isolated private copy, stored
+    recipe for captured exams, per-exam offsets and warning downgrade — and
+    confirms each non-null capture against its own frame. Returns per-exam
+    final work settings plus the stored match mapping (``None`` for baseline
+    entries) plus the effective offset. A late failure raises before any
+    phantom, plot, dose, or result production, so no partial output escapes.
+    Opaque exam labels only.
+    """
+    if getattr(settings, "equipment_profile_session", None) is not None:
+        raise CaptureError(
+            "Captured equipment contexts cannot be combined with a live session.",
+            CODE_INVALID_EQUIPMENT_CAPTURE,
+        )
+    for index, exam in enumerate(exams):
+        if exam.equipment_receipt is not None:
+            raise CaptureError(
+                f"{opaque_exam_label(index)}: captured equipment contexts cannot be "
+                "combined with a live receipt.",
+                CODE_INVALID_EQUIPMENT_CAPTURE,
+            )
+    global_offset = [
+        float(settings.phantom.patient_offset.d_lon),
+        float(settings.phantom.patient_offset.d_ver),
+        float(settings.phantom.patient_offset.d_lat),
+    ]
+    prepared: list[tuple[PyskindoseSettings, dict[str, Any] | None, list[float]]] = []
+    for index, (exam, context) in enumerate(zip(exams, contexts, strict=True)):
+        raw_offset = (
+            per_exam_offsets[index]
+            if per_exam_offsets and index < len(per_exam_offsets)
+            else global_offset
+        )
+        if (
+            not isinstance(raw_offset, (list, tuple))
+            or len(raw_offset) != 3
+            or not all(
+                isinstance(value, (int, float))
+                and not isinstance(value, bool)
+                and math.isfinite(float(value))
+                for value in raw_offset
+            )
+        ):
+            raise CaptureError(
+                f"{opaque_exam_label(index)}: captured multi-exam offsets must hold "
+                "exactly 3 finite numeric values.",
+                CODE_INVALID_EQUIPMENT_CAPTURE,
+            )
+        effective_offset = [float(value) for value in raw_offset]
+        prepared.append(
+            _prepare_one_captured_exam(exam, context, settings, effective_offset, downgrade_beam_warning)
+        )
+    return prepared
+
+
+def _prepare_one_captured_exam(
+    exam: InputAdapterResult,
+    context: Any,
+    settings: PyskindoseSettings,
+    effective_offset: list[float],
+    downgrade_beam_warning: bool,
+) -> tuple[PyskindoseSettings, dict[str, Any] | None, list[float]]:
+    """Prebuild one exam's final isolated work settings plus stored match.
+
+    Exactly one private copy per exam: isolation (root, normalization,
+    vectors, phantom, dimension, patient offset) is verified before any
+    recipe, offset, or warning lands, so shared-copy hooks cannot funnel
+    caller handles into the calculation. Null entries take the same isolated
+    path without a recipe.
+    """
+    try:
+        work_settings = copy.deepcopy(settings)
+    except Exception:
+        # Untrusted boundary: the caller owns the settings graph.
+        raise CaptureError(
+            _CAPTURE_SETTINGS_ERROR,
+            CODE_INVALID_EQUIPMENT_CAPTURE,
+        ) from None
+    _check_work_isolated(work_settings, settings)
+    if context is None:
+        stored_match = None
+    else:
+        candidate = prepare_captured_candidate(context=context, norm=work_settings.normalization_settings)
+        work_settings.normalization_settings = candidate
+        _, stored_match = confirm_captured_application(
+            context=context, frame=exam.normalized_data, candidate=candidate
+        )
+    _apply_exam_offset(work_settings, effective_offset, downgrade_beam_warning)
+    return work_settings, stored_match, effective_offset
+
+
+def _apply_exam_offset(
+    work_settings: PyskindoseSettings, effective_offset: list[float], downgrade_beam_warning: bool
+) -> None:
+    """Apply one exam's offset and warning downgrade onto isolated work settings."""
+    try:
+        patient_offset = work_settings.phantom.patient_offset
+        patient_offset.d_lon, patient_offset.d_ver, patient_offset.d_lat = effective_offset
+    except AttributeError:
+        raise CaptureError(
+            _CAPTURE_SETTINGS_ERROR,
+            CODE_INVALID_EQUIPMENT_CAPTURE,
+        ) from None
+    if downgrade_beam_warning:
+        work_settings.beam_miss_warn = "summary"
+
 _HEX_64 = re.compile(r"\A[0-9a-f]{64}\Z")
 
 
