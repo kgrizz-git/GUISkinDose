@@ -24,6 +24,7 @@ import pandas as pd
 
 from guiskindose import constants as c
 from guiskindose.analyze_data import analyze_data
+from guiskindose.equipment_confirmation import check_captured_work_isolated
 from guiskindose.equipment_profiles.capture import (
     CODE_INVALID_EQUIPMENT_CAPTURE,
     CapturedCoordinates,
@@ -31,9 +32,16 @@ from guiskindose.equipment_profiles.capture import (
     validate_constructed_context,
 )
 from guiskindose.input_adapters.import_options import TABULAR_SUFFIXES
+from guiskindose.input_adapters.models import InputAdapterResult, InputProvenance
 from guiskindose.settings import PyskindoseSettings
 
-__all__ = ["analyze_captured_input_file", "analyze_captured_main_input", "shielded_settings_for_capture"]
+__all__ = [
+    "analyze_captured_input_file",
+    "analyze_captured_main_input",
+    "load_captured_exam",
+    "reject_captured_options_conflict",
+    "shielded_settings_for_capture",
+]
 
 
 def shielded_settings_for_capture(settings: PyskindoseSettings) -> PyskindoseSettings:
@@ -41,6 +49,9 @@ def shielded_settings_for_capture(settings: PyskindoseSettings) -> PyskindoseSet
 
     Plain dict/str inputs already produce fresh objects at init; only a
     caller-owned settings home needs shielding from output-format assignment.
+    Beyond the root-identity guard, the full established isolation boundary
+    applies: a self-returning ``__deepcopy__`` that shares nested
+    normalization/phantom homes fails closed before any setter runs.
     """
     try:
         work = copy.deepcopy(settings)
@@ -55,6 +66,7 @@ def shielded_settings_for_capture(settings: PyskindoseSettings) -> PyskindoseSet
             "Equipment capture cannot use shared settings.",
             CODE_INVALID_EQUIPMENT_CAPTURE,
         )
+    check_captured_work_isolated(work, settings)
     return work
 
 
@@ -132,60 +144,123 @@ def analyze_captured_input_file(
     same capture. Never collects or passes a live receipt.
     """
     context = _reject_captured_input_conflicts(settings, equipment_capture_context)
+    frame = load_captured_exam(
+        file_path, settings=settings, input_schema=input_schema, sheet_name=sheet_name,
+        import_options=import_options, context=context,
+    ).normalized_data
+    if not isinstance(frame, pd.DataFrame):
+        raise CaptureError(
+            "Equipment capture replay needs a single raw exam frame.",
+            CODE_INVALID_EQUIPMENT_CAPTURE,
+        )
+    return analyze_data(frame, settings, equipment_capture_context=context)
+
+
+def reject_captured_options_conflict(file_path: str | Path | None, import_options: Any | None) -> None:
+    """Refuse set coordinate import options on a non-tabular path in capture mode.
+
+    Same trigger as reject_import_options_for_non_tabular (flags set on a
+    non-tabular path), closed for capture mode before any source read.
+    All-false options stay accepted on every suffix.
+    """
     if (
         import_options is not None
         and import_options.any_set()
         and (file_path is None or Path(file_path).suffix.lower() not in TABULAR_SUFFIXES)
     ):
-        # Same trigger as reject_import_options_for_non_tabular (flags set on
-        # a non-tabular path), closed for capture mode before any source read.
         raise CaptureError(
             "Equipment capture replay needs tabular input for import options.",
             CODE_INVALID_EQUIPMENT_CAPTURE,
         )
+
+
+def _dicom_exam_result(frame: pd.DataFrame, file_path: str | Path | None) -> InputAdapterResult:
+    """Wrap a loaded DICOM frame as a receipt-free exam result.
+
+    Mirrors the legacy multi-file DICOM construction: schema ``"rdsr"``, no
+    warnings, no raw data, no live receipt.
+    """
+    if not isinstance(frame, pd.DataFrame):
+        raise CaptureError(
+            "Equipment capture replay needs a single raw exam frame.",
+            CODE_INVALID_EQUIPMENT_CAPTURE,
+        )
+    provenance = InputProvenance(
+        source_type="" if file_path is None else Path(file_path).suffix.lower().lstrip("."),
+        schema_name="rdsr",
+        original_filename="" if file_path is None else Path(file_path).name,
+        header_row_index=0,
+        detected_encoding="n/a",
+        detected_delimiter=None,
+        sheet_name=None,
+        column_map={},
+        unit_conversions={},
+        warnings=[],
+    )
+    return InputAdapterResult(
+        normalized_data=frame,
+        raw_data=None,
+        provenance=provenance,
+        warnings=[],
+        equipment_receipt=None,
+    )
+
+
+def load_captured_exam(
+    file_path: str | Path | None,
+    *,
+    settings: PyskindoseSettings,
+    input_schema: str | None,
+    sheet_name: str | int,
+    import_options: Any | None,
+    context: CapturedCoordinates | None,
+) -> InputAdapterResult:
+    """Load one raw file in capture mode without calculating.
+
+    A validated capture routes through the capture-aware loaders (confirming
+    recipe, geometry, identity, and count); ``None`` loads the live baseline
+    with any live receipt stripped. Callers validate the capture authority
+    and session conflicts before any load. Multi-study splits refuse closed
+    in capture mode — including null entries, so one file always yields one
+    exam and positional alignment cannot slip. Preparsed JSON refuses before
+    any read; unreadable or malformed sources neutralize to a closed error
+    that never echoes filenames, paths, or library exceptions.
+    """
+    reject_captured_options_conflict(file_path, import_options)
+    if file_path is not None and Path(file_path).suffix.lower() == ".json":
+        raise CaptureError(
+            "Equipment capture replay needs raw input, not preparsed JSON.",
+            CODE_INVALID_EQUIPMENT_CAPTURE,
+        )
     try:
-        if file_path is None:
+        if file_path is None or Path(file_path).suffix.lower() not in TABULAR_SUFFIXES:
             from guiskindose.helpers.read_and_normalize_rdsr_data import (
                 read_and_normalise_rdsr_data,
             )
 
             frame = read_and_normalise_rdsr_data(
-                rdsr_filepath=None,
+                rdsr_filepath=None if file_path is None else str(file_path),
                 settings=settings,
                 equipment_capture_context=context,
             )
-        elif Path(file_path).suffix.lower() in (".csv", ".tsv", ".xlsx", ".xlsm"):
-            from guiskindose.input_adapters.registry import read_and_normalize_input
+            return _dicom_exam_result(frame, file_path)
+        from guiskindose.input_adapters.registry import read_and_normalize_input
 
-            result = read_and_normalize_input(
-                file_path,
-                input_schema=input_schema,
-                sheet_name=sheet_name,
-                settings=settings,
-                import_options=import_options,
-                equipment_capture_context=context,
-            )
-            if isinstance(result, list):
-                raise CaptureError(
-                    "Equipment capture replay needs a single raw exam, not a multi-study split.",
-                    CODE_INVALID_EQUIPMENT_CAPTURE,
-                )
-            frame = result.normalized_data
-        elif Path(file_path).suffix.lower() == ".json":
+        result = read_and_normalize_input(
+            file_path,
+            input_schema=input_schema,
+            sheet_name=sheet_name,
+            settings=settings,
+            import_options=import_options,
+            equipment_capture_context=context,
+        )
+        if isinstance(result, list):
             raise CaptureError(
-                "Equipment capture replay needs raw input, not preparsed JSON.",
+                "Equipment capture replay needs a single raw exam, not a multi-study split.",
                 CODE_INVALID_EQUIPMENT_CAPTURE,
             )
-        else:
-            from guiskindose.helpers.read_and_normalize_rdsr_data import (
-                read_and_normalise_rdsr_data,
-            )
-
-            frame = read_and_normalise_rdsr_data(
-                rdsr_filepath=str(file_path),
-                settings=settings,
-                equipment_capture_context=context,
-            )
+        result.equipment_receipt = None
+        return result
     except CaptureError:
         raise
     except Exception:
@@ -195,9 +270,3 @@ def analyze_captured_input_file(
             "Equipment capture replay failed closed while reading input.",
             CODE_INVALID_EQUIPMENT_CAPTURE,
         ) from None
-    if not isinstance(frame, pd.DataFrame):
-        raise CaptureError(
-            "Equipment capture replay needs a single raw exam frame.",
-            CODE_INVALID_EQUIPMENT_CAPTURE,
-        )
-    return analyze_data(frame, settings, equipment_capture_context=context)

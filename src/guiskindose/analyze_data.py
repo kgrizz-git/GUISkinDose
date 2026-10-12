@@ -11,7 +11,9 @@ from guiskindose import constants as c
 from guiskindose.calculate_dose.calculate_dose import calculate_dose
 from guiskindose.debug import dprint
 from guiskindose.equipment_confirmation import (
+    _check_capture_baseline_request,
     _prepare_captured_exams,
+    _validate_capture_baselines,
     _validate_capture_contexts,
 )
 from guiskindose.equipment_profiles.capture import (
@@ -33,6 +35,7 @@ from guiskindose.plotting.create_dose_map_plot import create_dose_map_plot
 from guiskindose.plotting.create_geometry_plot import create_geometry_plot
 from guiskindose.privacy import exception_class_name, opaque_exam_label, safe_error_event
 from guiskindose.settings import PyskindoseSettings, initialize_settings
+from guiskindose.settings.normalization_settings import NormalizationSettings
 
 logger = logging.getLogger(__name__)
 _CAPTURE_SETTINGS_ERROR = "Equipment capture cannot be applied to these settings."
@@ -559,6 +562,7 @@ def analyze_multiple_exams(
     per_exam_extra_warnings: list[list[str]] | None = None,
     *,
     equipment_capture_contexts: list[CapturedCoordinates | None] | tuple[CapturedCoordinates | None, ...] | None = None,
+    per_exam_baselines: list[NormalizationSettings | None] | tuple[NormalizationSettings | None, ...] | None = None,
 ) -> MultiExamResult:
     """Process a list of exams on a shared phantom mesh topology.
 
@@ -574,7 +578,10 @@ def analyze_multiple_exams(
     with isolated private settings — before any exam produces output, so a
     bad later capture leaves no partial result. Each captured exam calculates
     on its own prepared work settings, so normalization from one exam is
-    never borrowed by another.
+    never borrowed by another. ``per_exam_baselines`` optionally carries one
+    private normalization snapshot per exam position (``None`` for captured
+    entries); a null entry then calculates on its own baseline instead of the
+    shared last-load state. Baselines without capture contexts fail closed.
     """
     settings = initialize_settings(settings)
     downgrade_beam_warning = settings.beam_miss_warn == "per_event"
@@ -585,13 +592,17 @@ def analyze_multiple_exams(
     # later offset cannot leave a partial multi-exam result behind.
     _validate_per_exam_offsets(per_exam_offsets)
 
+    _check_capture_baseline_request(equipment_capture_contexts, per_exam_baselines)
     captured: list[tuple[PyskindoseSettings, dict[str, Any] | None, list[float]]] | None = None
     if equipment_capture_contexts is not None:
         # Captured mode first: shape, session/receipt rejection, and every
         # capture validated before the live session path below can misread
         # the mixed authority as a live failure with a different error.
         aligned = _validate_capture_contexts(exams, equipment_capture_contexts)
-        captured = _prepare_captured_exams(exams, aligned, settings, per_exam_offsets, downgrade_beam_warning)
+        baselines = _validate_capture_baselines(per_exam_baselines, aligned)
+        captured = _prepare_captured_exams(
+            exams, aligned, settings, per_exam_offsets, downgrade_beam_warning, baselines
+        )
 
     # Same atomicity for custom sessions: every exam must carry its resolved
     # raw provenance before anything calculates, so a late failure cannot

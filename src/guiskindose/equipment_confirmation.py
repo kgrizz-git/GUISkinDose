@@ -65,6 +65,7 @@ _CAPTURE_SETTINGS_ERROR = "Equipment capture cannot be applied to these settings
 __all__ = [
     "CapturedApplicationReceipt",
     "check_captured_candidate",
+    "check_captured_work_isolated",
     "confirm_captured_application",
     "prepare_captured_candidate",
     "prepare_replay_settings",
@@ -72,6 +73,17 @@ __all__ = [
 
 _SIGN_TO_INT = {"+": 1, "-": -1}
 _MATCHED_SOURCES = ("custom", "bundled")
+
+
+def check_captured_work_isolated(work_settings: Any, settings: Any) -> None:
+    """Public isolation boundary for privately cloned capture work settings.
+
+    Same established check as the preparation path: the working copy must
+    share no mutable home (root, normalization, vectors, phantom, dimension,
+    patient offset) with the caller-owned settings, verified before any
+    setter runs. Closed ``CaptureError`` on violation.
+    """
+    _check_work_isolated(work_settings, settings)
 
 
 def _check_work_isolated(work_settings: Any, settings: Any) -> None:
@@ -187,12 +199,37 @@ def _check_capture_event_total(materialized: list[Any]) -> None:
                 )
 
 
+def _check_capture_baseline_request(contexts: Any, baselines: Any) -> None:
+    """Refuse baseline snapshots without the captured-analysis authority path."""
+    if contexts is None and baselines is not None:
+        raise CaptureError(
+            "Per-exam baseline snapshots need capture contexts.", CODE_INVALID_EQUIPMENT_CAPTURE
+        )
+
+
+def _validate_capture_baselines(
+    baselines: Any, contexts: list[Any]
+) -> list[NormalizationSettings | None] | None:
+    """Validate bounded positional snapshots; captured entries cannot supply one."""
+    if baselines is None:
+        return None
+    if type(baselines) not in (list, tuple) or len(baselines) != len(contexts):
+        raise _closed()
+    if len(baselines) > MAX_PROFILES:
+        raise _closed()
+    for baseline, context in zip(baselines, contexts, strict=True):
+        if baseline is not None and (context is not None or not isinstance(baseline, NormalizationSettings)):
+            raise _closed()
+    return list(baselines)
+
+
 def _prepare_captured_exams(
     exams: list[InputAdapterResult],
     contexts: list[Any],
     settings: PyskindoseSettings,
     per_exam_offsets: list[list[float]] | None,
     downgrade_beam_warning: bool,
+    per_exam_baselines: list[Any] | None = None,
 ) -> list[tuple[PyskindoseSettings, dict[str, Any] | None, list[float]]]:
     """Validate every provided capture before any exam produces output.
 
@@ -245,8 +282,11 @@ def _prepare_captured_exams(
                 CODE_INVALID_EQUIPMENT_CAPTURE,
             )
         effective_offset = [float(value) for value in raw_offset]
+        baseline = per_exam_baselines[index] if per_exam_baselines is not None else None
         prepared.append(
-            _prepare_one_captured_exam(exam, context, settings, effective_offset, downgrade_beam_warning)
+            _prepare_one_captured_exam(
+                exam, context, settings, effective_offset, downgrade_beam_warning, baseline
+            )
         )
     return prepared
 
@@ -257,6 +297,7 @@ def _prepare_one_captured_exam(
     settings: PyskindoseSettings,
     effective_offset: list[float],
     downgrade_beam_warning: bool,
+    baseline: Any = None,
 ) -> tuple[PyskindoseSettings, dict[str, Any] | None, list[float]]:
     """Prebuild one exam's final isolated work settings plus stored match.
 
@@ -264,7 +305,9 @@ def _prepare_one_captured_exam(
     vectors, phantom, dimension, patient offset) is verified before any
     recipe, offset, or warning lands, so shared-copy hooks cannot funnel
     caller handles into the calculation. Null entries take the same isolated
-    path without a recipe.
+    path without a recipe; with a private baseline snapshot they install
+    their own baseline instead of inheriting shared last-load state. No
+    fake capture, session, receipt, or canonical match is attached to nulls.
     """
     try:
         work_settings = copy.deepcopy(settings)
@@ -277,6 +320,20 @@ def _prepare_one_captured_exam(
     _check_work_isolated(work_settings, settings)
     if context is None:
         stored_match = None
+        if baseline is not None:
+            if not isinstance(baseline, NormalizationSettings):
+                raise CaptureError(
+                    _CAPTURE_SETTINGS_ERROR,
+                    CODE_INVALID_EQUIPMENT_CAPTURE,
+                )
+            try:
+                cloned_baseline = copy.deepcopy(baseline)
+            except Exception:
+                raise _closed() from None
+            _candidate_home(cloned_baseline)
+            _check_clone_isolated(cloned_baseline, baseline)
+            work_settings.normalization_settings = cloned_baseline
+            _check_work_isolated(work_settings, settings)
     else:
         candidate = prepare_captured_candidate(context=context, norm=work_settings.normalization_settings)
         work_settings.normalization_settings = candidate

@@ -270,6 +270,12 @@ file offline through `analyze_input_file(..., equipment_capture_context=...)`
 returned frame calculates with the stored match mapping. The capture verifies recipe,
 geometry, identity, and count — not authenticity or full raw/dose content hashes. Dose also depends on the input dose and filtration data, phantom, physics, and correction
 settings. Matching captured geometry alone does not guarantee the original dose result.
+Several raw files replay together through
+`analyze_multiple_input_files(..., equipment_capture_contexts=[...])` with one capture
+or `None` per explicit file path (positional, no guessing or globs; at most 64 files
+and 10_000 aggregate retained events): every authority is validated before any file is
+read, splits refuse so one file stays one exam, `None` entries normalize through the
+standard baseline path, and calculation runs only after all files load.
 
 **New to GUISkinDose?** Prefer the GUI or the interactive getting-started notebook
 ([docs/source/getting_started/getting_started.ipynb](docs/source/getting_started/getting_started.ipynb);

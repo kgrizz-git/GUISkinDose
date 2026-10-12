@@ -263,18 +263,6 @@ def analyze_input_file(
     )
 
 
-def _resolve_input_paths(file_paths: Sequence[str | Path]) -> list[Path]:
-    """Expand missing glob paths, preserving the established input ordering."""
-    resolved: list[Path] = []
-    for file_path in file_paths:
-        path = Path(file_path)
-        if not path.exists() and ("*" in str(path) or "?" in str(path)):
-            resolved.extend(sorted(path.parent.glob(path.name)))
-        else:
-            resolved.append(path)
-    return resolved
-
-
 def analyze_multiple_input_files(
     file_paths: Sequence[str | Path],
     settings: str | dict | PyskindoseSettings | None = None,
@@ -283,6 +271,9 @@ def analyze_multiple_input_files(
     sheet_name: str | int = 0,
     per_exam_offsets: list[list[float]] | None = None,
     import_options: TabularImportOptions | None = None,
+    equipment_capture_contexts: list[CapturedCoordinates | None]
+    | tuple[CapturedCoordinates | None, ...]
+    | None = None,
 ) -> MultiExamResult:
     """Run PySkinDose on a list of input files, treating each as a separate exam.
 
@@ -306,7 +297,18 @@ def analyze_multiple_input_files(
     import_options:
         Optional post-normalization coordinate overrides applied to every
         tabular exam. Rejected if any resolved path is not tabular.
+    equipment_capture_contexts:
+        One capture or None per explicit file; splits fail closed, sessions/receipts refuse.
     """
+    if equipment_capture_contexts is not None:
+        from guiskindose.equipment_captured_multi import analyze_captured_multiple_input_files
+
+        return analyze_captured_multiple_input_files(
+            file_paths, settings=settings, input_schema=input_schema, sheet_name=sheet_name,
+            per_exam_offsets=per_exam_offsets, import_options=import_options,
+            equipment_capture_contexts=equipment_capture_contexts,
+        )
+    from guiskindose.equipment_captured_multi import resolve_input_paths
     from guiskindose.input_adapters.models import InputAdapterResult, InputProvenance
     from guiskindose.input_adapters.registry import read_and_normalize_input
 
@@ -318,7 +320,7 @@ def analyze_multiple_input_files(
 
     all_exams: list[InputAdapterResult] = []
 
-    resolved_paths = _resolve_input_paths(file_paths)
+    resolved_paths = resolve_input_paths(file_paths)
 
     reject_import_options_for_non_tabular(resolved_paths, import_options)
 
@@ -495,6 +497,7 @@ def build_cli_export_source(
     Handles single RDSR / tabular files and multi-file (multi-exam) runs, forcing
     ``output_format='dict'`` and capturing calculation warnings.
     """
+    from guiskindose.equipment_captured_multi import resolve_input_paths
     from guiskindose.export import build_export_source_from_cli
     from guiskindose.input_adapters.registry import read_and_normalize_input
 
@@ -508,7 +511,7 @@ def build_cli_export_source(
     pkg_logger = logging.getLogger("guiskindose")
     pkg_logger.addHandler(capture)
     try:
-        resolved = _resolve_input_paths(file_paths)
+        resolved = resolve_input_paths(file_paths)
 
         reject_import_options_for_non_tabular(resolved, import_options)
 

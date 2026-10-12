@@ -3,6 +3,43 @@
 Implementation history for the active [execution plan](CUSTOM_EQUIPMENT_PROFILES_EXECUTION.md).
 Scientific requirements and phase acceptance gates remain in that plan and its linked contracts.
 
+- 2026-10-11 — **Captured multi-file parent review hardening.** File/context counts
+  are checked before copying; per-exam baseline snapshots require bounded positional
+  list/tuple containers, correct home types, and null capture entries. Baseline clones
+  must isolate their own coordinate vectors and the caller's settings before any
+  offset or production. Regression tests reject malformed containers, captured-entry
+  baselines, and self-returning/shared-vector copy hooks. No run-state/CLI/GUI wiring.
+
+- 2026-10-12 — **Captured multi-file review fixes (same chunk).** Capture mode
+  takes explicit paths only — no glob resolution, existence probes, or reads before
+  every authority validates (generators, bare strings, non-path entries, glob syntax,
+  and >64 files fail closed with zero filesystem probes); retained normalized events
+  accumulate across loaded frames including nulls against the aggregate cap before the
+  next load; the caller shield enforces the full established isolation boundary
+  (shared-child deepcopies fail closed); null files load on private per-file copies
+  with per-exam baseline snapshots installed at preparation, matching individual
+  baseline runs across vendors and orders (legacy no-context path unchanged);
+  non-null captured entries never contact bundled/store/resolver while nulls
+  intentionally run standard baseline selection; JSON refuses for every entry;
+  the options-conflict check is a public shared seam. 22 tests.
+
+- 2026-10-12 — **Captured multi-file input through the public API.**
+  `analyze_multiple_input_files` takes keyword-only `equipment_capture_contexts=` (one
+  validated capture or `None` per resolved file position, exact builtin list/tuple, ≤64
+  files, ≤10_000 aggregate events); a new `equipment_captured_multi` helper owns the
+  captured-only orchestration (shield → parse → resolve → prevalidate all authorities
+  and session/plot conflicts → options policy → private per-file loads → existing
+  `analyze_multiple_exams` capture path), leaving the legacy path untouched. Set import
+  options on non-tabular paths fail closed pre-I/O; multi-study splits refuse closed
+  including null entries so one file stays one exam; a bad later source/context leaves
+  no partial output and no calculation runs. Single-file raw loading refactored into
+  the shared no-calculation `load_captured_exam` seam with identical errors (20
+  single-file tests intact). 17 tests (mixed Siemens-CFA/Philips-ASD parity, ordering,
+  nulls, offsets, mixed formats, options, offline, late-failure atomicity, shape/caps,
+  conflicts, purity). Contract §7 API row and §10 item 6 updated (capture stack
+  delivered; run-state round-trip still open). No run-state version/wiring, GUI/CLI,
+  rich reports, transmission, or filter expansion.
+
 - 2026-10-11 — **Single-file captured input through the public API.**
   `analyze_input_file` and `main` take keyword-only `equipment_capture_context=` for one raw
   file (`main`: DICOM only; `analyze_input_file`: DICOM or raw vendor tabular); a new `equipment_captured_input` helper module owns the

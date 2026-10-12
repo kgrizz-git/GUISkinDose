@@ -167,7 +167,7 @@ status/source displays remain unlocked until Phase 4.
 | Surface | Shape | State |
 |---|---|---|
 | Pre-calculation / Calculate / Results (GUI) | Effective leaves, inherited sources, notices, active/unused profiles per exam, before calculation | **OPEN** (Phase 2/3) |
-| Python API results | `equipment_profile_match` mapping on dict/JSON (`analyze_data` → `receipt_to_mapping`); single-exam direct-capture analysis via `equipment_capture_context=` and multi-exam via positional `equipment_capture_contexts=` (clone, prepare, confirm, stored mapping); single-file replay with `equipment_capture_context=` via `analyze_input_file` (DICOM + raw vendor tabular) or `main` (DICOM only; run-state/GUI still open) | Implemented (7b8530e; direct-capture slices 2026-10-11) |
+| Python API results | `equipment_profile_match` mapping on dict/JSON (`analyze_data` → `receipt_to_mapping`); single-exam direct-capture analysis via `equipment_capture_context=` and multi-exam via positional `equipment_capture_contexts=` (clone, prepare, confirm, stored mapping); single-file replay with `equipment_capture_context=` via `analyze_input_file` (DICOM + raw vendor tabular) or `main` (DICOM only; run-state/GUI still open); multi-file replay with `equipment_capture_contexts=` via `analyze_multiple_input_files` (one capture or `None` per explicit file, ≤64 files, ≤10_000 aggregate retained events, splits refuse, loads private before calculation) | Implemented (7b8530e; direct-capture slices 2026-10-11; multi-file replay 2026-10-12) |
 | Rich report (`ExportPayload` v4) | Per-exam equipment block: validated match, effective recipe, count and versioned geometry checksum; maker/model default-visible; provenance joins Settings & equipment | **OPEN** (Phase 5) |
 | Run state v2 | §3 capture | **OPEN** (Phase 2) |
 
@@ -203,7 +203,11 @@ any mutation or export.
 5. Old run-profile compatibility reader beyond today's `normalization_settings`
    handling. Owner: Phase 2 (single owner, nowhere else).
 6. Typed captured authority, versioned geometry/capture checksums, strict validators,
-   and offline round-trip/atomic rollback fixtures. Owner: Phase 2/3 at their respective boundaries.
+   offline replay paths, and atomic pre-calculation validation (codec, confirmation,
+   single/multi analysis, DICOM/tabular replay, single/multi-file public APIs) —
+   **delivered**; open remainder: run-state v2 emission/application round-trip with
+   rollback fixtures. Owner: Phase 2 at its boundary (see also item 1). Neither the
+   phase nor items 1–5 are claimed complete by this lock.
 7. Replacing the `run_state.py:155-178` maker/model gate with §4 default-safe
    emission. Owner: the v2 implementing slice.
 

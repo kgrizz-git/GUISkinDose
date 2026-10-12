@@ -12,6 +12,15 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ### Changed
 
+- **Captured multi-file input through the public API** (2026-10-12) — new
+  `equipment_captured_multi` helper behind `analyze_multiple_input_files(...,
+  equipment_capture_contexts=)`; single-file raw loading refactored into the shared
+  `load_captured_exam` seam; `resolve_input_paths` moved verbatim to the helper
+  (`main.py` at 797 lines). Review fixes: explicit-paths-only capture mode with
+  zero-filesystem-probe validation, cumulative retained-event cap, full shield
+  isolation, per-exam null baselines, public options seam. 22 tests; ruff,
+  basedpyright, complexity, size, and freshness gates clean. Contract §7/§10.6
+  updated.
 - **Single-file captured input review fixes** (2026-10-11) — `main` refuses tabular
   pre-I/O via `analyze_captured_main_input`; set import options on non-tabular paths fail
   closed pre-I/O; caller settings are deep-copied via `shielded_settings_for_capture`;

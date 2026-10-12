@@ -24,6 +24,20 @@ That keeps SemVer and contributor history organized.
 - Custom negative table-angle and third positioner-angle direction signs now preserve the zero-angle
   arrays instead of causing a row-length error during normalization.
 
+- **Captured multi-file input through the public API (experimental)** (2026-10-12) —
+  `analyze_multiple_input_files()` accepts positional `equipment_capture_contexts=` (one
+  validated `CapturedCoordinates` or `None` per explicit file path — no globs — at most
+  64 files and 10_000 aggregate retained events): every authority and session conflict
+  is validated before any filesystem probe or read, set import options on non-tabular
+  paths fail closed, multi-study splits refuse so one file stays one exam, retained
+  events accumulate against the cap across null frames before the next load, and
+  calculation runs only after all files load privately through the existing multi-exam
+  capture path (isolated per-exam recipes, per-exam null baselines matching individual
+  baseline runs, offsets, matches; null entries stay baseline). Captures verify recipe,
+  geometry, identity, and count — not authenticity or full raw/dose content hashes.
+  Run-state, GUI, CLI, rich reports, transmission, and filter expansion are not part
+  of this slice.
+
 - **Direct capture analysis in `analyze_data` (experimental)** (2026-10-11) — single-exam
   `analyze_data()` accepts a validated `CapturedCoordinates` via the keyword-only
   `equipment_capture_context=` parameter and calculates from an already transformed frame with
