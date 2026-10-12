@@ -50,6 +50,15 @@ That keeps SemVer and contributor history organized.
   frame feeds `analyze_data(...equipment_capture_context=...)` directly. No tabular replay,
   run-state, GUI, CLI, rich exports, version bumps, or settings-bound fields in this slice.
 
+- **Raw tabular replay from captures (experimental)** (2026-10-11) —
+  `read_and_normalize_input()` accepts a validated `CapturedCoordinates` via the keyword-only
+  `equipment_capture_context=` parameter for raw `generic_rdsr_like`, `radimetrics`, and
+  `dosetrack` inputs: full pre-load validation, `normalized`-schema refusal, recipe replay
+  through the shared pipeline with bundled selection and session resolution bypassed, and
+  final confirmation after import options with no live receipt attached. Failures are closed
+  `CaptureError` codes that survive adapter wrapping. No main-flow, run-state, GUI, CLI, rich
+  reports, version bumps, settings-bound fields, or transmission in this slice.
+
 - **Custom equipment profiles in Python API results (experimental)** (2026-10-11) — binding a frozen
   equipment-profile session on settings (`equipment_profile_session=`) applies matching custom
   coordinates during raw input normalization, with per-exam match records, inheritance notices, and

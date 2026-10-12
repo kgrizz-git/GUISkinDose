@@ -266,8 +266,9 @@ def _check_capture_replay(settings: PyskindoseSettings, equipment_receipt_out: A
 
     Full context validation plus the recipe/label precondition on the passed
     settings: an unapplied home fails closed here instead of normalizing
-    under live defaults. No geometry runs yet, so no final confirmation and
-    no publication happen at this point.
+    under live defaults. A receipt list combined with a capture is refused
+    closed — replay phases never run, so nothing is ever published. No
+    geometry runs yet, so no final confirmation happens at this point.
     """
     from guiskindose.equipment_confirmation import check_captured_candidate
     from guiskindose.equipment_profiles.capture import (
@@ -367,9 +368,9 @@ def rdsr_normalizer_with_source_rows(
 
             session_applied = begin_session_application(data_parsed=data_parsed, settings=settings)
     else:
-        # Offline replay: the captured recipe is already on settings, so live
-        # bundled selection, session resolution, and receipt publication stay
-        # off. Full authority and prepared-settings checks run first.
+        # Offline replay: the captured recipe is already on settings (checked
+        # above), so live bundled selection, session resolution, and receipt
+        # publication stay off here.
         session_applied = False
 
     resolve_source_detector_distance(data_parsed)

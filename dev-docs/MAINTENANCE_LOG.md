@@ -12,6 +12,20 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ### Changed
 
+- **Captured tabular replay parent review** (2026-10-11) — existing live receipts are
+  validated before coordinate import options and rebound only afterward; corrupt original
+  geometry hashes fail before transformation. Captured load/header errors use closed codes
+  with suppressed causes, and confirmation checks the candidate used by normalization.
+
+- **Raw tabular replay from captures** (2026-10-11) — `read_and_normalize_input()` gains
+  keyword-only `equipment_capture_context=` for `generic_rdsr_like`, `radimetrics`, and
+  `dosetrack`: pre-load validation, `normalized` refusal, recipe application through the
+  shared pipeline into the checked normalizer hook, final confirmation after import options,
+  no live receipt attached. Review fixes: production rebind of live post-options receipts,
+  single shared preparation, restored hook receipt rejection, closed capture-mode errors,
+  real-Philips ASD shutter refusal. 18 tests; ruff, basedpyright,
+  complexity, size, and freshness gates clean. No main, run-state,
+  GUI/CLI, rich reports, version bumps, settings-bound fields, or transmission.
 - **Captured DICOM replay parent review** (2026-10-11) — capture checks precede raw-frame
   work, public replay preparation rejects live sessions, and path/settings setup stays outside
   exception assertions. The focused replay/analysis/confirmation suites passed 92 tests.

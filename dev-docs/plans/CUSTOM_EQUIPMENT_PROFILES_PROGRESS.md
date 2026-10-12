@@ -3,6 +3,34 @@
 Implementation history for the active [execution plan](CUSTOM_EQUIPMENT_PROFILES_EXECUTION.md).
 Scientific requirements and phase acceptance gates remain in that plan and its linked contracts.
 
+- 2026-10-11 — **Tabular replay review fixes (same chunk).** Live import-options receipts
+  are rebound to the final post-options frame in production (single preparation shared by
+  dispatch and confirmation); the normalizer hook keeps receipt rejection with the pipeline
+  passing `None` in capture mode; capture-mode enforcement and upstream failures surface as
+  closed codes; explicit `normalized` refuses before source I/O with instance-checked
+  settings and closed suffix/schema errors; ASD tabular coverage uses a real Philips
+  DICOM-produced capture failing closed on shutterless data (current shutterless fixtures lack ASD inputs; numeric shutter coercion
+  is not supported by these adapters — no schema expansion). 18 tests.
+- 2026-10-11 — **Raw tabular replay from captures (no wiring).** `read_and_normalize_input()`
+  takes keyword-only `equipment_capture_context=` for raw vendor schemas
+  (`generic_rdsr_like`, `radimetrics`, `dosetrack`): full pre-load validation with bound
+  sessions rejected and settings required; explicit/auto `normalized` refusal; recipe applied
+  on a private clone through the shared pipeline into the checked normalizer hook (bundled
+  selection, session resolution, and receipt publication bypassed); final confirmation on the
+  returned frame after import options with no live receipt attached. Proven on synthetic
+  CSV/TSV/in-memory-XLSX canonical frames with per-schema PSD/dose-map/match parity, offline
+  with bundled selection and resolution forcibly broken, plus options, drop-count, tamper,
+  bounds, and caller-purity regressions. 14 tests. Main, run-state, GUI/CLI, rich reports,
+  version bumps, settings-bound fields, and transmission remain open.
+- 2026-10-11 — **Tabular replay review fixes (same chunk).** Live import-options receipts are
+  rebound to the final post-options frame in production (one preparation shared by dispatch
+  and confirmation, so no muted clone can slip between); the normalizer hook keeps receipt
+  rejection with the pipeline passing `None` in capture mode; capture-mode enforcement and
+  upstream failures surface as closed codes; explicit `normalized` refuses before source I/O
+  with instance-checked settings and closed suffix/schema errors; ASD tabular coverage uses a
+  real Philips DICOM-produced capture failing closed on shutterless data (current shutterless fixtures lack ASD inputs; these adapters
+  do not support numeric shutter coercion — no schema expansion). 18 tests.
+
 - 2026-10-11 — **DICOM replay review fixes (same chunk).** Loader validates the full context
   before any read (forged counts fail with zero source reads); the normalizer hook enforces
   the validated context plus the applied recipe/label precondition via reusable

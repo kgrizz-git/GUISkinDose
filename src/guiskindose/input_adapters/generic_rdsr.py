@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import pandas as pd
 
+from guiskindose.equipment_profiles.capture import CapturedCoordinates
 from guiskindose.input_adapters.base import (
     AdapterContext,
     coerce_numeric_columns,
@@ -200,11 +201,14 @@ def adapt(
     loaded: _RawLoad,
     original_filename: str,
     settings: PyskindoseSettings,
+    *,
+    equipment_capture_context: CapturedCoordinates | None = None,
 ) -> InputAdapterResult:
     """Convert a raw-loaded file to a normalized InputAdapterResult via rdsr_normalizer().
 
     Raises ValueError on blocking errors: missing required columns, duplicate
     mappings, or rdsr_normalizer() failure (e.g. unknown manufacturer/model).
+    A validated capture replays offline through the shared pipeline instead.
     """
     return run_normalizer_pipeline(
         loaded,
@@ -215,4 +219,5 @@ def adapt(
         transform=_transform,
         original_filename=original_filename,
         settings=settings,
+        equipment_capture_context=equipment_capture_context,
     )

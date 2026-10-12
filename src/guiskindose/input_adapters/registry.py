@@ -13,10 +13,11 @@ is ``docs/source/gui_help/input_formats.md``; the maintainer description is
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal, overload
+from typing import Any, Literal, overload
 
 import pandas as pd
 
+from guiskindose.equipment_profiles.capture import CapturedCoordinates
 from guiskindose.input_adapters import dosetrack as dosetrack_adapter
 from guiskindose.input_adapters import generic_rdsr as generic_rdsr_adapter
 from guiskindose.input_adapters import normalized as normalized_adapter
@@ -34,9 +35,7 @@ from guiskindose.input_adapters.models import InputAdapterResult
 from guiskindose.input_adapters.normalized import NORMALIZED_HEADER_NAMES
 from guiskindose.input_adapters.radimetrics import RADIMETRICS_COLUMN_NAMES
 from guiskindose.input_adapters.tabular_loader import _RawLoad, load
-
-if TYPE_CHECKING:
-    from guiskindose.settings import PyskindoseSettings
+from guiskindose.settings import PyskindoseSettings
 
 
 class SchemaDetectionError(ValueError):
@@ -321,6 +320,7 @@ def _dispatch_to_adapter(
     loaded: _RawLoad,
     path: Path,
     settings: PyskindoseSettings | None,
+    equipment_capture_context: CapturedCoordinates | None = None,
 ) -> InputAdapterResult | list[InputAdapterResult]:
     """Run the adapter selected for *schema* and return its result.
 
@@ -336,6 +336,16 @@ def _dispatch_to_adapter(
             schema="normalized",
             session=getattr(settings, "equipment_profile_session", None),
         )
+        if equipment_capture_context is not None:
+            from guiskindose.equipment_profiles.capture import (
+                CODE_INVALID_EQUIPMENT_CAPTURE,
+                CaptureError,
+            )
+
+            raise CaptureError(
+                "Equipment capture replay needs raw vendor input, not normalized frames.",
+                CODE_INVALID_EQUIPMENT_CAPTURE,
+            )
         return normalized_adapter.adapt(loaded, original_filename=path.name)
     if schema in ("generic_rdsr_like", "radimetrics", "dosetrack"):
         if settings is None:
@@ -343,10 +353,19 @@ def _dispatch_to_adapter(
                 f"settings is required for {schema} schema (needed by rdsr_normalizer for manufacturer/model lookup)."
             )
         if schema == "generic_rdsr_like":
-            return generic_rdsr_adapter.adapt(loaded, original_filename=path.name, settings=settings)
+            return generic_rdsr_adapter.adapt(
+                loaded, original_filename=path.name, settings=settings,
+                equipment_capture_context=equipment_capture_context,
+            )
         if schema == "radimetrics":
-            return radimetrics_adapter.adapt(loaded, original_filename=path.name, settings=settings)
-        return dosetrack_adapter.adapt(loaded, original_filename=path.name, settings=settings)
+            return radimetrics_adapter.adapt(
+                loaded, original_filename=path.name, settings=settings,
+                equipment_capture_context=equipment_capture_context,
+            )
+        return dosetrack_adapter.adapt(
+            loaded, original_filename=path.name, settings=settings,
+            equipment_capture_context=equipment_capture_context,
+        )
     if schema in stubs.STUB_VENDORS:
         stubs.raise_not_implemented(schema)
     raise ValueError(f"Unknown schema {schema!r}. Supported: {_SUPPORTED_SCHEMAS!r}.")
@@ -392,6 +411,7 @@ def read_and_normalize_input(
     sheet_name: str | int = ...,
     settings: PyskindoseSettings | None = ...,
     import_options: TabularImportOptions | None = ...,
+    equipment_capture_context: CapturedCoordinates | None = ...,
 ) -> InputAdapterResult:
     """Load and normalize a known vendor tabular schema (overload)."""
 
@@ -404,6 +424,7 @@ def read_and_normalize_input(
     sheet_name: str | int = ...,
     settings: PyskindoseSettings | None = ...,
     import_options: TabularImportOptions | None = ...,
+    equipment_capture_context: CapturedCoordinates | None = ...,
 ) -> InputAdapterResult | list[InputAdapterResult]:
     """Load and normalize a normalized/auto tabular schema (overload)."""
 
@@ -416,6 +437,7 @@ def read_and_normalize_input(
     sheet_name: str | int = ...,
     settings: PyskindoseSettings | None = ...,
     import_options: TabularImportOptions | None = ...,
+    equipment_capture_context: CapturedCoordinates | None = ...,
 ) -> InputAdapterResult | list[InputAdapterResult]:
     """Load and normalize a tabular input file (overload)."""
 
@@ -427,6 +449,7 @@ def read_and_normalize_input(
     sheet_name: str | int = 0,
     settings: PyskindoseSettings | None = None,
     import_options: TabularImportOptions | None = None,
+    equipment_capture_context: CapturedCoordinates | None = None,
 ) -> InputAdapterResult | list[InputAdapterResult]:
     """Load a tabular file and return a normalized InputAdapterResult.
 
@@ -456,6 +479,15 @@ def read_and_normalize_input(
         ``Ap1``/``Ap2`` negation). Applied per result using that result's
         ``provenance.schema_name``. ``None`` and all-false options leave
         numeric values unchanged vs omitting the argument.
+    equipment_capture_context:
+        Validated captured-coordinate authority for offline replay of raw
+        vendor schemas (``generic_rdsr_like``, ``radimetrics``, ``dosetrack``).
+        Fully validated before any file load, with bound sessions rejected
+        and settings required. The ``normalized`` schema refuses a capture
+        (explicitly or auto-discovered); multi-study splits refuse rather
+        than applying one capture to several frames. Final confirmation runs
+        on the returned frame after import options; the result carries no
+        live receipt.
 
     Provenance records ``detection_mode`` (``"auto"`` or ``"explicit"``) and,
     for auto loads only, ``matched_column_count`` (the winning schema's
@@ -466,15 +498,78 @@ def read_and_normalize_input(
     ValueError
         On unsupported suffix, unknown schema, ambiguous auto-detection, or
         data validation failures from the selected adapter.
+    CaptureError
+        On capture/shape conflicts: malformed contexts, missing settings,
+        live sessions, normalized frames, or multi-study splits under capture.
     """
+    if equipment_capture_context is None:
+        return _read_and_normalize_input_impl(
+            file_path, input_schema=input_schema, sheet_name=sheet_name,
+            settings=settings, import_options=import_options,
+        )
+    from guiskindose.equipment_profiles.capture import CODE_INVALID_EQUIPMENT_CAPTURE, CaptureError
+
+    try:
+        return _read_and_normalize_input_impl(
+            file_path, input_schema=input_schema, sheet_name=sheet_name,
+            settings=settings, import_options=import_options,
+            equipment_capture_context=equipment_capture_context,
+        )
+    except CaptureError:
+        raise
+    except (OSError, ValueError, TypeError, AttributeError, KeyError, OverflowError):
+        raise CaptureError(
+            "Equipment capture replay could not load or normalize raw tabular input.",
+            CODE_INVALID_EQUIPMENT_CAPTURE,
+        ) from None
+
+
+def _read_and_normalize_input_impl(
+    file_path: str | Path,
+    *,
+    input_schema: str | None = None,
+    sheet_name: str | int = 0,
+    settings: PyskindoseSettings | None = None,
+    import_options: TabularImportOptions | None = None,
+    equipment_capture_context: CapturedCoordinates | None = None,
+) -> InputAdapterResult | list[InputAdapterResult]:
+    """Shared pipeline; the public boundary closes capture-only failures."""
+    if equipment_capture_context is not None:
+        settings = _reject_captured_conflicts(settings, equipment_capture_context)
     path = Path(file_path)
     suffix = path.suffix.lower()
 
     if suffix not in TABULAR_SUFFIXES:
+        if equipment_capture_context is not None:
+            from guiskindose.equipment_profiles.capture import (
+                CODE_INVALID_EQUIPMENT_CAPTURE,
+                CaptureError,
+            )
+
+            raise CaptureError(
+                "Equipment capture replay needs a raw tabular input file.",
+                CODE_INVALID_EQUIPMENT_CAPTURE,
+            )
         raise ValueError(
             f"Unsupported suffix {suffix!r}. "
             "The tabular adapter handles .csv, .tsv, .xlsx, .xlsm. "
             "For DICOM RDSR or JSON use read_and_normalise_rdsr_data()."
+        )
+
+    if equipment_capture_context is not None and (
+        input_schema is None or input_schema == "normalized"
+    ):
+        # Explicit normalized refuses before any source I/O; auto detection
+        # below may still read first to discover an unsupported normalized
+        # frame, but never silently ignores the context.
+        from guiskindose.equipment_profiles.capture import (
+            CODE_INVALID_EQUIPMENT_CAPTURE,
+            CaptureError,
+        )
+
+        raise CaptureError(
+            "Equipment capture replay needs raw vendor input, not normalized frames.",
+            CODE_INVALID_EQUIPMENT_CAPTURE,
         )
 
     loaded = load(path, sheet_name=sheet_name)
@@ -486,7 +581,33 @@ def read_and_normalize_input(
     if is_auto:
         schema, matched_column_count = _detect_schema_with_hits(loaded)
 
-    result = _dispatch_to_adapter(schema, loaded, path, settings)
+    if equipment_capture_context is not None and schema not in (
+        "generic_rdsr_like",
+        "radimetrics",
+        "dosetrack",
+    ):
+        from guiskindose.equipment_profiles.capture import (
+            CODE_INVALID_EQUIPMENT_CAPTURE,
+            CaptureError,
+        )
+
+        raise CaptureError(
+            "Equipment capture replay needs a raw vendor schema.",
+            CODE_INVALID_EQUIPMENT_CAPTURE,
+        )
+
+    work_settings: Any = settings
+    if equipment_capture_context is not None:
+        # One preparation shared by dispatch and confirmation: the candidate
+        # the pipeline normalizes with is the candidate confirmed later, so a
+        # stale or muted clone cannot slip between the two.
+        from guiskindose.equipment_confirmation import prepare_replay_settings
+
+        narrowed: Any = settings
+        work_settings = prepare_replay_settings(
+            context=equipment_capture_context, settings=narrowed
+        )
+    result = _dispatch_to_adapter(schema, loaded, path, work_settings, equipment_capture_context)
 
     provenance_fields: dict[str, object] = {
         "detection_mode": "auto" if is_auto else "explicit",
@@ -496,4 +617,113 @@ def read_and_normalize_input(
         provenance_fields["sheet_name"] = sheet_name
     _stamp_provenance(result, **provenance_fields)
 
-    return _apply_import_options_to_results(result, import_options)
+    _validate_live_receipts(result, settings)
+    result = _apply_import_options_to_results(result, import_options)
+    _rebind_live_receipts(result)
+    if equipment_capture_context is not None:
+        _confirm_captured_result(
+            result, work_settings.normalization_settings, equipment_capture_context
+        )
+    return result
+
+
+def _validate_live_receipts(
+    result: InputAdapterResult | list[InputAdapterResult], settings: PyskindoseSettings | None
+) -> None:
+    """Verify existing authority before a sanctioned geometry transformation."""
+    from guiskindose.equipment_resolution import receipt_to_mapping
+
+    items = result if isinstance(result, list) else [result]
+    for item in items:
+        if item.equipment_receipt is None:
+            continue
+        if settings is None:
+            raise ValueError("Equipment-profile receipts require configured settings.")
+        receipt_to_mapping(receipt=item.equipment_receipt, frame=item.normalized_data, settings=settings)
+
+
+def _rebind_live_receipts(result: InputAdapterResult | list[InputAdapterResult]) -> None:
+    """Rebind genuine live receipts to the final post-options frame.
+
+    The caller validates the original receipts before import options run.
+    Import options transform geometry after the adapter binds its receipt, so
+    without rebinding the recorded checksum describes a frame that no longer
+    exists. Each receipt is rebound with the public bridge helper; results
+    without receipts (including every capture replay) pass through untouched.
+    """
+    from guiskindose.equipment_resolution import bind_receipt_frame
+
+    items = result if isinstance(result, list) else [result]
+    for item in items:
+        if item.equipment_receipt is not None:
+            item.equipment_receipt = bind_receipt_frame(item.equipment_receipt, item.normalized_data)
+
+
+def _reject_captured_conflicts(settings: Any, context: Any) -> PyskindoseSettings:
+    """Fully validate a capture and reject authority conflicts before any I/O.
+
+    A constructor-bypassed forgery fails here with zero file reads; a
+    missing or mistyped settings home and bound live sessions fail on the
+    same closed terms. Returns the narrowed settings home for dispatch.
+    """
+    from guiskindose.equipment_profiles.capture import (
+        CODE_INVALID_EQUIPMENT_CAPTURE,
+        CaptureError,
+        validate_constructed_context,
+    )
+
+    try:
+        validate_constructed_context(context)
+    except (TypeError, AttributeError):
+        raise CaptureError(
+            "Equipment capture context must be a CapturedCoordinates or None.",
+            CODE_INVALID_EQUIPMENT_CAPTURE,
+        ) from None
+    if not isinstance(settings, PyskindoseSettings):
+        raise CaptureError(
+            "Equipment capture replay needs settings for raw normalization.",
+            CODE_INVALID_EQUIPMENT_CAPTURE,
+        )
+    if getattr(settings, "equipment_profile_session", None) is not None:
+        raise CaptureError(
+            "Equipment capture replay never resolves a live session.",
+            CODE_INVALID_EQUIPMENT_CAPTURE,
+        )
+    return settings
+
+
+def _confirm_captured_result(
+    result: InputAdapterResult | list[InputAdapterResult], candidate: Any, context: Any
+) -> None:
+    """Confirm the returned frame after import options; result carries no receipt.
+
+    Multi-study splits fail closed before any confirmation or publication —
+    one capture is never applied to several frames. Confirms identity, count,
+    geometry, and all 15 leaves on the actual returned frame against the
+    pipeline's own applied candidate (threaded from dispatch, never
+    re-prepared, so a muted clone cannot slip between the two). A live
+    receipt on the result fails closed rather than returning mixed authority;
+    nothing is published.
+    """
+    from guiskindose.equipment_confirmation import confirm_captured_application
+    from guiskindose.equipment_profiles.capture import (
+        CODE_INVALID_EQUIPMENT_CAPTURE,
+        CaptureError,
+    )
+
+    if isinstance(result, list):
+        raise CaptureError(
+            "Equipment capture replay needs a single raw exam, not a multi-study split.",
+            CODE_INVALID_EQUIPMENT_CAPTURE,
+        )
+
+    if result.equipment_receipt is not None:
+        raise CaptureError(
+            "Equipment capture replay never publishes receipt records.",
+            CODE_INVALID_EQUIPMENT_CAPTURE,
+        )
+    confirm_captured_application(
+        context=context,
+        frame=result.normalized_data,
+        candidate=candidate,
+    )
