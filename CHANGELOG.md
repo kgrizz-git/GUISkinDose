@@ -24,6 +24,15 @@ That keeps SemVer and contributor history organized.
 - Custom negative table-angle and third positioner-angle direction signs now preserve the zero-angle
   arrays instead of causing a row-length error during normalization.
 
+- **Direct capture analysis in `analyze_data` (experimental)** (2026-10-11) — single-exam
+  `analyze_data()` accepts a validated `CapturedCoordinates` via the keyword-only
+  `equipment_capture_context=` parameter and calculates from an already transformed frame with
+  no live session: caller settings are privately cloned, the captured recipe is prepared into
+  the clone, and frame identity/count/geometry plus all 15 leaves are confirmed before anything
+  calculates, with the stored match mapping reported under `equipment_profile_match`. Combining
+  a capture with a bound session or receipt fails closed. Multi-exam, run-state, GUI, CLI, and
+  rich-report integration are not part of this slice.
+
 - **Custom equipment profiles in Python API results (experimental)** (2026-10-11) — binding a frozen
   equipment-profile session on settings (`equipment_profile_session=`) applies matching custom
   coordinates during raw input normalization, with per-exam match records, inheritance notices, and

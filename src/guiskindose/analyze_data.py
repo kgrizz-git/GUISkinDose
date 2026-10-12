@@ -10,6 +10,11 @@ import pandas as pd
 from guiskindose import constants as c
 from guiskindose.calculate_dose.calculate_dose import calculate_dose
 from guiskindose.debug import dprint
+from guiskindose.equipment_profiles.capture import (
+    CODE_INVALID_EQUIPMENT_CAPTURE,
+    CapturedCoordinates,
+    CaptureError,
+)
 from guiskindose.format_export_data import (
     ExamResult,
     MultiExamResult,
@@ -26,6 +31,7 @@ from guiskindose.privacy import exception_class_name, opaque_exam_label, safe_er
 from guiskindose.settings import PyskindoseSettings, initialize_settings
 
 logger = logging.getLogger(__name__)
+_CAPTURE_SETTINGS_ERROR = "Equipment capture cannot be applied to these settings."
 
 
 def _match_mapping_for_output(
@@ -62,6 +68,93 @@ def _match_mapping_for_output(
             )
         return None
     return receipt_to_mapping(receipt=equipment_receipt, frame=frame, settings=settings)
+
+
+def _apply_capture_context(
+    settings: PyskindoseSettings,
+    normalized_data: pd.DataFrame,
+    equipment_receipt: Any,
+    capture_context: Any,
+) -> tuple[PyskindoseSettings, dict[str, Any]]:
+    """Calculate from a captured authority on an already transformed frame.
+
+    Rejects a simultaneous live session or receipt, clones the caller
+    settings privately, prepares the captured recipe into the clone, and
+    confirms frame and candidate before anything calculates. The caller's
+    settings home is preserved on success and failure alike. Returns the
+    working settings plus the stored validated match mapping for output.
+    """
+    from guiskindose.equipment_confirmation import (
+        confirm_captured_application,
+        prepare_captured_candidate,
+    )
+
+    if type(capture_context) is not CapturedCoordinates:
+        raise CaptureError(
+            "Equipment capture context must be a CapturedCoordinates or None.",
+            CODE_INVALID_EQUIPMENT_CAPTURE,
+        )
+    if getattr(settings, "equipment_profile_session", None) is not None or equipment_receipt is not None:
+        raise CaptureError(
+            "A captured equipment context cannot be combined with a live session or receipt.",
+            CODE_INVALID_EQUIPMENT_CAPTURE,
+        )
+    candidate = prepare_captured_candidate(context=capture_context, norm=settings.normalization_settings)
+    try:
+        work_settings = copy.deepcopy(settings)
+    except Exception:
+        # Untrusted boundary: the caller owns the settings graph, so any copy
+        # failure (including hostile __deepcopy__ hooks) is closed, never raw.
+        raise CaptureError(
+            _CAPTURE_SETTINGS_ERROR,
+            CODE_INVALID_EQUIPMENT_CAPTURE,
+        ) from None
+    _check_work_isolated(work_settings, settings)
+    work_settings.normalization_settings = candidate
+    _, equipment_profile_match = confirm_captured_application(
+        context=capture_context, frame=normalized_data, candidate=candidate
+    )
+    return work_settings, equipment_profile_match
+
+
+def _check_work_isolated(work_settings: Any, settings: Any) -> None:
+    """Require the working copy isolated from caller-owned mutable state.
+
+    A self-returning ``__deepcopy__`` (or shared-child hooks) that rebinds the
+    working copy to caller handles would let later candidate assignment — or
+    downstream plot-mode dimension writes — mutate the caller. Reject before
+    the candidate is assigned. Ordinary subclasses that copy cleanly pass
+    unchanged. This verifies handle isolation at handoff; it cannot restrain
+    a hostile hook that mutates caller state during its own copy execution.
+    """
+    if not isinstance(work_settings, PyskindoseSettings):
+        raise CaptureError(
+            _CAPTURE_SETTINGS_ERROR,
+            CODE_INVALID_EQUIPMENT_CAPTURE,
+        )
+    try:
+        shared = (
+            work_settings is settings
+            or work_settings.normalization_settings is settings.normalization_settings
+            or work_settings.normalization_settings.trans_offset
+            is settings.normalization_settings.trans_offset
+            or work_settings.normalization_settings.trans_dir
+            is settings.normalization_settings.trans_dir
+            or work_settings.normalization_settings.rot_dir
+            is settings.normalization_settings.rot_dir
+            or work_settings.phantom is settings.phantom
+            or work_settings.phantom.dimension is settings.phantom.dimension
+        )
+    except AttributeError:
+        raise CaptureError(
+            _CAPTURE_SETTINGS_ERROR,
+            CODE_INVALID_EQUIPMENT_CAPTURE,
+        ) from None
+    if shared:
+        raise CaptureError(
+            _CAPTURE_SETTINGS_ERROR,
+            CODE_INVALID_EQUIPMENT_CAPTURE,
+        )
 
 
 def _format_multi_exam_failure_warning(exam_id: str, exc: BaseException) -> str:
@@ -110,6 +203,7 @@ def analyze_data(
     settings: str | dict | PyskindoseSettings,
     *,
     equipment_receipt: Any = None,
+    equipment_capture_context: CapturedCoordinates | None = None,
 ) -> dict[str, Any] | str | PySkinDoseOutput | None:
     """Analyze data och settings, and runs PySkinDose in desired mode.
 
@@ -124,6 +218,19 @@ def analyze_data(
         Raw loaders attach it when a session is bound; direct callers with a
         configured session but no record fail closed, since already-normalized
         input carries no raw provenance to apply a session to.
+    equipment_capture_context : CapturedCoordinates | None
+        Validated captured-coordinate authority for single-exam calculation
+        without a live session. The passed frame must already be transformed
+        (this path never replays raw normalization): the caller's settings
+        are privately cloned, the captured recipe is prepared into the clone,
+        and the frame is confirmed (identity, count, geometry, all 15 leaves)
+        before any calculation, plot, or cache mutation. The stored validated
+        match mapping is used for output. Never combined with a bound session
+        or an equipment receipt; the context is never serialized as settings
+        config and no file, store, bundle, or live resolver is contacted. The working copy is
+        verified isolated (root plus normalization, phantom, and dimension homes) before the
+        candidate lands, so custom clone hooks that share caller state fail closed; ordinary
+        settings subclasses copy cleanly and keep working.
 
     Returns
     -------
@@ -141,7 +248,12 @@ def analyze_data(
             f"Invalid output format specified. Must be one of {'.'.join(c.RUN_ARGUMENTS_VALID_OUTPUT_FORMATS)}"
         )
 
-    equipment_profile_match = _match_mapping_for_output(settings, equipment_receipt, normalized_data)
+    if equipment_capture_context is None:
+        equipment_profile_match = _match_mapping_for_output(settings, equipment_receipt, normalized_data)
+    else:
+        settings, equipment_profile_match = _apply_capture_context(
+            settings, normalized_data, equipment_receipt, equipment_capture_context
+        )
 
     dprint("CALCULATION", "Creating table and pad phantoms")
     # create table, pad and patient phantoms.

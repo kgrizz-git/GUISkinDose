@@ -12,6 +12,17 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ### Changed
 
+- **Direct capture analysis, single-exam** (2026-10-11) — `analyze_data()` gains keyword-only
+  `equipment_capture_context=`: with a validated capture it rejects live sessions/receipts,
+  clones caller settings privately, prepares/confirms via the existing confirmation boundary
+  before any calculation, and reports the stored match mapping. Callers keep their settings
+  and frames byte-equivalent; no-capture behavior and live receipt validation unchanged. 17
+  tests (parity, offline, tamper-before-calculation, forged-receipt, keysets); gates clean.
+  Review fixes: working-copy isolation across root, normalization vectors, phantom, and
+  dimension before candidate assignment (self-returning/raising/shared-child clone hooks
+  fail closed with no calculation and unchanged caller state); ASD parity on the real Philips
+  loader; row-2 identity rejection; setup hoisted out of raises blocks. 23 tests.
+  Multi-exam, run-state, GUI/CLI, rich export, and version bumps remain open.
 - **Captured-application preparation/confirmation (app prep)** (2026-10-11) — new
   `src/guiskindose/equipment_confirmation.py`: frozen `CapturedApplicationReceipt` plus pure
   candidate preparation and closed confirmation against confirmed frames (identity/count/

@@ -470,6 +470,21 @@ gets macOS/Linux and Windows manual evidence as applicable.
 
 ## Progress log
 
+- 2026-10-11 — **Direct capture analysis, single-exam (no wiring).** `analyze_data()` takes a
+  keyword-only `equipment_capture_context=` (`CapturedCoordinates | None`): with a capture it
+  rejects any live session/receipt, privately clones caller settings, prepares the captured
+  candidate into the clone, and confirms frame and candidate before any calculation, plot, or
+  cache mutation, reporting the stored validated match mapping. Proven PSD/dose-map parity with
+  the live raw run (full/partial/default, zero/False), offline after source removal and bundle
+  changes, and closed rejections before calculation. 17 tests. Multi-exam, run-state, GUI/CLI,
+  rich export, version bumps, and settings-bound capture fields remain open.
+- 2026-10-11 — **Direct-capture review fixes (same chunk).** Working-copy isolation verified
+  (root plus normalization vectors, phantom, and dimension — the plot-mode dimension writes
+  found by audit are covered) before the candidate lands: self-returning/raising deepcopies
+  and shared-child hooks fail closed with no calculation and caller state byte-equivalent;
+  ordinary subclasses keep working. ASD parity proven on the real Philips loader; identity
+  rejection strengthened to row-2 variation; all throwing invocations hoisted out of
+  `pytest.raises` blocks. 23 tests.
 - 2026-10-11 — **Captured-application preparation/confirmation (app prep, no wiring).**
   New `src/guiskindose/equipment_confirmation.py` (381 lines): pure
   `prepare_captured_candidate` (validates context, deep-copies the settings home, applies the
