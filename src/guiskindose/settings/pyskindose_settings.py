@@ -39,6 +39,7 @@ from guiskindose.constants import (
     RUN_ARGUMENTS_OUTPUT_JSON,
     RUN_ARGUMENTS_VALID_OUTPUT_FORMATS,
 )
+from guiskindose.equipment_profiles.errors import EquipmentProfileError, ProfileErrorCode
 from guiskindose.equipment_profiles.session import EquipmentProfileSession
 
 from .kerma_meter_correction_settings import KermaMeterCorrectionSettings
@@ -47,6 +48,44 @@ from .phantom_settings import PhantomSettings
 from .plot_settings import Plotsettings
 
 logger = logging.getLogger(__name__)
+
+
+def _assemble_block_session(
+    block: Any | None,
+    equipment_profile_session: EquipmentProfileSession | None,
+    settings_base_dir: str | Path | None,
+) -> EquipmentProfileSession | None:
+    """Resolve the effective profile session for settings construction.
+
+    The runtime argument type-checks first so programming errors never
+    trigger reads: without a block it keeps legacy ValueError semantics
+    with a fixed message, while a source-bearing (block-present) mistype
+    fails native coded. A config block and an explicit runtime session
+    together refuse closed before any profile I/O (even an explicitly empty
+    block, which still requests assembly). Invalid blocks raise native
+    value-free :class:`EquipmentProfileError`, never ``ValueError``, so
+    construction fallbacks cannot silently substitute example settings.
+    """
+    if equipment_profile_session is not None and not isinstance(
+        equipment_profile_session, EquipmentProfileSession
+    ):
+        if block is None:
+            raise ValueError(
+                "equipment_profile_session must be an EquipmentProfileSession or None."
+            )
+        raise EquipmentProfileError(
+            ProfileErrorCode.INVALID_TYPE, source_kind="memory", field_path=("equipment_profiles",)
+        )
+    if block is not None and equipment_profile_session is not None:
+        raise EquipmentProfileError(
+            ProfileErrorCode.INVALID_TYPE, source_kind="memory", field_path=("equipment_profiles",)
+        )
+    if block is None:
+        return equipment_profile_session
+    from guiskindose.settings_equipment_profiles import equipment_session_from_config
+
+    return equipment_session_from_config(block, settings_base_dir)
+
 
 class PyskindoseSettings:
     """A class to store all settings required to run PySkinDose.
@@ -110,6 +149,8 @@ class PyskindoseSettings:
         file_result_output_path: str | Path | None = None,
         output_format: str = RUN_ARGUMENTS_OUTPUT_HTML,
         equipment_profile_session: EquipmentProfileSession | None = None,
+        *,
+        settings_base_dir: str | Path | None = None,
     ):
         """Initialize settings class.
 
@@ -118,19 +159,39 @@ class PyskindoseSettings:
         settings : Union[str, dict]
             Either a JSON-string or a dictionary containing all the settings
             parameters required to run PySkinDose. See setting_example.json
-            in /settings/ for example.
+            in /settings/ for example. May carry an optional
+            ``equipment_profiles`` block (files/store sources); it is
+            assembled here and never serialized.
         equipment_profile_session : EquipmentProfileSession | None
             Optional frozen custom-profile session bound before input loading.
             Never serialized: ``to_settings_dict``/``to_json`` exclude it by
             design so canonical profile content cannot leak into configs.
-
+            Mutually exclusive with an ``equipment_profiles`` block, refused
+            closed before any profile I/O (including an explicitly empty
+            block, which still requests assembly).
+        settings_base_dir : str | Path | None
+            Explicit base directory for relative equipment-profile source
+            paths; inline configs resolve against the working directory.
+            Keyword-only, so existing positional calls are unchanged.
         """
-        tmp = json.loads(settings) if isinstance(settings, str) else settings
+        block: Any = None
+        if isinstance(settings, str):
+            from guiskindose.settings_equipment_profiles import split_json_block
+
+            block, text = split_json_block(settings)
+            tmp = json.loads(text)
+        else:
+            tmp = settings
+            block = None
+            if isinstance(tmp, dict):
+                block = tmp.get("equipment_profiles")
 
         if (output_format := output_format.lower()) not in RUN_ARGUMENTS_VALID_OUTPUT_FORMATS:
             raise ValueError(
                 f"The output format must be specified as one of {', '.join(RUN_ARGUMENTS_VALID_OUTPUT_FORMATS)}"
             )
+
+        session = _assemble_block_session(block, equipment_profile_session, settings_base_dir)
 
         self.mode = tmp[KEY_PARAM_MODE]
         self.output_format = output_format
@@ -204,14 +265,9 @@ class PyskindoseSettings:
 
         # Optional frozen custom-profile session (import-before-load only).
         # Typed and never serialized: anything else is a programming error.
-        if equipment_profile_session is not None and not isinstance(
-            equipment_profile_session, EquipmentProfileSession
-        ):
-            raise ValueError(
-                "equipment_profile_session must be an EquipmentProfileSession or None, "
-                f"not {type(equipment_profile_session).__name__}."
-            )
-        self.equipment_profile_session: EquipmentProfileSession | None = equipment_profile_session
+        # The runtime argument was already type-checked up front; `session`
+        # carries it or the candidate assembled from the config block above.
+        self.equipment_profile_session: EquipmentProfileSession | None = session
 
     @property
     def estimate_k_tab(self) -> bool:
@@ -382,8 +438,18 @@ class PyskindoseSettings:
         return print(output_str)
 
 
-def initialize_settings(settings: str | dict | PyskindoseSettings) -> PyskindoseSettings:
-    """Coerce str/dict/settings input into a PyskindoseSettings instance."""
+def initialize_settings(
+    settings: str | dict | PyskindoseSettings,
+    *,
+    settings_base_dir: str | Path | None = None,
+) -> PyskindoseSettings:
+    """Coerce str/dict/settings input into a PyskindoseSettings instance.
+
+    Already-built objects return as-is (identity preserved): they carry no
+    source-request block, so the base is ignored and a bound session is
+    never replaced. Dict/str inputs flow through the constructor, which
+    assembles an ``equipment_profiles`` block (if present) against the base.
+    """
     valid_input_settings = settings is not None and isinstance(settings, (str, dict, PyskindoseSettings))
 
     if not valid_input_settings:
@@ -392,4 +458,4 @@ def initialize_settings(settings: str | dict | PyskindoseSettings) -> Pyskindose
     if isinstance(settings, PyskindoseSettings):
         return settings
 
-    return PyskindoseSettings(settings=settings)
+    return PyskindoseSettings(settings=settings, settings_base_dir=settings_base_dir)

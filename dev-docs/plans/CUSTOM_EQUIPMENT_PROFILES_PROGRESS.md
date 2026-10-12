@@ -3,6 +3,13 @@
 Implementation history for the active [execution plan](CUSTOM_EQUIPMENT_PROFILES_EXECUTION.md).
 Scientific requirements and phase acceptance gates remain in that plan and its linked contracts.
 
+- 2026-10-12 — **Direct Python settings source-block support.** `PyskindoseSettings`
+  and `initialize_settings` accept `equipment_profiles` blocks (plus keyword-only
+  `settings_base_dir`); block+session conflicts refuse closed pre-I/O, invalid blocks
+  raise value-free errors past the legacy fallback, and request paths never serialize.
+  Shared strict-JSON extraction; CLI composes flags+config assembling once (proven no
+  double-load). 16 constructor tests; direct constructor wiring no longer open.
+
 - 2026-10-12 — **Headless CLI settings-JSON source wiring + CLI+config composition.**
   Settings files/dicts/inline JSON accept an optional `equipment_profiles` block
   (base = settings-file parent, CWD for inline); CLI flags and the block compose

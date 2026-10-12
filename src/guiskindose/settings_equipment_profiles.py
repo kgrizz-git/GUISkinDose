@@ -45,6 +45,7 @@ notes, or causes), and the CLI boundary applies its existing value-free converte
 
 from __future__ import annotations
 
+import json
 import os
 from dataclasses import dataclass
 from pathlib import Path
@@ -70,7 +71,45 @@ from guiskindose.equipment_profiles.constants import (
 from guiskindose.equipment_profiles.errors import EquipmentProfileError, ProfileErrorCode
 from guiskindose.equipment_profiles.store_schema import normalize_selection
 
-__all__ = ["equipment_session_from_config"]
+__all__ = ["equipment_session_from_config", "split_json_block"]
+
+
+class _DuplicateJsonKey(Exception):
+    """Internal sentinel for duplicate JSON object keys (never escapes)."""
+
+
+def _unique_object(pairs: list[tuple[Any, Any]]) -> dict[Any, Any]:
+    """object_pairs_hook rejecting duplicate keys; JSON keys are always plain str."""
+    seen: set[Any] = set()
+    for key, _value in pairs:
+        if key in seen:
+            raise _DuplicateJsonKey()
+        seen.add(key)
+    return dict(pairs)
+
+
+def split_json_block(text: str) -> tuple[Any | None, str]:
+    """Split an equipment_profiles block off JSON settings text.
+
+    Returns (block_or_None, working_text_without_block). Malformed JSON
+    raises ValueError so callers preserve legacy handling; a profile-bearing
+    document with duplicate keys anywhere raises closed
+    ``DUPLICATE_JSON_KEY`` (never the raw parser cause, never echoed keys)
+    instead of silently last-wins. Unrelated documents pass through
+    byte-identical.
+    """
+    parsed = json.loads(text)
+    if not isinstance(parsed, dict) or "equipment_profiles" not in parsed:
+        return None, text
+    try:
+        json.loads(text, object_pairs_hook=_unique_object)
+    except _DuplicateJsonKey:
+        raise EquipmentProfileError(
+            ProfileErrorCode.DUPLICATE_JSON_KEY, source_kind="memory", field_path=()
+        ) from None
+    block = parsed.pop("equipment_profiles")
+    return block, json.dumps(parsed)
+
 
 _BLOCK_FIELDS = ("files", "store")
 _FILE_FIELDS = ("path", "format", "sheet")

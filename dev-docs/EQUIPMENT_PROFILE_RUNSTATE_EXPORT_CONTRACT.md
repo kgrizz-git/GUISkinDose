@@ -202,11 +202,10 @@ any mutation or export.
 4. CLI wildcard-promotion flag. Owner: Phase 2.
    (CLI file-source syntax — repeatable `--equipment-profile` plus
    `--equipment-profile-sheet` — explicit read-only store selection
-   (`--equipment-profile-store` plus `--equipment-profile-id`), and the
+   (`--equipment-profile-store` plus `--equipment-profile-id`), the
    settings-file `equipment_profiles` block composed with CLI flags into one
-   candidate, delivered 2026-10-12; the promotion flag stays open. Direct
-   `PyskindoseSettings` constructor / `initialize_settings` API wiring stays
-   open for a later chunk.)
+   candidate, and direct `PyskindoseSettings` / `initialize_settings` source
+   support, delivered 2026-10-12; the promotion flag stays open.)
 5. Old run-profile compatibility reader beyond today's `normalization_settings`
    handling. Owner: Phase 2 (single owner, nowhere else).
 6. Typed captured authority, versioned geometry/capture checksums, strict validators,

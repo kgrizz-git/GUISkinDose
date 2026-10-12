@@ -75,7 +75,9 @@ Headless preparation composes CLI flags and the settings block into **one**
 candidate assembled once: file requests concatenate (CLI paths first, then
 config paths — order affects diagnostics only), at most one snapshot per
 side, requests validated before settings construction or profile-source I/O,
-assembled once and bound last. Reading the selected settings file necessarily
+assembled once and bound last. JSON settings strip the block before legacy
+construction (duplicate keys in profile-bearing documents fail closed), so
+the constructor never double-loads. Reading the selected settings file necessarily
 precedes request validation.
 Never bind or override prematurely: a pre-bound runtime session fails
 closed before any mutation or read, caller-owned homes stage on an isolated
@@ -84,4 +86,5 @@ claims across sides fail the canonical conflicts — never deduped or
 overridden. The legacy `ValueError` construction fallback still owns
 malformed non-profile settings, but an invalid `equipment_profiles` block
 fails closed first and never falls through it. Direct `PyskindoseSettings`
-constructor / `initialize_settings` API wiring stays open for a later chunk.
+constructor / `initialize_settings` source support is wired (keyword-only
+`settings_base_dir`); GUI authoring stays out of scope.

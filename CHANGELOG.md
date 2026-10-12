@@ -24,6 +24,13 @@ That keeps SemVer and contributor history organized.
 - Custom negative table-angle and third positioner-angle direction signs now preserve the zero-angle
   arrays instead of causing a row-length error during normalization.
 
+- **Settings-block equipment profiles in Python (experimental)** (2026-10-12) —
+  `PyskindoseSettings` and `initialize_settings` accept an optional `equipment_profiles`
+  block (`files` with `path`/`format`/`sheet`, `store` with `path`/`ids`), assembled
+  during construction with a keyword-only `settings_base_dir` (working directory by
+  default). Block+session conflicts refuse closed; invalid blocks raise value-free
+  errors past the legacy fallback; request paths never serialize.
+
 - **Settings-file equipment profiles on the CLI (experimental)** (2026-10-12) — settings
   files (and inline JSON/dict configs) accept an optional `equipment_profiles` block
   (`files` with `path`/`format`/`sheet`, `store` with `path`/`ids`; relative paths resolve

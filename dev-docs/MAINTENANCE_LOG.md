@@ -12,6 +12,11 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ### Changed
 
+- **Direct Python settings source support** (2026-10-12) — `PyskindoseSettings` /
+  `initialize_settings` assemble `equipment_profiles` blocks (keyword-only
+  `settings_base_dir`); shared strict-JSON extraction; CLI composes flags+config
+  assembling once. 16 constructor tests; ruff, basedpyright, complexity, size, and
+  freshness gates clean.
 - **Headless CLI settings-JSON wiring** (2026-10-12) — settings-file base capture,
   transient block strip, single-candidate CLI+config composition in `prepare_cli_settings`,
   GUI config guard; shared pure-parser seam reused. Parent takeover after the provider

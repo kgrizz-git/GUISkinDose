@@ -261,6 +261,20 @@ output = analyze_input_file("study.dcm", settings=settings)
 print(output["equipment_profile_match"]["notice"]["text"])
 ```
 
+A settings dict (or JSON text) may carry its own sources instead under an
+`equipment_profiles` block (`files` with `path`/`format`/`sheet`, `store`
+with `path`/`ids`), assembled during construction — no silent ignore:
+
+```python
+config = load_settings_example_json()
+config["equipment_profiles"] = {"files": [{"path": "my_profile.json"}]}
+settings = PyskindoseSettings(settings=config)  # base defaults to the working directory
+```
+
+Pass `settings_base_dir` for settings files living elsewhere, and never pass
+both a block and `equipment_profile_session` (refused closed). Request paths
+never appear in exports or `to_settings_dict`.
+
 Pre-transformed inputs (`normalized` tables, preparsed `.json`, bare DataFrames) refuse a
 nonempty session instead of silently skipping it. GUI management and rich-report
 integration are not part of this slice.

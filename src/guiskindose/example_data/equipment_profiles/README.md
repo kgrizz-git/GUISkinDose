@@ -156,8 +156,7 @@ initial coordinate-only capability gate (see below). Available entry points:
   resolve against the settings file's directory, and CLI flags compose with the block
   into one candidate assembled once. Save/enable/delete commands, store management, and
   direct constructor wiring are not available from the CLI.
-- **Still planned and unimplemented:** GUI import/activation/download, profile-store management commands,
-  and direct `PyskindoseSettings` constructor wiring. See
+- **Still planned and unimplemented:** GUI import/activation/download and profile-store management commands. See
   [dev-docs/plans/CUSTOM_EQUIPMENT_PROFILES_EXECUTION.md](../../../../dev-docs/plans/CUSTOM_EQUIPMENT_PROFILES_EXECUTION.md)
   for status.
 

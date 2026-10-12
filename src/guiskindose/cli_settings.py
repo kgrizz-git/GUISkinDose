@@ -72,57 +72,27 @@ def _extract_profile_block(raw: Any) -> tuple[Any | None, Any]:
             return None, raw
         return working.pop("equipment_profiles", None), working
     if isinstance(raw, str) and raw.lstrip().startswith("{"):
-        stripped = _strip_json_block(raw)
-        if stripped is not None:
-            return stripped
+        from guiskindose.settings_equipment_profiles import split_json_block
+
+        try:
+            return split_json_block(raw)
+        except EquipmentProfileError:
+            raise UserFacingInputError("Equipment profile settings are not valid.") from None
+        except ValueError:
+            return None, raw
     return None, raw
-
-
-class _DuplicateJsonKey(Exception):
-    """Internal sentinel for duplicate JSON object keys (never escapes)."""
-
-
-def _unique_object(pairs: list[tuple[Any, Any]]) -> dict[Any, Any]:
-    """object_pairs_hook rejecting duplicate keys; JSON keys are always plain str."""
-    seen: set[Any] = set()
-    for key, _value in pairs:
-        if key in seen:
-            raise _DuplicateJsonKey()
-        seen.add(key)
-    return dict(pairs)
-
-
-def _strip_json_block(raw: str) -> tuple[Any | None, str] | None:
-    """Split the block off a JSON text, or None when absent or malformed.
-
-    Malformed JSON returns None so the legacy fallback proceeds exactly as
-    before. A profile-bearing document re-parses strictly: duplicate keys
-    anywhere fail closed rather than silently last-wins, while unrelated
-    legacy configs keep their exact fallback behavior.
-    """
-    try:
-        parsed = json.loads(raw)
-    except ValueError:
-        return None
-    if not isinstance(parsed, dict) or "equipment_profiles" not in parsed:
-        return None
-    try:
-        json.loads(raw, object_pairs_hook=_unique_object)
-    except _DuplicateJsonKey:
-        raise UserFacingInputError("Equipment profile settings are not valid.") from None
-    block = parsed.pop("equipment_profiles")
-    return block, json.dumps(parsed)
 
 
 def _profile_requests(
     args: Any, block: Any | None, base: Path | None
 ) -> tuple[_ValidatedRequest | None, _ValidatedRequest | None]:
-    """Parse CLI and config sides purely under one converter; combined cap pre-everything.
+    """Parse CLI and config sides purely; the caller converts failures closed.
 
     The base validates first; both sides then parse fully, and the combined
     file-plus-snapshot total validates before any settings construction,
-    mutation, or profile/store I/O. Only EquipmentProfileError converts;
-    UserFacingInputError (and anything else) passes through untouched.
+    mutation, or profile/store I/O. Raises EquipmentProfileError (converted
+    once at the single CLI boundary); UserFacingInputError passes through
+    untouched.
     """
     from guiskindose.cli_equipment_profiles import _cli_request_from_args
     from guiskindose.settings_equipment_profiles import (
@@ -131,14 +101,23 @@ def _profile_requests(
         _validated_base,
     )
 
+    resolved_base = _validated_base(base)
+    cli_request = _cli_request_from_args(args)
+    config_request = None if block is None else _parse_request(block, resolved_base)
+    _check_composed_bounds(cli_request, config_request)
+    return cli_request, config_request
+
+
+def _validated_profile_inputs(
+    args: Any, raw: Any, base: Path | None
+) -> tuple[Any, _ValidatedRequest | None, _ValidatedRequest | None]:
+    """Extract and validate profile inputs under the value-free CLI converter."""
     try:
-        resolved_base = _validated_base(base)
-        cli_request = _cli_request_from_args(args)
-        config_request = None if block is None else _parse_request(block, resolved_base)
-        _check_composed_bounds(cli_request, config_request)
+        block, working = _extract_profile_block(raw)
+        cli_request, config_request = _profile_requests(args, block, base)
     except EquipmentProfileError as exc:
         raise UserFacingInputError(str(exc)) from None
-    return cli_request, config_request
+    return working, cli_request, config_request
 
 
 def _assemble_and_bind(
@@ -243,8 +222,7 @@ def prepare_cli_settings(args: argparse.Namespace) -> PyskindoseSettings:
         if not is_file:
             raise SystemExit(safe_user_error("settings_file_not_found"))
         raw = Path(raw).read_text(encoding="utf-8")
-    block, working = _extract_profile_block(raw)
-    cli_request, config_request = _profile_requests(args, block, base)
+    working, cli_request, config_request = _validated_profile_inputs(args, raw, base)
     settings = parse_settings_to_settings_class(settings=working)
     has_sources = cli_request is not None or config_request is not None
     if has_sources and isinstance(raw, PyskindoseSettings):
