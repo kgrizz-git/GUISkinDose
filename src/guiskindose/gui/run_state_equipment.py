@@ -316,7 +316,7 @@ class _FrozenOverride(dict):
         raise TypeError(_IMMUTABLE_MESSAGE)
 
     def __delitem__(self, key: Any) -> None:
-        raise TypeError(_IMMUTABLE_MESSAGE)
+        raise RuntimeError(_IMMUTABLE_MESSAGE)
 
     def __ior__(self, other: Any) -> Any:
         return NotImplemented

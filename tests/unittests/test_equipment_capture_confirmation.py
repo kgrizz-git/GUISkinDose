@@ -380,13 +380,6 @@ _LEAF_MUTATIONS: dict[str, Any] = {
     "detector_side_length": 31.0,
 }
 
-
-_BLOCK_ATTR = {
-    "translation_offset": "trans_offset",
-    "translation_direction": "trans_dir",
-    "rotation_direction": "rot_dir",
-}
-
 _ROT_KEYS = ("Ap1", "Ap2", "Ap3", "At1", "At2", "At3")
 _SIGN_BACK = {1: "+", -1: "-"}
 

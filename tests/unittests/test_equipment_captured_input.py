@@ -49,6 +49,8 @@ _GENERIC_PHILIPS_ROW = (
     "Philips,Allura Clarity,Fluoroscopy,Single Plane,1198,785,37.8,40.6,294.1,0.01,"
     "Copper or Copper compound,0.6,0.6,-0.1,-1.1,77.0,0.00003,130.0,130.0,163.5,163.5"
 )
+# Sibling capture tests import the Philips tabular row; keep the symbol materialized here.
+_TABULAR_FIXTURE_ROWS = (_GENERIC_SIEMENS_ROW, _GENERIC_PHILIPS_ROW)
 
 
 def _siemens_coordinates() -> dict[str, Any]:

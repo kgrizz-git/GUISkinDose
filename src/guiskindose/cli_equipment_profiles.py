@@ -27,7 +27,6 @@ GUI wiring in this module; headless settings-JSON composition is owned by
 
 from __future__ import annotations
 
-import logging
 import os
 from pathlib import Path
 from typing import Any
@@ -41,8 +40,6 @@ from guiskindose.equipment_profiles.store_schema import normalize_selection
 from guiskindose.privacy import UserFacingInputError
 from guiskindose.settings import PyskindoseSettings
 from guiskindose.settings_equipment_profiles import _assemble_composed, _parse_request, _ValidatedRequest
-
-logger = logging.getLogger(__name__)
 
 GUI_EQUIPMENT_PROFILES_MESSAGE = (
     "Equipment profile inputs (--equipment-profile, --equipment-profile-sheet, "

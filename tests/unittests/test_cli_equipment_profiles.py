@@ -51,7 +51,6 @@ from tests.unittests.test_equipment_captured_input import (
 )
 
 _SIEMENS_DICOM = get_path_to_example_rdsr_files() / "siemens_axiom_artis.dcm"
-_PHILIPS_DICOM = get_path_to_example_rdsr_files() / "philips_allura_clarity_u104.dcm"
 
 _COLUMNS: tuple[str, ...] = tuple(FLAT_COLUMNS)
 _WIDTH = len(_COLUMNS)
