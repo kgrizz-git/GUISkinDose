@@ -474,6 +474,12 @@ def test_pending_override_is_immutable_and_copyable() -> None:
     assert stored is not source
     with pytest.raises(TypeError):
         stored["x"] = 99.0
+    alias = stored
+    alias |= {"x": 99.0}
+    assert type(alias) is dict
+    assert alias == {"x": 99.0, "y": 2.0, "z": -3.0}
+    assert stored == {"x": 1.0, "y": 2.0, "z": -3.0}
+    assert entry.table_origin_override is stored
     import copy
 
     assert copy.deepcopy(entry).table_origin_override == stored

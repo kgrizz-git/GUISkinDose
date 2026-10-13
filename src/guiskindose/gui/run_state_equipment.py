@@ -306,7 +306,9 @@ class _FrozenOverride(dict):
     iteration) so transform consumers need no changes, but every mutator
     (``__setitem__``, ``__delitem__``, ``pop``, ``clear``, ``update``,
     ``setdefault``) raises ``TypeError`` — staged authority cannot be
-    rewritten through a retained reference. Deep-copies (and copies) into
+    rewritten through a retained reference. ``|=`` declines in-place
+    (``NotImplemented``) so it falls back to ``|``, which rebinds the name to
+    a new plain dict and leaves this mapping untouched, as ``+=`` on a tuple. Deep-copies (and copies) into
     an equal frozen copy, so snapshots and rollback keep working.
     """
 
@@ -317,7 +319,7 @@ class _FrozenOverride(dict):
         raise TypeError(_IMMUTABLE_MESSAGE)
 
     def __ior__(self, other: Any) -> Any:
-        raise TypeError(_IMMUTABLE_MESSAGE)
+        return NotImplemented
 
     def pop(self, *args: Any) -> Any:
         raise TypeError(_IMMUTABLE_MESSAGE)
