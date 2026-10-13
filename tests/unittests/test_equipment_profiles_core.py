@@ -1408,3 +1408,12 @@ def test_measured_source_cannot_be_whitespace() -> None:
     with pytest.raises(EquipmentProfileError) as excinfo:
         parse_memory_document(document)
     assert excinfo.value.code == ProfileErrorCode.BLANK_REQUIRED_CELL
+
+
+def test_json_file_nul_path_fails_with_closed_error() -> None:
+    with pytest.raises(EquipmentProfileError) as excinfo:
+        parse_json_file("invalid\x00.json")
+    assert _error_code(excinfo) is ProfileErrorCode.UNREADABLE_SOURCE
+    assert excinfo.value.__cause__ is None
+    assert excinfo.value.__suppress_context__
+    assert "invalid" not in str(excinfo.value)

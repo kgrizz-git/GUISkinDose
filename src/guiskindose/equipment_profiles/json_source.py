@@ -230,7 +230,7 @@ def parse_json_file(path: str | os.PathLike[str]) -> ParsedDocument:
     try:
         with candidate.open("rb") as handle:
             raw = handle.read(MAX_SOURCE_BYTES + 1)
-    except OSError:
+    except (OSError, ValueError):
         raise EquipmentProfileError(ProfileErrorCode.UNREADABLE_SOURCE, source_kind=SOURCE_KIND_JSON) from None
     if len(raw) > MAX_SOURCE_BYTES:
         raise EquipmentProfileError(
