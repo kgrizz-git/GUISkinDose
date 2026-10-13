@@ -36,8 +36,6 @@ from guiskindose.equipment_profiles.models import (
     TransmissionRow,
 )
 
-_HEX_DIGEST_LENGTH = 64
-
 
 def canonical_json_bytes(value: Any) -> bytes:
     """Serialize ``value`` to the canonical UTF-8 JSON byte form."""

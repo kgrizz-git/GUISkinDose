@@ -12,6 +12,10 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ### Changed
 
+- **Equipment-profile PR CodeQL review** (2026-10-13) — removed unused constants and dead test
+  setup; made the three-value resolution return explicit for static analysis. Updated the execution
+  plan header to distinguish delivered coordinate foundations from outstanding acceptance/later phases.
+
 - **Equipment-profile delivery consolidation** (2026-10-13) — grouped engine/session/API work into
   one prerequisite PR and capture/replay/configuration/GUI work into a second PR, preserving the
   implementation commits and independently checking each base. Carried forward scanner, Windows,
