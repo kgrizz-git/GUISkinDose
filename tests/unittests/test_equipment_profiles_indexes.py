@@ -200,7 +200,8 @@ def test_transmission_only_and_coordinate_only_profiles_share_identity() -> None
 
     assert len(indexes) == 2
     claim = indexes.coordinates.lookup_exact("Acme Imaging", "DemoScope 2000")
-    assert claim is not None and claim.profile_id == "coord-only"
+    assert claim is not None
+    assert claim.profile_id == "coord-only"
     assert len(indexes.transmission.nodes_for("DemoScope 2000", "Single Plane")) == 1
 
 
@@ -276,8 +277,9 @@ def test_lying_length_cannot_force_unbounded_copy() -> None:
                 return entry
             raise IndexError(index)
 
+    lying = _Lying()  # type: ignore[arg-type]
     with pytest.raises(EquipmentProfileError) as excinfo:
-        build_profile_indexes(_Lying())  # type: ignore[arg-type]
+        build_profile_indexes(lying)
     assert excinfo.value.code is ProfileErrorCode.PROFILE_LIMIT_EXCEEDED
 
 
@@ -408,7 +410,8 @@ def test_stale_hash_fails_closed() -> None:
         build_profile_indexes([bad])
     assert excinfo.value.code is ProfileErrorCode.CONFLICTING_PROFILE_METADATA
     text = str(excinfo.value) + repr(excinfo.value)
-    assert "Acme" not in text and flipped not in text
+    assert "Acme" not in text
+    assert flipped not in text
     assert excinfo.value.__cause__ is None
 
 
@@ -439,8 +442,9 @@ _MANUAL_MALFORMED_CASES: tuple[tuple[dict[str, Any], ProfileErrorCode], ...] = (
 
 @pytest.mark.parametrize(("fields", "code"), _MANUAL_MALFORMED_CASES)
 def test_manual_malformed_profiles_rejected(fields: dict[str, Any], code: ProfileErrorCode) -> None:
+    entries = [_manual_entry(fields)]
     with pytest.raises(EquipmentProfileError) as excinfo:
-        build_profile_indexes([_manual_entry(fields)])
+        build_profile_indexes(entries)
     assert excinfo.value.code is code
 
 
@@ -449,24 +453,25 @@ def test_manual_mutable_transmission_rejected() -> None:
     tx_profile = _parse([{"profile_id": "tx-base", "manufacturer": "Acme", "models": ["TxBase"],
                           "transmission": [_transmission_row(device_model="TxBase")]}])[0]
     real_row = tx_profile.transmission[0]
+    entries = [_manual_entry({"coordinates": None, "models": ("TxBase",), "transmission": [real_row]})]
     with pytest.raises(EquipmentProfileError) as excinfo:
-        build_profile_indexes(
-            [_manual_entry({"coordinates": None, "models": ("TxBase",), "transmission": [real_row]})]
-        )
+        build_profile_indexes(entries)
     assert excinfo.value.code is ProfileErrorCode.INVALID_TYPE
 
 
 def test_manual_unresolvable_alias_target_rejected() -> None:
     """A well-typed but dangling alias target fails with the boundary's usual code on re-parse."""
+    entries = [_manual_entry({"model_aliases": (("OkAlias", "Missing"),)})]
     with pytest.raises(EquipmentProfileError) as excinfo:
-        build_profile_indexes([_manual_entry({"model_aliases": (("OkAlias", "Missing"),)})])
+        build_profile_indexes(entries)
     assert excinfo.value.code is ProfileErrorCode.ALIAS_TARGET_MISMATCH
 
 
 def test_manual_empty_domain_rejected() -> None:
     """A well-typed profile with neither domain fails with the boundary's usual code on re-parse."""
+    entries = [_manual_entry({"coordinates": None})]
     with pytest.raises(EquipmentProfileError) as excinfo:
-        build_profile_indexes([_manual_entry({"coordinates": None})])
+        build_profile_indexes(entries)
     assert excinfo.value.code is ProfileErrorCode.EMPTY_DOMAIN
 
 
@@ -542,7 +547,8 @@ def test_conflict_errors_carry_no_user_data() -> None:
     with pytest.raises(EquipmentProfileError) as excinfo:
         build_profile_indexes([first, second])
     text = str(excinfo.value) + repr(excinfo.value)
-    assert "Acme" not in text and "DemoScope" not in text
+    assert "Acme" not in text
+    assert "DemoScope" not in text
     assert excinfo.value.__cause__ is None
 
 
@@ -575,12 +581,14 @@ def test_every_permutation_compiles_to_identical_content() -> None:
 
 
 def test_inputs_and_results_are_immutable() -> None:
+    from dataclasses import FrozenInstanceError
+
     entries = _example_entries()
     indexes = build_profile_indexes(entries)
 
-    with pytest.raises(Exception):  # noqa: B017 - frozen dataclasses reject attribute writes
+    with pytest.raises(FrozenInstanceError):
         indexes.coordinates.keys = ()  # type: ignore[misc]
-    with pytest.raises(Exception):  # noqa: B017
+    with pytest.raises(FrozenInstanceError):
         entries[0].revision = 5  # type: ignore[misc]
     assert indexes.coordinates.lookup_exact("Acme Imaging", "DemoScope 2000") is not None
 

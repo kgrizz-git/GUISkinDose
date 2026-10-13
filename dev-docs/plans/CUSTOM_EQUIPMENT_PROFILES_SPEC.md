@@ -108,6 +108,9 @@ The store is not the bundled correction provider and never mutates package data.
 
 ### Packaged examples and templates
 
+Current authoring status: JSON/CSV examples, templates, and README exist; TSV/XLSX variants, wheel packaging,
+loader verification, and GUI downloads remain pending. The following list defines the target delivery.
+
 Users get the same starting experience as the kerma-meter example file
 (`src/guiskindose/example_data/kerma_meter/` — packaged CSV plus README plus a GUI download button):
 

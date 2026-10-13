@@ -224,7 +224,8 @@ def test_require_homogeneous_identity_rejects_mixed_value_free() -> None:
         require_homogeneous_identity(frame)
     message = str(excinfo.value)
     assert "2 distinct equipment identities" in message
-    assert "Siemens" not in message and "Philips" not in message
+    assert "Siemens" not in message
+    assert "Philips" not in message
 
 
 def test_require_homogeneous_identity_rejects_same_maker_model_variation() -> None:
@@ -283,7 +284,8 @@ def test_raw_tabular_mixed_manufacturers_fail_closed(tmp_path: Path) -> None:
     with pytest.raises(RdsrInputError) as excinfo:
         _adapt_raw(text, tmp_path)
     message = str(excinfo.value)
-    assert "Siemens" not in message and "Philips" not in message
+    assert "Siemens" not in message
+    assert "Philips" not in message
 
 
 def test_raw_tabular_same_maker_different_models_fail_closed(tmp_path: Path) -> None:
@@ -343,16 +345,19 @@ def test_dosetrack_homogeneous_maps_per_row(tmp_path: Path) -> None:
 
 def test_dosetrack_mixed_equipment_fails_before_overwrite(tmp_path: Path) -> None:
     """Two makers from Equipment Name fail closed; no whole-column first-name overwrite."""
+    csv_text = _dosetrack_csv(["AXIOM-Artis", "Azurion"])
     with pytest.raises(RdsrInputError) as excinfo:
-        _adapt_dosetrack(_dosetrack_csv(["AXIOM-Artis", "Azurion"]), tmp_path)
+        _adapt_dosetrack(csv_text, tmp_path)
     message = str(excinfo.value)
-    assert "AXIOM-Artis" not in message and "Azurion" not in message
+    assert "AXIOM-Artis" not in message
+    assert "Azurion" not in message
 
 
 def test_dosetrack_same_maker_different_equipment_fails(tmp_path: Path) -> None:
     """Two Philips equipment names are two models: rejected, not merged under the first."""
+    csv_text = _dosetrack_csv(["Azurion", "Allura Clarity"])
     with pytest.raises(RdsrInputError, match="2 distinct equipment identities"):
-        _adapt_dosetrack(_dosetrack_csv(["Azurion", "Allura Clarity"]), tmp_path)
+        _adapt_dosetrack(csv_text, tmp_path)
 
 
 def test_dosetrack_unknown_name_warns_count_only(tmp_path: Path) -> None:
@@ -374,8 +379,9 @@ def test_dosetrack_blank_continuation_fills_hierarchical(tmp_path: Path) -> None
 
 def test_dosetrack_leading_blank_plus_known_fails_with_missing_count(tmp_path: Path) -> None:
     """A leading blank cannot borrow the later row's identity."""
+    csv_text = _dosetrack_csv(["", "AXIOM-Artis"])
     with pytest.raises(RdsrInputError) as excinfo:
-        _adapt_dosetrack(_dosetrack_csv(["", "AXIOM-Artis"]), tmp_path)
+        _adapt_dosetrack(csv_text, tmp_path)
     assert "1 event(s) without maker identity" in str(excinfo.value)
 
 
@@ -444,7 +450,8 @@ def test_normalized_mixed_manufacturers_fail_closed_value_free(tmp_path: Path) -
     text = header + "\n" + _NORMALIZED_ROW + ",Siemens\n" + _NORMALIZED_ROW + ",Philips\n"
     with pytest.raises(ValueError, match="2 distinct equipment identities") as excinfo:
         _adapt_normalized(text, tmp_path)
-    assert "Siemens" not in str(excinfo.value) and "Philips" not in str(excinfo.value)
+    assert "Siemens" not in str(excinfo.value)
+    assert "Philips" not in str(excinfo.value)
 
 
 def test_normalized_same_maker_different_models_fail_closed(tmp_path: Path) -> None:
@@ -523,7 +530,8 @@ def test_normalized_multi_study_mixed_within_one_group_fails(tmp_path: Path) -> 
     with pytest.raises(ValueError, match="distinct equipment identities") as excinfo:
         _adapt_normalized(text, tmp_path)
     message = str(excinfo.value)
-    assert "UID-A" not in message and "Siemens" not in message
+    assert "UID-A" not in message
+    assert "Siemens" not in message
 
 
 # ── export identity lookup ────────────────────────────────────────────────

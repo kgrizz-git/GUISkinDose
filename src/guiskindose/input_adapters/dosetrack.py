@@ -242,6 +242,35 @@ def _is_blank_equipment_name(value: object) -> bool:
         return False
 
 
+def _forward_fill_equipment_names(raw_names: list[object]) -> list[object]:
+    """Repeat the previous row's equipment for blank cells (hierarchical exports).
+
+    pandas ffill only fills NaN, so blank text is forwarded here; leading
+    blanks stay missing. This never masks a real mix: distinct names still
+    reach the guard as distinct pairs.
+    """
+    filled: list[object] = []
+    last: object = None
+    for name in raw_names:
+        if _is_blank_equipment_name(name):
+            filled.append(last)
+        else:
+            last = name
+            filled.append(name)
+    return filled
+
+
+def _map_equipment_name(name: object) -> tuple[str | None, str | None, bool]:
+    """Map one equipment name to ``(maker, model, unknown)``; blanks stay missing."""
+    if _is_blank_equipment_name(name):
+        return None, None, False
+    model_name = str(name).strip()
+    maker = MODEL2MANUF.get(model_name)
+    if maker is None:
+        return model_name, model_name, True
+    return maker, model_name, False
+
+
 def _infer_manufacturer_from_equipment(data_df: pd.DataFrame, warnings: list[str]) -> pd.DataFrame:
     """Map each row's DoseTrack Equipment Name to Manufacturer/Model/StationName.
 
@@ -255,36 +284,18 @@ def _infer_manufacturer_from_equipment(data_df: pd.DataFrame, warnings: list[str
     never enter warnings.
     """
     if "_dt_equipment_name" in data_df.columns:
-        raw_names = data_df["_dt_equipment_name"].tolist()
-        # Hierarchical convention (see _transform ffill): a blank cell repeats
-        # the previous row's equipment. pandas ffill only fills NaN, so blank
-        # text is forwarded here; leading blanks stay missing. This never masks
-        # a real mix: distinct names still reach the guard as distinct pairs.
-        filled: list[object] = []
-        last: object = None
-        for name in raw_names:
-            if _is_blank_equipment_name(name):
-                filled.append(last)
-            else:
-                last = name
-                filled.append(name)
+        filled = _forward_fill_equipment_names(data_df["_dt_equipment_name"].tolist())
         if all(_is_blank_equipment_name(name) for name in filled):
             raise ValueError("DoseTrack 'Equipment Name' column is empty; cannot infer manufacturer.")
         makers: list[str | None] = []
         models: list[str | None] = []
         unknown = 0
         for name in filled:
-            if _is_blank_equipment_name(name):
-                makers.append(None)
-                models.append(None)
-                continue
-            model_name = str(name).strip()
-            maker = MODEL2MANUF.get(model_name)
-            if maker is None:
-                unknown += 1
-                maker = model_name
+            maker, model_name, is_unknown = _map_equipment_name(name)
             makers.append(maker)
             models.append(model_name)
+            if is_unknown:
+                unknown += 1
         if unknown:
             warnings.append(
                 f"DoseTrack adapter: {unknown} event(s) carry an equipment name outside the known "

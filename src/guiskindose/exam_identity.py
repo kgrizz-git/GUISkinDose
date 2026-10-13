@@ -30,6 +30,7 @@ frames at their established per-exam boundary (study-id groups) or reject.
 
 from __future__ import annotations
 
+import math
 from typing import Any
 
 import pandas as pd
@@ -77,7 +78,7 @@ def clean_identity_value(value: object) -> str | None:
     """
     if value is None:
         return None
-    if isinstance(value, float) and value != value:
+    if isinstance(value, float) and math.isnan(value):
         return None
     if isinstance(value, str):
         text = value.strip()

@@ -125,7 +125,7 @@ def _check_entries(entries: Sequence[zipfile.ZipInfo]) -> None:
 
 def _is_directory_spoof(name: str) -> bool:
     """True for a name that ends in a separator without being flagged as a directory entry."""
-    return name.endswith("/") or name.endswith("\\")
+    return name.endswith(("/", "\\"))
 
 
 def _is_worksheet_part(name: str) -> bool:
