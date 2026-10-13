@@ -41,6 +41,14 @@ That keeps SemVer and contributor history organized.
   maker/model pair is rejected with a value-free error instead of silently using the first pair.
   Dose results, coordinates, and exports are unchanged (maker/model were already default-safe in reports).
 
+- **Equipment-profile XLSX reader (experimental, internal only)** — bounded workbook parsing
+  now validates archive inflation, actual worksheet coordinates and typed cells before producing
+  the same canonical profiles as JSON/CSV. Application activation remains outside this adapter slice.
+
+- **Equipment-profile CSV/TSV readers (experimental, internal only)** — flat tables now parse
+  into the same bounded, immutable canonical profiles as JSON. Application activation remains
+  outside this adapter slice.
+
 - **Equipment-profile starting files** (2026-10-10) — added synthetic JSON/CSV examples and blank
   templates with authoring guidance. These describe the planned schema; equipment-profile loading,
   activation, and GUI downloads are not implemented yet.
