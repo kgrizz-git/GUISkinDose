@@ -199,7 +199,8 @@ def test_save_revision_cas_race_between_two_handles(tmp_path: Path) -> None:
     second = _open(tmp_path)
     first.save_new_revision(_coordinate_profile())
 
-    assert second.save_new_revision(_coordinate_profile(), expected_current_revision=1).current_revision == 2
+    updated = second.save_new_revision(_coordinate_profile(), expected_current_revision=1)
+    assert updated.current_revision == 2
     stale = _coordinate_profile()
     with pytest.raises(EquipmentProfileError) as excinfo:
         first.save_new_revision(stale, expected_current_revision=1)
@@ -321,7 +322,6 @@ def test_snapshot_is_stable_after_later_edits(tmp_path: Path) -> None:
 def test_source_hash_tracks_selection_and_revisions_but_not_content_hashes(tmp_path: Path) -> None:
     store = _open(tmp_path)
     first = _example_profiles()[0]
-    second = _coordinate_profile("other-partial")
     second = parse_memory_document(
         {
             "schema_version": 1,
@@ -1103,7 +1103,10 @@ def test_schema_rejects_missing_keys_triggers_and_views(tmp_path: Path) -> None:
     raw.execute("DROP TRIGGER sneak")
     raw.commit()
     raw.close()
-    assert ProfileStore.open(target).list_records()
+    reopened = ProfileStore.open(target)
+    records = reopened.list_records()
+    reopened.close()
+    assert records
 
 
 def test_schema_rejects_dropped_primary_key(tmp_path: Path) -> None:
