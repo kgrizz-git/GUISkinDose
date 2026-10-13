@@ -8,6 +8,7 @@ echoes an unknown user key into an error. Every rejection is a value-free :class
 
 from __future__ import annotations
 
+import math
 import re
 from collections.abc import Mapping, Sequence
 from datetime import date
@@ -172,11 +173,11 @@ def _require_number(value: Any, field_path: tuple[str, ...], source_kind: str) -
         raise EquipmentProfileError(
             ProfileErrorCode.INVALID_NUMBER, source_kind=source_kind, field_path=field_path
         ) from None
-    if result != result or result in (float("inf"), float("-inf")):
+    if math.isnan(result) or result in (float("inf"), float("-inf")):
         raise EquipmentProfileError(ProfileErrorCode.INVALID_NUMBER, source_kind=source_kind, field_path=field_path)
-    if result == 0.0:
-        return 0.0
-    return result
+    # Negative zero normalizes to +0.0 by exact IEEE addition (no comparison):
+    # adding zero is exact for finite values and maps -0.0 to +0.0.
+    return result + 0.0
 
 
 def _require_range(
