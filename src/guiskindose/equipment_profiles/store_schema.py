@@ -134,8 +134,6 @@ def normalize_db_error(error_class: type[BaseException]) -> EquipmentProfileErro
     states mean the database is momentarily unavailable (``store_unavailable``); everything else means the
     content or the file cannot be trusted (``store_corruption``). No message, path, or row content is kept.
     """
-    import sqlite3
-
     if issubclass(error_class, sqlite3.IntegrityError):
         return fail(ProfileErrorCode.STORE_CONFLICT)
     if issubclass(error_class, sqlite3.OperationalError):

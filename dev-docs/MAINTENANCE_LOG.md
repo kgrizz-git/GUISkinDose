@@ -12,6 +12,12 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ### Changed
 
+- **Equipment-profile delivery consolidation** (2026-10-13) — grouped engine/session/API work into
+  one prerequisite PR and capture/replay/configuration/GUI work into a second PR, preserving the
+  implementation commits and independently checking each base. Carried forward scanner, Windows,
+  and CodeQL corrections; empty direct API application now fails before changing settings.
+  XLSX source-hash tests compare the exact byte snapshot parsed, avoiding ZIP timestamp races.
+
 - **Run-state/export contract lock (docs only)** (2026-10-11) — new
   `dev-docs/EQUIPMENT_PROFILE_RUNSTATE_EXPORT_CONTRACT.md` locks SPEC decisions 13/18/20 from actual
   seams: run-state 1→2, rich-report 3→4, dict/JSON export stays 3 while additive; default-safe maker/model
