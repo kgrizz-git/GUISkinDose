@@ -15,6 +15,8 @@ import copy
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+import pandas as pd
+
 from guiskindose.equipment_capture import capture_from_receipt
 from guiskindose.equipment_confirmation import (
     confirm_captured_application,
@@ -57,6 +59,13 @@ def _bounds_authority(live: Any, pending: Any, replay_capture: Any) -> Any:
     if replay_capture is not None:
         return replay_capture
     return pending or None
+
+
+def _drop_zero_kvp_rows(df: pd.DataFrame, settings: Any) -> pd.DataFrame:
+    """Remove zero-kVp rows when the user enabled invalid-row removal."""
+    if settings.remove_invalid_rows and len(df[df.kVp == 0]):
+        return df[df.kVp != 0].reset_index(drop=True)
+    return df
 
 
 def _check_session_exam_count(loaded_count: int, new_count: int, *, session: Any) -> None:

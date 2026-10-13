@@ -17,6 +17,7 @@ from guiskindose.gui.exam_equipment import (
     _check_session_event_total,
     _check_session_exam_count,
     _confirm_consumed_capture,
+    _drop_zero_kvp_rows,
     _live_session,
     _mint_session_captures,
     _peek_pending_entry,
@@ -154,8 +155,7 @@ def load_rdsr(file_path: Path, state: AppState) -> tuple[bool, str]:
             )
             norm = settings.normalization_settings
 
-        if settings.remove_invalid_rows and len(df[df.kVp == 0]):
-            df = df[df.kVp != 0].reset_index(drop=True)
+        df = _drop_zero_kvp_rows(df, settings)
 
         # Filter, transform, bound, and authorize on the candidate frame.
         final, capture, snapshot, flag_values, override_value = _resolve_dicom_authority(
