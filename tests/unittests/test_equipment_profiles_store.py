@@ -200,8 +200,9 @@ def test_save_revision_cas_race_between_two_handles(tmp_path: Path) -> None:
     first.save_new_revision(_coordinate_profile())
 
     assert second.save_new_revision(_coordinate_profile(), expected_current_revision=1).current_revision == 2
+    stale = _coordinate_profile()
     with pytest.raises(EquipmentProfileError) as excinfo:
-        first.save_new_revision(_coordinate_profile(), expected_current_revision=1)
+        first.save_new_revision(stale, expected_current_revision=1)
     assert _code(excinfo) is ProfileErrorCode.STORE_CONFLICT
 
     revisions = {record.current_revision for record in first.list_records()}
@@ -213,8 +214,9 @@ def test_save_on_existing_record_requires_expected_revision(tmp_path: Path) -> N
     store = _open(tmp_path)
     store.save_new_revision(_coordinate_profile())
 
+    update = _coordinate_profile()
     with pytest.raises(EquipmentProfileError) as excinfo:
-        store.save_new_revision(_coordinate_profile())
+        store.save_new_revision(update)
     assert _code(excinfo) is ProfileErrorCode.STORE_CONFLICT
 
     record = store.save_new_revision(_coordinate_profile(), expected_current_revision=1)
@@ -634,12 +636,14 @@ def test_global_record_and_revision_caps(monkeypatch: pytest.MonkeyPatch, tmp_pa
     store.save_new_revision(_coordinate_profile())
     store.save_new_revision(_coordinate_profile(), expected_current_revision=1)
 
+    other = _coordinate_profile("other")
     with pytest.raises(EquipmentProfileError) as excinfo:
-        store.save_new_revision(_coordinate_profile("other"))
+        store.save_new_revision(other)
     assert _code(excinfo) is ProfileErrorCode.STORE_LIMIT_EXCEEDED
 
+    retry = _coordinate_profile()
     with pytest.raises(EquipmentProfileError) as excinfo:
-        store.save_new_revision(_coordinate_profile(), expected_current_revision=2)
+        store.save_new_revision(retry, expected_current_revision=2)
     assert _code(excinfo) is ProfileErrorCode.STORE_LIMIT_EXCEEDED
 
 
@@ -754,7 +758,7 @@ def test_provenance_is_retained_privately_but_hashed(tmp_path: Path) -> None:
 def test_default_store_path_computes_without_touching_the_filesystem(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setattr(Path, "home", classmethod(lambda _cls: tmp_path))
     path = default_store_path()
 
     assert path == tmp_path / ".guiskindose" / "equipment_profiles.sqlite3"
@@ -1429,8 +1433,9 @@ def test_oversized_tombstone_identities_are_rejected(tmp_path: Path) -> None:
     raw.close()
 
     # 1 live record + 1023 tombstones: one more brand-new ID would exceed the bound.
+    newcomer = _coordinate_profile("brand-new")
     with pytest.raises(EquipmentProfileError) as excinfo:
-        store.save_new_revision(_coordinate_profile("brand-new"))
+        store.save_new_revision(newcomer)
     assert _code(excinfo) is ProfileErrorCode.STORE_LIMIT_EXCEEDED
 
     # Deleting still works: it removes one record for every tombstone it adds, so the total is unchanged.
@@ -1442,8 +1447,9 @@ def test_oversized_tombstone_identities_are_rejected(tmp_path: Path) -> None:
     assert (recreated.generation, recreated.current_revision) == (2, 2)
 
     # But a genuinely new ID still exceeds the bound.
+    another = _coordinate_profile("brand-new")
     with pytest.raises(EquipmentProfileError) as excinfo:
-        store.save_new_revision(_coordinate_profile("brand-new"))
+        store.save_new_revision(another)
     assert _code(excinfo) is ProfileErrorCode.STORE_LIMIT_EXCEEDED
 
 
