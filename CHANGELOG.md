@@ -21,6 +21,10 @@ That keeps SemVer and contributor history organized.
 
 ### Changed
 
+- **Equipment-profile CSV/TSV readers (experimental, internal only)** — flat tables now parse
+  into the same bounded, immutable canonical profiles as JSON. Application activation remains
+  outside this adapter slice.
+
 - **Equipment-profile starting files** (2026-10-10) — added synthetic JSON/CSV examples and blank
   templates with authoring guidance. These describe the planned schema; equipment-profile loading,
   activation, and GUI downloads are not implemented yet.
