@@ -9,6 +9,9 @@ from unittest import mock
 import numpy as np
 import pytest
 
+# These workflow tests need the optional GUI extra; core CI skips the module.
+pytest.importorskip("nicegui")
+
 from guiskindose.analyze_data import analyze_data, analyze_multiple_exams
 from guiskindose.equipment_profiles import assemble_session
 from guiskindose.gui.exam_loaders import load_rdsr, load_tabular

@@ -8,6 +8,8 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ## [Unreleased]
 
+- Guard equipment GUI workflow tests with the optional NiceGUI dependency so the core CI matrix can collect without GUI extras; the GUI-enabled suite still executes all workflow regressions.
+
 - Run-state v2 final review: validate effective single-exam global flags and retained capture geometry before import mutation; revalidate copied frozen overrides at the loader boundary. Regression coverage includes null and absent equipment sections.
 
 - Radimetrics unknown-model diagnostics report only the model count; raw equipment names remain local.

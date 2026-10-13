@@ -16,6 +16,9 @@ from typing import Any
 import numpy as np
 import pytest
 
+# These workflow tests need the optional GUI extra; core CI skips the module.
+pytest.importorskip("nicegui")
+
 from guiskindose.analyze_data import analyze_data
 from guiskindose.equipment_capture import capture_to_mapping
 from guiskindose.equipment_profiles import assemble_session

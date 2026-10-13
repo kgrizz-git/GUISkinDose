@@ -8,6 +8,9 @@ from unittest import mock
 
 import pytest
 
+# These workflow tests need the optional GUI extra; core CI skips the module.
+pytest.importorskip("nicegui")
+
 from guiskindose.equipment_capture import frame_geometry_rows, geometry_digest_v1
 from guiskindose.equipment_profiles import assemble_session
 from guiskindose.gui.exam_equipment import (
