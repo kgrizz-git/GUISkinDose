@@ -298,6 +298,8 @@ def begin_session_application(*, data_parsed: Any, settings: Any) -> bool:
     session = _session_or_none(settings)
     if session is None or len(session.profiles) == 0:
         return False
+    if len(data_parsed) == 0:
+        raise ValueError("No irradiation events remain for the equipment-profile application.")
     norm = settings.normalization_settings
     maker, model = _raw_identity(data_parsed)
     resolution, matched_maker, matched_model = resolve_exam_coordinates(

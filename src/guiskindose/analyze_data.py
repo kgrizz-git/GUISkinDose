@@ -151,6 +151,7 @@ def _check_work_isolated(work_settings: Any, settings: Any) -> None:
             is settings.normalization_settings.rot_dir
             or work_settings.phantom is settings.phantom
             or work_settings.phantom.dimension is settings.phantom.dimension
+            or work_settings.phantom.patient_offset is settings.phantom.patient_offset
         )
     except AttributeError:
         raise CaptureError(

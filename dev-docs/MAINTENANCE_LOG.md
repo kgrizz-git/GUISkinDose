@@ -16,6 +16,17 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ### Changed
 
+- **Consolidated replay/GUI delivery review** (2026-10-13) — kept all capture, CLI/settings, GUI,
+  and run-state commits in the second dependent PR. Read-only URI regression paths now exercise
+  spaces, Unicode, `#`, and literal percent escapes using filenames legal on Windows. Single-capture
+  calculation checks patient-offset handle isolation before production, matching the multi-exam guard.
+
+- **Equipment-profile delivery consolidation** (2026-10-13) — grouped engine/session/API work into
+  one prerequisite PR and capture/replay/configuration/GUI work into a second PR, preserving the
+  implementation commits and independently checking each base. Carried forward scanner, Windows,
+  and CodeQL corrections; empty direct API application now fails before changing settings.
+  XLSX source-hash tests compare the exact byte snapshot parsed, avoiding ZIP timestamp races.
+
 - **Run-state v2 migration slice** (2026-10-13) — always-v2 writer, strict v1
   reader with retention warnings, trial confirmation + pending staging +
   replay consumption, calc threading, snapshot/rollback coverage, resequence

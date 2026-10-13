@@ -13,6 +13,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+import pandas as pd
 import pytest
 
 from guiskindose import PyskindoseSettings, load_settings_example_json
@@ -23,6 +24,7 @@ from guiskindose.equipment_profiles import (
     assemble_session,
     parse_memory_document,
 )
+from guiskindose.equipment_resolution import begin_session_application
 from guiskindose.main import analyze_data, analyze_input_file, analyze_multiple_input_files
 
 _DICOM = (
@@ -103,6 +105,15 @@ def _settings_with(*profiles):
     settings = _settings()
     settings.equipment_profile_session = _session_for(*profiles)
     return settings
+
+
+def test_empty_session_application_refuses_before_mutating_settings():
+    settings = _settings_with(_raw_profile("empty-frame"))
+    before = settings.to_settings_dict()
+    frame = pd.DataFrame(columns=["Manufacturer", "ManufacturerModelName"])
+    with pytest.raises(ValueError, match="No irradiation events remain"):
+        begin_session_application(data_parsed=frame, settings=settings)
+    assert settings.to_settings_dict() == before
 
 
 def _full_coordinates():

@@ -618,6 +618,25 @@ def test_shared_dimension_child_rejected_and_caller_unchanged(monkeypatch: Any) 
     assert fresh.phantom.dimension is wrapper
 
 
+def test_shared_patient_offset_rejected_before_calculation(monkeypatch: Any) -> None:
+    context, frame, _ = _dicom_capture(
+        assemble_session(documents=[_profile_doc("a-full", _full_coordinates())])
+    )
+    fresh = _fresh_settings()
+    inner = fresh.phantom.patient_offset
+    before = (inner.d_lat, inner.d_ver, inner.d_lon)
+    wrapper = _SharedChild(inner)
+    _force_attr(fresh.phantom, "patient_offset", wrapper)
+    calls = _spy_no_calculate(monkeypatch)
+    with pytest.raises(CaptureError) as excinfo:
+        analyze_data(frame, fresh, equipment_capture_context=context)
+    assert _code(excinfo) == CODE_INVALID_EQUIPMENT_CAPTURE
+    assert calls == []
+    assert fresh.phantom.patient_offset is wrapper
+    actual = (inner.d_lat, inner.d_ver, inner.d_lon)
+    assert actual == before
+
+
 def test_forged_receipt_is_not_authority() -> None:
     from guiskindose.equipment_confirmation import CapturedApplicationReceipt
 

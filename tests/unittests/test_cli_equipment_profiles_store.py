@@ -249,9 +249,9 @@ def test_read_only_mutations_fail_coded_bytes_unchanged(tmp_path: Path) -> None:
 
 
 def test_read_only_uri_special_chars(tmp_path: Path) -> None:
-    awkward = tmp_path / "my prof#1?.db"
+    awkward = tmp_path / "my prof#1%3F.db"
     db = _seed_store(awkward, [_siemens_profile()], enabled=["p-siemens"])
-    nested = tmp_path / "ünicode dir" / "sp ace.db"
+    nested = tmp_path / "ünicode dir" / "sp ace # %3F.db"
     nested.parent.mkdir()
     db.replace(nested)
     store = ProfileStore.open_read_only(nested)
