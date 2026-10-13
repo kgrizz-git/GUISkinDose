@@ -52,7 +52,6 @@ from guiskindose.equipment_profiles.errors import EquipmentProfileError, Profile
 _UTF8_BOM = "\ufeff"
 
 #: Columns that carry list cells.
-_LIST_COLUMNS = frozenset({"models", "manufacturer_aliases", "model_aliases"})
 
 #: Columns whose maximum length is the bounded-free-text limit.
 _LONG_TEXT_COLUMNS = frozenset({"notes", "comment", "source"})

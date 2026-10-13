@@ -1,6 +1,6 @@
 # Custom Equipment Profiles — Execution Plan
 
-Status: **Active — Phase 0 in progress; fallback and sparse-data rules agreed**
+Status: **Active — coordinate foundation and initial API slices implemented; phase acceptance and later features remain open**
 Design authority: [CUSTOM_EQUIPMENT_PROFILES_SPEC.md](CUSTOM_EQUIPMENT_PROFILES_SPEC.md) (reviewed 2026-10-10)
 Contract lock reference: [EQUIPMENT_PROFILE_SCHEMA.md](../EQUIPMENT_PROFILE_SCHEMA.md) (common + coordinate domains)
 Created: 2026-10-09 · plan updated 2026-10-10

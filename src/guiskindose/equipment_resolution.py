@@ -182,7 +182,8 @@ def resolve_exam_coordinates(
         custom=session.prepared,
         bundled=bundled,
     )
-    return resolution, *_matched_names(resolution, session, bundled)
+    matched_maker, matched_model = _matched_names(resolution, session, bundled)
+    return resolution, matched_maker, matched_model
 
 
 def _matched_names(

@@ -16,6 +16,9 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ### Changed
 
+- **Equipment-profile PR CodeQL review** (2026-10-13) — removed unused constants and dead test
+  setup; made the three-value resolution return explicit for static analysis. Updated the execution
+  plan header to distinguish delivered coordinate foundations from outstanding acceptance/later phases.
 - **Consolidated replay/GUI delivery review** (2026-10-13) — kept all capture, CLI/settings, GUI,
   and run-state commits in the second dependent PR. Read-only URI regression paths now exercise
   spaces, Unicode, `#`, and literal percent escapes using filenames legal on Windows. Single-capture

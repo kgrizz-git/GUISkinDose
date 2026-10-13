@@ -713,7 +713,6 @@ def test_resolver_rejects_dangling_claim_reference() -> None:
         claims=(*bundled.exact.coordinates.claims, dangling),
         keys=(*bundled.exact.coordinates.keys, ("siemens", "axiom artis")),
     )
-    custom = _empty_custom()
     import dataclasses
 
     patched = dataclasses.replace(bundled, exact=tampered)

@@ -41,7 +41,6 @@ _MAX_OOCXML_COLUMNS = 16_384
 
 _ROW_ELEMENT = "row"
 _CELL_ELEMENT = "c"
-_DIMENSION_ELEMENT = "dimension"
 
 
 def worksheet_budgets() -> tuple[int, int, int]:

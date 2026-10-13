@@ -122,8 +122,6 @@ def test_packaged_example_shorthand_alias_array_is_accepted() -> None:
 
 
 def test_partial_coordinate_omission_is_valid_inheritance() -> None:
-    document = parse_memory_document(_envelope([_profile(coordinates=_full_coordinates() | {"detector_side_length": None}) if False else _profile(coordinates=_full_coordinates())]))
-
     # Omit rather than null: drop the detector leaf from a full block.
     coordinates = _full_coordinates()
     del coordinates["detector_side_length"]
