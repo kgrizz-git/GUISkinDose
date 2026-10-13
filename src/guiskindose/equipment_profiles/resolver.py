@@ -251,7 +251,7 @@ def _check_inputs(
 
 
 def _display_label(entry: IndexedProfile) -> str:
-    """Notice label: the profile ID for custom profiles, the listed model otherwise."""
+    """Notice label: the listed model, or manufacturer plus wildcard for wildcard profiles."""
     if entry.profile.models == ("*",):
         return f"{entry.profile.manufacturer} *"
     return entry.profile.models[0] if entry.profile.models else entry.profile.profile_id
