@@ -3,6 +3,29 @@
 Implementation history for the active [execution plan](CUSTOM_EQUIPMENT_PROFILES_EXECUTION.md).
 Scientific requirements and phase acceptance gates remain in that plan and its linked contracts.
 
+- 2026-10-13 — **GUI live session + loader captures + calc threading (F-A).**
+  Optional immutable session home on `AppState` with a checked import-before-load
+  bind seam (refuses loaded exams, legacy preview data, in-flight ops, and
+  mistyped sessions pre-mutation); `build_settings` binds it with no I/O.
+  DICOM/tabular loaders request genuine receipts, rebind to final frames via
+  the public bridge, and mint per-exam `(capture, snapshot)` authority with
+  `capture_from_receipt` — snapshots are the receipt's proven leaves on an
+  isolated copy, never shared last-load state. Publication is candidate-based:
+  every step runs on a bounded shallow copy and the live state adopts wholesale
+  only on full success, so parse/bounds/append/mint/finalize/rebuild faults and
+  cancellation leave exams, preview, raw, display, offsets, results, and session
+  identical (no restore pass). Exam/event ceilings (64 / 10,000, O(1) counts
+  first, null-inclusive early-exit sums) refuse before copies; calculation
+  threads captures through the existing context APIs with the session stripped
+  and private per-exam baselines (missing-snapshot nulls fail closed); stale
+  captures are retained and refuse loudly before dose; captures and session
+  survive `reset_results`. 44 GUI tests (bind, parity single/multi/mixed with
+  per-exam snapshot-field + oracle proofs both vendor orders, flags, fallback,
+  stale zero-dose spy + control, reset, atomicity incl. injected rebuild faults
+  and KI/SystemExit propagation, refusal, bounds, privacy). Honest partial
+  status: no run-state bump/import/writer, no GUI authoring UI, no
+  aliases/wildcards/transmission, no before-raw-load pending path.
+
 - 2026-10-12 — **Run-state equipment-envelope boundary (foundation, inert).**
   `RunStateError` moved unchanged to `gui/run_state_errors.py` (`gui/run_state`
   re-exports; identity/codes/messages intact); new `gui/run_state_equipment.py`

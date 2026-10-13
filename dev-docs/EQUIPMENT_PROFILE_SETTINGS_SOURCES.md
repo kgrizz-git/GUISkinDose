@@ -88,3 +88,32 @@ malformed non-profile settings, but an invalid `equipment_profiles` block
 fails closed first and never falls through it. Direct `PyskindoseSettings`
 constructor / `initialize_settings` source support is wired (keyword-only
 `settings_base_dir`); GUI authoring stays out of scope.
+
+## 5. GUI live-session ownership (F-A slice)
+
+The GUI holds one optional immutable `EquipmentProfileSession` on
+`AppState.equipment_profile_session` (`gui/state.py`), bound only through
+`bind_equipment_session` (`gui/settings_builder.py`): mistyped sessions,
+in-flight operations, and loaded exams or legacy preview data all refuse
+closed before any mutation (import-before-data-load); results invalidate
+only on success. `build_settings` passes the home through the validated
+constructor kwarg (no store/file I/O; the session arrives already assembled).
+
+Session-active loaders request genuine receipts from their own normalizer
+call, rebind each receipt to the final post-filter/post-transform frame with
+the public `bind_receipt_frame` bridge, and mint one `(capture, snapshot)`
+authority pair per accepted exam with `capture_from_receipt` (full bridge
+validation, never a forged or foreign receipt). The snapshot is the
+receipt's proven leaves on an isolated copy — the exam's genuine per-exam
+baseline, retained on the exam result with `repr=False`. Publication is
+candidate-based: every step runs on a bounded shallow copy and the live
+state adopts wholesale only on full success, so any fault or cancellation
+leaves exams, preview, raw, display, offsets, results, and session identical.
+Exam/event ceilings (64 / 10,000; O(1) counts first, null-inclusive bounded
+sums) refuse before copies. Calculation threads captures positionally
+through the existing `equipment_capture_context(s)` APIs with the live
+session stripped and private per-exam baselines (a capture-less entry with
+no snapshot fails closed as inconsistent, distinct from an intentional
+null); stale captures are retained and refuse loudly before dose. Captures
+and session survive `reset_results`. No run-state version bump, import, or
+writer rides on this slice.

@@ -22,6 +22,19 @@ That keeps SemVer and contributor history organized.
 - Experimental equipment captures reject non-string envelope modes and
   non-string object keys before comparisons, with value-free errors.
 
+### Added
+
+- **GUI live custom-profile sessions (experimental)** (2026-10-13) — an
+  assembled coordinate session can be bound before any data load
+  (`bind_equipment_session`; binds with loaded exams, preview data, or an
+  in-flight operation refuse closed). DICOM and tabular loads then resolve
+  through the live session and mint one captured-coordinate authority plus a
+  private per-exam baseline snapshot per accepted exam; failed loads publish
+  nothing. Calculation consumes the captures through the existing capture
+  APIs with the live session stripped; edited frames keep their authority
+  and refuse loudly before dose instead of falling back silently. Captures
+  survive result resets. Run-state v2 import/export stays open.
+
 
 ### Changed
 

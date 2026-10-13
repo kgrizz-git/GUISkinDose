@@ -12,6 +12,17 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ### Changed
 
+- **GUI authority parent review** (2026-10-12) — candidate and calculation counts are bounded before list copies; captured contexts are revalidated and aggregate bounds use current frame rows before any baseline snapshot is copied.
+
+- **GUI equipment session ownership** (2026-10-13) — session home, checked bind
+  seam (loaded/preview/busy refusals), loader receipt/rebind/mint with per-exam
+  snapshots via candidate-based whole-file atomicity, count-first bounds,
+  calc threading with gated private baselines; `InputAdapterResult`
+  `equipment_capture` / repr-hidden `normalization_snapshot` fields;
+  `reset_results` accepts an optional target (default singleton, callers
+  unchanged). No run-state changes. Targeted checks passed; ruff,
+  basedpyright, complexity, size, and freshness gates clean.
+
 - Run-state trial settings validation now uses a fixed error message with the underlying exception suppressed; privacy Semgrep identified the raw exception text after the shared error-class move.
 
 - **Capture codec parent review** (2026-10-12) — exact string keys and envelope

@@ -2,10 +2,25 @@
 
 from __future__ import annotations
 
+import copy
+from typing import TYPE_CHECKING
+
 from guiskindose import load_settings_example_json
+from guiskindose.equipment_profiles.capture import (
+    CODE_INVALID_EQUIPMENT_CAPTURE,
+    CaptureError,
+    validate_constructed_context,
+)
+from guiskindose.equipment_profiles.constants import MAX_AGGREGATE_ROWS, MAX_PROFILES
+from guiskindose.equipment_profiles.session import EquipmentProfileSession
 from guiskindose.settings import PyskindoseSettings
 
-from .state import AppState
+from .state import AppState, reset_results
+
+if TYPE_CHECKING:
+    from guiskindose.equipment_profiles.capture import CapturedCoordinates
+    from guiskindose.input_adapters.models import InputAdapterResult
+    from guiskindose.settings.normalization_settings import NormalizationSettings
 
 
 def fallback_normalization_exam_count(app_state: AppState) -> int:
@@ -51,6 +66,31 @@ def refresh_normalization_warnings(app_state: AppState) -> None:
             "Using default normalization settings."
         )
     app_state.normalization_warnings = warnings
+
+
+def bind_equipment_session(app_state: AppState, session: EquipmentProfileSession | None) -> None:
+    """Bind (or clear) the live custom-profile session: import-before-data-load only.
+
+    Refuses closed with loaded exams, legacy preview data, or an in-flight
+    operation — activating, replacing, or clearing a session under loaded
+    geometry would silently re-scope dose, so the caller unloads everything
+    first, then binds, then loads. A candidate failure leaves session,
+    results, offsets, and exams untouched: every check runs before the single
+    assignment, and results invalidate only on success (stale dose must never
+    display under a new session). The session object itself is immutable and
+    already assembled; no store or file is opened here.
+    """
+    if session is not None and not isinstance(session, EquipmentProfileSession):
+        raise ValueError("Equipment session must be an EquipmentProfileSession or None.")
+    if app_state.busy:
+        raise ValueError("Cannot change the equipment-profile session while an operation is in flight.")
+    if app_state.loaded_exams or app_state.rdsr_df is not None:
+        raise ValueError(
+            "Cannot change the equipment-profile session with exams loaded or preview "
+            "data present; unload all exams first, then bind, then load."
+        )
+    app_state.equipment_profile_session = session
+    reset_results(app_state)
 
 
 def build_settings(
@@ -131,4 +171,83 @@ def build_settings(
         # a zero-profile build would silently disable vendor normalization.
         normalization_arg = NormalizationSettings(app_state.normalization_profiles)
 
-    return PyskindoseSettings(settings=base, normalization_settings=normalization_arg, output_format=output_format)
+    return PyskindoseSettings(
+        settings=base,
+        normalization_settings=normalization_arg,
+        output_format=output_format,
+        equipment_profile_session=app_state.equipment_profile_session,
+    )
+
+
+def settings_stripped(settings: PyskindoseSettings) -> PyskindoseSettings:
+    """Remove the bound live session from caller-owned calculation settings.
+
+    Captured calculation never resolves live; stripping here (rather than in
+    the loaders) keeps the bound home intact for future loads while the
+    calculation works on an isolated copy. Only ever called with fresh
+    ``build_settings`` output, never caller-persisted state.
+    """
+    settings.equipment_profile_session = None
+    return settings
+
+
+def _validate_calculation_frames(
+    loaded: list[InputAdapterResult], contexts: list[CapturedCoordinates | None]
+) -> None:
+    """Validate every authority and bound current rows before copying baselines."""
+    from guiskindose.settings.normalization_settings import NormalizationSettings
+
+    retained = 0
+    for context, exam in zip(contexts, loaded, strict=True):
+        if context is not None:
+            validate_constructed_context(context)
+        retained += len(exam.normalized_data)
+        if retained > MAX_AGGREGATE_ROWS:
+            raise CaptureError("Too many retained events for captured calculation.", CODE_INVALID_EQUIPMENT_CAPTURE)
+        if context is None and not isinstance(exam.normalization_snapshot, NormalizationSettings):
+            raise CaptureError(
+                "An exam is missing its captured authority baseline; reload the exams.", CODE_INVALID_EQUIPMENT_CAPTURE
+            )
+
+
+def prepare_calculation_authority(
+    app_state: AppState, settings: PyskindoseSettings
+) -> tuple[
+    PyskindoseSettings, list[CapturedCoordinates | None] | None, list[NormalizationSettings | None] | None
+]:
+    """Split live-session settings from captured-calculation authority.
+
+    Collects each loaded exam's minted capture positionally. With no captures
+    anywhere the caller's settings pass through untouched (pure and
+    live-session paths behave exactly as before). With any capture present
+    the bound live session is stripped from the calculation settings —
+    captured calculation never resolves live — and every capture-less entry
+    installs its own retained per-exam normalization snapshot (all-captured
+    runs need no baselines). A capture-less entry with no snapshot is
+    inconsistent authority (stripped provenance, not an intentional null) and
+    fails closed before any dose. Exam/event ceilings are enforced here on
+    O(1) counts plus early-exit sums — covering every retained row, captured
+    or not — before any baseline is copied. The settings object must be
+    caller-owned (``build_settings`` output): it is mutated only by session
+    removal, never by capture content.
+    """
+    loaded = app_state.loaded_exams
+    if len(loaded) > MAX_PROFILES:
+        # Preserve unrestricted legacy baseline runs without materializing an
+        # oversized authority list. Any captured or live authority is bounded.
+        session = settings.equipment_profile_session
+        if (session is not None and session.profiles) or any(exam.equipment_capture is not None for exam in loaded):
+            raise CaptureError("Too many captured exams for one calculation.", CODE_INVALID_EQUIPMENT_CAPTURE)
+        return settings, None, None
+    contexts: list[CapturedCoordinates | None] = [exam.equipment_capture for exam in loaded]
+    if not any(context is not None for context in contexts):
+        return settings, None, None
+    _validate_calculation_frames(loaded, contexts)
+    # All bounds and baseline shapes pass before copying any snapshot.
+    baselines = [
+        copy.deepcopy(exam.normalization_snapshot) if context is None else None
+        for context, exam in zip(contexts, loaded, strict=True)
+    ]
+    if not any(baseline is not None for baseline in baselines):
+        return settings_stripped(settings), contexts, None
+    return settings_stripped(settings), contexts, baselines

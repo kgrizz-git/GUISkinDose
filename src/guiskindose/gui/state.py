@@ -10,9 +10,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pandas as pd
+
+if TYPE_CHECKING:
+    from guiskindose.equipment_profiles.session import EquipmentProfileSession
 
 
 @dataclass
@@ -127,6 +130,14 @@ class AppState:
     dark_mode: bool = True
     colorscale: str = "jet"
 
+    # ── Custom equipment profiles (coordinate-only live session) ──────────
+    # Assembled immutable session bound before any data load
+    # (import-before-data-load via bind_equipment_session). None = no custom
+    # profiles: loaders resolve with bundled/Default only and mint no captures.
+    # Never serialized; never cleared by reset_results (captures live on exams
+    # and survive settings-only invalidation).
+    equipment_profile_session: EquipmentProfileSession | None = None
+
     # ── Imported run-state homes (settings export/import) ────────────────
     # Restorable configuration with no GUI widget. None = example-JSON
     # default (builder leaves the default in place); non-None values are
@@ -183,16 +194,23 @@ class AppState:
 state = AppState()
 
 
-def reset_results() -> None:
-    """Clear calculation results when settings or file change."""
-    state.output = None
-    state.multi_exam_result = None
-    state.calculation_done = False
-    state.psd = None
-    state.air_kerma = None
-    state.dosemap_fig = None
-    state.visible_exam_dosemaps = []
-    state.aggregate_subset_exams = []
+def reset_results(target: AppState | None = None) -> None:
+    """Clear calculation results when settings or file change.
+
+    Only result fields are cleared: per-exam captures live on the loaded
+    exams and the bound session home is configuration, so both survive
+    settings-only invalidation (stale authority refuses loudly at
+    calculation instead of silently falling back).
+    """
+    state_obj = state if target is None else target
+    state_obj.output = None
+    state_obj.multi_exam_result = None
+    state_obj.calculation_done = False
+    state_obj.psd = None
+    state_obj.air_kerma = None
+    state_obj.dosemap_fig = None
+    state_obj.visible_exam_dosemaps = []
+    state_obj.aggregate_subset_exams = []
 
 
 def is_ready_to_calculate() -> bool:

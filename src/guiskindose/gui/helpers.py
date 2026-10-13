@@ -14,7 +14,7 @@ import numbers
 from collections.abc import Callable
 from math import isclose
 from pathlib import Path
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
 import pandas as pd
@@ -30,6 +30,10 @@ from guiskindose.phantom_mesh_names import (
     sort_clinical_mesh_stems,
 )
 from guiskindose.privacy import safe_error_event
+
+if TYPE_CHECKING:
+    from guiskindose.equipment_profiles.capture import CapturedCoordinates
+    from guiskindose.settings.normalization_settings import NormalizationSettings
 
 from .exam_loaders import get_excel_sheets, load_rdsr, load_tabular
 from .exam_transforms import (
@@ -75,6 +79,7 @@ from .settings_builder import (
     fallback_normalization_exam_count,
     format_input_scanner_label,
     format_normalization_profile_label,
+    prepare_calculation_authority,
     refresh_normalization_warnings,
 )
 from .state import AppState
@@ -249,6 +254,20 @@ def to_json_safe_records(dataframe: pd.DataFrame) -> list[dict[str, object]]:
     ]
 
 
+def _capture_calculation_kwargs(
+    contexts: list[CapturedCoordinates | None] | None,
+    baselines: list[NormalizationSettings | None] | None,
+    *,
+    multi: bool,
+) -> dict[str, Any]:
+    """Leave baseline call signatures intact; pass capture authority only when present."""
+    if contexts is None:
+        return {}
+    if multi:
+        return {"equipment_capture_contexts": contexts, "per_exam_baselines": baselines}
+    return {"equipment_capture_context": contexts[0]}
+
+
 def run_calculation(state: AppState, progress_cb=None) -> tuple[bool, str]:
     """Run the full dose calculation. Returns (success, message).
 
@@ -265,6 +284,13 @@ def run_calculation(state: AppState, progress_cb=None) -> tuple[bool, str]:
         settings.kerma_meter_correction.unresolved_equipment_labels = dict(state.kerma_meter_unresolved_labels)
         settings.kerma_meter_correction.calibration_periods = dict(state.kerma_meter_periods)
         settings.kerma_meter_correction.periods_acknowledged = set(state.kerma_meter_periods_acknowledged)
+
+        # Captured-coordinate authority minted at load: with any capture present
+        # the live session is stripped (captured calculation never resolves
+        # live) and null exams get private baselines. Stale captures — frames
+        # edited after load — refuse loudly inside analyze_* before any dose,
+        # and are retained, never cleared into a silent baseline fallback.
+        settings, capture_contexts, capture_baselines = prepare_calculation_authority(state, settings)
 
         # Don't log state.file_name — it can carry PHI (patient name/MRN).
         dprint("CALCULATION", "Starting calculation")
@@ -312,11 +338,13 @@ def run_calculation(state: AppState, progress_cb=None) -> tuple[bool, str]:
                 ]
 
                 # analyze_multiple_exams internally handles logging and tqdm patch
+                multi_authority = _capture_calculation_kwargs(capture_contexts, capture_baselines, multi=True)
                 multi_result = analyze_multiple_exams(
                     exams=state.loaded_exams,
                     settings=settings,
                     per_exam_offsets=per_exam_offsets,
                     per_exam_extra_warnings=per_exam_extra_warnings,
+                    **multi_authority,
                 )
 
                 state.dosemap_fig = None
@@ -359,7 +387,12 @@ def run_calculation(state: AppState, progress_cb=None) -> tuple[bool, str]:
                 calc_df = state.rdsr_df.drop(
                     columns=[EXAM_COLUMN, EXAM_INDEX_COLUMN], errors="ignore"
                 ).copy()
-                output = analyze_data(normalized_data=calc_df, settings=settings)
+                single_authority = _capture_calculation_kwargs(capture_contexts, capture_baselines, multi=False)
+                output = analyze_data(
+                    normalized_data=calc_df,
+                    settings=settings,
+                    **single_authority,
+                )
 
                 state.calc_warnings = list(_collector.messages)
 
