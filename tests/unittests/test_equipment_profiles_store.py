@@ -758,7 +758,7 @@ def test_provenance_is_retained_privately_but_hashed(tmp_path: Path) -> None:
 def test_default_store_path_computes_without_touching_the_filesystem(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setattr(Path, "home", classmethod(lambda _cls: tmp_path))
     path = default_store_path()
 
     assert path == tmp_path / ".guiskindose" / "equipment_profiles.sqlite3"
