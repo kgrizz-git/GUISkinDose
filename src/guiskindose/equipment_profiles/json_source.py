@@ -21,7 +21,7 @@ from __future__ import annotations
 
 import json
 import os
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -116,7 +116,11 @@ def _enforce_depth(value: Any, max_depth: int, *, source_kind: str, max_nodes: i
             raise EquipmentProfileError(
                 ProfileErrorCode.NESTING_LIMIT_EXCEEDED, source_kind=source_kind, count=max_depth
             )
-        children = node.values() if isinstance(node, Mapping) else node if isinstance(node, (list, tuple)) else ()
+        children: Iterable[Any] = ()
+        if isinstance(node, Mapping):
+            children = node.values()
+        elif isinstance(node, (list, tuple)):
+            children = node
         for child in children:
             if visited + len(stack) >= max_nodes:
                 raise EquipmentProfileError(
@@ -136,6 +140,20 @@ def _loads(text: str) -> Any:
         raise EquipmentProfileError(ProfileErrorCode.MALFORMED_JSON, source_kind=SOURCE_KIND_JSON) from None
 
 
+def _flat_entry_total(entry: Any) -> int:
+    """Grammar total for one envelope entry: itself plus coordinate leaves and rows."""
+    if not isinstance(entry, Mapping):
+        return 0
+    total = 1
+    coordinates = entry.get("coordinates")
+    if isinstance(coordinates, Mapping):
+        total += sum(len(block) if isinstance(block, Mapping) else 1 for block in coordinates.values())
+    rows = entry.get("transmission")
+    if isinstance(rows, Sequence) and not isinstance(rows, (str, bytes)):
+        total += len(rows)
+    return total
+
+
 def _early_envelope_checks(document: Any, source_kind: str) -> None:
     """Cheap known-count checks that run before any structure traversal."""
     if not isinstance(document, Mapping):
@@ -148,19 +166,7 @@ def _early_envelope_checks(document: Any, source_kind: str) -> None:
             )
         # Aggregate grammar totals are also known before traversal: profile count plus the children of each
         # profile object (coordinate leaves and transmission rows) is bounded by the flat table's own ceilings.
-        flat_total = 0
-        for entry in profiles:
-            if not isinstance(entry, Mapping):
-                continue
-            flat_total += 1
-            coordinates = entry.get("coordinates")
-            if isinstance(coordinates, Mapping):
-                flat_total += sum(
-                    len(block) if isinstance(block, Mapping) else 1 for block in coordinates.values()
-                )
-            rows = entry.get("transmission")
-            if isinstance(rows, Sequence) and not isinstance(rows, (str, bytes)):
-                flat_total += len(rows)
+        flat_total = sum(_flat_entry_total(entry) for entry in profiles)
         if flat_total > MAX_AGGREGATE_ROWS:
             raise EquipmentProfileError(
                 ProfileErrorCode.ROW_LIMIT_EXCEEDED, source_kind=source_kind, count=flat_total
