@@ -1,0 +1,112 @@
+{
+  "schema_version": 1,
+  "profiles": [
+    {
+      "profile_id": "demo-scope-2000",
+      "manufacturer": "Acme Imaging",
+      "models": ["DemoScope 2000"],
+      "manufacturer_aliases": ["AcmeImaging"],
+      "model_aliases": ["DemoScope2000", "DS2000"],
+      "provenance": {
+        "source": "Example profile packaged with GUISkinDose",
+        "notes": "Fictional values. Copy this file and replace every value with your own data."
+      },
+      "coordinates": {
+        "translation_offset": { "x": 0.0, "y": 0.0, "z": 0.0 },
+        "translation_direction": { "x": "+", "y": "+", "z": "+" },
+        "rotation_direction": {
+          "Ap1": "+", "Ap2": "+", "Ap3": "+",
+          "At1": "+", "At2": "+", "At3": "+"
+        },
+        "swap_lateral_longitudinal": false,
+        "field_size_mode": "CFA",
+        "detector_side_length": 40
+      },
+      "transmission": [
+        {
+          "device_model": "DemoScope 2000",
+          "acquisition_plane": "Single Plane",
+          "kvp_kv": 80,
+          "filtration_added_mmcu": 0.0,
+          "filtration_added_mmal": 0,
+          "k_patient_support": 0.71,
+          "evidence_status": "estimated",
+          "source": "Example row packaged with GUISkinDose",
+          "date": "1901-01-01",
+          "comment": ""
+        },
+        {
+          "device_model": "DemoScope 2000",
+          "acquisition_plane": "Single Plane",
+          "kvp_kv": 100,
+          "filtration_added_mmcu": 0.2,
+          "filtration_added_mmal": 4,
+          "k_patient_support": 0.68,
+          "evidence_status": "estimated",
+          "source": "Example row packaged with GUISkinDose",
+          "date": "1901-01-01",
+          "comment": ""
+        },
+        {
+          "device_model": "DemoScope 2000",
+          "acquisition_plane": "Single Plane",
+          "kvp_kv": 120,
+          "filtration_added_mmcu": 0.4,
+          "filtration_added_mmal": 8,
+          "k_patient_support": 0.66,
+          "evidence_status": "estimated",
+          "source": "Example row packaged with GUISkinDose",
+          "date": "1901-01-01",
+          "comment": ""
+        }
+      ]
+    },
+    {
+      "profile_id": "demo-scope-wildcard",
+      "manufacturer": "Acme Imaging",
+      "models": ["*"],
+      "provenance": {
+        "source": "Example profile packaged with GUISkinDose",
+        "notes": "Coordinate-only and partial: only the z offset is supplied, every other field is inherited from the best bundled match and reported in the partial-match notice."
+      },
+      "coordinates": {
+        "translation_offset": { "z": -12.5 }
+      }
+    },
+    {
+      "profile_id": "demo-biplane-rows",
+      "manufacturer": "Acme Imaging",
+      "models": ["DemoScope Biplane 4000"],
+      "provenance": {
+        "source": "Example profile packaged with GUISkinDose",
+        "notes": "Transmission-only and partial: only 80 kVp is covered, every other beam quality falls back to the packaged table."
+      },
+      "transmission": [
+        {
+          "device_model": "DemoScope Biplane 4000",
+          "acquisition_plane": "Plane A",
+          "kvp_kv": 80,
+          "filtration_added_mmcu": 0.0,
+          "filtration_added_mmal": 0,
+          "k_patient_support": 0.74,
+          "evidence_status": "estimated",
+          "source": "Example row packaged with GUISkinDose",
+          "date": "1901-01-01",
+          "comment": ""
+        },
+        {
+          "device_model": "DemoScope Biplane 4000",
+          "acquisition_plane": "Plane B",
+          "kvp_kv": 80,
+          "filtration_added_mmcu": 0.0,
+          "filtration_added_mmal": 0,
+          "k_patient_support": 0.69,
+          "evidence_status": "estimated",
+          "source": "Example row packaged with GUISkinDose",
+          "date": "1901-01-01",
+          "comment": ""
+        }
+      ]
+    }
+  ]
+}

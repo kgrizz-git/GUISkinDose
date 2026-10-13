@@ -282,10 +282,11 @@ long as the live singleton is untouched on the worker.
   - `app.py` (or equivalent) restore/preset paths that already call `refresh_geometry_preview`
   - Per-exam offset changes (`_per_exam.py`); Settings tab navigation in `app.py`
 
-- [ ] **Step 6: Manual smoke** — no RDSR; `hudfrid` + pediatric; each scale slider; nonuniform
+- [x] **Step 6: Manual smoke** — no RDSR; `hudfrid` + pediatric; each scale slider; nonuniform
   scales; offset nudges; head-first vs feet-first; orbit preserved while dragging scales; face-up
   readable; **initial paint non-blank**; multi-exam active-exam offset change updates preview;
-  plane/cylinder shows human-only placeholder.
+  plane/cylinder shows human-only placeholder. **Done 2026-10-07** (agent-run headless smoke):
+  criteria 1–4, 7, 8, 10, 11 by screenshots and plot data; 5, 6, 9, 12, 13 by code and test reading.
 
 - [ ] **Step 7: Commit.** (deferred until user requests commit)
 

@@ -10,6 +10,26 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ### Changed
 
+- **Equipment-profile design readiness** (2026-10-10) — reviewed the spec and execution phases,
+  recorded unresolved Phase 0 contracts before calculation changes, and clarified the synthetic
+  example documentation. Added guidance to split large PRs while preserving atomic audit and
+  migration contracts. Accepted only the new synthetic CSV-header heuristic in the phi-scan
+  baseline, preserving all earlier entries and expiry dates.
+
+- **2026-10-07 manual smokes recorded** (2026-10-09) — the agent-run smoke pass for shipped features
+  now lives in the plans instead of `TO_DO.md`: multi-exam upload/calculate/per-exam offsets
+  ([plans/archive/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN.md](plans/archive/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN.md),
+  [plans/archive/multiple-exams.md](plans/archive/multiple-exams.md)), correction safety and tube
+  identity, the Results table, Settings phantom preview
+  ([plans/archive/SETTINGS_PHANTOM_PREVIEW_PLAN.md](plans/archive/SETTINGS_PHANTOM_PREVIEW_PLAN.md)),
+  the rich-export browser modal ([plans/RICH_EXPORT_PLAN.md](plans/RICH_EXPORT_PLAN.md)), and the
+  kerma-meter CF browser GUI
+  ([plans/archive/KERMA_METER_CF_WORKFLOW_PLAN.md](plans/archive/KERMA_METER_CF_WORKFLOW_PLAN.md)).
+  The pass found and fixed stale Results/sidebar totals after invalidation, a
+  `--input-preview-only` run ignoring `--plane-code-map`, and the duplicated "Exam Exam 1" heading.
+  `TO_DO.md` → Manual Smokes keeps only the user-only passes (native pywebview windows, Windows
+  native file dialogs).
+
 - **Upload auto-detect failure hint** (2026-10-09) — the GUI retry text names the marker, the
   two-column floor, and the two-source stop. `tests/gui/test_rdsr_unit_error.py` pins that
   wording and checks that the detector's header text is not shown.
