@@ -154,6 +154,9 @@ def load_rdsr(file_path: Path, state: AppState) -> tuple[bool, str]:
             )
             norm = settings.normalization_settings
 
+        if settings.remove_invalid_rows and len(df[df.kVp == 0]):
+            df = df[df.kVp != 0].reset_index(drop=True)
+
         # Filter, transform, bound, and authorize on the candidate frame.
         final, capture, snapshot, flag_values, override_value = _resolve_dicom_authority(
             settings=settings,

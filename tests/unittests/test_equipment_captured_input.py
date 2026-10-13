@@ -235,19 +235,19 @@ def test_main_dicom_parity() -> None:
 
 
 def test_main_tabular_refusal(tmp_path: Path, monkeypatch: Any) -> None:
-    import guiskindose.input_adapters.tabular_loader as loader_module
+    import guiskindose.input_adapters.registry as registry_module
 
     session = assemble_session(documents=[_siemens_doc()])
     csv_path = _write(tmp_path, "events.csv", _GENERIC_HEADER + "\n" + _GENERIC_SIEMENS_ROW + "\n")
     context, _, _ = _live_capture_csv(csv_path, session)
-    real_load = loader_module.load
+    real_load = registry_module.load
     reads: list[str] = []
 
     def _spy_load(path: Any, *args: Any, **kwargs: Any) -> Any:
         reads.append(str(path))
         return real_load(path, *args, **kwargs)
 
-    monkeypatch.setattr(loader_module, "load", _spy_load)
+    monkeypatch.setattr(registry_module, "load", _spy_load)
     csv_str = str(csv_path)
     settings = _dose_settings()
     with pytest.raises(CaptureError) as excinfo:
@@ -459,21 +459,21 @@ def test_malformed_and_session_conflicts_pre_io(monkeypatch: Any, tmp_path: Path
     import copy as _copy
 
     import guiskindose.helpers.read_and_normalize_rdsr_data as dicom_helper
-    import guiskindose.input_adapters.tabular_loader as loader_module
+    import guiskindose.input_adapters.registry as registry_module
 
     session = assemble_session(documents=[_siemens_doc()])
     path = _write(tmp_path, "events.csv", _GENERIC_HEADER + "\n" + _GENERIC_SIEMENS_ROW + "\n")
     context, _, _ = _live_capture_csv(path, session)
     forged = _copy.copy(context)
     object.__setattr__(forged, "event_count", "bad")
-    real_load = loader_module.load
+    real_load = registry_module.load
     reads: list[str] = []
 
     def _spy_load(path: Any, *args: Any, **kwargs: Any) -> Any:
         reads.append(str(path))
         return real_load(path, *args, **kwargs)
 
-    monkeypatch.setattr(loader_module, "load", _spy_load)
+    monkeypatch.setattr(registry_module, "load", _spy_load)
     real_read = dicom_helper.pydicom.dcmread
     dicom_reads: list[str] = []
 

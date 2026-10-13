@@ -48,12 +48,6 @@ That keeps SemVer and contributor history organized.
   and refuse loudly before dose instead of falling back silently. Captures
   survive result resets. Run-state v2 import/export stays open.
 
-
-### Changed
-
-- Custom negative table-angle and third positioner-angle direction signs now preserve the zero-angle
-  arrays instead of causing a row-length error during normalization.
-
 - **Settings-block equipment profiles in Python (experimental)** (2026-10-12) —
   `PyskindoseSettings` and `initialize_settings` accept an optional `equipment_profiles`
   block (`files` with `path`/`format`/`sheet`, `store` with `path`/`ids`), assembled
@@ -157,6 +151,15 @@ That keeps SemVer and contributor history organized.
   with cross-kind conflict checks, capability gating, a compiled index prepared once, and per-exam
   resolution without recompiling. **Inert like the rest of the package:** nothing reads a session
   from any feature path, so results, exports, and settings are unchanged.
+
+### Changed
+
+- Custom negative table-angle and third positioner-angle direction signs now preserve the zero-angle
+  arrays instead of causing a row-length error during normalization.
+
+- **GUI upload examples** — loading a bundled DICOM or tabular example now clears the exam list,
+  abandons staged run-configuration equipment entries (with the same warning as exam removal), and
+  rolls staged entries back if the example load fails.
 
 - **Equipment-profile coordinate resolution core (experimental, internal only)** (2026-10-11) — the
   internal package gains immutable custom-exact coordinate resolution over compiled indexes (custom

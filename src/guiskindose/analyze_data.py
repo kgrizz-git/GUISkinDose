@@ -15,6 +15,7 @@ from guiskindose.equipment_confirmation import (
     _prepare_captured_exams,
     _validate_capture_baselines,
     _validate_capture_contexts,
+    check_captured_work_isolated,
 )
 from guiskindose.equipment_profiles.capture import (
     CODE_INVALID_EQUIPMENT_CAPTURE,
@@ -124,45 +125,7 @@ def _apply_capture_context(
     return work_settings, equipment_profile_match
 
 
-def _check_work_isolated(work_settings: Any, settings: Any) -> None:
-    """Require the working copy isolated from caller-owned mutable state.
-
-    A self-returning ``__deepcopy__`` (or shared-child hooks) that rebinds the
-    working copy to caller handles would let later candidate assignment — or
-    downstream plot-mode dimension writes — mutate the caller. Reject before
-    the candidate is assigned. Ordinary subclasses that copy cleanly pass
-    unchanged. This verifies handle isolation at handoff; it cannot restrain
-    a hostile hook that mutates caller state during its own copy execution.
-    """
-    if not isinstance(work_settings, PyskindoseSettings):
-        raise CaptureError(
-            _CAPTURE_SETTINGS_ERROR,
-            CODE_INVALID_EQUIPMENT_CAPTURE,
-        )
-    try:
-        shared = (
-            work_settings is settings
-            or work_settings.normalization_settings is settings.normalization_settings
-            or work_settings.normalization_settings.trans_offset
-            is settings.normalization_settings.trans_offset
-            or work_settings.normalization_settings.trans_dir
-            is settings.normalization_settings.trans_dir
-            or work_settings.normalization_settings.rot_dir
-            is settings.normalization_settings.rot_dir
-            or work_settings.phantom is settings.phantom
-            or work_settings.phantom.dimension is settings.phantom.dimension
-            or work_settings.phantom.patient_offset is settings.phantom.patient_offset
-        )
-    except AttributeError:
-        raise CaptureError(
-            _CAPTURE_SETTINGS_ERROR,
-            CODE_INVALID_EQUIPMENT_CAPTURE,
-        ) from None
-    if shared:
-        raise CaptureError(
-            _CAPTURE_SETTINGS_ERROR,
-            CODE_INVALID_EQUIPMENT_CAPTURE,
-        )
+_check_work_isolated = check_captured_work_isolated
 
 
 def _format_multi_exam_failure_warning(exam_id: str, exc: BaseException) -> str:

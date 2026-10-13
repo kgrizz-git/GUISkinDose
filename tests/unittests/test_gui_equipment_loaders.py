@@ -455,18 +455,37 @@ def test_pending_pre64_dicom_refuses_zero_reads(session: Any) -> None:
     """
     import pydicom
 
-    state = _bound_state(session)
-    assert load_rdsr(_DICOM, state)[0]
-    exam = state.loaded_exams[0]
+    donor = _bound_state(session)
+    assert load_rdsr(_DICOM, donor)[0]
+    exam = donor.loaded_exams[0]
+    capture = exam.equipment_capture
+    state = AppState()
     state.loaded_exams = [exam] * 64
-    state.loaded_exam_meta = state.loaded_exam_meta * 64
-    state.equipment_pending = (_staged_entry(exam.equipment_capture),)
+    state.loaded_exam_meta = [donor.loaded_exam_meta[0]] * 64
+    state.equipment_pending = (_staged_entry(capture),)
     with mock.patch.object(pydicom, "dcmread", wraps=pydicom.dcmread) as spy:
         ok, msg = load_rdsr(_DICOM, state)
     assert not ok
-    assert "conflict" in msg
+    assert "Too many loaded exams" in msg
     spy.assert_not_called()
     assert len(state.loaded_exams) == 64
+    assert len(state.equipment_pending) == 1
+
+
+def test_bound_session_refuses_staged_capture_replay(session: Any) -> None:
+    """A bound live session cannot consume a staged capture replay slot."""
+    import pydicom
+
+    donor = _bound_state(session)
+    assert load_rdsr(_DICOM, donor)[0]
+    capture = donor.loaded_exams[0].equipment_capture
+    state = _bound_state(session)
+    state.equipment_pending = (_staged_entry(capture),)
+    with mock.patch.object(pydicom, "dcmread", wraps=pydicom.dcmread) as spy:
+        ok, msg = load_rdsr(_DICOM, state)
+    assert not ok
+    assert "conflict" in msg.lower()
+    spy.assert_not_called()
     assert len(state.equipment_pending) == 1
 
 

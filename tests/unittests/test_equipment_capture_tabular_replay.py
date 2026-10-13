@@ -482,21 +482,21 @@ def test_explicit_and_auto_normalized_refusal(tmp_path: Path) -> None:
 def test_malformed_capture_reads_zero_sources(monkeypatch: Any, tmp_path: Path) -> None:
     import copy as _copy
 
-    import guiskindose.input_adapters.tabular_loader as loader_module
+    import guiskindose.input_adapters.registry as registry_module
 
     session = assemble_session(documents=[_siemens_doc()])
     path = _write(tmp_path, "events.csv", _GENERIC_HEADER + "\n" + _GENERIC_ROW + "\n")
     context, _, _ = _live_capture(path, "generic_rdsr_like", session)
     forged = _copy.copy(context)
     object.__setattr__(forged, "event_count", "bad")
-    real_load = loader_module.load
+    real_load = registry_module.load
     reads: list[str] = []
 
     def _spy(path: Any, *args: Any, **kwargs: Any) -> Any:
         reads.append(str(path))
         return real_load(path, *args, **kwargs)
 
-    monkeypatch.setattr(loader_module, "load", _spy)
+    monkeypatch.setattr(registry_module, "load", _spy)
     fresh = _dose_settings()
     with pytest.raises(CaptureError) as excinfo:
         read_and_normalize_input(

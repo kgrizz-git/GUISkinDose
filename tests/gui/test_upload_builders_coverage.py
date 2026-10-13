@@ -13,6 +13,7 @@ from nicegui.testing import User
 from guiskindose.gui.constants import EXAMPLE_FILES
 from guiskindose.gui.helpers import load_tabular
 from guiskindose.gui.page_context import PageContext
+from guiskindose.gui.run_state_equipment import PendingEntry
 from guiskindose.gui.state import state
 from guiskindose.gui.tabs import upload_builders as ub
 from guiskindose.gui.tabs.upload_builders import MAX_UPLOAD_BYTES
@@ -77,22 +78,42 @@ def test_drawer_file_label_states() -> None:
     assert ub._drawer_file_label() == "2 FILES"
 
 
+def _pending_null_entry() -> PendingEntry:
+    return PendingEntry(
+        capture=None,
+        swap_lat_lon=False,
+        flip_ap1=False,
+        flip_ap2=False,
+        flip_tx=False,
+        flip_ty=False,
+        flip_tz=False,
+        d_lon=0.0,
+        d_ver=0.0,
+        d_lat=0.0,
+        table_origin_override=None,
+    )
+
+
 def test_snapshot_and_restore_load_state_round_trip() -> None:
     state.rdsr_df = None
     state.file_name = "before.dcm"
     state.manufacturer = "Vendor"
     state.loaded_exam_meta = [{"file_name": "before.dcm", "d_lon": 1.0}]
+    state.equipment_pending = (_pending_null_entry(),)
     snap = ub._snapshot_load_state()
 
     state.file_name = "mutated.dcm"
     state.manufacturer = "Changed"
     state.loaded_exam_meta = [{"file_name": "mutated.dcm", "d_lon": 9.0}]
+    state.equipment_pending = None
 
     ub._restore_load_state(snap)
 
     assert state.file_name == "before.dcm"
     assert state.manufacturer == "Vendor"
     assert state.loaded_exam_meta[0]["d_lon"] == 1.0
+    assert state.equipment_pending is not None
+    assert len(state.equipment_pending) == 1
 
 
 def test_clear_all_exams_resets_state_and_ui(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -103,6 +124,9 @@ def test_clear_all_exams_resets_state_and_ui(monkeypatch: pytest.MonkeyPatch) ->
     state.rdsr_df = MagicMock()
     state.file_name = "x.dcm"
     state.calculation_done = True
+    state.equipment_pending = (_pending_null_entry(),)
+    notify = MagicMock()
+    monkeypatch.setattr(ub.ui, "notify", notify)
 
     ctrl.clear_all_exams()
 
@@ -110,6 +134,8 @@ def test_clear_all_exams_resets_state_and_ui(monkeypatch: pytest.MonkeyPatch) ->
     assert state.rdsr_df is None
     assert state.file_name == ""
     assert state.calculation_done is False
+    assert state.equipment_pending is None
+    notify.assert_any_call(ub._REMOVE_ABANDON_MESSAGE, type="warning")
     cast(MagicMock, ctrl.ctx.file_label.set_text).assert_called_with("No file loaded")
     cast(MagicMock, ctrl.refs.event_table.refresh).assert_called()
 
@@ -404,3 +430,74 @@ async def test_load_tabular_example_uses_the_tabular_import_path(
     assert len(state.rdsr_df) == n_events
     assert state.loaded_exam_meta[0]["schema"] == "radimetrics"
     cast(MagicMock, ctrl.refs.import_preview.refresh).assert_called()
+
+
+@pytest.mark.asyncio
+async def test_load_tabular_example_clears_prior_exams(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Tabular examples replace the exam list like DICOM examples."""
+    name = "radimetrics_example_older_export_biplane.csv"
+    ctrl = _upload_controller()
+    ctrl.refs.example_select.value = name
+    state.loaded_exams = [SimpleNamespace(), SimpleNamespace()]
+    state.loaded_exam_meta = [{"file_name": "old.dcm"}, {"file_name": "old2.dcm"}]
+    state.is_multi_exam = True
+
+    async def _fake_io_bound(fn, *args, **kwargs):
+        return fn(*args, **kwargs)
+
+    monkeypatch.setattr(ub.run, "io_bound", _fake_io_bound)
+    monkeypatch.setattr(ctrl, "refresh_exams_table", lambda: None)
+
+    await ctrl.load_example()
+
+    assert len(state.loaded_exams) == 1
+    assert state.is_multi_exam is False
+
+
+@pytest.mark.asyncio
+async def test_load_tabular_example_restores_staged_equipment_on_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    ctrl = _upload_controller()
+    ctrl.refs.example_select.value = "radimetrics_example_older_export_biplane.csv"
+    state.equipment_pending = (_pending_null_entry(),)
+    state.file_name = "keep.dcm"
+
+    async def _fake_io_bound(fn, *args, **kwargs):
+        return False, "synthetic failure"
+
+    monkeypatch.setattr(ub.run, "io_bound", _fake_io_bound)
+    monkeypatch.setattr(ub, "remove_temp_upload", lambda _p: None)
+    notify = MagicMock()
+    monkeypatch.setattr(ub.ui, "notify", notify)
+
+    await ctrl.load_example()
+
+    assert state.file_name == "keep.dcm"
+    assert state.equipment_pending is not None
+    assert len(state.equipment_pending) == 1
+    for call in notify.call_args_list:
+        assert call.args[0] != ub._REMOVE_ABANDON_MESSAGE
+
+
+@pytest.mark.asyncio
+async def test_load_tabular_example_abandons_staged_equipment_on_success(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    name = "radimetrics_example_older_export_biplane.csv"
+    ctrl = _upload_controller()
+    ctrl.refs.example_select.value = name
+    state.equipment_pending = (_pending_null_entry(),)
+
+    async def _fake_io_bound(fn, *args, **kwargs):
+        return fn(*args, **kwargs)
+
+    monkeypatch.setattr(ub.run, "io_bound", _fake_io_bound)
+    monkeypatch.setattr(ctrl, "refresh_exams_table", lambda: None)
+    notify = MagicMock()
+    monkeypatch.setattr(ub.ui, "notify", notify)
+
+    await ctrl.load_example()
+
+    assert state.equipment_pending is None
+    notify.assert_any_call(ub._REMOVE_ABANDON_MESSAGE, type="warning")

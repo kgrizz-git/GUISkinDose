@@ -93,6 +93,7 @@ _LOAD_STATE_FIELDS = (
     "d_lon",
     "d_ver",
     "d_lat",
+    "equipment_pending",
 )
 
 
@@ -113,6 +114,8 @@ def _snapshot_load_state() -> dict[str, Any]:
             snap[name] = list(value)
         elif name == "loaded_exam_meta":
             snap[name] = [dict(meta) for meta in value]
+        elif name == "equipment_pending":
+            snap[name] = tuple(value) if value is not None else None
         else:
             snap[name] = value
     return snap
@@ -250,9 +253,11 @@ class UploadTabController:
                 await self._load_tabular_example(name, path)
                 return
             snap = _snapshot_load_state()
+            staged_abandoned = False
             try:
                 # Stage against cleared exam state; keep prior uploads' temps until commit.
                 clear_multi_exam_state(state)
+                staged_abandoned = abandon_staged_equipment(state)
                 state.input_source_type = "dicom"
                 state.swap_lat_lon = False
                 state.flip_ap1 = False
@@ -260,6 +265,8 @@ class UploadTabController:
                 self.refs.upload_status.set_text(_PARSING_STATUS)
                 ok, msg = require_io_result(await run.io_bound(load_rdsr, path, state))
                 if ok:
+                    if staged_abandoned:
+                        ui.notify(_REMOVE_ABANDON_MESSAGE, type="warning")
                     clear_all_temp_uploads()
                     state.file_name = name
                     n_events = len(state.rdsr_df) if state.rdsr_df is not None else 0
@@ -288,13 +295,21 @@ class UploadTabController:
         """
         suffix = path.suffix.lower()
         snap = _snapshot_load_state()
+        staged_abandoned = False
         tmp_path: Path | None = None
         try:
+            clear_multi_exam_state(state)
+            staged_abandoned = abandon_staged_equipment(state)
+            state.swap_lat_lon = False
+            state.flip_ap1 = False
+            state.flip_ap2 = False
             tmp_path = create_temp_upload(path.read_bytes(), suffix=suffix)
             self.refs.upload_status.set_text(_PARSING_STATUS)
             state.input_source_type = suffix.lstrip(".")
             ok, msg = require_io_result(await run.io_bound(load_tabular, tmp_path, state))
             if ok:
+                if staged_abandoned:
+                    ui.notify(_REMOVE_ABANDON_MESSAGE, type="warning")
                 state.input_sheet_name = 0
                 state.available_sheets = []
                 self.refs.import_preview.sheet_row.set_visibility(False)
@@ -336,6 +351,8 @@ class UploadTabController:
         """Clear all exams."""
         clear_all_temp_uploads()
         clear_multi_exam_state(state)
+        if abandon_staged_equipment(state):
+            ui.notify(_REMOVE_ABANDON_MESSAGE, type="warning")
         state.rdsr_df = None
         state.rdsr_raw_df = None
         state.file_name = ""

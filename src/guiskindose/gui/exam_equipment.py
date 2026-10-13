@@ -256,17 +256,15 @@ def _resolve_dicom_authority(
     work: AppState,
     receipt: Any,
 ) -> tuple[pd.DataFrame, CapturedCoordinates | None, NormalizationSettings | None, dict[str, bool], Any]:
-    """Filter, transform, bound, and authorize one DICOM frame (candidate-only).
+    """Transform, bound, and authorize one DICOM frame (candidate-only).
 
-    Applies final filtering, then the pending entry's flags once (fresh
+    Applies the pending entry's flags once (fresh
     loads keep the frame as normalized), enforces the O(1) exam recount and
     the bounded retained-event sum, then confirms the staged capture or
     mints on the rebound receipt. Pure with respect to live state: only the
     candidate ``work`` is read. Returns ``(final, capture, snapshot, flags,
     override)`` for result/meta construction.
     """
-    if settings.remove_invalid_rows and len(df[df.kVp == 0]):
-        df = df[df.kVp != 0].reset_index(drop=True)
     if entry is None:
         final = df
         flag_values = dict.fromkeys(PendingEntry.geometry_keys(), False)
