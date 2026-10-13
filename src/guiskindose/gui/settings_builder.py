@@ -74,11 +74,13 @@ def bind_equipment_session(app_state: AppState, session: EquipmentProfileSession
     Refuses closed with loaded exams, legacy preview data, or an in-flight
     operation — activating, replacing, or clearing a session under loaded
     geometry would silently re-scope dose, so the caller unloads everything
-    first, then binds, then loads. A candidate failure leaves session,
-    results, offsets, and exams untouched: every check runs before the single
-    assignment, and results invalidate only on success (stale dose must never
-    display under a new session). The session object itself is immutable and
-    already assembled; no store or file is opened here.
+    first, then binds, then loads. Binding a session while run-configuration
+    equipment is staged is also refused (the staged captures would conflict
+    with live resolution); clearing back to None stays allowed. A candidate
+    failure leaves session, results, offsets, and exams untouched: every check
+    runs before the single assignment, and results invalidate only on success
+    (stale dose must never display under a new session). The session object
+    itself is immutable and already assembled; no store or file is opened here.
     """
     if session is not None and not isinstance(session, EquipmentProfileSession):
         raise ValueError("Equipment session must be an EquipmentProfileSession or None.")
@@ -88,6 +90,11 @@ def bind_equipment_session(app_state: AppState, session: EquipmentProfileSession
         raise ValueError(
             "Cannot change the equipment-profile session with exams loaded or preview "
             "data present; unload all exams first, then bind, then load."
+        )
+    if session is not None and app_state.equipment_pending:
+        raise ValueError(
+            "Cannot bind an equipment-profile session while run-configuration "
+            "equipment is staged; load the staged exams first, or re-import without equipment."
         )
     app_state.equipment_profile_session = session
     reset_results(app_state)

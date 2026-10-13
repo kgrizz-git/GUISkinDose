@@ -12,12 +12,24 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
+from guiskindose.equipment_profiles.capture_checks import CODE_INVALID_EQUIPMENT_CAPTURE
+from guiskindose.gui.run_state_equipment import (
+    equipment_section_for_document,
+    validate_equipment_document,
+    warn_equipment_import,
+)
 from guiskindose.gui.run_state_errors import RunStateError
 from guiskindose.gui.run_state_kerma import (
     apply_exam_kerma,
     apply_legacy_k_tab,
     serialize_exam_kerma,
     validate_exam_kerma,
+)
+from guiskindose.gui.run_state_trial import (
+    _trial_apply_settings,
+    check_exam_count_alignment,
+    check_retained_geometry_intent,
+    restore_equipment,
 )
 from guiskindose.privacy import opaque_exam_label
 
@@ -26,7 +38,7 @@ if TYPE_CHECKING:  # duck-typed at runtime; keeps this module GUI-light
     from guiskindose.settings.pyskindose_settings import PyskindoseSettings
 
 RUN_STATE_SCHEMA = "guiskindose.run_state"
-RUN_STATE_SCHEMA_VERSION = 1
+RUN_STATE_SCHEMA_VERSION = 2
 
 _TOP_LEVEL_PASSTHROUGH_EXCLUDE = frozenset(
     {
@@ -37,6 +49,9 @@ _TOP_LEVEL_PASSTHROUGH_EXCLUDE = frozenset(
         "settings",
         "normalization_settings",
         "gui_state",
+        # The writer owns the v2 equipment section (emitted fresh every
+        # save); it must never round-trip through generic passthrough.
+        "equipment",
     }
 )
 
@@ -175,8 +190,11 @@ def _serialize_exam(meta: dict, index: int, include_identifiers: bool) -> dict[s
         "study_id": _gate(meta.get("study_id"), include_identifiers),
         "file_name": _gate(meta.get("file_name"), include_identifiers),
         "file_path": _basename_or_none(meta.get("file_path"), include_identifiers),
-        "input_manufacturer": _gate(meta.get("input_manufacturer"), include_identifiers),
-        "input_model": _gate(meta.get("input_model"), include_identifiers),
+        # Maker/model spellings are default-safe equipment content (contract
+        # §4): the v2 writer emits them unconditionally, replacing the old
+        # identifier gate. Every other identifier still rides the gate.
+        "input_manufacturer": meta.get("input_manufacturer"),
+        "input_model": meta.get("input_model"),
     }
 
 
@@ -246,8 +264,14 @@ def serialize_run_state(
     Returns
     -------
     dict
-        JSON-serializable ``guiskindose.run_state`` v1 document.
+        JSON-serializable ``guiskindose.run_state`` v2 document.
     """
+    if app_state.equipment_pending:
+        raise RunStateError(
+            "Run-state document cannot be emitted while equipment entries are "
+            "staged; load the remaining exams first.",
+            code=CODE_INVALID_EQUIPMENT_CAPTURE,
+        )
     if app_version is None:
         import guiskindose
 
@@ -261,6 +285,7 @@ def serialize_run_state(
         "created": created,
         "settings": _serialize_settings(settings, app_state, include_identifiers),
         "normalization_settings": list(normalization_profiles or []),
+        "equipment": equipment_section_for_document(app_state.loaded_exams),
         "gui_state": {
             "input_schema": app_state.input_schema,
             "input_source_type": app_state.input_source_type,
@@ -349,6 +374,7 @@ _SNAPSHOT_ATTRS = (
     "max_events_for_patient_inclusion",
     "normalization_profiles",
     "run_state_passthrough",
+    "equipment_pending",
     "input_schema",
     "input_source_type",
     "input_sheet_name",
@@ -440,7 +466,10 @@ def validate_run_state_document(document: Any) -> None:
     rejected. Every structural check runs here — before `apply_run_state`
     mutates anything — so malformed inner types (`settings` as a list,
     `exams` holding strings, non-dict profiles, ragged kerma tables) fail
-    with the session untouched instead of `AttributeError` mid-apply.
+    with the session untouched instead of `AttributeError` mid-apply. A
+    present v2 `equipment` section is fully decoded against the document exam
+    count here (same gate the trial re-runs with live frames); v1 documents
+    skip equipment validation entirely and keep today's reader.
     """
     if not isinstance(document, dict):
         raise _malformed(f"run-state document must be a mapping, got {type(document).__name__}")
@@ -487,6 +516,7 @@ def validate_run_state_document(document: Any) -> None:
             for tube, factor in tubes.items():
                 if isinstance(factor, bool) or not isinstance(factor, (int, float)):
                     raise _malformed(f"kerma_meter_in_memory_table[{equipment!r}][{tube!r}] must be a number")
+    validate_equipment_document(document, v2=(version == RUN_STATE_SCHEMA_VERSION), exam_count=len(exams or []))
 
 
 def _validate_unresolved_labels(labels: Any) -> None:
@@ -673,61 +703,19 @@ def _sync_single_exam_couplings(app_state: AppState) -> None:
     meta["d_lat"] = app_state.d_lat
 
 
-def _trial_apply_settings(settings: dict, profiles: Any, app_state: AppState) -> None:
-    """Validate the merged post-import state by building settings on a copy.
-
-    Applies the settings slice to a shallow copy — scalar rebinding only, so
-    the live session cannot be affected — then constructs the real settings
-    object from it. Constructor failures (invalid plane-code map, out-of-range
-    angular step, non-bool flags) become `RunStateError` here at import time
-    instead of surfacing later at calculation with half-applied state behind
-    them. The message keeps the underlying detail for logs/tests; the GUI
-    surfaces only the fixed per-code message.
-    """
-    import copy
-
-    from guiskindose.constants import (
-        KEY_NORMALIZATION_DETECTOR_SIDE_LENGTH,
-        KEY_NORMALIZATION_FIELD_SIZE_MODE,
-        KEY_NORMALIZATION_MANUFACTURER,
-        KEY_NORMALIZATION_MODELS,
-    )
-    from guiskindose.gui.settings_builder import build_settings
-
-    trial = copy.copy(app_state)
-    _apply_settings_slice(settings, trial, [])
-    if profiles:
-        # The constructor stores the list verbatim, so required keys are
-        # checked here — otherwise a keyless profile would import cleanly and
-        # raise KeyError inside update_used_settings at the next file load.
-        required = (
-            KEY_NORMALIZATION_MANUFACTURER,
-            KEY_NORMALIZATION_MODELS,
-            KEY_NORMALIZATION_FIELD_SIZE_MODE,
-            KEY_NORMALIZATION_DETECTOR_SIDE_LENGTH,
-        )
-        for index, profile in enumerate(profiles):
-            missing = [key for key in required if key not in profile]
-            if missing:
-                raise RunStateError(
-                    f"normalization_settings[{index}] missing required keys: {', '.join(missing)}",
-                    code="invalid_settings",
-                )
-        trial.normalization_profiles = profiles
-    try:
-        build_settings(trial)
-    except Exception:
-        raise RunStateError("Imported settings failed validation.", code="invalid_settings") from None
-
-
 def apply_run_state(document: dict, app_state: AppState) -> ApplyResult:
     """Apply a run-state document to GUI state, returning warnings for the UI.
 
     Implements the three-tier import rule: derived data facts verify pairing
     only; picker-owned file handles are never downgraded (divergence warns
     loudly); every other non-null configuration value applies skip-if-null.
-    Exam count mismatch raises `RunStateError` naming the counts. Unknown
-    top-level keys are collected into `result.passthrough` for re-export.
+    Exam count mismatch raises `RunStateError` naming the counts (more live
+    exams than document exams always fails; fewer live exams proceed only
+    with staged v2 equipment, otherwise the same mismatch). v1 documents
+    keep today's reader plus equipment-retention warnings; a present v2
+    equipment section trial-confirms the loaded prefix and stages the
+    unloaded tail as pending, all before any mutation. Unknown top-level
+    keys are collected into `result.passthrough` for re-export.
     Tabular re-parse sequencing, `reset_results()` + UI refresh, and
     normalization-profile application to `PyskindoseSettings` are Phase-3
     caller responsibilities (this function is GUI-light and synchronous).
@@ -739,20 +727,20 @@ def apply_run_state(document: dict, app_state: AppState) -> ApplyResult:
         result.warnings.append(
             f"older schema_version {version} (supported {RUN_STATE_SCHEMA_VERSION}); proceeding best-effort."
         )
+    warn_equipment_import(document, version, app_state, result.warnings)
     result.passthrough = {key: value for key, value in document.items() if key not in _TOP_LEVEL_PASSTHROUGH_EXCLUDE}
     # Structural checks before any mutation: a count or shape mismatch must
     # fail with the session untouched, never half-applied (shapes already
-    # validated above; only counts remain).
+    # validated above; only counts remain). More live exams than document
+    # exams always fails; fewer proceed only when v2 equipment stages the
+    # remainder as pending (checked inside, strict otherwise).
     gui_section = _require_section(document, "gui_state")
     doc_exams = gui_section.get("exams") or []
     live_metas = app_state.loaded_exam_meta
-    if len(doc_exams) != len(live_metas):
-        raise RunStateError(
-            f"exam count mismatch: document has {len(doc_exams)} exam(s), "
-            f"session has {len(live_metas)} loaded — load the same inputs in the same order/count.",
-            code="exam_count_mismatch",
-        )
+    check_exam_count_alignment(document, version, len(doc_exams), len(live_metas))
+    check_retained_geometry_intent(document, version, app_state)
     _trial_apply_settings(_require_section(document, "settings"), document.get("normalization_settings"), app_state)
+    restore_equipment(document, version, doc_exams=doc_exams, app_state=app_state)
     app_state.run_state_passthrough = dict(result.passthrough)
     result.mode = _apply_settings_slice(_require_section(document, "settings"), app_state, result.warnings)
     profiles = document.get("normalization_settings")
@@ -775,9 +763,12 @@ def apply_run_state(document: dict, app_state: AppState) -> ApplyResult:
     for key in ("swap_lat_lon", "flip_ap1", "flip_ap2"):
         _apply_present(app_state, key, gui.get(key))
     _apply_kerma_gui_state(gui, app_state)
-    for index, (exam, meta) in enumerate(zip(doc_exams, live_metas, strict=True)):
+    # Live prefix only: trailing document exams without loaded counterparts
+    # stage equipment as pending (or nothing, without equipment); the count
+    # gate above guarantees live never exceeds the document.
+    for index, (exam, meta) in enumerate(zip(doc_exams, live_metas, strict=False)):
         if _apply_exam(exam, meta, index, result.warnings):
             result.schema_or_sheet_changed = True
-    result.applied_exams = len(doc_exams)
+    result.applied_exams = len(live_metas)
     _sync_single_exam_couplings(app_state)
     return result

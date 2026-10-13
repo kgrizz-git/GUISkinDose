@@ -8,9 +8,23 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ## [Unreleased]
 
+- Run-state v2 final review: validate effective single-exam global flags and retained capture geometry before import mutation; revalidate copied frozen overrides at the loader boundary. Regression coverage includes null and absent equipment sections.
+
 - Radimetrics unknown-model diagnostics report only the model count; raw equipment names remain local.
 
 ### Changed
+
+- **Run-state v2 migration slice** (2026-10-13) — always-v2 writer, strict v1
+  reader with retention warnings, trial confirmation + pending staging +
+  replay consumption, calc threading, snapshot/rollback coverage, resequence
+  and export guards; `run_state_trial.py` split holds the size cap (trial
+  settings moved verbatim); complexity ratchet updated (stale apply entry
+  removed). Review follow-ups in the same slice: hardened pending entries,
+  registry defer-confirm seam, null-inclusive bounds tokens, writer refusal
+  on staged pending, canonical-equivalence conflict gate with atomic
+  publish. No CLI/store/transmission/rich-report changes. Targeted checks
+  passed; ruff, basedpyright, complexity, size, freshness, help-registry, and
+  UI-copy gates clean.
 
 - **GUI authority parent review** (2026-10-12) — candidate and calculation counts are bounded before list copies; captured contexts are revalidated and aggregate bounds use current frame rows before any baseline snapshot is copied.
 

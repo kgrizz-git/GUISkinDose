@@ -138,6 +138,60 @@ def test_unbind_empty_state_succeeds(session: Any) -> None:
     assert state.equipment_profile_session is None
 
 
+def test_bind_session_refuses_pending(session: Any) -> None:
+    """Activating with staged entries refuses before any mutation."""
+    from guiskindose.gui.run_state_equipment import PendingEntry
+
+    state = AppState()
+    state.equipment_pending = (
+        PendingEntry(
+            capture=None,
+            swap_lat_lon=False,
+            flip_ap1=False,
+            flip_ap2=False,
+            flip_tx=False,
+            flip_ty=False,
+            flip_tz=False,
+            d_lon=0.0,
+            d_ver=0.0,
+            d_lat=0.0,
+            table_origin_override=None,
+        ),
+    )
+    state.psd = 1.0
+    with pytest.raises(ValueError, match="staged"):
+        bind_equipment_session(state, session)
+    assert state.equipment_profile_session is None
+    assert state.psd == 1.0
+    assert state.equipment_pending is not None
+
+
+def test_unbind_with_pending_allowed(session: Any) -> None:
+    """Clearing back to None never conflicts with staged entries."""
+    from guiskindose.gui.run_state_equipment import PendingEntry
+
+    state = AppState()
+    bind_equipment_session(state, session)
+    state.equipment_pending = (
+        PendingEntry(
+            capture=None,
+            swap_lat_lon=False,
+            flip_ap1=False,
+            flip_ap2=False,
+            flip_tx=False,
+            flip_ty=False,
+            flip_tz=False,
+            d_lon=0.0,
+            d_ver=0.0,
+            d_lat=0.0,
+            table_origin_override=None,
+        ),
+    )
+    bind_equipment_session(state, None)
+    assert state.equipment_profile_session is None
+    assert state.equipment_pending is not None
+
+
 def test_reset_results_preserves_session_home(session: Any) -> None:
     """Settings-only invalidation never drops the bound session."""
     from guiskindose.gui.state import reset_results

@@ -10,16 +10,26 @@ from typing import TYPE_CHECKING, Any
 import pandas as pd
 import pydicom
 
-from guiskindose.equipment_capture import capture_from_receipt
-from guiskindose.equipment_profiles.constants import MAX_AGGREGATE_ROWS, MAX_PROFILES
-from guiskindose.equipment_resolution import bind_receipt_frame, restore_receipt_to_settings
+from guiskindose.equipment_confirmation import prepare_replay_settings
+from guiskindose.equipment_profiles.constants import MAX_PROFILES
+from guiskindose.gui.exam_equipment import (
+    _bounds_authority,
+    _check_session_event_total,
+    _check_session_exam_count,
+    _confirm_consumed_capture,
+    _live_session,
+    _mint_session_captures,
+    _peek_pending_entry,
+    _read_tabular_results,
+    _resolve_dicom_authority,
+)
+from guiskindose.gui.run_state_equipment import PendingEntry
 from guiskindose.privacy import UserFacingInputError, safe_error_event
 from guiskindose.rdsr_normalizer import RdsrUnitError, rdsr_normalizer
 from guiskindose.rdsr_parser import rdsr_parser
 
 if TYPE_CHECKING:
     from guiskindose.equipment_profiles.capture import CapturedCoordinates
-    from guiskindose.settings.normalization_settings import NormalizationSettings
 
 from .exam_transforms import (
     _apply_transform_flags,
@@ -64,116 +74,13 @@ def _raw_extracted_view(result) -> pd.DataFrame | None:
         return raw
 
 
-def _live_session(settings: Any) -> Any | None:
-    """Bound nonempty custom-profile session, else None (empty behaves session-free)."""
-    session = settings.equipment_profile_session
-    if session is None or len(session.profiles) == 0:
-        return None
-    return session
-
-
-def _check_session_exam_count(loaded_count: int, new_count: int, *, session: Any) -> None:
-    """O(1) exam ceiling before any frame access (count before traversal).
-
-    Pure loads (no session) keep today's behavior untouched.
-    """
-    if session is None:
-        return
-    if loaded_count + new_count > MAX_PROFILES:
-        raise UserFacingInputError(
-            "Too many loaded exams for custom equipment-profile authority."
-        )
-
-
-def _check_session_event_total(state: AppState, new_frames: list[pd.DataFrame], *, session: Any) -> None:
-    """Early-exit retained-event ceiling over every row, captured or not.
-
-    Callers run this only after the exam-count gate bounds the collection
-    (so traversal stays bounded); the sum aborts at the first breach instead
-    of completing. Every retained row counts, including capture-less entries —
-    a null entry is unspecified authority, never a smaller footprint.
-    """
-    if session is None:
-        return
-    retained = 0
-    for frame in new_frames:
-        retained += len(frame)
-        if retained > MAX_AGGREGATE_ROWS:
-            raise UserFacingInputError(
-                "Too many retained events for custom equipment-profile authority."
-            )
-    for exam in state.loaded_exams:
-        retained += len(exam.normalized_data)
-        if retained > MAX_AGGREGATE_ROWS:
-            raise UserFacingInputError(
-                "Too many retained events for custom equipment-profile authority."
-            )
-
-
-def _mint_session_capture(
-    *, settings: Any, receipt: Any, frame: Any
-) -> tuple[CapturedCoordinates | None, NormalizationSettings | None]:
-    """Rebind a genuine loader receipt to the final frame and mint authority.
-
-    Returns a ``(capture, snapshot)`` pair, or ``(None, None)`` without a
-    session (pure loads keep byte-identical behavior). The snapshot is the
-    receipt's proven leaves applied to an isolated normalization copy — the
-    exam's genuine per-exam baseline, never shared last-load state. A missing
-    receipt under an active session, an empty final frame, or any bridge
-    breach fails closed with a fixed message: authority is minted or the load
-    is refused, never silently skipped, and forged receipts can never enter
-    here (callers pass only records their own normalizer call issued).
-    """
-    session = _live_session(settings)
-    if session is None:
-        return None, None
-    if receipt is None:
-        raise UserFacingInputError(
-            "Custom equipment profiles did not resolve this input; no authority was produced."
-        )
-    try:
-        rebound = bind_receipt_frame(receipt, frame)
-        snapshot = copy.deepcopy(settings.normalization_settings)
-        restore_receipt_to_settings(rebound, snapshot)
-        work = copy.deepcopy(settings)
-        work.normalization_settings = snapshot
-        capture = capture_from_receipt(receipt=rebound, frame=frame, settings=work)
-    except UserFacingInputError:
-        raise
-    except Exception:
-        raise UserFacingInputError(
-            "Custom equipment profiles could not be applied to this input."
-        ) from None
-    return capture, snapshot
-
-
-def _mint_session_captures(state: AppState, settings: Any, start: int) -> None:
-    """Mint and attach authority for exams appended at ``start:`` (session loads).
-
-    No session: returns immediately. Otherwise every new exam must present its
-    genuine adapter receipt; each is rebound to its final transformed frame
-    and minted with its per-exam snapshot retained, receipts are discarded
-    (captures never ride with live receipts), and authority attaches to the
-    exam results. The first breach aborts; the caller discards the whole
-    candidate so publication stays atomic.
-    """
-    if _live_session(settings) is None:
-        return
-    for exam in state.loaded_exams[start:]:
-        capture, snapshot = _mint_session_capture(
-            settings=settings, receipt=exam.equipment_receipt, frame=exam.normalized_data
-        )
-        exam.equipment_capture = capture
-        exam.normalization_snapshot = snapshot
-        exam.equipment_receipt = None
-
-
 def _load_candidate(state: AppState) -> AppState:
     """Bound live authority before copying candidate exam lists."""
     session = state.equipment_profile_session
-    if session is not None and session.profiles:
-        _check_session_exam_count(len(state.loaded_exams), 0, session=session)
-        _check_session_exam_count(len(state.loaded_exam_meta), 0, session=session)
+    pending = state.equipment_pending
+    if (session is not None and session.profiles) or pending:
+        _check_session_exam_count(len(state.loaded_exams), 0, session=session or pending)
+        _check_session_exam_count(len(state.loaded_exam_meta), 0, session=session or pending)
     work = copy.copy(state)
     work.loaded_exams = list(state.loaded_exams)
     work.loaded_exam_meta = list(state.loaded_exam_meta)
@@ -204,37 +111,59 @@ def load_rdsr(file_path: Path, state: AppState) -> tuple[bool, str]:
         work = _load_candidate(state)
         reset_global_offsets_on_new_load(work)
         settings = build_settings(work, mode="calculate_dose")
+        live = _live_session(settings)
+
+        # Staged pending entry for this load (FIFO head, if any). A capture
+        # slot replays the recipe instead of resolving live; a null slot
+        # loads with live behavior but seeds the document's flags.
+        pending, entry, replay_capture = _peek_pending_entry(state, live)
 
         # Pre-read exam ceiling: a fresh DICOM load always appends exactly
         # one exam, so 64 loaded already refuse before the file is touched.
-        live = _live_session(settings)
-        _check_session_exam_count(len(work.loaded_exams), 1, session=live)
+        # The token covers live sessions, staged captures, and staged
+        # presence alike — null slots still stage authority.
+        _check_session_exam_count(
+            len(work.loaded_exams), 1, session=_bounds_authority(live, pending, replay_capture)
+        )
 
         # Manually parse and normalise so we can keep the raw version
         data_raw = pydicom.dcmread(str(file_path))
         data_parsed = rdsr_parser(data_raw, silence_pydicom_warnings=settings.silence_pydicom_warnings)
 
-        # Normalize (never modifies data_parsed). A bound session publishes one
-        # genuine receipt for this exam; without a session nothing is issued.
+        # Normalize (never modifies data_parsed). Replay runs the staged
+        # captured recipe with no live resolution and publishes no receipt;
+        # a bound session publishes one genuine receipt for this exam, and
+        # without either nothing is issued.
         session_receipts: list = []
-        df = rdsr_normalizer(
-            data_parsed,
-            settings=settings,
-            equipment_receipt_out=session_receipts if live is not None else None,
-        )
+        if replay_capture is not None:
+            replay_base = copy.copy(settings)
+            replay_base.equipment_profile_session = None
+            replay_settings = prepare_replay_settings(context=replay_capture, settings=replay_base)
+            df = rdsr_normalizer(
+                data_parsed,
+                settings=replay_settings,
+                equipment_receipt_out=None,
+                equipment_capture_context=replay_capture,
+            )
+            norm = replay_settings.normalization_settings
+        else:
+            df = rdsr_normalizer(
+                data_parsed,
+                settings=settings,
+                equipment_receipt_out=session_receipts if live is not None else None,
+            )
+            norm = settings.normalization_settings
 
-        if settings.remove_invalid_rows and len(df[df.kVp == 0]):
-            df = df[df.kVp != 0].reset_index(drop=True)
-
-        # Session authority is minted on the final frame (post-filter, with the
-        # session's receipt rebound to it); the O(1) exam recount and the
-        # bounded retained-event sum refuse before anything is published.
-        _check_session_exam_count(len(work.loaded_exams), 1, session=live)
-        _check_session_event_total(work, [df], session=live)
-        capture, snapshot = _mint_session_capture(
+        # Filter, transform, bound, and authorize on the candidate frame.
+        final, capture, snapshot, flag_values, override_value = _resolve_dicom_authority(
             settings=settings,
+            authority=_bounds_authority(live, pending, replay_capture),
+            entry=entry,
+            replay_capture=replay_capture,
+            df=df,
+            norm=norm,
+            work=work,
             receipt=session_receipts[0] if session_receipts else None,
-            frame=df,
         )
 
         # Build a synthetic InputAdapterResult so DICOM and tabular exams are
@@ -251,7 +180,7 @@ def load_rdsr(file_path: Path, state: AppState) -> tuple[bool, str]:
             unit_conversions={},
         )
         result = InputAdapterResult(
-            normalized_data=df,
+            normalized_data=final,
             raw_data=data_parsed.copy(),
             provenance=provenance,
             warnings=[],
@@ -262,7 +191,8 @@ def load_rdsr(file_path: Path, state: AppState) -> tuple[bool, str]:
 
         # Auto-detected table origin from manufacturer/model matching — captured
         # per exam so the Phase 2.5 override can pre-fill and reset to it.
-        norm = settings.normalization_settings
+        # (``norm`` above already points at the replay settings for replayed
+        # loads, so detected labels match the recipe that normalized them.)
 
         # ── Accumulate (candidate lists) ────────────────────────────────
         work.loaded_exams.append(result)
@@ -278,15 +208,15 @@ def load_rdsr(file_path: Path, state: AppState) -> tuple[bool, str]:
             # DICOM has no swap/flip toggles, but the table-origin override
             # (Phase 2.5) re-bases from this base.
             "base_data": df.copy(),
-            "swap_lat_lon": False,
-            "flip_ap1": False,
-            "flip_ap2": False,
+            "swap_lat_lon": flag_values["swap_lat_lon"],
+            "flip_ap1": flag_values["flip_ap1"],
+            "flip_ap2": flag_values["flip_ap2"],
             # Axis-direction sign flips (Phase 2.4) — not exposed for DICOM (its
             # trans_dir convention is matched at normalization); seeded False so the
             # meta schema is uniform across exam types.
-            "flip_tx": False,
-            "flip_ty": False,
-            "flip_tz": False,
+            "flip_tx": flag_values["flip_tx"],
+            "flip_ty": flag_values["flip_ty"],
+            "flip_tz": flag_values["flip_tz"],
             # Auto-detected table origin (from manufacturer/model matching) that a
             # manual override would replace; None override = use auto (Phase 2.5).
             "table_origin_detected": {
@@ -294,13 +224,14 @@ def load_rdsr(file_path: Path, state: AppState) -> tuple[bool, str]:
                 "y": float(norm.trans_offset.y),
                 "z": float(norm.trans_offset.z),
             },
-            "table_origin_override": None,
-            # Per-exam patient offset (Phase 2.3): default to the pre-reset global
-            # offset; editable per exam in the loaded-exam list. Only consumed in
-            # multi-exam mode (analyze_multiple_exams); single-exam uses global.
-            "d_lon": seed_d_lon,
-            "d_ver": seed_d_ver,
-            "d_lat": seed_d_lat,
+            "table_origin_override": override_value,
+            # Per-exam patient offset (Phase 2.3): staged document offsets for
+            # pending consumption, else the pre-reset globals; editable per
+            # exam in the loaded-exam list. Only consumed in multi-exam mode
+            # (analyze_multiple_exams); single-exam uses global.
+            "d_lon": entry.d_lon if entry is not None else seed_d_lon,
+            "d_ver": entry.d_ver if entry is not None else seed_d_ver,
+            "d_lat": entry.d_lat if entry is not None else seed_d_lat,
             "normalization_method": norm.normalization_method,
             "input_manufacturer": norm.input_manufacturer,
             "input_model": norm.input_model,
@@ -334,7 +265,9 @@ def load_rdsr(file_path: Path, state: AppState) -> tuple[bool, str]:
         refresh_normalization_warnings(work)
 
         state.__dict__.update(work.__dict__)
-        return True, f"Loaded {len(df)} irradiation events"
+        if pending:
+            state.equipment_pending = pending[1:] or None
+        return True, f"Loaded {len(final)} irradiation events"
     except RdsrUnitError as exc:
         # Unit mismatch is a specific, actionable condition. Its message is built
         # from fixed labels only, so it is shown instead of the generic error.
@@ -414,7 +347,6 @@ def _parse_tabular(
     (and cancellation, which propagates uncaught) all leave the live state
     identical with no restore pass.
     """
-    from guiskindose.input_adapters.registry import read_and_normalize_input
 
     # T20: capture globals before reset; on re-parse keep current globals.
     seed_d_lon = state.d_lon
@@ -426,18 +358,39 @@ def _parse_tabular(
     settings = build_settings(work, mode="calculate_dose")
     schema = work.input_schema or "auto"
     live = _live_session(settings)
-    if live is not None and not replace_existing and len(work.loaded_exams) >= MAX_PROFILES:
+    pending, entry, replay_capture = _peek_pending_entry(state, live)
+    if (
+        not replace_existing
+        and len(work.loaded_exams) >= MAX_PROFILES
+        and _bounds_authority(live, pending, replay_capture) is not None
+    ):
         # Pre-read exam ceiling: a fresh tabular load always appends at least
         # one exam, so 64 loaded already refuse before the file is touched.
+        # The token covers live sessions, staged captures, and staged
+        # presence alike — null slots still stage authority.
         raise UserFacingInputError(
             "Too many loaded exams for custom equipment-profile authority."
         )
 
-    raw = read_and_normalize_input(
-        file_path,
-        input_schema=schema,
+    # Staged pending entry for this load (FIFO head, if any). Re-parsing
+    # while entries are staged would silently lose their slots: refuse
+    # before the drop runs. A capture slot replays the recipe instead of
+    # resolving live; a null slot loads with live behavior but seeds the
+    # document's flags.
+    pending, entry, replay_capture = _peek_pending_entry(state, live)
+    if replace_existing and pending:
+        raise UserFacingInputError(
+            "Cannot re-parse inputs while run-configuration equipment is staged; "
+            "load the staged exams first, or re-import without equipment."
+        )
+
+    raw = _read_tabular_results(
+        file_path=file_path,
+        schema=schema,
+        work=work,
         settings=settings,
-        sheet_name=work.input_sheet_name,
+        replay_capture=replay_capture,
+        pending=pending,
     )
 
     preserved_flags = _collect_preserved_flags(work, file_path, replace_existing)
@@ -445,23 +398,82 @@ def _parse_tabular(
         _drop_exams_for_path(work, file_path)
     # O(1) exam-count gate before any frame access; the retained-event sum
     # below runs only over the now-bounded collection with early exit.
+    # Captured authority enforces ceilings without a live session.
     new_count = len(raw) if isinstance(raw, list) else 1
-    _check_session_exam_count(len(work.loaded_exams), new_count, session=live)
-    if live is not None:
+    authority = _bounds_authority(live, pending, replay_capture)
+    _check_session_exam_count(len(work.loaded_exams), new_count, session=authority)
+    if authority is not None:
         new_frames = (
             [exam.normalized_data for exam in raw]
             if isinstance(raw, list)
             else [raw.normalized_data]
         )
-        _check_session_event_total(work, new_frames, session=live)
+        _check_session_event_total(work, new_frames, session=authority)
     start = len(work.loaded_exams)
-    if isinstance(raw, list):
-        out = _append_multi_study_exams(raw, work, file_path, seed_d_lon, seed_d_ver, seed_d_lat, preserved_flags)
-    else:
-        out = _append_single_study_exam(raw, work, file_path, seed_d_lon, seed_d_ver, seed_d_lat, preserved_flags)
-    _mint_session_captures(work, settings, start)
+    out = _append_and_authorize_tabular(
+        raw=raw,
+        work=work,
+        file_path=file_path,
+        seeds=(seed_d_lon, seed_d_ver, seed_d_lat),
+        preserved_flags=preserved_flags,
+        settings=settings,
+        entry=entry,
+        replay_capture=replay_capture,
+        start=start,
+    )
     _finalize_tabular_state(work, file_path, out[0])
     state.__dict__.update(work.__dict__)
+    if pending:
+        state.equipment_pending = pending[1:] or None
+    return out
+
+
+def _append_and_authorize_tabular(
+    *,
+    raw: Any,
+    work: AppState,
+    file_path: Path,
+    seeds: tuple[float, float, float],
+    preserved_flags: list[dict],
+    settings: Any,
+    entry: PendingEntry | None,
+    replay_capture: CapturedCoordinates | None,
+    start: int,
+) -> tuple[Any, str]:
+    """Append one file's exams and resolve authority on the candidate.
+
+    A staged entry seeds document offsets/flags (single-exam files only —
+    the caller refuses multi-study splits with pending staged); replay
+    confirms the staged capture against the final frame, live loads mint
+    with receipts rebound. Pure with respect to live state: only the
+    candidate ``work`` is written. Returns ``(result, message)``.
+    """
+    seed_d_lon, seed_d_ver, seed_d_lat = seeds
+    if isinstance(raw, list):
+        out = _append_multi_study_exams(raw, work, file_path, seed_d_lon, seed_d_ver, seed_d_lat, preserved_flags)
+    elif entry is None:
+        out = _append_single_study_exam(raw, work, file_path, seed_d_lon, seed_d_ver, seed_d_lat, preserved_flags)
+    else:
+        out = _append_single_study_exam(
+            raw, work, file_path, entry.d_lon, entry.d_ver, entry.d_lat, preserved_flags, consumed=entry
+        )
+    if replay_capture is None:
+        _mint_session_captures(work, settings, start)
+        return out
+    exam = out[0]
+    if exam.equipment_receipt is not None:
+        raise UserFacingInputError(
+            "Staged equipment replay published a live receipt; refusing mixed authority."
+        )
+    snapshot = _confirm_consumed_capture(
+        context=replay_capture,
+        frame=exam.normalized_data,
+        norm=settings.normalization_settings,
+        position=start,
+    )
+    exam.equipment_capture = replay_capture
+    exam.normalization_snapshot = snapshot
+    exam.equipment_receipt = None
     return out
 
 
@@ -520,6 +532,8 @@ def _build_exam_meta_entry(
     seed_d_ver: float,
     seed_d_lat: float,
     study_id: str | None = None,
+    *,
+    table_origin_override: Any = None,
 ) -> dict:
     """Construct a per-exam meta entry shared by single and multi-study paths."""
     return {
@@ -542,7 +556,7 @@ def _build_exam_meta_entry(
         # auto-detected origin is zero; a manual override (Phase 2.5) is
         # then an absolute table-origin shift.
         "table_origin_detected": {"x": 0.0, "y": 0.0, "z": 0.0},
-        "table_origin_override": None,
+        "table_origin_override": table_origin_override,
         "d_lon": seed_d_lon,
         "d_ver": seed_d_ver,
         "d_lat": seed_d_lat,
@@ -603,13 +617,24 @@ def _append_single_study_exam(
     seed_d_ver: float,
     seed_d_lat: float,
     preserved_flags: list[dict],
+    *,
+    consumed: PendingEntry | None = None,
 ) -> tuple[Any, str]:
-    """Append a single-exam tabular file and rebuild concat preview."""
+    """Append a single-exam tabular file and rebuild concat preview.
+
+    A staged pending entry overrides the transform flags and table-origin
+    override for this load (document authority replaces live seeding);
+    otherwise preserved prior flags or live defaults apply as before.
+    """
     base = result.normalized_data.copy()
-    flags = preserved_flags[0] if (preserved_flags) else _default_transform_flags(state)
+    if consumed is not None:
+        flags = consumed.geometry_flags()
+    else:
+        flags = preserved_flags[0] if (preserved_flags) else _default_transform_flags(state)
     result.normalized_data = _apply_transform_flags(
         base, flags["swap_lat_lon"], flags["flip_ap1"],
         flags["flip_ap2"], result.provenance.schema_name,
+        table_origin_override=consumed.table_origin_override if consumed is not None else None,
         flip_tx=flags.get("flip_tx", False),
         flip_ty=flags.get("flip_ty", False),
         flip_tz=flags.get("flip_tz", False),
@@ -619,6 +644,7 @@ def _append_single_study_exam(
         _build_exam_meta_entry(
             state, file_path, result.provenance.schema_name, base, result.provenance, result.warnings,
             flags, seed_d_lon, seed_d_ver, seed_d_lat, result.study_id,
+            table_origin_override=consumed.table_origin_override if consumed is not None else None,
         )
     )
     msg = f"Loaded {len(result.normalized_data)} events ({result.provenance.schema_name})"

@@ -3,6 +3,32 @@
 Implementation history for the active [execution plan](CUSTOM_EQUIPMENT_PROFILES_EXECUTION.md).
 Scientific requirements and phase acceptance gates remain in that plan and its linked contracts.
 
+- 2026-10-13 — **Run-state v2 migration slice (atomic).** Always-v2 writer
+  (null equipment when captur eless, maker/model default-safe); strict v1
+  reader (count gate preserved, retention warnings, reserved-key warning,
+  passthrough excludes the owned section); v2 decode against document count;
+  trial confirmation of loaded frames with geometry-change refusal (intended
+  transforms trial-proven from base, never base checksums as authority);
+  FIFO pending staging with single-exam DICOM/vendor-tabular replay
+  consumption (post-transform confirmation, snapshots retained); calc
+  threading through existing capture APIs; whole-import snapshot rollback
+  covering pending; resequence/save/remove/bind guards with fixed messages.
+  35 v2 tests + updated suites; blast radius green. Honest remainders: owned
+  atomic raw-replay transaction (reparse/geometry changes refuse), pre-load
+  multi-study splits (refused explicitly), GUI equipment surfaces (item 3),
+  no Phase 2 completion claimed.
+- 2026-10-13 — **Run-state v2 review blockers (same slice).** Pending entries
+  hardened (overflow-closed finite offsets, strict x/y/z allowlist keys,
+  immutable deepcopyable override mapping, count/token-only repr, full
+  capture revalidation at construction, revalidation before loader reads);
+  registry `defer_capture_confirmation` seam preserves the public confirm
+  path while loaders confirm only the final transformed frame (swap/flip/
+  override/combo lifecycles with PSD/map/match parity, no rehash); bounds
+  tokens cover null pending with pre-read gates; the public writer refuses
+  staged pending; pre-copy 64-caps on emission/staging helpers; canonical
+  equivalence rejects conflicting provenance (same-geometry different-recipe
+  regression) and partial publication rolls back atomically.
+
 - 2026-10-13 — **GUI live session + loader captures + calc threading (F-A).**
   Optional immutable session home on `AppState` with a checked import-before-load
   bind seam (refuses loaded exams, legacy preview data, in-flight ops, and

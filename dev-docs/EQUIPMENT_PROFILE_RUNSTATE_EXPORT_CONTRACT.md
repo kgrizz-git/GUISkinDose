@@ -197,6 +197,20 @@ any mutation or export.
 
 1. Run-state v2 `equipment` emission (`serialize_run_state`) and application
    (`apply_run_state` + trial-build coverage). Owner: Phase 2.
+   (Delivered 2026-10-13 as one atomic slice: always-v2 writer with null
+   when captur eless; strict v1 reader with retention warnings; v2 decode
+   against document count; trial confirmation of loaded frames with
+   geometry-change refusal; FIFO pending staging with raw-load replay
+   consumption for single-exam DICOM/vendor-tabular; calc threading through
+   existing capture APIs; whole-import snapshot rollback. Review hardening in
+   the same slice: strict immutable pending entries with pre-read
+   revalidation, deferred-confirm replay seam, null-inclusive bounds, writer
+   refusal on staged pending, canonical-equivalence conflict gate with atomic
+   publish. Still open here:
+   the owned atomic raw-replay transaction for reparse/geometry changes,
+   pre-load multi-study splits (refused explicitly), and GUI
+   pre-calculation/Calculate/Results equipment surfaces (item 3). Neither
+   the phase nor items 1–5 are claimed complete by this lock.)
 2. Rich-report v4 per-exam equipment block (collector + writer rows). Owner: Phase 5.
 3. GUI pre-calculation / Calculate / Results equipment surfaces. Owner: Phase 2/3.
 4. CLI wildcard-promotion flag. Owner: Phase 2.
@@ -213,7 +227,11 @@ any mutation or export.
    single/multi analysis, DICOM/tabular replay, single/multi-file public APIs) —
    **delivered**; open remainder: run-state v2 emission/application round-trip with
    rollback fixtures. Owner: Phase 2 at its boundary (see also item 1). Neither the
-   phase nor items 1–5 are claimed complete by this lock. The inert parse/emit
+   phase nor items 1–5 are claimed complete by this lock. (2026-10-13: the v2
+   emission/application round-trip with snapshot rollback is delivered for
+   single-exam DICOM and vendor-tabular loads plus already-loaded multi-exam
+   restore and calculation; the pre-load multi-study gap and the owned
+   raw-replay transaction remain open under items 1–3.) The inert parse/emit
    boundary plus `RunStateError` translation (`gui/run_state_equipment.py`,
    `gui/run_state_errors.py`, 2026-10-12) is delivered as foundation only: no
    writer, application, or rollback rides on it yet, and it exposes no partial

@@ -3,8 +3,9 @@
 ## Privacy
 
 Run configurations are de-identified by default: source filenames, absolute
-paths, equipment labels, study and sheet names are stored as `null` unless you
-opt in with **Include source identifiers**. Path-valued fields are stored as
+paths, study and sheet names are stored as `null` unless you
+opt in with **Include source identifiers**. Scanner maker/model spellings are
+default-safe equipment content and are always stored. Path-valued fields are stored as
 the user-facing basename only — never an absolute path — even when identifiers
 are included, except `corrections_db_path`, which is stored verbatim so the
 calculation can resolve it. Store every exported configuration in an approved
@@ -33,3 +34,19 @@ Documents carry a `schema_version`: newer-than-supported documents are
 rejected, and unknown future keys are preserved across re-export. A document
 whose mode is not `calculate_dose` imports its settings but still calculates
 with `calculate_dose`, which is the only mode the GUI runs.
+
+## Equipment captures
+
+Saved documents (`schema_version` 2) carry an `equipment` section with one
+entry per exam: either `null` or a captured coordinate authority from a
+custom equipment-profile session. Loading validates every entry before
+anything changes: a malformed entry, a geometry mismatch against the loaded
+exams, or a changed geometry request the importer cannot replay rejects the
+whole import and leaves the session untouched.
+
+When some document exams are not loaded yet, their entries are staged and
+consumed in order as you load the matching raw inputs (DICOM or vendor
+tabular, single-exam files). Saving is blocked while entries are still
+staged — load the remaining exams first. Removing an exam drops staged
+entries with a warning. Older (`schema_version` 1) documents import as
+before; when live equipment state exists the import warns and retains it.

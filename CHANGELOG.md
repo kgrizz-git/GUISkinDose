@@ -24,6 +24,19 @@ That keeps SemVer and contributor history organized.
 
 ### Added
 
+- **Run-configuration equipment captures (experimental)** (2026-10-13) —
+  saved configurations always use schema version 2 with one equipment entry
+  per exam (`null` or a captured coordinate authority); scanner maker/model
+  are now stored unconditionally. Loading validates every entry before
+  changing anything: mismatches refuse the whole import, unloaded exams
+  stage entries that later raw loads consume in order, and older documents
+  import as before with a warning when live equipment state exists. Saving
+  is blocked while entries are still staged; re-parsing with staged or
+  confirmed captures is refused. Staged entries validate fully (bounded
+  values, immutable overrides); conflicting provenance refuses rather than
+  silently keeping live authority. Pre-load multi-study restores and the
+  atomic raw-replay transaction stay open.
+
 - **GUI live custom-profile sessions (experimental)** (2026-10-13) — an
   assembled coordinate session can be bound before any data load
   (`bind_equipment_session`; binds with loaded exams, preview data, or an

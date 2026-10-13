@@ -412,6 +412,7 @@ def read_and_normalize_input(
     settings: PyskindoseSettings | None = ...,
     import_options: TabularImportOptions | None = ...,
     equipment_capture_context: CapturedCoordinates | None = ...,
+    defer_capture_confirmation: bool = ...,
 ) -> InputAdapterResult:
     """Load and normalize a known vendor tabular schema (overload)."""
 
@@ -425,6 +426,7 @@ def read_and_normalize_input(
     settings: PyskindoseSettings | None = ...,
     import_options: TabularImportOptions | None = ...,
     equipment_capture_context: CapturedCoordinates | None = ...,
+    defer_capture_confirmation: bool = ...,
 ) -> InputAdapterResult | list[InputAdapterResult]:
     """Load and normalize a normalized/auto tabular schema (overload)."""
 
@@ -438,6 +440,7 @@ def read_and_normalize_input(
     settings: PyskindoseSettings | None = ...,
     import_options: TabularImportOptions | None = ...,
     equipment_capture_context: CapturedCoordinates | None = ...,
+    defer_capture_confirmation: bool = ...,
 ) -> InputAdapterResult | list[InputAdapterResult]:
     """Load and normalize a tabular input file (overload)."""
 
@@ -450,6 +453,7 @@ def read_and_normalize_input(
     settings: PyskindoseSettings | None = None,
     import_options: TabularImportOptions | None = None,
     equipment_capture_context: CapturedCoordinates | None = None,
+    defer_capture_confirmation: bool = False,
 ) -> InputAdapterResult | list[InputAdapterResult]:
     """Load a tabular file and return a normalized InputAdapterResult.
 
@@ -488,6 +492,12 @@ def read_and_normalize_input(
         than applying one capture to several frames. Final confirmation runs
         on the returned frame after import options; the result carries no
         live receipt.
+    defer_capture_confirmation:
+        Skip only that final confirmation (the caller confirms a
+        further-transformed frame itself, e.g. GUI post-load flags).
+        Preparation, recipe-before-concepts normalization, and every other
+        capture gate are unchanged. Defaults to False: the public replay
+        path confirms exactly as before.
 
     Provenance records ``detection_mode`` (``"auto"`` or ``"explicit"``) and,
     for auto loads only, ``matched_column_count`` (the winning schema's
@@ -514,6 +524,7 @@ def read_and_normalize_input(
             file_path, input_schema=input_schema, sheet_name=sheet_name,
             settings=settings, import_options=import_options,
             equipment_capture_context=equipment_capture_context,
+            defer_capture_confirmation=defer_capture_confirmation,
         )
     except CaptureError:
         raise
@@ -532,8 +543,15 @@ def _read_and_normalize_input_impl(
     settings: PyskindoseSettings | None = None,
     import_options: TabularImportOptions | None = None,
     equipment_capture_context: CapturedCoordinates | None = None,
+    defer_capture_confirmation: bool = False,
 ) -> InputAdapterResult | list[InputAdapterResult]:
-    """Shared pipeline; the public boundary closes capture-only failures."""
+    """Shared pipeline; the public boundary closes capture-only failures.
+
+    ``defer_capture_confirmation`` skips only the final capture confirmation
+    (the caller confirms a further-transformed frame itself); preparation,
+    recipe-before-concepts normalization, receipt suppression, and every
+    other capture gate stay exactly as in the confirming path.
+    """
     if equipment_capture_context is not None:
         settings = _reject_captured_conflicts(settings, equipment_capture_context)
     path = Path(file_path)
@@ -620,11 +638,16 @@ def _read_and_normalize_input_impl(
     _validate_live_receipts(result, settings)
     result = _apply_import_options_to_results(result, import_options)
     _rebind_live_receipts(result)
-    if equipment_capture_context is not None:
+    if _capture_needs_confirmation(equipment_capture_context, defer_capture_confirmation):
         _confirm_captured_result(
             result, work_settings.normalization_settings, equipment_capture_context
         )
     return result
+
+
+def _capture_needs_confirmation(context: CapturedCoordinates | None, deferred: bool) -> bool:
+    """Keep final confirmation unless an owning transform pipeline defers it."""
+    return context is not None and not deferred
 
 
 def _validate_live_receipts(

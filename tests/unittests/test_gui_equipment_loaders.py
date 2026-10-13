@@ -10,12 +10,11 @@ import pytest
 
 from guiskindose.equipment_capture import frame_geometry_rows, geometry_digest_v1
 from guiskindose.equipment_profiles import assemble_session
-from guiskindose.gui.exam_loaders import (
+from guiskindose.gui.exam_equipment import (
     _check_session_event_total,
     _check_session_exam_count,
-    load_rdsr,
-    load_tabular,
 )
+from guiskindose.gui.exam_loaders import load_rdsr, load_tabular
 from guiskindose.gui.settings_builder import bind_equipment_session
 from guiskindose.gui.state import AppState
 from guiskindose.input_adapters.models import InputAdapterResult
@@ -166,10 +165,10 @@ def test_replace_failure_restores_dropped_exams(session: Any, tmp_path: Path) ->
 
 def test_mint_failure_truncates_file_appends(session: Any, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """A late mint breach drops only this file's exams; prior state survives."""
-    import guiskindose.gui.exam_loaders as loaders
+    import guiskindose.gui.exam_equipment as equipment
 
     calls: list[str] = []
-    real_mint = loaders.capture_from_receipt
+    real_mint = equipment.capture_from_receipt
 
     def _fail_second(*args: Any, **kwargs: Any) -> Any:
         calls.append("mint")
@@ -179,7 +178,7 @@ def test_mint_failure_truncates_file_appends(session: Any, tmp_path: Path, monke
             raise CaptureError("boom", CODE_INVALID_EQUIPMENT_CAPTURE)
         return real_mint(*args, **kwargs)
 
-    monkeypatch.setattr(loaders, "capture_from_receipt", _fail_second)
+    monkeypatch.setattr(equipment, "capture_from_receipt", _fail_second)
     state = _bound_state(session)
     assert load_tabular(_write_csv(tmp_path / "keep.csv", [_RAW_ROW]), state)[0]
     state.d_lon = 7.0
@@ -223,7 +222,7 @@ def test_dicom_rebuild_failure_preserves_state(session: Any, monkeypatch: pytest
 
 def test_dicom_mint_failure_preserves_raw(session: Any, monkeypatch: pytest.MonkeyPatch) -> None:
     """B1 repro: a mint breach must not publish the raw preview either."""
-    import guiskindose.gui.exam_loaders as loaders
+    import guiskindose.gui.exam_equipment as equipment
 
     state = _bound_state(session)
     assert load_rdsr(_DICOM, state)[0]
@@ -234,7 +233,7 @@ def test_dicom_mint_failure_preserves_raw(session: Any, monkeypatch: pytest.Monk
     def _boom(*args: Any, **kwargs: Any) -> Any:
         raise ValueError("injected mint fault")
 
-    monkeypatch.setattr(loaders, "capture_from_receipt", _boom)
+    monkeypatch.setattr(equipment, "capture_from_receipt", _boom)
     ok, _ = load_rdsr(_DICOM, state)
     assert not ok
     assert state.loaded_exams is old_exams
@@ -423,6 +422,68 @@ def test_session_event_ceiling_refuses_oversize_file(session: Any, tmp_path: Pat
     assert not ok
     assert state.loaded_exams == []
     assert state.d_lon == 3.0
+
+
+def _staged_entry(capture: Any) -> Any:
+    """One validated null-or-capture pending entry (no fixtures needed)."""
+    from guiskindose.gui.run_state_equipment import PendingEntry
+
+    return PendingEntry(
+        capture=capture,
+        swap_lat_lon=False,
+        flip_ap1=False,
+        flip_ap2=False,
+        flip_tx=False,
+        flip_ty=False,
+        flip_tz=False,
+        d_lon=0.0,
+        d_ver=0.0,
+        d_lat=0.0,
+        table_origin_override=None,
+    )
+
+
+def test_pending_pre64_dicom_refuses_zero_reads(session: Any) -> None:
+    """Staged entries enforce the exam ceiling before the raw read.
+
+    Sixty-four loaded exams plus staged authority cannot arise through
+    public seams (loads consume slots one-for-one); this gate unit pins
+    the pre-read refusal with spies proving zero file contact.
+    """
+    import pydicom
+
+    state = _bound_state(session)
+    assert load_rdsr(_DICOM, state)[0]
+    exam = state.loaded_exams[0]
+    state.loaded_exams = [exam] * 64
+    state.loaded_exam_meta = state.loaded_exam_meta * 64
+    state.equipment_pending = (_staged_entry(exam.equipment_capture),)
+    with mock.patch.object(pydicom, "dcmread", wraps=pydicom.dcmread) as spy:
+        ok, msg = load_rdsr(_DICOM, state)
+    assert not ok
+    assert "conflict" in msg
+    spy.assert_not_called()
+    assert len(state.loaded_exams) == 64
+    assert len(state.equipment_pending) == 1
+
+
+def test_pending_pre64_tabular_refuses_zero_reads(tmp_path: Path) -> None:
+    """Staged null entries enforce the exam ceiling before adapter reads."""
+    import guiskindose.input_adapters.registry as registry
+
+    state = AppState()
+    assert load_rdsr(_DICOM, state)[0]
+    exam = state.loaded_exams[0]
+    state.loaded_exams = [exam] * 64
+    state.loaded_exam_meta = state.loaded_exam_meta * 64
+    state.equipment_pending = (_staged_entry(None),)
+    real_read = registry.read_and_normalize_input
+    with mock.patch.object(registry, "read_and_normalize_input", wraps=real_read) as spy:
+        ok, _ = load_tabular(_write_csv(tmp_path / "late.csv", [_RAW_ROW]), state)
+    assert not ok
+    spy.assert_not_called()
+    assert len(state.loaded_exams) == 64
+    assert len(state.equipment_pending) == 1
 
 
 def _shell_exam(rows: int, captured: bool = True) -> Any:

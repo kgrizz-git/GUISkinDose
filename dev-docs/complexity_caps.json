@@ -71,11 +71,6 @@
     },
     {
       "path": "src/guiskindose/gui/run_state.py",
-      "function": "apply_run_state",
-      "cap": 11
-    },
-    {
-      "path": "src/guiskindose/gui/run_state.py",
       "function": "validate_run_state_document",
       "cap": 22
     },

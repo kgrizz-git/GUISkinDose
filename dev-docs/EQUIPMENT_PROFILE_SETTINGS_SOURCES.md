@@ -117,3 +117,16 @@ no snapshot fails closed as inconsistent, distinct from an intentional
 null); stale captures are retained and refuse loudly before dose. Captures
 and session survive `reset_results`. No run-state version bump, import, or
 writer rides on this slice.
+
+## 6. Run-state staging hardening (same slice)
+
+Pending entries validate fully at construction (finite offsets with overflow
+closed, exact booleans, strict x/y/z override keys) and again before loader
+reads, so forged bypass inputs fail before any I/O. Overrides store as an
+immutable deepcopyable mapping with a count/token-only repr. Tabular replay
+uses the `defer_capture_confirmation` registry seam (default path unchanged)
+and confirms only the final transformed frame. Bounds tokens cover staged
+presence (nulls included) with pre-read gates; emission/staging helpers cap
+at 64 before materializing. The public writer refuses staged pending.
+Already-loaded imports prove canonical capture equivalence against live
+authority and refuse conflicts instead of silently keeping it.

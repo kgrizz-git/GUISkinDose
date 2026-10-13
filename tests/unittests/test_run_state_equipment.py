@@ -584,7 +584,11 @@ def test_modules_stay_gui_light() -> None:
         "import sys, guiskindose.gui.run_state_equipment as m; "
         "assert 'nicegui' not in sys.modules; "
         "assert 'guiskindose.gui.app' not in sys.modules; "
-        "assert set(m.__all__) == {'decode_equipment_section', 'emit_equipment_section'}"
+        "assert set(m.__all__) == {'PendingEntry', 'build_pending', "
+        "'decode_equipment_section', 'emit_equipment_section', "
+        "'equipment_section_for_document', 'publish_restored_captures', "
+        "'revalidate_pending', 'translate_capture_error', "
+        "'validate_equipment_document', 'warn_equipment_import'}"
     )
     proc = subprocess.run(
         [sys.executable, "-c", probe], capture_output=True, text=True, check=False
@@ -622,7 +626,7 @@ def test_decode_colliding_hostile_key_never_equated() -> None:
 
 
 def test_trial_settings_error_does_not_expose_exception(monkeypatch):
-    from guiskindose.gui.run_state import _trial_apply_settings
+    from guiskindose.gui.run_state_trial import _trial_apply_settings
     from guiskindose.gui.state import AppState
 
     def fail_build(_state):

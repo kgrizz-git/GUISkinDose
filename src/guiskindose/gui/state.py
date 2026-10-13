@@ -16,6 +16,7 @@ import pandas as pd
 
 if TYPE_CHECKING:
     from guiskindose.equipment_profiles.session import EquipmentProfileSession
+    from guiskindose.gui.run_state_equipment import PendingEntry
 
 
 @dataclass
@@ -137,6 +138,13 @@ class AppState:
     # Never serialized; never cleared by reset_results (captures live on exams
     # and survive settings-only invalidation).
     equipment_profile_session: EquipmentProfileSession | None = None
+    # Staged equipment authority for not-yet-loaded document positions
+    # (run-state v2 import). A tuple of validated immutable entries aligned
+    # to the document's unloaded tail, consumed FIFO by later raw loads;
+    # None = nothing staged. Never serialized; survives reset_results;
+    # replaced wholesale only by a newer present envelope, never cleared by
+    # v1 or absent/null imports.
+    equipment_pending: tuple[PendingEntry, ...] | None = None
 
     # ── Imported run-state homes (settings export/import) ────────────────
     # Restorable configuration with no GUI widget. None = example-JSON
@@ -211,6 +219,20 @@ def reset_results(target: AppState | None = None) -> None:
     state_obj.dosemap_fig = None
     state_obj.visible_exam_dosemaps = []
     state_obj.aggregate_subset_exams = []
+
+
+def abandon_staged_equipment(target: AppState | None = None) -> bool:
+    """Drop staged pending equipment entries; True when anything was staged.
+
+    Exam removal/reorder invalidates positional staging while confirmed
+    captures ride their exams untouched. No other home is touched, and
+    staged-then-abandoned entries never reach calculation.
+    """
+    state_obj = state if target is None else target
+    if state_obj.equipment_pending is None:
+        return False
+    state_obj.equipment_pending = None
+    return True
 
 
 def is_ready_to_calculate() -> bool:

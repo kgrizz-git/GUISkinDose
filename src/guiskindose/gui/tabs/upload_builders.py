@@ -30,7 +30,7 @@ from ..helpers import (
     refresh_normalization_warnings,
     restore_globals_from_exam_meta,
 )
-from ..state import reset_results, state
+from ..state import abandon_staged_equipment, reset_results, state
 from ..ui_copy import copy_text
 from ..upload_temp_files import (
     clear_all_temp_uploads,
@@ -47,6 +47,11 @@ MAX_UPLOAD_BYTES = 64 * 1024 * 1024
 
 _LOAD_FAILURE_STATUS = "Could not load — see message"
 _NO_FILE_LOADED_STATUS = "No file loaded"
+
+_REMOVE_ABANDON_MESSAGE = (
+    "Staged run-configuration equipment entries were dropped with the removed exam; "
+    "re-import the configuration to stage them again."
+)
 
 _FORMAT_BADGE_COLORS = {
     "dicom": "purple",
@@ -378,6 +383,8 @@ class UploadTabController:
         state.loaded_exams.pop(index)
         if index < len(state.loaded_exam_meta):
             state.loaded_exam_meta.pop(index)
+        if abandon_staged_equipment(state):
+            ui.notify(_REMOVE_ABANDON_MESSAGE, type="warning")
         refresh_normalization_warnings(state)
         adjust_active_exam_index_after_remove(state, index)
         if file_path is not None and all(m.get("file_path") != file_path for m in state.loaded_exam_meta):
