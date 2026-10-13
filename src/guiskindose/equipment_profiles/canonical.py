@@ -54,9 +54,9 @@ def canonical_json_bytes(value: Any) -> bytes:
 def _normalized_float(value: float) -> float:
     """Return ``value`` as a finite float with negative zero normalized to ``+0.0``."""
     result = float(value)
-    if result == 0.0:
-        return 0.0
-    return result
+    # Exact IEEE addition maps -0.0 to +0.0 without any comparison; adding zero
+    # is exact, so every other finite value is unchanged.
+    return result + 0.0
 
 
 def _axis_numbers(block: object) -> dict[str, float]:

@@ -300,7 +300,9 @@ def number_cell(row: ParsedRow, name: str, source_kind: str) -> float:
             field_path=(name,),
             row_index=row.index,
         )
-    return 0.0 if value == 0.0 else value
+    # Negative zero normalizes to +0.0 by exact IEEE addition (no comparison):
+    # adding zero is exact for finite values and maps -0.0 to +0.0.
+    return value + 0.0
 
 
 def boolean_cell(row: ParsedRow, name: str, source_kind: str) -> bool:
@@ -333,7 +335,7 @@ def sign_cell(row: ParsedRow, name: str, source_kind: str) -> str:
     return raw
 
 
-def list_cell(row: ParsedRow, name: str, source_kind: str) -> list[str]:
+def list_cell(row: ParsedRow, name: str) -> list[str]:
     """Split a flat list cell on ``|``. Only list cells use the separator."""
     raw = row.values.get(name, "")
     if not raw:

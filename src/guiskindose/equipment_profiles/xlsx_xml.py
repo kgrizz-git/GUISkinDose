@@ -57,7 +57,10 @@ def worksheet_budgets() -> tuple[int, int, int]:
     )
 
 _COLUMN_REF_RE = re.compile(r"\A[A-Z]+\Z")
-_CELL_REF_RE = re.compile(r"\A([A-Z]+)([0-9]+)\Z")
+# ASCII-only matching is deliberate below: OOXML row/column coordinates are ASCII by
+# specification, while Python `\d` also matches Unicode decimal digits (e.g. U+0663), which must
+# stay rejected — `int()` would otherwise accept them and mis-resolve the coordinate.
+_CELL_REF_RE = re.compile(r"\A([A-Z]+)(\d+)\Z", re.ASCII)
 
 
 def column_index(column_ref: str) -> int | None:
@@ -135,7 +138,7 @@ class _WorksheetGuard:
                 raise self._fail()
             self._open_cell(attrs)
 
-    def end_element(self, name: str) -> None:
+    def end_element(self, _name: str) -> None:
         self._path.pop()
 
     def _open_row(self, attrs: dict[str, str]) -> None:
@@ -148,7 +151,8 @@ class _WorksheetGuard:
         self._rows += 1
 
     def _row_reference(self, reference: str) -> int:
-        if not re.fullmatch(r"[1-9][0-9]{0,6}", reference):
+        # The explicit ASCII flag keeps Unicode digits invalid here too.
+        if not re.fullmatch(r"[1-9]\d{0,6}", reference, flags=re.ASCII):
             raise self._fail()
         return int(reference)
 
@@ -201,8 +205,6 @@ def validate_worksheet_xml(payload: bytes, *, source_kind: str) -> tuple[int, in
         raise EquipmentProfileError(
             ProfileErrorCode.MALFORMED_CONTAINER, source_kind=source_kind
         ) from None
-    except EquipmentProfileError:
-        raise
     return guard.bounds
 
 

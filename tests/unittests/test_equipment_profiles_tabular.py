@@ -236,8 +236,9 @@ def test_optional_promotion_column_is_accepted_on_a_wildcard() -> None:
 
 def test_duplicate_header_column_is_rejected_without_echoing_it() -> None:
     header = [*_FLAT_COLUMN_NAMES, "notes"]
+    payload = _write([_profile_row()], header=header)
     with pytest.raises(EquipmentProfileError) as excinfo:
-        parse_csv_bytes(_write([_profile_row()], header=header))
+        parse_csv_bytes(payload)
 
     assert _code(excinfo) is ProfileErrorCode.DUPLICATE_JSON_KEY
     assert "notes" not in repr(excinfo.value)
@@ -245,23 +246,26 @@ def test_duplicate_header_column_is_rejected_without_echoing_it() -> None:
 
 def test_unknown_header_column_is_rejected_without_echoing_it() -> None:
     header = [*_FLAT_COLUMN_NAMES, "not_a_column"]
+    payload = _write([_profile_row()], header=header)
     with pytest.raises(EquipmentProfileError) as excinfo:
-        parse_csv_bytes(_write([_profile_row()], header=header))
+        parse_csv_bytes(payload)
 
     assert _code(excinfo) is ProfileErrorCode.UNKNOWN_FIELD
     assert "not_a_column" not in str(excinfo.value)
     assert "not_a_column" not in repr(excinfo.value)
 
 def test_missing_header_column_is_rejected() -> None:
+    payload = _write([_profile_row()], header=list(_FLAT_COLUMN_NAMES[:-1]))
     with pytest.raises(EquipmentProfileError) as excinfo:
-        parse_csv_bytes(_write([_profile_row()], header=list(_FLAT_COLUMN_NAMES[:-1])))
+        parse_csv_bytes(payload)
 
     assert _code(excinfo) is ProfileErrorCode.MISSING_REQUIRED_FIELD
 
 
 def test_promotion_value_without_the_column_is_a_width_error() -> None:
+    payload = _write([[*_profile_row(), "true"]])
     with pytest.raises(EquipmentProfileError) as excinfo:
-        parse_csv_bytes(_write([[*_profile_row(), "true"]]))
+        parse_csv_bytes(payload)
 
     assert _code(excinfo) is ProfileErrorCode.MALFORMED_TABULAR
 
@@ -273,16 +277,18 @@ def test_promotion_value_without_the_column_is_a_width_error() -> None:
 
 def test_short_and_long_rows_are_rejected() -> None:
     for rows in ([_profile_row()[:-1]], [[*_profile_row(), ""]]):
+        payload = _write(rows)
         with pytest.raises(EquipmentProfileError) as excinfo:
-            parse_csv_bytes(_write(rows))
+            parse_csv_bytes(payload)
         assert _code(excinfo) is ProfileErrorCode.MALFORMED_TABULAR
 
 
 def test_unknown_record_type_is_rejected_without_echoing_it() -> None:
     row = _profile_row()
     row[0] = "not-a-record-type"
+    payload = _write([row])
     with pytest.raises(EquipmentProfileError) as excinfo:
-        parse_csv_bytes(_write([row]))
+        parse_csv_bytes(payload)
 
     assert _code(excinfo) is ProfileErrorCode.UNKNOWN_FIELD
     assert "not-a-record-type" not in str(excinfo.value)
@@ -291,8 +297,9 @@ def test_unknown_record_type_is_rejected_without_echoing_it() -> None:
 def test_value_in_a_non_applicable_column_is_rejected() -> None:
     row = _leaf("translation_offset.x", "1.0")
     row[_FLAT_COLUMN_NAMES.index("acquisition_plane")] = "Single Plane"
+    payload = _write([_profile_row(), row])
     with pytest.raises(EquipmentProfileError) as excinfo:
-        parse_csv_bytes(_write([_profile_row(), row]))
+        parse_csv_bytes(payload)
 
     assert _code(excinfo) is ProfileErrorCode.UNKNOWN_FIELD
     assert excinfo.value.field_path == ("acquisition_plane",)
@@ -314,8 +321,9 @@ def test_coordinate_and_transmission_rows_may_precede_their_profile_row() -> Non
 
 def test_orphan_rows_without_required_metadata_fail() -> None:
     for rows in ([*_ALL_LEAVES], [_transmission_row()]):
+        payload = _write(rows)
         with pytest.raises(EquipmentProfileError) as excinfo:
-            parse_csv_bytes(_write(rows))
+            parse_csv_bytes(payload)
         assert _code(excinfo) is ProfileErrorCode.MISSING_REQUIRED_FIELD
 
 
@@ -326,24 +334,27 @@ def test_repeated_profile_metadata_may_agree() -> None:
 
 def test_conflicting_repeated_metadata_fails() -> None:
     rows = [_profile_row(), _profile_row(models="DemoScope 3000"), *_ALL_LEAVES]
+    payload = _write(rows)
     with pytest.raises(EquipmentProfileError) as excinfo:
-        parse_csv_bytes(_write(rows))
+        parse_csv_bytes(payload)
 
     assert _code(excinfo) is ProfileErrorCode.CONFLICTING_PROFILE_METADATA
 
 
 def test_duplicate_coordinate_leaf_fails_even_when_identical() -> None:
     rows = [_profile_row(), *_ALL_LEAVES, _leaf("translation_offset.x", "0.0")]
+    payload = _write(rows)
     with pytest.raises(EquipmentProfileError) as excinfo:
-        parse_csv_bytes(_write(rows))
+        parse_csv_bytes(payload)
 
     assert _code(excinfo) is ProfileErrorCode.DUPLICATE_JSON_KEY
 
 
 def test_duplicate_transmission_key_fails_through_the_canonical_check() -> None:
     rows = [_profile_row(), _transmission_row(), _transmission_row()]
+    parsed = [parse_csv_bytes(_write(rows))]
     with pytest.raises(EquipmentProfileError) as excinfo:
-        combine_documents([parse_csv_bytes(_write(rows))])
+        combine_documents(parsed)
 
     assert _code(excinfo) is ProfileErrorCode.DUPLICATE_TRANSMISSION_KEY
 
@@ -371,8 +382,9 @@ def test_pipe_separated_shorthand_list_is_accepted() -> None:
 
 def test_pipe_list_with_multiple_models_is_ambiguous() -> None:
     rows = [_profile_row(models="A|B", model_aliases="x"), *_ALL_LEAVES]
+    payload = _write(rows)
     with pytest.raises(EquipmentProfileError) as excinfo:
-        parse_csv_bytes(_write(rows))
+        parse_csv_bytes(payload)
 
     assert _code(excinfo) is ProfileErrorCode.ALIAS_AMBIGUOUS_TARGET
 
@@ -389,24 +401,27 @@ def test_quoted_json_alias_map_cell_is_accepted() -> None:
 
 def test_map_target_must_be_a_listed_model() -> None:
     rows = [_profile_row(model_aliases='{"x": "Unlisted"}'), *_ALL_LEAVES]
+    payload = _write(rows)
     with pytest.raises(EquipmentProfileError) as excinfo:
-        parse_csv_bytes(_write(rows))
+        parse_csv_bytes(payload)
 
     assert _code(excinfo) is ProfileErrorCode.ALIAS_TARGET_MISMATCH
 
 
 def test_malformed_json_alias_map_cell_is_rejected() -> None:
     rows = [_profile_row(model_aliases='{"x": '), *_ALL_LEAVES]
+    payload = _write(rows)
     with pytest.raises(EquipmentProfileError) as excinfo:
-        parse_csv_bytes(_write(rows))
+        parse_csv_bytes(payload)
 
     assert _code(excinfo) is ProfileErrorCode.MALFORMED_TABULAR
 
 
 def test_duplicate_key_in_a_json_alias_map_cell_is_rejected() -> None:
     rows = [_profile_row(model_aliases='{"x": "A", "x": "B"}'), *_ALL_LEAVES]
+    payload = _write(rows)
     with pytest.raises(EquipmentProfileError) as excinfo:
-        parse_csv_bytes(_write(rows))
+        parse_csv_bytes(payload)
 
     assert _code(excinfo) is ProfileErrorCode.DUPLICATE_JSON_KEY
 
@@ -452,16 +467,18 @@ def test_csv_alias_map_equals_json_alias_map_content() -> None:
 
 def test_blank_required_profile_cells_fail() -> None:
     for column in ("manufacturer", "models", "profile_id"):
+        payload = _write([_profile_row(**{column: ""}), *_ALL_LEAVES])
         with pytest.raises(EquipmentProfileError) as excinfo:
-            parse_csv_bytes(_write([_profile_row(**{column: ""}), *_ALL_LEAVES]))
+            parse_csv_bytes(payload)
         assert _code(excinfo) is ProfileErrorCode.BLANK_REQUIRED_CELL, column
         assert excinfo.value.field_path == (column,)
 
 
 def test_blank_filtration_is_disallowed_not_read_as_zero() -> None:
     for column in ("filtration_added_mmcu", "filtration_added_mmal"):
+        payload = _write([_profile_row(), _transmission_row(**{column: ""})])
         with pytest.raises(EquipmentProfileError) as excinfo:
-            parse_csv_bytes(_write([_profile_row(), _transmission_row(**{column: ""})]))
+            parse_csv_bytes(payload)
         assert _code(excinfo) is ProfileErrorCode.BLANK_DISALLOWED_CELL, column
         assert excinfo.value.field_path == (column,)
 
@@ -475,8 +492,9 @@ def test_explicit_zero_filtration_is_accepted() -> None:
 
 def test_non_finite_and_boolean_numeric_cells_are_rejected() -> None:
     for value in ("NaN", "nan", "inf", "-inf", "Infinity", "1e999", "true", "false", "8_0", "abc", ""):
+        payload = _write([_profile_row(), _transmission_row(kvp_kv=value)])
         with pytest.raises(EquipmentProfileError) as excinfo:
-            parse_csv_bytes(_write([_profile_row(), _transmission_row(kvp_kv=value)]))
+            parse_csv_bytes(payload)
         assert _code(excinfo) in (
             ProfileErrorCode.INVALID_NUMBER,
             ProfileErrorCode.BLANK_REQUIRED_CELL,
@@ -484,16 +502,18 @@ def test_non_finite_and_boolean_numeric_cells_are_rejected() -> None:
 
 
 def test_huge_integer_is_rejected_as_non_finite() -> None:
+    payload = _write([_profile_row(), _transmission_row(kvp_kv="1" + "0" * 400)])
     with pytest.raises(EquipmentProfileError) as excinfo:
-        parse_csv_bytes(_write([_profile_row(), _transmission_row(kvp_kv="1" + "0" * 400)]))
+        parse_csv_bytes(payload)
 
     assert _code(excinfo) is ProfileErrorCode.INVALID_NUMBER
 
 
 def test_only_true_and_false_are_boolean_lexical_forms() -> None:
     for value in ("True", "TRUE", "1", "0", "yes"):
+        payload = _write([_profile_row(), _leaf("swap_lateral_longitudinal", value)])
         with pytest.raises(EquipmentProfileError) as excinfo:
-            parse_csv_bytes(_write([_profile_row(), _leaf("swap_lateral_longitudinal", value)]))
+            parse_csv_bytes(payload)
         assert _code(excinfo) is ProfileErrorCode.INVALID_TYPE, value
 
 
@@ -512,16 +532,18 @@ def test_null_like_strings_are_literal_text_not_omission() -> None:
 
 
 def test_blank_coordinate_value_is_a_required_cell_error() -> None:
+    payload = _write([_profile_row(), _leaf("translation_offset.x", "")])
     with pytest.raises(EquipmentProfileError) as excinfo:
-        parse_csv_bytes(_write([_profile_row(), _leaf("translation_offset.x", "")]))
+        parse_csv_bytes(payload)
 
     assert _code(excinfo) is ProfileErrorCode.BLANK_REQUIRED_CELL
     assert excinfo.value.field_path == ("value",)
 
 
 def test_unknown_leaf_name_is_rejected_without_echoing_it() -> None:
+    payload = _write([_profile_row(), _leaf("translation_offset.w", "1.0")])
     with pytest.raises(EquipmentProfileError) as excinfo:
-        parse_csv_bytes(_write([_profile_row(), _leaf("translation_offset.w", "1.0")]))
+        parse_csv_bytes(payload)
 
     assert _code(excinfo) is ProfileErrorCode.UNKNOWN_FIELD
     assert excinfo.value.field_path == ("field",)
@@ -530,36 +552,40 @@ def test_unknown_leaf_name_is_rejected_without_echoing_it() -> None:
 
 
 def test_unknown_non_dotted_field_is_rejected() -> None:
+    payload = _write([_profile_row(), _leaf("nonsense_field", "1.0")])
     with pytest.raises(EquipmentProfileError) as excinfo:
-        parse_csv_bytes(_write([_profile_row(), _leaf("nonsense_field", "1.0")]))
+        parse_csv_bytes(payload)
 
     assert _code(excinfo) is ProfileErrorCode.UNKNOWN_FIELD
     assert "nonsense_field" not in str(excinfo.value)
 
 
 def test_sign_leaf_rejects_other_literals() -> None:
+    payload = _write([_profile_row(), _leaf("translation_direction.x", "xx")])
     with pytest.raises(EquipmentProfileError) as excinfo:
-        parse_csv_bytes(_write([_profile_row(), _leaf("translation_direction.x", "xx")]))
+        parse_csv_bytes(payload)
 
     assert _code(excinfo) is ProfileErrorCode.INVALID_ENUM
 
 
 def test_measured_rows_require_source_and_date() -> None:
     # A blank optional cell is read as "omitted", so measured-without-source is a missing-field error.
+    payload = _write([_profile_row(), _transmission_row(evidence_status="measured", date="2026-01-01")])
     with pytest.raises(EquipmentProfileError) as excinfo:
         parse_csv_bytes(
-            _write([_profile_row(), _transmission_row(evidence_status="measured", date="2026-01-01")])
+            payload
         )
     assert _code(excinfo) is ProfileErrorCode.MISSING_REQUIRED_FIELD
 
-    with pytest.raises(EquipmentProfileError) as excinfo:
-        parse_csv_bytes(
-            _write(
+    payload = _write(
                 [
                     _profile_row(),
                     _transmission_row(evidence_status="measured", source="physicist", date=""),
                 ]
             )
+    with pytest.raises(EquipmentProfileError) as excinfo:
+        parse_csv_bytes(
+            payload
         )
     assert _code(excinfo) is ProfileErrorCode.MISSING_REQUIRED_FIELD
 
@@ -569,8 +595,9 @@ def test_measured_date_must_be_strict() -> None:
         _profile_row(),
         _transmission_row(evidence_status="measured", source="physicist", date="2026-02-30"),
     ]
+    payload = _write(rows)
     with pytest.raises(EquipmentProfileError) as excinfo:
-        parse_csv_bytes(_write(rows))
+        parse_csv_bytes(payload)
     assert _code(excinfo) is ProfileErrorCode.INVALID_DATE
 
 
@@ -578,8 +605,9 @@ def test_promotion_is_rejected_without_a_wildcard_model() -> None:
     header = [*_FLAT_COLUMN_NAMES, _PROMOTION_COLUMN]
     row = _profile_row()
     row.append("true")
+    payload = _write([row], header=header)
     with pytest.raises(EquipmentProfileError) as excinfo:
-        parse_csv_bytes(_write([row], header=header))
+        parse_csv_bytes(payload)
 
     assert _code(excinfo) is ProfileErrorCode.WILDCARD_NOT_PERMITTED
 
@@ -628,8 +656,9 @@ def test_tsv_file_adapter_uses_the_tsv_source_kind(tmp_path: Path) -> None:
 
 def test_wrong_delimiter_is_a_header_error() -> None:
     text = _CSV_PATH.read_text(encoding="utf-8").replace(",", ";")
+    payload = text.encode("utf-8")
     with pytest.raises(EquipmentProfileError) as excinfo:
-        parse_tsv_bytes(text.encode("utf-8"))
+        parse_tsv_bytes(payload)
     assert _code(excinfo) is ProfileErrorCode.UNKNOWN_FIELD
 
 
@@ -657,8 +686,9 @@ def test_aggregate_row_ceiling_is_enforced_before_materialization() -> None:
             )
     assert len(rows) == 5 * (1 + 15 + 2_000)
 
+    payload = _write(rows)
     with pytest.raises(EquipmentProfileError) as excinfo:
-        parse_csv_bytes(_write(rows))
+        parse_csv_bytes(payload)
 
     assert _code(excinfo) is ProfileErrorCode.ROW_LIMIT_EXCEEDED
 
@@ -685,14 +715,16 @@ def test_same_profile_in_two_files_still_fails() -> None:
 
 def test_errors_never_leak_raw_cells() -> None:
     header = [*_FLAT_COLUMN_NAMES, "top_secret_column"]
+    payload = _write([_profile_row()], header=header)
     with pytest.raises(EquipmentProfileError) as excinfo:
-        parse_csv_bytes(_write([_profile_row()], header=header))
+        parse_csv_bytes(payload)
     assert "top_secret_column" not in str(excinfo.value)
     assert "top_secret_column" not in repr(excinfo.value)
 
     row = _profile_row()[:-1]
+    payload = _write([row])
     with pytest.raises(EquipmentProfileError) as excinfo:
-        parse_csv_bytes(_write([row]))
+        parse_csv_bytes(payload)
     assert "Acme" not in str(excinfo.value)
 
 
@@ -700,8 +732,9 @@ def test_errors_never_leak_raw_cells() -> None:
 def test_unclosed_quote_is_malformed(delimiter: str) -> None:
     from guiskindose.equipment_profiles.tabular_common import tabular_rows
 
+    rows_iter = tabular_rows('"unfinished', delimiter=delimiter, source_kind="csv" if delimiter == "," else "tsv")
     with pytest.raises(EquipmentProfileError) as excinfo:
-        list(tabular_rows('"unfinished', delimiter=delimiter, source_kind="csv" if delimiter == "," else "tsv"))
+        list(rows_iter)
     assert excinfo.value.code == ProfileErrorCode.MALFORMED_TABULAR
     assert "unfinished" not in str(excinfo.value)
     assert excinfo.value.__suppress_context__
@@ -709,10 +742,8 @@ def test_unclosed_quote_is_malformed(delimiter: str) -> None:
 
 @pytest.mark.parametrize("parser,suffix", [(parse_csv_file, ".csv"), (parse_tsv_file, ".tsv")])
 def test_invalid_path_is_value_free(parser: object, suffix: str) -> None:
+    read = parse_csv_file if parser is parse_csv_file else parse_tsv_file
     with pytest.raises(EquipmentProfileError) as excinfo:
-        if parser is parse_csv_file:
-            parse_csv_file("invalid\x00" + suffix)
-        else:
-            parse_tsv_file("invalid\x00" + suffix)
+        read("invalid\x00" + suffix)
     assert excinfo.value.code == ProfileErrorCode.UNREADABLE_SOURCE
     assert "invalid" not in str(excinfo.value)
