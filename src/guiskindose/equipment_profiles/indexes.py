@@ -19,6 +19,7 @@ to activation. The initial activation gate is unchanged by this module.
 
 from __future__ import annotations
 
+import math
 import re
 from bisect import bisect_left
 from collections.abc import Sequence
@@ -282,7 +283,7 @@ def _check_number(value: Any, field_path: tuple[str, ...], source_kind: str) -> 
         result = float(value)
     except (OverflowError, ValueError):
         _reject(ProfileErrorCode.INVALID_NUMBER, source_kind, field_path)
-    if result != result or result in (float("inf"), float("-inf")):
+    if math.isnan(result) or result in (float("inf"), float("-inf")):
         _reject(ProfileErrorCode.INVALID_NUMBER, source_kind, field_path)
 
 

@@ -27,6 +27,7 @@ Design constraints this module exists to hold:
 
 from __future__ import annotations
 
+import math
 import os
 from collections.abc import Iterator, Mapping
 from datetime import date, datetime
@@ -217,7 +218,7 @@ def _finite_float_text(
     row_index: int,
     source_kind: str,
 ) -> str:
-    if value != value or value in (float("inf"), float("-inf")):
+    if math.isnan(value) or value in (float("inf"), float("-inf")):
         raise EquipmentProfileError(
             ProfileErrorCode.INVALID_NUMBER, source_kind=source_kind, field_path=field_path, row_index=row_index
         )
@@ -498,7 +499,7 @@ def _rows(raw: bytes, *, selected: int | None, source_kind: str) -> Iterator[Par
         for row in _iter_rows(sheet):
             if header is None:
                 names = tuple(_row_cells(row, None, source_kind, data_rows))
-                header = validate_header(list(names), source_kind)
+                header = validate_header(names, source_kind)
                 continue
             yield parse_row(
                 _row_cells(row, _ordered_names(header), source_kind, data_rows),

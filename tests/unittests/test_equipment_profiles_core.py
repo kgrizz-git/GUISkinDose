@@ -134,22 +134,25 @@ def test_partial_coordinate_omission_is_valid_inheritance() -> None:
 
 
 def test_coordinate_block_present_but_empty_is_rejected() -> None:
+    document = _envelope([_profile(coordinates={"translation_offset": {}})])
     with pytest.raises(EquipmentProfileError) as excinfo:
-        parse_memory_document(_envelope([_profile(coordinates={"translation_offset": {}})]))
+        parse_memory_document(document)
 
     assert _error_code(excinfo) is ProfileErrorCode.EMPTY_COORDINATE_BLOCK
 
 
 def test_coordinates_object_with_no_block_is_rejected() -> None:
+    document = _envelope([_profile(coordinates={})])
     with pytest.raises(EquipmentProfileError) as excinfo:
-        parse_memory_document(_envelope([_profile(coordinates={})]))
+        parse_memory_document(document)
 
     assert _error_code(excinfo) is ProfileErrorCode.EMPTY_COORDINATE_BLOCK
 
 
 def test_profile_with_no_domain_is_rejected() -> None:
+    document = _envelope([_profile()])
     with pytest.raises(EquipmentProfileError) as excinfo:
-        parse_memory_document(_envelope([_profile()]))
+        parse_memory_document(document)
 
     assert _error_code(excinfo) is ProfileErrorCode.EMPTY_DOMAIN
 
@@ -179,9 +182,7 @@ def test_alias_shorthand_and_explicit_map_normalize_identically() -> None:
 
 
 def test_alias_shorthand_with_multiple_models_is_rejected() -> None:
-    with pytest.raises(EquipmentProfileError) as excinfo:
-        parse_memory_document(
-            _envelope(
+    document = _envelope(
                 [
                     _profile(
                         models=["DemoScope 2000", "DemoScope 3000"],
@@ -189,22 +190,27 @@ def test_alias_shorthand_with_multiple_models_is_rejected() -> None:
                     )
                 ]
             )
+    with pytest.raises(EquipmentProfileError) as excinfo:
+        parse_memory_document(
+            document
         )
 
     assert _error_code(excinfo) is ProfileErrorCode.ALIAS_AMBIGUOUS_TARGET
 
 
 def test_alias_map_target_must_be_a_listed_model() -> None:
+    document = _envelope([_profile(coordinates=_full_coordinates(), model_aliases={"A": "Other"})])
     with pytest.raises(EquipmentProfileError) as excinfo:
-        parse_memory_document(_envelope([_profile(coordinates=_full_coordinates(), model_aliases={"A": "Other"})]))
+        parse_memory_document(document)
 
     assert _error_code(excinfo) is ProfileErrorCode.ALIAS_TARGET_MISMATCH
 
 
 def test_normalize_colliding_aliases_are_rejected() -> None:
+    document = _envelope([_profile(coordinates=_full_coordinates(), model_aliases=["DS-2000", "ds 2000"])])
     with pytest.raises(EquipmentProfileError) as excinfo:
         parse_memory_document(
-            _envelope([_profile(coordinates=_full_coordinates(), model_aliases=["DS-2000", "ds 2000"])])
+            document
         )
 
     assert _error_code(excinfo) is ProfileErrorCode.ALIAS_AMBIGUOUS_TARGET
@@ -286,7 +292,8 @@ def test_numeric_spelling_does_not_change_the_hash() -> None:
         _envelope([_profile(coordinates=_full_coordinates() | {"detector_side_length": 40.0})])
     ).profiles[0]
 
-    assert base.coordinates is not None and spelling.coordinates is not None
+    assert base.coordinates is not None
+    assert spelling.coordinates is not None
     assert base.coordinates.detector_side_length == spelling.coordinates.detector_side_length == 40.0
     assert isinstance(base.coordinates.detector_side_length, float)
     assert profile_hash(base) == profile_hash(spelling)
@@ -325,11 +332,13 @@ def test_schema_version_serializes_as_integer_not_float() -> None:
 
 
 def test_parsed_profiles_are_immutable() -> None:
+    from dataclasses import FrozenInstanceError
+
     profile = _coordinate_profile()
 
-    with pytest.raises(Exception):  # noqa: B017 - frozen dataclass raises FrozenInstanceError
+    with pytest.raises(FrozenInstanceError):
         profile.profile_id = "changed"  # type: ignore[misc]
-    with pytest.raises(Exception):  # noqa: B017
+    with pytest.raises(FrozenInstanceError):
         profile.coordinates.detector_side_length = 10  # type: ignore[union-attr, misc]
 
 
@@ -433,8 +442,9 @@ def test_duplicate_transmission_keys_fail_within_one_profile() -> None:
         _envelope([_profile(transmission=[dict(row), dict(row)])])
     ).profiles
 
+    parsed = [parse_memory_document(_envelope([_profile(transmission=[dict(row), dict(row)])]))]
     with pytest.raises(EquipmentProfileError) as excinfo:
-        combine_documents([parse_memory_document(_envelope([_profile(transmission=[dict(row), dict(row)])]))])
+        combine_documents(parsed)
 
     assert _error_code(excinfo) is ProfileErrorCode.DUPLICATE_TRANSMISSION_KEY
     assert len(profiles) == 1
@@ -448,8 +458,9 @@ def test_duplicate_transmission_keys_fail_within_one_profile() -> None:
 def test_unknown_field_is_rejected_and_key_is_not_echoed() -> None:
     malicious = "EVIL_PATIENT_12345"
 
+    document = _envelope([_profile(coordinates=_full_coordinates(), **{malicious: "x"})])
     with pytest.raises(EquipmentProfileError) as excinfo:
-        parse_memory_document(_envelope([_profile(coordinates=_full_coordinates(), **{malicious: "x"})]))
+        parse_memory_document(document)
 
     assert _error_code(excinfo) is ProfileErrorCode.UNKNOWN_FIELD
     assert malicious not in str(excinfo.value)
@@ -461,8 +472,9 @@ def test_unknown_nested_field_names_the_closest_allowlisted_parent() -> None:
     coordinates = _full_coordinates()
     coordinates["translation_offset"] = {"x": 0.0, malicious_key: 1.0}  # type: ignore[dict-item]
 
+    document = _envelope([_profile(coordinates=coordinates)])
     with pytest.raises(EquipmentProfileError) as excinfo:
-        parse_memory_document(_envelope([_profile(coordinates=coordinates)]))
+        parse_memory_document(document)
 
     assert _error_code(excinfo) is ProfileErrorCode.UNKNOWN_FIELD
     assert excinfo.value.field_path == ("coordinates", "translation_offset")
@@ -489,8 +501,9 @@ def test_unreadable_source_is_value_free(tmp_path: Path) -> None:
 
 
 def test_unsupported_suffix_is_value_free() -> None:
+    path = Path("/nonexistent/profile.csv")
     with pytest.raises(EquipmentProfileError) as excinfo:
-        parse_json_file(Path("/nonexistent/profile.csv"))
+        parse_json_file(path)
 
     assert _error_code(excinfo) is ProfileErrorCode.UNSUPPORTED_SOURCE_SUFFIX
 
@@ -513,8 +526,9 @@ def test_boolean_is_not_a_number() -> None:
     coordinates = _full_coordinates()
     coordinates["detector_side_length"] = True
 
+    document = _envelope([_profile(coordinates=coordinates)])
     with pytest.raises(EquipmentProfileError) as excinfo:
-        parse_memory_document(_envelope([_profile(coordinates=coordinates)]))
+        parse_memory_document(document)
 
     assert _error_code(excinfo) is ProfileErrorCode.INVALID_NUMBER
 
@@ -523,15 +537,17 @@ def test_number_is_not_a_boolean() -> None:
     coordinates = _full_coordinates()
     coordinates["swap_lateral_longitudinal"] = 1
 
+    document = _envelope([_profile(coordinates=coordinates)])
     with pytest.raises(EquipmentProfileError) as excinfo:
-        parse_memory_document(_envelope([_profile(coordinates=coordinates)]))
+        parse_memory_document(document)
 
     assert _error_code(excinfo) is ProfileErrorCode.INVALID_TYPE
 
 
 def test_null_is_not_omission() -> None:
+    document = _envelope([_profile(manufacturer=None)])
     with pytest.raises(EquipmentProfileError) as excinfo:
-        parse_memory_document(_envelope([_profile(manufacturer=None)]))
+        parse_memory_document(document)
 
     assert _error_code(excinfo) is ProfileErrorCode.INVALID_TYPE
 
@@ -565,15 +581,17 @@ def test_overflowing_exponent_is_rejected_as_non_finite() -> None:
 
 
 def test_offset_out_of_range_is_rejected() -> None:
+    document = _envelope([_profile(coordinates={"translation_offset": {"x": 5000.0}})])
     with pytest.raises(EquipmentProfileError) as excinfo:
-        parse_memory_document(_envelope([_profile(coordinates={"translation_offset": {"x": 5000.0}})]))
+        parse_memory_document(document)
 
     assert _error_code(excinfo) is ProfileErrorCode.VALUE_OUT_OF_RANGE
 
 
 def test_detector_side_length_must_be_positive() -> None:
+    document = _envelope([_profile(coordinates={"detector_side_length": 0})])
     with pytest.raises(EquipmentProfileError) as excinfo:
-        parse_memory_document(_envelope([_profile(coordinates={"detector_side_length": 0})]))
+        parse_memory_document(document)
 
     assert _error_code(excinfo) is ProfileErrorCode.VALUE_OUT_OF_RANGE
 
@@ -589,8 +607,9 @@ def test_transmission_factor_must_be_in_unit_interval() -> None:
         "evidence_status": "estimated",
     }
 
+    document = _envelope([_profile(transmission=[row])])
     with pytest.raises(EquipmentProfileError) as excinfo:
-        parse_memory_document(_envelope([_profile(transmission=[row])]))
+        parse_memory_document(document)
 
     assert _error_code(excinfo) is ProfileErrorCode.VALUE_OUT_OF_RANGE
 
@@ -606,8 +625,9 @@ def test_transmission_device_model_must_target_a_listed_model() -> None:
         "evidence_status": "estimated",
     }
 
+    document = _envelope([_profile(transmission=[row])])
     with pytest.raises(EquipmentProfileError) as excinfo:
-        parse_memory_document(_envelope([_profile(transmission=[row])]))
+        parse_memory_document(document)
 
     assert _error_code(excinfo) is ProfileErrorCode.ALIAS_TARGET_MISMATCH
 
@@ -623,8 +643,9 @@ def test_measured_rows_require_source_and_date() -> None:
         "evidence_status": "measured",
     }
 
+    document = _envelope([_profile(transmission=[row])])
     with pytest.raises(EquipmentProfileError) as excinfo:
-        parse_memory_document(_envelope([_profile(transmission=[row])]))
+        parse_memory_document(document)
 
     assert _error_code(excinfo) is ProfileErrorCode.MISSING_REQUIRED_FIELD
 
@@ -642,20 +663,23 @@ def test_dates_must_be_strict_calendar_dates() -> None:
         "date": "2026-02-30",
     }
 
+    document = _envelope([_profile(transmission=[row])])
     with pytest.raises(EquipmentProfileError) as excinfo:
-        parse_memory_document(_envelope([_profile(transmission=[row])]))
+        parse_memory_document(document)
 
     assert _error_code(excinfo) is ProfileErrorCode.INVALID_DATE
 
 
 def test_schema_version_must_be_exact_integer_one() -> None:
+    document = {"schema_version": True, "profiles": [_profile(coordinates=_full_coordinates())]}
     with pytest.raises(EquipmentProfileError) as excinfo:
-        parse_memory_document({"schema_version": True, "profiles": [_profile(coordinates=_full_coordinates())]})
+        parse_memory_document(document)
 
     assert _error_code(excinfo) is ProfileErrorCode.UNSUPPORTED_SCHEMA_VERSION
 
+    document = {"schema_version": 2, "profiles": [_profile(coordinates=_full_coordinates())]}
     with pytest.raises(EquipmentProfileError) as excinfo:
-        parse_memory_document({"schema_version": 2, "profiles": [_profile(coordinates=_full_coordinates())]})
+        parse_memory_document(document)
 
     assert _error_code(excinfo) is ProfileErrorCode.UNSUPPORTED_SCHEMA_VERSION
 
@@ -672,22 +696,25 @@ def test_unknown_root_key_is_rejected() -> None:
 
 
 def test_empty_profiles_array_is_rejected() -> None:
+    document = _envelope([])
     with pytest.raises(EquipmentProfileError) as excinfo:
-        parse_memory_document(_envelope([]))
+        parse_memory_document(document)
 
     assert _error_code(excinfo) is ProfileErrorCode.EMPTY_SOURCE
 
 
 def test_profile_id_form_is_enforced() -> None:
+    document = _envelope([_profile(profile_id="../escape", coordinates=_full_coordinates())])
     with pytest.raises(EquipmentProfileError) as excinfo:
-        parse_memory_document(_envelope([_profile(profile_id="../escape", coordinates=_full_coordinates())]))
+        parse_memory_document(document)
 
     assert _error_code(excinfo) is ProfileErrorCode.INVALID_PROFILE_ID
 
 
 def test_wildcard_models_are_rejected_outside_the_permitted_shape() -> None:
+    document = _envelope([_profile(models=["*", "Other"], coordinates=_full_coordinates())])
     with pytest.raises(EquipmentProfileError) as excinfo:
-        parse_memory_document(_envelope([_profile(models=["*", "Other"], coordinates=_full_coordinates())]))
+        parse_memory_document(document)
 
     assert _error_code(excinfo) is ProfileErrorCode.WILDCARD_NOT_PERMITTED
 
@@ -736,9 +763,10 @@ def test_wildcard_profile_with_promotion_is_refused_by_the_gate() -> None:
 
 
 def test_promotion_is_only_valid_beside_a_wildcard_model() -> None:
+    document = _envelope([_profile(coordinates=_full_coordinates(), promote_coordinate_wildcard=True)])
     with pytest.raises(EquipmentProfileError) as excinfo:
         parse_memory_document(
-            _envelope([_profile(coordinates=_full_coordinates(), promote_coordinate_wildcard=True)])
+            document
         )
 
     assert _error_code(excinfo) is ProfileErrorCode.WILDCARD_NOT_PERMITTED
@@ -976,15 +1004,17 @@ def test_every_required_transmission_field_missing_is_a_closed_error() -> None:
     }
     for missing, field_path in expected_paths.items():
         partial = {key: value for key, value in row.items() if key != missing}
+        document = _envelope([_profile(transmission=[partial])])
         with pytest.raises(EquipmentProfileError) as excinfo:
-            parse_memory_document(_envelope([_profile(transmission=[partial])]))
+            parse_memory_document(document)
         assert _error_code(excinfo) is ProfileErrorCode.MISSING_REQUIRED_FIELD, missing
         assert excinfo.value.field_path == field_path, missing
 
 
 def test_huge_integers_are_rejected_as_non_finite_numbers() -> None:
+    document = _envelope([_profile(coordinates={"detector_side_length": 10**400})])
     with pytest.raises(EquipmentProfileError) as excinfo:
-        parse_memory_document(_envelope([_profile(coordinates={"detector_side_length": 10**400})]))
+        parse_memory_document(document)
 
     assert _error_code(excinfo) is ProfileErrorCode.INVALID_NUMBER
     assert excinfo.value.__cause__ is None
@@ -1041,8 +1071,9 @@ def test_packaged_wildcard_example_with_empty_alias_list_parses() -> None:
 
 def test_degenerate_model_keys_are_rejected() -> None:
     for bad in ["!!!", "   ", "-", "_"]:
+        document = _envelope([_profile(models=[bad], coordinates=_full_coordinates())])
         with pytest.raises(EquipmentProfileError) as excinfo:
-            parse_memory_document(_envelope([_profile(models=[bad], coordinates=_full_coordinates())]))
+            parse_memory_document(document)
 
         assert _error_code(excinfo) is ProfileErrorCode.INVALID_MODEL_LIST, bad
 
@@ -1055,9 +1086,10 @@ def test_wildcard_variants_are_treated_as_the_wildcard_consistently() -> None:
         assert document.profiles[0].models == ("*",), spelling
 
     # A wildcard variant mixed with real models is still refused.
+    document = _envelope([_profile(models=[" * ", "DemoScope 2000"], coordinates=_full_coordinates())])
     with pytest.raises(EquipmentProfileError) as excinfo:
         parse_memory_document(
-            _envelope([_profile(models=[" * ", "DemoScope 2000"], coordinates=_full_coordinates())])
+            document
         )
     assert _error_code(excinfo) is ProfileErrorCode.WILDCARD_NOT_PERMITTED
 
@@ -1073,8 +1105,9 @@ def test_transmission_row_cannot_target_the_wildcard() -> None:
         "evidence_status": "estimated",
         "date": "1901-01-01",
     }
+    document = _envelope([{"profile_id": "p", "manufacturer": "A", "models": ["*"], "transmission": [row]}])
     with pytest.raises(EquipmentProfileError) as excinfo:
-        parse_memory_document(_envelope([{"profile_id": "p", "manufacturer": "A", "models": ["*"], "transmission": [row]}]))
+        parse_memory_document(document)
 
     assert _error_code(excinfo) is ProfileErrorCode.ALIAS_TARGET_MISMATCH
 
@@ -1208,9 +1241,7 @@ def test_alias_named_like_a_different_listed_model_is_rejected() -> None:
     # but the alias resolves to ``DemoScope 2000``. That is indistinguishable on lookup, so it is rejected.
     assert normalize_model_key("DemoScope 3000") == normalize_model_key("DemoScope-3000")
 
-    with pytest.raises(EquipmentProfileError) as excinfo:
-        parse_memory_document(
-            _envelope(
+    document = _envelope(
                 [
                     _profile(
                         models=["DemoScope 2000", "DemoScope-3000"],
@@ -1219,6 +1250,9 @@ def test_alias_named_like_a_different_listed_model_is_rejected() -> None:
                     )
                 ]
             )
+    with pytest.raises(EquipmentProfileError) as excinfo:
+        parse_memory_document(
+            document
         )
 
     assert _error_code(excinfo) is ProfileErrorCode.ALIAS_AMBIGUOUS_TARGET
@@ -1351,11 +1385,15 @@ def test_packaged_example_still_parses_after_conflict_rule_change() -> None:
 @pytest.mark.parametrize("adapter", [parse_memory_document, parse_json_bytes])
 def test_unpaired_surrogate_is_rejected_without_raw_error(adapter: object) -> None:
     document = _envelope([_profile(coordinates=_full_coordinates(), provenance={"notes": "\ud800"})])
+    raw = json.dumps(document).encode("utf-8")
+    from functools import partial
+
+    if adapter is parse_json_bytes:
+        operation = partial(parse_json_bytes, raw)
+    else:
+        operation = partial(parse_memory_document, document)
     with pytest.raises(EquipmentProfileError) as excinfo:
-        if adapter is parse_json_bytes:
-            parse_json_bytes(json.dumps(document).encode("utf-8"))
-        else:
-            parse_memory_document(document)
+        operation()
     assert excinfo.value.code == ProfileErrorCode.UNSUPPORTED_SOURCE_ENCODING
     assert excinfo.value.__suppress_context__
 
@@ -1366,6 +1404,16 @@ def test_measured_source_cannot_be_whitespace() -> None:
         "kvp_kv": 80, "filtration_added_mmcu": 0, "filtration_added_mmal": 0,
         "k_patient_support": 0.7, "evidence_status": "measured", "source": "   ", "date": "1901-01-01",
     }
+    document = _envelope([_profile(transmission=[row])])
     with pytest.raises(EquipmentProfileError) as excinfo:
-        parse_memory_document(_envelope([_profile(transmission=[row])]))
+        parse_memory_document(document)
     assert excinfo.value.code == ProfileErrorCode.BLANK_REQUIRED_CELL
+
+
+def test_json_file_nul_path_fails_with_closed_error() -> None:
+    with pytest.raises(EquipmentProfileError) as excinfo:
+        parse_json_file("invalid\x00.json")
+    assert _error_code(excinfo) is ProfileErrorCode.UNREADABLE_SOURCE
+    assert excinfo.value.__cause__ is None
+    assert excinfo.value.__suppress_context__
+    assert "invalid" not in str(excinfo.value)

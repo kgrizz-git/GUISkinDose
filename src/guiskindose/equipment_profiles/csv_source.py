@@ -113,9 +113,9 @@ def _identity_payload(row: ParsedRow, source_kind: str) -> dict[str, Any]:
     payload: dict[str, Any] = {
         "profile_id": profile_id_cell(row, source_kind),
         "manufacturer": required_text(row, "manufacturer", source_kind),
-        "models": list_cell(row, "models", source_kind),
+        "models": list_cell(row, "models"),
     }
-    manufacturer_aliases = list_cell(row, "manufacturer_aliases", source_kind)
+    manufacturer_aliases = list_cell(row, "manufacturer_aliases")
     if manufacturer_aliases:
         payload["manufacturer_aliases"] = manufacturer_aliases
     model_aliases = alias_map_cell(row, "model_aliases", source_kind)
@@ -176,7 +176,7 @@ def _apply_coordinate_row(group: _ProfileGroup, row: ParsedRow, source_kind: str
     group.coordinate_leaves[key] = (key, parsed, leaf)
 
 
-def _build_coordinates(group: _ProfileGroup, source_kind: str) -> dict[str, Any] | None:
+def _build_coordinates(group: _ProfileGroup) -> dict[str, Any] | None:
     """Nest the group's leaf entries into the canonical coordinate block mapping."""
     if not group.coordinate_leaves:
         return None
@@ -279,7 +279,7 @@ def _profile_entry(group: _ProfileGroup, source_kind: str) -> dict[str, Any]:
             row_index=group.first_index,
         )
     entry: dict[str, Any] = dict(group.metadata)
-    coordinates = _build_coordinates(group, source_kind)
+    coordinates = _build_coordinates(group)
     if coordinates:
         entry["coordinates"] = coordinates
     if group.transmission:
