@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 from unittest import mock
 
+import pandas as pd
 import pytest
 
 # These workflow tests need the optional GUI extra; core CI skips the module.
@@ -115,6 +116,39 @@ def test_dicom_pure_load_unchanged() -> None:
     exam = state.loaded_exams[0]
     assert exam.equipment_capture is None
     assert exam.equipment_receipt is None
+
+
+def test_dicom_zero_kvp_filtered_before_base_data_and_capture(
+    session: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """GUI DICOM load drops zero-kVp rows before base_data and capture confirmation."""
+    import guiskindose.gui.exam_loaders as loader_mod
+    from guiskindose.rdsr_normalizer import rdsr_normalizer as real_normalizer
+
+    pre_filter_rows = 0
+
+    def _normalizer_with_zero_row(data_parsed: Any, settings: Any, **kwargs: Any) -> pd.DataFrame:
+        nonlocal pre_filter_rows
+        frame = real_normalizer(data_parsed, settings=settings, **kwargs)
+        pre_filter_rows = len(frame)
+        polluted = frame.copy()
+        polluted.loc[polluted.index[0], "kVp"] = 0.0
+        return polluted
+
+    monkeypatch.setattr(loader_mod, "rdsr_normalizer", _normalizer_with_zero_row)
+    state = _bound_state(session)
+    state.remove_invalid_rows = True
+    ok, _ = load_rdsr(_DICOM, state)
+    assert ok
+    exam = state.loaded_exams[0]
+    final = exam.normalized_data
+    base = state.loaded_exam_meta[0]["base_data"]
+    assert pre_filter_rows > 0
+    assert len(final) == pre_filter_rows - 1
+    assert (final["kVp"] > 0).all()
+    pd.testing.assert_frame_equal(base.reset_index(drop=True), final.reset_index(drop=True))
+    assert exam.equipment_capture is not None
+    assert exam.equipment_capture.event_count == len(final)
 
 
 def test_tabular_mint_honors_transform_flags(session: Any, tmp_path: Path) -> None:
