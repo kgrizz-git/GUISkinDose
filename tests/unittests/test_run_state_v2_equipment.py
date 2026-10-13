@@ -33,7 +33,7 @@ from guiskindose.gui.run_state import (
     snapshot_app_state,
     validate_run_state_document,
 )
-from guiskindose.gui.run_state_equipment import PendingEntry, build_pending
+from guiskindose.gui.run_state_equipment import ImmutableOverrideError, PendingEntry, build_pending
 from guiskindose.gui.run_state_trial import trial_confirm_equipment
 from guiskindose.gui.settings_builder import bind_equipment_session, build_settings
 from guiskindose.gui.state import AppState, abandon_staged_equipment
@@ -474,6 +474,8 @@ def test_pending_override_is_immutable_and_copyable() -> None:
     assert stored is not source
     with pytest.raises(TypeError):
         stored["x"] = 99.0
+    with pytest.raises(ImmutableOverrideError):
+        del stored["x"]
     alias = stored
     alias |= {"x": 99.0}
     assert type(alias) is dict

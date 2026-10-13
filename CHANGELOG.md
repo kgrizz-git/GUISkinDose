@@ -152,28 +152,12 @@ That keeps SemVer and contributor history organized.
   resolution without recompiling. **Inert like the rest of the package:** nothing reads a session
   from any feature path, so results, exports, and settings are unchanged.
 
-### Changed
-
-- Custom negative table-angle and third positioner-angle direction signs now preserve the zero-angle
-  arrays instead of causing a row-length error during normalization.
-
-- **GUI upload examples** — loading a bundled DICOM or tabular example now clears the exam list,
-  abandons staged run-configuration equipment entries (with the same warning as exam removal), and
-  rolls staged entries back if the example load fails.
-
 - **Equipment-profile coordinate resolution core (experimental, internal only)** (2026-10-11) — the
   internal package gains immutable custom-exact coordinate resolution over compiled indexes (custom
   exact → bundled exact → bundled wildcard → Default, per-leaf inheritance, complete/partial
   notices) plus canonical bundled profiles converted from the shipped normalization settings.
   **Inert like the rest of the package:** nothing reads a resolution from any feature path, so
   results, exports, and settings are unchanged.
-
-- **Equipment maker identity in normalized data** (2026-10-11) — every normalized event frame now
-  carries a `manufacturer` column with the exact equipment-maker spelling (`None` when the source
-  carries none). The `normalized` tabular   schema accepts an optional `manufacturer` column; tables
-  without it load with a warning giving the event count. An exam carrying anything but one
-  maker/model pair is rejected with a value-free error instead of silently using the first pair.
-  Dose results, coordinates, and exports are unchanged (maker/model were already default-safe in reports).
 
 - **Equipment-profile XLSX reader (experimental, internal only)** — bounded workbook parsing
   now validates archive inflation, actual worksheet coordinates and typed cells before producing
@@ -217,6 +201,22 @@ That keeps SemVer and contributor history organized.
   and immutable selected snapshots with a locked revision-set source hash. **Inert like the rest of the
   package:** nothing reads or writes a store from any feature path, so results, exports, and settings are
   unchanged.
+
+### Changed
+
+- Custom negative table-angle and third positioner-angle direction signs now preserve the zero-angle
+  arrays instead of causing a row-length error during normalization.
+
+- **GUI upload examples** — loading a bundled DICOM or tabular example now clears the exam list,
+  abandons staged run-configuration equipment entries (with the same warning as exam removal), and
+  rolls staged entries back if the example load fails.
+
+- **Equipment maker identity in normalized data** (2026-10-11) — every normalized event frame now
+  carries a `manufacturer` column with the exact equipment-maker spelling (`None` when the source
+  carries none). The `normalized` tabular   schema accepts an optional `manufacturer` column; tables
+  without it load with a warning giving the event count. An exam carrying anything but one
+  maker/model pair is rejected with a value-free error instead of silently using the first pair.
+  Dose results, coordinates, and exports are unchanged (maker/model were already default-safe in reports).
 
 - **Upload auto-detect failure hint** (2026-10-09) — when auto-detect cannot choose, the Upload
   message says it needs one source's own column and at least two recognized columns, and that it

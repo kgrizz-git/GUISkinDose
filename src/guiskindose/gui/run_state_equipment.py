@@ -274,6 +274,10 @@ _OFFSET_MESSAGE = "Equipment pending entry offsets must be finite numbers."
 _IMMUTABLE_MESSAGE = "Staged equipment overrides are immutable."
 
 
+class ImmutableOverrideError(Exception):
+    """Raised when code attempts to delete from a staged override mapping."""
+
+
 def _finite_offset(value: Any) -> float:
     """Require a finite non-boolean offset number."""
     if isinstance(value, bool) or type(value) not in (int, float):
@@ -304,8 +308,9 @@ class _FrozenOverride(dict):
 
     Behaves like a plain read-only mapping (``[]``, ``.get``, ``in``,
     iteration) so transform consumers need no changes, but every mutator
-    (``__setitem__``, ``__delitem__``, ``pop``, ``clear``, ``update``,
-    ``setdefault``) raises ``TypeError`` — staged authority cannot be
+    (``__setitem__``, ``pop``, ``clear``, ``update``, ``setdefault``) raises
+    ``TypeError``; ``__delitem__`` raises :class:`ImmutableOverrideError` —
+    staged authority cannot be
     rewritten through a retained reference. ``|=`` declines in-place
     (``NotImplemented``) so it falls back to ``|``, which rebinds the name to
     a new plain dict and leaves this mapping untouched, as ``+=`` on a tuple. Deep-copies (and copies) into
@@ -316,7 +321,7 @@ class _FrozenOverride(dict):
         raise TypeError(_IMMUTABLE_MESSAGE)
 
     def __delitem__(self, key: Any) -> None:
-        raise RuntimeError(_IMMUTABLE_MESSAGE)
+        raise ImmutableOverrideError(_IMMUTABLE_MESSAGE)
 
     def __ior__(self, other: Any) -> Any:
         return NotImplemented
