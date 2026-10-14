@@ -23,17 +23,21 @@ def _is_mapping(value: Any) -> bool:
 
 def has_equipment_profile_content(match: dict[str, Any] | None) -> bool:
     """True when *match* carries a displayable profile match record."""
-    if not _is_mapping(match):
+    if not isinstance(match, dict):
         return False
     profile_id = match.get("profile_id")
     notice = match.get("notice")
-    return isinstance(profile_id, str) and profile_id and _is_mapping(notice) and isinstance(notice.get("text"), str)
+    if not isinstance(profile_id, str) or not profile_id:
+        return False
+    if not isinstance(notice, dict):
+        return False
+    return isinstance(notice.get("text"), str)
 
 
 def equipment_match_kind_label(match: dict[str, Any]) -> str:
     """Human-readable complete vs partial label from the structured notice."""
-    notice = match.get("notice") if _is_mapping(match) else None
-    kind = notice.get("kind") if _is_mapping(notice) else None
+    notice = match.get("notice")
+    kind = notice.get("kind") if isinstance(notice, dict) else None
     if kind == RESOLUTION_COMPLETE:
         return "Complete"
     if kind == RESOLUTION_PARTIAL:
@@ -45,8 +49,8 @@ def equipment_match_row_cells(match: dict[str, Any]) -> list[str]:
     """One table row for a match mapping (no equipment labels or file paths)."""
     profile_id = str(match.get("profile_id", ""))
     source = str(match.get("source", ""))
-    notice = match.get("notice") if _is_mapping(match) else {}
-    text = str(notice.get("text", "")) if _is_mapping(notice) else ""
+    notice = match.get("notice")
+    text = str(notice.get("text", "")) if isinstance(notice, dict) else ""
     return [profile_id, source, equipment_match_kind_label(match), text]
 
 

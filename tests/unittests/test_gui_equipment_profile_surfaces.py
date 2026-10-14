@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from types import SimpleNamespace
+from typing import Any, cast
 from unittest import mock
 
 from guiskindose.gui.equipment_profile_surfaces import (
@@ -25,7 +26,7 @@ def test_pre_calc_skips_exams_without_capture() -> None:
         is_multi_exam=False,
         loaded_exams=[SimpleNamespace(equipment_capture=None)],
     )
-    assert pre_calc_equipment_profile_blocks(app_state) == []
+    assert pre_calc_equipment_profile_blocks(cast(Any, app_state)) == []
 
 
 def test_pre_calc_single_exam_unlabelled() -> None:
@@ -38,7 +39,7 @@ def test_pre_calc_single_exam_unlabelled() -> None:
         "guiskindose.gui.equipment_profile_surfaces.capture_to_mapping",
         return_value={"match": _match()},
     ):
-        blocks = pre_calc_equipment_profile_blocks(app_state)
+        blocks = pre_calc_equipment_profile_blocks(cast(Any, app_state))
     assert blocks == [(None, _match())]
 
 
@@ -55,7 +56,7 @@ def test_pre_calc_multi_exam_labels() -> None:
         "guiskindose.gui.equipment_profile_surfaces.capture_to_mapping",
         side_effect=[{"match": _match("a")}, {"match": _match("b")}],
     ):
-        blocks = pre_calc_equipment_profile_blocks(app_state)
+        blocks = pre_calc_equipment_profile_blocks(cast(Any, app_state))
     assert blocks == [("Exam 1", _match("a")), ("Exam 3", _match("b"))]
 
 
@@ -68,7 +69,7 @@ def test_pre_calc_forged_capture_returns_none() -> None:
         "guiskindose.gui.equipment_profile_surfaces.capture_to_mapping",
         side_effect=ValueError("invalid"),
     ):
-        assert pre_calc_equipment_profile_blocks(app_state) == []
+        assert pre_calc_equipment_profile_blocks(cast(Any, app_state)) == []
 
 
 def test_post_calc_single_dict_output() -> None:
@@ -77,12 +78,12 @@ def test_post_calc_single_dict_output() -> None:
         multi_exam_result=None,
         output={"equipment_profile_match": _match()},
     )
-    assert post_calc_equipment_profile_blocks(app_state) == [(None, _match())]
+    assert post_calc_equipment_profile_blocks(cast(Any, app_state)) == [(None, _match())]
 
 
 def test_post_calc_non_dict_output_empty() -> None:
     app_state = SimpleNamespace(is_multi_exam=False, multi_exam_result=None, output=object())
-    assert post_calc_equipment_profile_blocks(app_state) == []
+    assert post_calc_equipment_profile_blocks(cast(Any, app_state)) == []
 
 
 def test_post_calc_multi_mixed_matches() -> None:
@@ -96,5 +97,5 @@ def test_post_calc_multi_mixed_matches() -> None:
         ),
         output=None,
     )
-    blocks = post_calc_equipment_profile_blocks(app_state)
+    blocks = post_calc_equipment_profile_blocks(cast(Any, app_state))
     assert blocks == [("opaque-a", _match("yes"))]
