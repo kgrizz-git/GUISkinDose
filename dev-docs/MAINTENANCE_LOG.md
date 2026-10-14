@@ -8,7 +8,310 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ## [Unreleased]
 
+- Radimetrics unknown-model diagnostics report only the model count; raw equipment names remain local.
+
 ### Changed
+
+- **Equipment-profile PR CodeQL review** (2026-10-13) — removed unused constants and dead test
+  setup; made the three-value resolution return explicit for static analysis. Updated the execution
+  plan header to distinguish delivered coordinate foundations from outstanding acceptance/later phases.
+
+- **Equipment-profile delivery consolidation** (2026-10-13) — grouped engine/session/API work into
+  one prerequisite PR and capture/replay/configuration/GUI work into a second PR, preserving the
+  implementation commits and independently checking each base. Carried forward scanner, Windows,
+  and CodeQL corrections; empty direct API application now fails before changing settings.
+  XLSX source-hash tests compare the exact byte snapshot parsed, avoiding ZIP timestamp races.
+
+- **Run-state/export contract lock (docs only)** (2026-10-11) — new
+  `dev-docs/EQUIPMENT_PROFILE_RUNSTATE_EXPORT_CONTRACT.md` locks SPEC decisions 13/18/20 from actual
+  seams: run-state 1→2, rich-report 3→4, dict/JSON export stays 3 while additive; default-safe maker/model
+  keys vs absent-by-construction station/serial and never-captured notes/paths; v1 readers retained with
+  atomic trial validation and capture restore; coordinates-only captures; self-contained reproducibility. Schema §16, spec,
+  plan, and index link to it. No run-state/export implementation is complete (§10 open list stands).
+- **Equipment API application review** (2026-10-11) — receipts publish after successful geometry
+  normalization, rebind after final zero-kVp filtering, and verify normalized numeric geometry plus
+  a fresh session resolution before analysis. Added regressions for same-count geometry changes,
+  well-typed forged notice text, failed normalization publication, and final retained counts.
+- **API slice review fixes** (2026-10-11) — custom field-size mode resolves before required-concept
+  validation; receipts carry final retained counts (empty frames fail closed); new
+  `EquipmentApplicationReceipt` binding validated at analysis boundaries with per-exam restore and
+  summary refresh; fixed a latent crash where negative direction signs emptied hardcoded zero
+  angle lists (`sign * [0] * len`). Covered by new gap tests; goldens unchanged.
+- **First API coordinate slice (import-before-load)** (2026-10-11) — added
+  `src/guiskindose/equipment_resolution.py` (session binding, raw-identity resolution after
+  filtering, all-15 application to live normalization settings, default-safe serialization);
+  typed never-serialized session parameter on `PyskindoseSettings`; resolution threading through
+  the normalizer, adapters, main flows, and dict/JSON outputs; closed refusals for pre-transformed
+  inputs. 24 targeted tests; ruff, basedpyright, complexity, size, and freshness gates clean. No
+  GUI/run-state/CLI-flag/export-catalog changes; Phase 2 remains open.
+- **Equipment-profile session assembly (inert)** (2026-10-11) — added
+  `src/guiskindose/equipment_profiles/session.py`: `FileSource` requests with SPEC §8 path rules,
+  `assemble_session()` combining file/memory/store sources with bounds before copying, canonical
+  cross-kind conflicts, capability gate, single index compile, active-set hash, default-safe
+  provenance, and per-exam `resolve()` over a prepared custom context (bundled compiled or
+  prepared); public prepare/resolve seam added to `resolver.py`/`preparation.py` with
+  `resolve_coordinate_leaves` preserved as a thin wrapper. Request collections bounded before copying
+  with incremental ceilings; closed path boundary; revalidated snapshots with compiler-output payloads;
+  canonical payload/provenance ordering; validated `__post_init__` contexts gating at preparation.
+  Schema §15 documents the session contract. 54 session and 9 seam targeted tests; ruff, basedpyright, complexity, size, and freshness gates clean. No renderer/
+  normalizer/settings/API/CLI/GUI/store activation wiring.
+- **Sonar validation cleanup (equipment profiles, no behavior change)** (2026-10-11) — cleared the 172
+  branch findings from the equipment-profile review without altering parser/privacy limits, immutable
+  records, capabilities, or scientific contracts: `math.isnan` for all NaN idioms; negative-zero
+  normalization via exact `+ 0.0` addition (bit-verified, no approximate compares); cognitive-complexity
+  splits in `resolver`/`json_source`/`store_writes`/`dosetrack`; removed unused params, the redundant
+  re-raise, the redundant `list()` call, and the redundant `UnicodeEncodeError`; statement-form depth
+  traversal; tuple-form `endswith`; 121 exception tests hoisted to a single invocation, 6 broad assertions
+  narrowed to `FrozenInstanceError`, 22 composite assertions split. Two `[0-9]` XML-coordinate regexes
+  keep ASCII through explicit `re.ASCII` flags (`\d` alone would admit Unicode digits
+  that `int()` accepts but OOXML forbids). No app wiring; Phase 2 remains open.
+- **Equipment-profile coordinate resolution core (inert)** (2026-10-11) — added
+  `src/guiskindose/equipment_profiles/resolver.py` (stdlib-only, immutable custom-exact ladder with
+  capability gate first, per-leaf inheritance preserving `False`/`0.0`, missing-maker Default bypass,
+  closed fallbacks, `CoordinateMatchRecord` reuse, structured notices),
+  `src/guiskindose/equipment_profiles/bundled.py` (legacy settings → canonical profiles/indexes under
+  `MAX_PROFILES` with order-independent deterministic IDs/hashes, per-entry materialized swap `False`,
+  separate Default), and
+  `src/guiskindose/equipment_profiles/vendor_aliases.py` (single alias home; settings re-exports
+  unchanged names). Shared stdlib missing-identity convention in `keys.clean_identity_text`. Schema §14 documents the resolver contract. 63 targeted tests pin
+  settings-selection parity, miss paths, capability tokens, store context, immutability, and privacy;
+  ruff, basedpyright, complexity, size, and freshness gates clean. No renderer/normalizer/settings
+  mutation and no API/CLI/GUI/store activation wiring.
+- **Normalized manufacturer identity (Phase 1, no activation)** (2026-10-11) — new
+  `src/guiskindose/exam_identity.py` seam (cleaning, raw/canonical pair listing, descriptive
+  classification, fail-closed guard); `rdsr_normalizer()` emits a canonical `manufacturer` column and
+  rejects anything but one canonical (manufacturer, model) pair per frame before profile selection —
+  distinct makers, same-maker model variation, and known+unknown mixes all fail closed value-free, so
+  row-0 selection only runs on proven-homogeneous frames; `normalized` schema recognizes optional
+  `manufacturer`, materializes all-`None` with a count-only legacy warning when absent/blank, and checks
+  each study-id group individually with opaque positions; DoseTrack maps each row's Equipment Name
+  per-row through `MODEL2MANUF` (no first-name overwrite; count-only unknown warning); export
+  maker/model come from one consistent row; `manufacturer` added to the normalized detection
+  fingerprint as score-only. 63 targeted tests in `tests/unittests/test_exam_identity.py`; full-frame
+  digest regen adds only the `manufacturer` column; golden dose/k_tab, GUI, CLI, and export suites
+  green; ruff, basedpyright, complexity, size, freshness, help-registry, and UI-copy gates clean.
+- **Equipment-profile index review fixes (inert)** (2026-10-11) — hardened `indexes.py` against review:
+  bounded sequence intake (`MAX_PROFILES` before copying, bounded materialization, aggregate rows before
+  expansion), strict entry context (exact-`str` source kind, exact-`int` revision in `1..MAX_REVISION`,
+  lowercase-hex hash), structural pre-checks plus compile-time re-validation through the existing document
+  boundary with claimed-hash verification (`conflicting_profile_metadata` on mismatch), ID-ordered conflict
+  check, value-free reprs on all public types, single-normalization lookups, and deterministic no-traversal
+  and full-equality tests replacing the wall-clock timing test. 66 targeted tests; ruff, basedpyright,
+  complexity, size, and freshness gates clean. No application, GUI, CLI, normalization, or calculation code
+  was touched.
+- **Equipment-profile compiled indexes (inert)** (2026-10-11) — added
+  `src/guiskindose/equipment_profiles/indexes.py`: immutable coordinate/transmission lookup compiled once
+  from validated profiles with source-kind/hash/revision context. Coordinates resolve by canonical
+  manufacturer/model (exact, alias, and manufacturer-scoped wildcard slots stored without activation);
+  transmission resolves by canonical model/literal plane with original numeric row keys in sorted groups.
+  Global conflicts run through the canonical check before publishing; retrieval bisects sorted key tables;
+  internals are tuples only and results are source-order independent. 22 targeted tests cover compilation,
+  retrieval, conflicts, determinism, immutability, lookup cost, and value-free diagnostics. No application,
+  GUI, CLI, normalization, or calculation code was touched.
+- **Equipment-profile first-sheet default** (2026-10-11) — align the XLSX adapter with the source-format
+  specification: use the first worksheet unless an index is selected. This supersedes the draft requirement
+  for explicit multi-sheet selection; explicit invalid indices still fail closed.
+
+### Changed
+- **XLSX preflight boundaries** (2026-10-11) — resolve worksheet namespaces and content-type parts before
+  reading; reject mismatched, unordered, and out-of-budget coordinates; bound reader padding; preserve
+  CSV-compatible numeric/boolean text and reject populated extra columns. Regression tests cover prefixed
+  XML, nonstandard worksheet paths, and typed/text canonical equivalence.
+
+### Changed
+
+### Changed
+
+- **Equipment-profile store hardening** (2026-10-11) — closed five remaining gaps in the inert store slice:
+  enabled-revision listing uses LEFT JOIN and rejects a missing revision instead of silently omitting it;
+  growth caps run in every transaction via bounded single-integer queries with total identities capped at
+  1024; schema verification compares exact DDL text, forbids extra metadata keys and any trigger/view, and
+  re-runs with a foreign-key violation check inside every transaction; stored payloads are byte-bounded
+  before parsing with all failures normalizing to `store_corruption`; `set_enabled`/`delete_record` accept
+  an optional `expected_generation`. No application, GUI, CLI, normalization, packaging, example, asset, or
+  baseline file was touched.
+### Changed
+
+- **Equipment-profile store review fixes** (2026-10-11) — fixed nine commit-blocking defects in the inert
+  store slice: matched save-CAS now compares after the record lookup (and updating requires an expectation);
+  re-enabling excludes the candidate before appending it; saves to enabled records validate the would-be
+  enabled set before commit; unexpected exceptions roll back, close safely, and normalize closed (reads use
+  plain `BEGIN`, cancellation preserved); payload length/type is queried before the text is fetched and the
+  parsed row count is rechecked; listings verify each payload; rows parse with no coercion; schema verification
+  covers keys, types, constraints, triggers, and views; selections are length-checked before copying with
+  duplicate IDs rejected and all integers range-checked before binding; NUL paths fail closed. The contract now
+  requires CAS on update, bumps a `generation` token on every mutation, and tombstones deletes against ABA
+  reuse. `profile_store.py` stays under the gates via `store_reads.py`/`store_writes.py` operation modules.
+  No application, GUI, CLI, normalization, packaging, example, asset, or baseline file was touched.
+### Changed
+
+- **Equipment-profile local user store (inert)** (2026-10-11) — added
+  `src/guiskindose/equipment_profiles/profile_store.py` (transactional stdlib-`sqlite3` repository) and
+  `store_types.py` (frozen record/revision/snapshot types plus the locked revision-set hash), implementing
+  the new §12 store contract. Fresh-empty creation at store schema version 1 with rejection of
+  unversioned-nonempty, future, and corrupt databases without mutation; `BEGIN IMMEDIATE` writes with
+  rollback; optimistic revision checks; payload re-parse, re-validation, and re-hash on every read; new
+  records start disabled; enable-time canonical conflict validation; one-transaction snapshots with
+  pre-materialization bounds. Five new closed `store_*` codes; `store_corruption` leaves the reserved set.
+  Tests use `tmp_path` only and cover CRUD, two-handle CAS races, rollback, snapshot stability and
+  determinism, conflicts, corruption/version rejection with byte-identical files, privacy, bounds, and
+  default-path purity. No application, GUI, CLI, normalization, packaging, example, asset, or baseline file
+  was touched; Phase 1 stays incomplete.
+### Changed
+
+- **Equipment-profile XLSX silent-loss fixes** (2026-10-10) — fixed two silent-loss defects in the inert
+  XLSX adapter, both of which produced a *successful* parse with missing content. First, a row conversion
+  truncated to the header width, so a populated cell beyond the 19-column header — including a formula or a
+  spreadsheet error cell — was silently discarded; populated extra cells now fail the whole load, while blank
+  padding outside the header is still tolerated. Second, openpyxl's read-only parser is dimension-driven, so a
+  workbook rewriting its declared `<dimension>` to `A1:S3` was silently read as one profile and two rows; the
+  adapter now validates every worksheet part with a bounded streaming `expat` parser that ignores the declared
+  dimension for sizing and enforces the row, column, and cell budgets on the coordinates actually present,
+  rejecting out-of-range, repeated, and malformed coordinates, DTDs, entity declarations, and external entity
+  references. With the real bounds known first, the reader's dimension is discarded so an understated workbook
+  is read in full and an overstated one cannot allocate padding it does not hold — no silent truncation in
+  either direction — and the budgets are re-enforced on the reader's actual iteration. Also added a typed-cell
+  policy that accepts a number or boolean only in a column whose schema type is that type (never coercing one
+  into text or into `1`), with the coordinate `value` column resolved per leaf; a sheet-count ceiling read from
+  the workbook's own worksheet catalog rather than archive part filenames; and one documented boundary over the
+  whole untrusted-container path that normalizes any remaining library exception family to
+  `malformed_container` with the cause suppressed and always closes the workbook. The schema contract's
+  inaccurate "dimension truncation is a limitation" claim was removed. Tests cover both silent-loss
+  regressions, understated and inflated dimensions, actual coordinate bounds and tampering, corrupt XML with a
+  valid CRC, the typed-cell policy across every column kind, 20-column promotion headers, extra-cell
+  rejection, and privacy. No binaries, assets, baselines, packaging files, or application code were touched.
+
+### Changed
+
+- **Equipment-profile XLSX adapter (inert)** (2026-10-10) — added
+  `src/guiskindose/equipment_profiles/xlsx_preflight.py` and `xlsx_source.py`. The container is preflighted
+  before any worksheet is read: the archive is opened from the in-memory byte snapshot, the entry list is
+  bounded, duplicate and directory-spoofing entry names are rejected, and every member is inflated by
+  streaming real decompressed bytes in chunks rather than trusting the central directory, so a forged
+  `file_size` cannot smuggle a zip bomb. Worksheets are counted by iterating actual rows, and the sheet index
+  is resolved from an explicit selection (mandatory for a multi-sheet workbook, otherwise sheet `0`).
+  Typed-cell policy: numbers stay numbers, booleans are accepted only where the schema expects one and
+  normalize to `true`/`false` (never coerced into `1` for a numeric column), dates are valid only in the
+  `date` column and must be exactly midnight rendering as strict ISO `YYYY-MM-DD`, formulas are rejected
+  rather than read as their cached value, and spreadsheet error cells are rejected. Typed cells convert
+  straight to the flat text cells the shared CSV seam consumes, so there is no CSV round trip and no second
+  flat parser. openpyxl is imported inside the adapter functions, so a JSON/CSV/TSV-only use never loads the
+  spreadsheet stack. Every failure carries source kind `xlsx` and an allowlisted column, `record_type`, or
+  integer count; sheet names, paths, cell text, and library messages never appear, and raw causes are
+  suppressed. Tests build workbooks in memory or under `tmp_path` so no tracked `.xlsx` binary is committed,
+  and cover CSV-to-workbook canonical equivalence, sheet selection and errors, typed cells, strict
+  headers/rows/types, formulas, errors, bounded snapshots, zip-inflation lies, container corruption, and
+  privacy. Documented limitation: openpyxl's read-only parser is dimension-driven, so a lying declared
+  `<dimension>` can only ever reduce the rows yielded; the budgets are enforced on actual iteration and are
+  authoritative in the unsafe direction, and such a workbook fails closed. The schema contract gained §6B,
+  the plan records the XLSX adapter as implemented-and-inert with the user store as the remaining Phase 1
+  adapter, and the packaged README and index note that the adapter is inert. No application, normalization,
+  calculation, GUI, CLI, store, or packaging file was touched, no `.xlsx` binary was introduced, and no
+  approved-asset inventory or scan baseline edit was made.
+- **Equipment-profile CSV and TSV adapters (inert)** (2026-10-10) — added
+  `src/guiskindose/equipment_profiles/tabular_common.py` (shared primitives: strict UTF-8 with optional BOM and
+  no unpaired surrogates, strict header validation that never echoes a duplicate or unknown column name,
+  row-width and record-type applicability checks, scalar/list/alias-map cell parsing) plus thin CSV and TSV
+  adapters differing only in delimiter and accepted suffix. Both assemble the same canonical document mapping
+  the JSON adapter produces, so the packaged CSV and packaged JSON have identical profile hashes, leaf values,
+  and transmission values while their raw source hashes differ. Grouping is two-pass so coordinate and
+  transmission rows may precede their `profile` row; repeated `profile` metadata may agree and disagreement
+  fails `conflicting_profile_metadata`, while a repeated coordinate leaf fails `duplicate_json_key` even when
+  identical. Tabular cells accept only the exact boolean forms `true`/`false`, reject `NaN`, `Infinity`,
+  `1e999`, `8_0` and booleans as numbers, treat blank filtration as `blank_disallowed_cell`, and treat
+  null-like strings as literal text. Every adapter failure carries source kind `csv`/`tsv` rather than `json`,
+  and no raw cell, unknown column, file path, or nested exception cause is included. Bounds are enforced during
+  row accumulation, before any profile object is built. Implemented with the standard library only — no
+  third-party reader and no DataFrame materialization — reading the decoded byte snapshot once.
+  `dev-docs/EQUIPMENT_PROFILE_SCHEMA.md` §6A restores the flat-column record-type table and blank semantics,
+  naming the packaged README as the authoritative field dictionary; the plan records the JSON/CSV/TSV adapters
+  as implemented and inert with XLSX still outstanding. No application, normalization, calculation, GUI, CLI,
+  store, or packaging file was touched, and no source value, example, or scan baseline changed.
+
+- **Equipment-profile JSON/core fixes and CHANGELOG entry** (2026-10-10) — fixed nine commit-blocking
+  defects in `src/guiskindose/equipment_profiles/` found on review, with no application or numerical
+  change: canonical `model_aliases` now serializes as a JSON object `{alias: target}` (resolving map
+  targets to the listed model spelling so equivalent normalized spellings hash like the shorthand)
+  instead of a list of pairs, with an active-set serialize/reload hash-equality test; missing
+  required transmission numeric fields raise `missing_required_field` with their own field path
+  instead of a `KeyError`; integers too large for a double raise `invalid_number` instead of leaking
+  `OverflowError`; an empty `model_aliases` list means "no aliases" for multi-model and wildcard
+  profiles, checked before the ambiguity rule; models with an empty normalized key are rejected and
+  wildcard variants such as `" * "` are treated as the wildcard consistently, while transmission rows
+  can no longer target the wildcard; file reads use one bounded `read(MAX_SOURCE_BYTES + 1)` instead
+  of a read-then-check, closing the size/read race; conflict detection only lets non-empty coordinate
+  profiles claim coordinate slots, expands claims across manufacturer and model aliases, rejects
+  alias keys that would collide with a different model, and compares transmission keys on the
+  normalized model key, so an alias equivalent to its own model stays allowed and coordinate-only
+  versus transmission-only profiles may share an identity; `ParsedDocument.profiles` is typed
+  `tuple[Profile, ...]`, depth errors use the caller's source kind, every document enforces the
+  aggregate logical-row ceiling itself, and early count checks plus a traversal node budget bound work
+  before a deep or broad mapping is walked. Added the missing `CHANGELOG.md` entry describing the core
+  as experimental and inert, and corrected the plan so the Phase 1 item is explicitly **not** checked
+  off complete. The doc contract (`dev-docs/EQUIPMENT_PROFILE_SCHEMA.md`) was updated to match every
+  one of these behaviours.
+
+- **Equipment-profile JSON/core slice, no application wiring** (2026-10-10) — corrected
+  [EQUIPMENT_PROFILE_SCHEMA.md](EQUIPMENT_PROFILE_SCHEMA.md) into a normative implementation contract and
+  implemented the stdlib-only core package `src/guiskindose/equipment_profiles/` that satisfies it. The core
+  provides immutable typed frozen-dataclass canonical models; a closed privacy-safe error type and code
+  constants; bounded JSON byte/path and in-memory parsing; full-v1 structural validation; deterministic
+  canonical serialization with profile, active-set, and exact source-byte SHA-256 hashes; across-source
+  duplicate and conflict validation; immutable match-record types; and a separate initial capability gate.
+  Nothing is wired into dose, normalization, GUI, CLI, or store paths — the slice is inert scaffolding.
+
+  Contract corrections applied from review: it is an implementation contract rather than an executable
+  reference; the root envelope holds only `schema_version` (exact integer `1`, a boolean is not an integer) and
+  a non-empty bounded `profiles` array; six coordinate blocks with 15 individually optional nested leaves;
+  unknown keys rejected at every level; duplicate JSON object keys rejected through an `object_pairs_hook`;
+  `null` is not omission; strict UTF-8 with an optional BOM. Identity reuses the existing normalized
+  manufacturer/model key algorithms with no bundled alias inheritance; JSON alias shorthand is an array only
+  (`|` separators remain a tabular spelling); alias-map targets must resolve to a listed model and
+  normalize-unique aliases; empty aliases normalize to absent. Duplicate rules: `profile_id` duplicates fail
+  across logical profiles and sources even when identical; duplicate coordinate claims fail even when
+  identical; duplicate transmission keys fail within and across profiles independent of manufacturer; only a
+  tabular grouping may repeat metadata that agrees. Bounds now include `models` ≤ 32, XLSX ≤ 16 sheets, JSON
+  depth 16, and an explicit logical-row definition for JSON/memory. Canonical serialization normalizes numeric
+  leaves to float while `schema_version` stays integer, omits empty optional texts/maps/arrays/blocks and
+  `false` promotion, sorts models / alias sets / transmission rows / active profiles by exact ID, and wraps
+  profiles as `{"schema_version":1,"profile":…}` and active sets as
+  `{"schema_version":1,"profiles":[…]}`, including provenance and excluding source context; the stored
+  revision-set hash is explicitly not locked. Per-leaf provenance carries revision, profile hash, and source
+  kind (`memory` added); `inherited` covers lower-priority custom wildcards; the illustrative match record
+  uses a partially supplied profile ID because a complete example cannot claim a bundled inherited leaf. Error
+  field paths use allowlisted names only and never echo an unknown user key; raw exception causes are
+  suppressed; `store_corruption`, `existing_model_out_of_extent`, and `explicit_sqlite_collision` are reserved
+  codes, not implemented.
+
+  Store schema and migrations, run-state and rich-export version locks and backward readers, CSV/TSV/XLSX
+  adapters and fixtures, transmission eligibility/evidence/grid work, the invalid-example fixture set, and
+  `MANIFEST.in` packaging inclusion remain outstanding, so Phase 0 is not complete. No application code, test
+  fixture, or packaging file was touched beyond the new package and its tests.
+
+- **Equipment-profile common + coordinate contract lock** (2026-10-10) — added
+  [EQUIPMENT_PROFILE_SCHEMA.md](EQUIPMENT_PROFILE_SCHEMA.md) as the executable Phase 0 reference for custom
+  equipment profiles: allowlisted field model for nested JSON, the flat 19-column tabular shape plus the
+  optional `promote_coordinate_wildcard` column with implicit v1, alias-list shorthand versus explicit
+  alias-to-model maps, finite-number/boolean typing and sign/field-mode enums, ingestion bounds (8 MiB file
+  bytes, 10,000 aggregate rows, 64 profiles, bounded aliases/text/IDs), blank-cell and unknown-field
+  semantics, bounded value-free errors with a stable code catalog, canonical serialization (negative-zero
+  normalization, numeric equivalence across JSON and tabular) with SHA-256 profile/active-set/source hashes that
+  cover profile content and provenance but never source context, cross-profile conflict rules, immutable
+  per-leaf match-record shapes, and the coordinate activation capability gate (exact-only; fail closed on
+  aliases/wildcards/transmission while the canonical parser still represents full v1). Registered in
+  `dev-docs/index.md`, linked from the spec and execution plan, and the applicable Phase 0 plan items are marked
+  locked with delivery pointers. Explicitly **not** full Phase 0 sign-off: user-store schema and migrations,
+  run-state/rich-export version locks, XLSX fixtures and approved-asset inventory evidence, transmission
+  eligibility/evidence/grid fixtures, the invalid-example fixture set, and `MANIFEST.in` packaging inclusion
+  remain for later slices. No application code changed and no scientific rule was reopened; where the spec left
+  a routine engineering value unspecified, a conservative explicit value was chosen and recorded. Transmission
+  matching key remains model + plane + kVp + Cu + Al.
+
+- **Equipment-profile fallback decisions** (2026-10-10) — amended the spec and execution plan so missing
+  custom coverage retains ordinary lookup, new-model rows work without an original table, and sparse
+  additions cannot damage usable interpolation. Defined protected unknown evidence, alias targets,
+  wildcard promotion and implicit-v1 tabular rules; replaced the blanket implementation hold with
+  per-slice contract locks. Example README synchronized; runtime behavior is unchanged.
 
 - **Equipment-profile design readiness** (2026-10-10) — reviewed the spec and execution phases,
   recorded unresolved Phase 0 contracts before calculation changes, and clarified the synthetic

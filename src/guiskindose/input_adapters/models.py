@@ -2,8 +2,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
 
 import pandas as pd
+
+if TYPE_CHECKING:
+    from guiskindose.equipment_resolution import EquipmentApplicationReceipt
 
 
 @dataclass
@@ -32,6 +36,7 @@ class InputAdapterResult:
     provenance: InputProvenance
     warnings: list[str] = field(default_factory=list)
     study_id: str | None = field(default=None)
+    equipment_receipt: EquipmentApplicationReceipt | None = field(default=None)
 
 
 @dataclass

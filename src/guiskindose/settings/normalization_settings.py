@@ -18,43 +18,21 @@ from guiskindose.constants import (
     KEY_RDSR_MANUFACTURER_MODEL_NAME,
 )
 from guiskindose.debug import dprint
+from guiskindose.equipment_profiles.vendor_aliases import (
+    GE_MANUFACTURER_ALIASES as _GE_MANUFACTURER_ALIASES,
+)
+from guiskindose.equipment_profiles.vendor_aliases import (
+    MANUFACTURER_ALIASES_BY_SETTINGS_KEY as _MANUFACTURER_ALIASES_BY_SETTINGS_KEY,
+)
 from guiskindose.helpers.create_attributes_string import create_attributes_string
 from guiskindose.settings.rotation_direction import RotationDirection
 from guiskindose.settings.translation_direction import TranslationDirection
 from guiskindose.settings.translation_offset import TranslationOffset
 
-_GE_MANUFACTURER_ALIASES = frozenset(
-    {
-        "ge",
-        "gehealthcare",
-        "ge healthcare",
-        "ge medical systems",
-        "general electric",
-        "gems",
-    }
-)
-
-_MANUFACTURER_ALIASES_BY_SETTINGS_KEY = {
-    "ge healthcare": _GE_MANUFACTURER_ALIASES,
-    "siemens": frozenset(
-        {
-            "siemens",
-            "siemens healthcare",
-            "siemens healthineers",
-            "siemens medical solutions",
-            "siemens ag",
-        }
-    ),
-    "philips": frozenset(
-        {
-            "philips",
-            "philips healthcare",
-            "philips medical systems",
-            "philips medical systems nederland b v",
-            "philips medical systems nederland bv",
-        }
-    ),
-}
+# Re-exported under the historic private names so existing importers keep
+# working; the allowlist itself lives in equipment_profiles.vendor_aliases,
+# shared with the canonical bundled-profile adapter (custom profiles never
+# inherit these aliases).
 
 
 def normalize_manufacturer_key(manufacturer: object) -> str:

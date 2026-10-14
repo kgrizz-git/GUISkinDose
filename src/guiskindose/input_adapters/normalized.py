@@ -15,12 +15,16 @@ from pathlib import Path
 
 import pandas as pd
 
+from guiskindose.exam_identity import clean_identity_value, require_homogeneous_identity
 from guiskindose.input_adapters.base import extract_table
 from guiskindose.input_adapters.column_mapper import detect_header_row
 from guiskindose.input_adapters.models import InputAdapterResult, InputProvenance
 from guiskindose.input_adapters.tabular_loader import _RawLoad
 
 # Canonical column names produced by rdsr_normalizer(), lowercased for comparison.
+# ``manufacturer`` is recognized but NOT required: legacy normalized tables
+# predate the Phase 1 identity contract and load through a warned compatibility
+# path (see adapt()). The required set stays at 23 columns.
 NORMALIZED_COLUMN_NAMES: frozenset[str] = frozenset(
     {
         "model",
@@ -49,6 +53,10 @@ NORMALIZED_COLUMN_NAMES: frozenset[str] = frozenset(
     }
 )
 
+# Optional identity column for the Phase 1 equipment-identity contract.
+# Recognized during header detection and mapping; never required.
+NORMALIZED_OPTIONAL_MANUFACTURER_COLUMNS: frozenset[str] = frozenset({"manufacturer"})
+
 # Optional per-unit identity columns for kerma-meter correction (not required).
 NORMALIZED_OPTIONAL_IDENTITY_COLUMNS: frozenset[str] = frozenset(
     {
@@ -73,6 +81,7 @@ NORMALIZED_OPTIONAL_ROTATIONAL_COLUMNS: frozenset[str] = frozenset(
 # Maps lowercase canonical name → proper-case name expected by analyze_data().
 # Matches the column names produced by rdsr_normalizer().
 NORMALIZED_COLUMN_CANONICAL: dict[str, str] = {
+    "manufacturer": "manufacturer",
     "model": "model",
     "dsd": "DSD",
     "dsi": "DSI",
@@ -113,6 +122,7 @@ NORMALIZED_REQUIRED_COLUMNS: frozenset[str] = NORMALIZED_COLUMN_NAMES
 # Names recognized during header detection (required + optional identity + rotational).
 NORMALIZED_HEADER_NAMES: frozenset[str] = (
     NORMALIZED_COLUMN_NAMES
+    | NORMALIZED_OPTIONAL_MANUFACTURER_COLUMNS
     | NORMALIZED_OPTIONAL_IDENTITY_COLUMNS
     | NORMALIZED_OPTIONAL_ROTATIONAL_COLUMNS
 )
@@ -233,6 +243,46 @@ def _coerce_numeric_and_units(data_df: pd.DataFrame, warnings: list[str]) -> pd.
     return data_df
 
 
+def _apply_manufacturer_contract(data_df: pd.DataFrame, warnings: list[str]) -> pd.DataFrame:
+    """Enforce the Phase 1 identity contract for the ``manufacturer`` column.
+
+    An explicit column is cleaned value-wise (blank/None/NaN/``"nan"`` text
+    becomes ``None`` — never the matchable strings ``"none"``/``"nan"``) and
+    the exact maker spellings are preserved for later key normalization at the
+    matching boundary. A missing — or entirely blank — column materializes as
+    all-``None`` with one count-only legacy warning; custom exact matching is
+    unavailable for those events, and nothing is inferred.
+    """
+    if "manufacturer" in data_df.columns:
+        cleaned = [clean_identity_value(value) for value in data_df["manufacturer"].tolist()]
+        data_df["manufacturer"] = pd.Series(cleaned, index=data_df.index, dtype=object)
+        if all(value is None for value in cleaned):
+            warnings.append(
+                f"manufacturer column is present but carries no identity for all {len(data_df)} "
+                "event(s); treating the exam as legacy (model-only identity). "
+                "Custom exact manufacturer/model matching is unavailable."
+            )
+        return data_df
+    data_df["manufacturer"] = None
+    warnings.append(
+        f"manufacturer column absent: {len(data_df)} event(s) load without equipment identity "
+        "(legacy normalized input). Custom exact manufacturer/model matching is "
+        "unavailable; continuing with model-only identity."
+    )
+    return data_df
+
+
+def _require_single_identity(data_df: pd.DataFrame, *, exam_index: int | None) -> None:
+    """Fail closed unless one exam carries exactly one canonical identity pair.
+
+    Raises :class:`~guiskindose.rdsr_input_checks.RdsrInputError` (a
+    :class:`~guiskindose.privacy.UserFacingInputError`) with a value-free
+    message. Split groups are checked individually with their positions, so
+    makers/models may differ *across* study-id groups, never *within* one exam.
+    """
+    require_homogeneous_identity(data_df, exam_index=exam_index)
+
+
 def _validate_normalized(data_df: pd.DataFrame, column_map: dict[str, str]) -> list[str]:
     """Return blocking validation errors for the renamed, coerced DataFrame.
 
@@ -346,6 +396,9 @@ def adapt(loaded: _RawLoad, original_filename: str) -> InputAdapterResult | list
     canonical_cols = list(column_map.values())
     data_df = data_df[[c for c in canonical_cols if c in data_df.columns]]
 
+    # 3b. Phase 1 identity contract: clean or materialize the manufacturer column.
+    data_df = _apply_manufacturer_contract(data_df, warnings)
+
     # 4. Coerce numeric columns (decimal-comma handling, NaN fallback)
     data_df = _coerce_numeric_and_units(data_df, warnings)
 
@@ -369,10 +422,16 @@ def adapt(loaded: _RawLoad, original_filename: str) -> InputAdapterResult | list
     )
 
     # 7. Multi-study split: if >1 distinct study IDs, return one result per group.
+    # Each group is one exam, so the identity check runs per group position:
+    # makers/models may differ *across* study groups, never *within* one exam.
     sid_values = _locate_study_id_values(raw_headers, raw_df, data_df, header_idx)
     if sid_values is not None and sid_values.nunique() > 1:
-        return _split_multi_study(data_df, sid_values, provenance, warnings)
+        groups = _split_multi_study(data_df, sid_values, provenance, warnings)
+        for index, group in enumerate(groups):
+            _require_single_identity(group.normalized_data, exam_index=index)
+        return groups
 
+    _require_single_identity(data_df, exam_index=None)
     return InputAdapterResult(
         normalized_data=data_df,
         raw_data=raw_df,

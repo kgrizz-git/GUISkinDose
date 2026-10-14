@@ -19,15 +19,16 @@ JSON describe identical profiles.
 |---|---|---|
 | `demo-scope-2000` | Coordinates complete, transmission sparse | All 15 coordinate leaves are supplied, so the coordinates need no inheritance. Only three transmission rows are present (80, 100 and 120 kVp on `Single Plane`), so transmission is partially covered. |
 | `demo-scope-wildcard` | Coordinates only, partial | A manufacturer-scoped model wildcard (`models: ["*"]`) that supplies only `translation_offset.z`. The remaining coordinate leaves are inherited from the next candidate in the ladder and named in the **partial match** notice before calculation; for a manufacturer with no bundled entry that next candidate is Default. |
-| `demo-biplane-rows` | Transmission only, partial | Two transmission rows (Plane A and Plane B at 80 kVp). Beam qualities without a row have no coverage from this profile; whether they fall back to a packaged table or to the normal no-coverage behavior depends on the unresolved Phase 0 policy for a model that has no packaged baseline grid. |
+| `demo-biplane-rows` | Transmission only, partial | Two transmission rows (Plane A and Plane B at 80 kVp). For this fictional model there is no original lookup table: use custom exact rows, and uncovered queries retain the existing unknown-model handling for the selected transmission mode. |
 
 Partial profiles are intentional: supply what you measured, and the rest is resolved from the next candidate
 that supplies it, with a notice naming which fields came from where. A fully supplied custom exact profile
 (the `demo-scope-2000` coordinates) needs no inheritance at all, fictional manufacturer and model included —
-it does not fall through to Default. What is *not* settled for a fictional model is transmission: it has no
-packaged baseline grid, so the bound and coverage rules for its rows are still open (see the plan's Phase 0
-blockers). Invalid, conflicting, or out-of-range values are *not* silently accepted — they fail with an error
-naming the row and field.
+it does not fall through to Default. Transmission rows for a new model are valid without an original lookup
+table. Isolated rows provide exact coverage; interpolation requires a complete usable grid within custom
+coverage. Missing custom coverage keeps the original lookup and its mode-dependent fallback. Sparse additions
+never create holes in otherwise usable original interpolation. Invalid custom values or out-of-original-extent
+rows for an existing model/plane fail validation; uncovered event queries fall back and notify.
 
 ## JSON shape
 
@@ -76,7 +77,7 @@ plan); a fully supplied profile omits nothing. Unknown fields are rejected.
 ## Tabular shape
 
 CSV, TSV, and XLSX use **one** flat table (the same rows and columns in every tabular format; XLSX is the same
-table on one sheet). Each row is one record, selected by `record_type`:
+table on one sheet, chosen by sheet). Each row is one record, selected by `record_type`:
 
 - `profile` — one row per profile: identity (`manufacturer`, `models`, aliases) and provenance. List values use
   `|` as the separator (`DemoScope2000|DS2000`); an empty list is an empty cell.
@@ -102,7 +103,7 @@ not apply. Coordinate lengths and sizes are **cm**; `kvp_kv` is **kV**; filtrati
 | 3 | `manufacturer` | `profile` | `manufacturer` | canonical manufacturer string | never blank on a `profile` row |
 | 4 | `models` | `profile` | `models` | canonical model keys, `\|`-separated; `*` is the only wildcard and only under an exact manufacturer | never blank on a `profile` row |
 | 5 | `manufacturer_aliases` | `profile` | `manufacturer_aliases` | `\|`-separated explicit list; never inherits bundled aliases | no aliases |
-| 6 | `model_aliases` | `profile` | `model_aliases` | `\|`-separated explicit list; never inherits bundled aliases | no aliases |
+| 6 | `model_aliases` | `profile` | `model_aliases` | `\|`-separated shorthand for one exact model; quoted JSON alias-to-model map for multiple models | no aliases |
 | 7 | `source` | `profile`, `transmission` | `provenance.source` on a `profile` row; `transmission[].source` on a `transmission` row | bounded free text | missing evidence text (required for `measured`) |
 | 8 | `notes` | `profile` | `provenance.notes` | bounded free text, no station/serial/path | no notes |
 | 9 | `field` | `coordinate` | dotted coordinate leaf, e.g. `translation_offset.z`, `rotation_direction.Ap2`, `swap_lateral_longitudinal`, `field_size_mode`, `detector_side_length` | one leaf path per row | never blank on a `coordinate` row |
@@ -110,8 +111,8 @@ not apply. Coordinate lengths and sizes are **cm**; `kvp_kv` is **kV**; filtrati
 | 11 | `device_model` | `transmission` | `transmission[].device_model` | explicit model name this row applies to | never blank on a `transmission` row |
 | 12 | `acquisition_plane` | `transmission` | `transmission[].acquisition_plane` | `Single Plane`, `Plane A`, `Plane B` | never blank on a `transmission` row |
 | 13 | `kvp_kv` | `transmission` | `transmission[].kvp_kv` | kV | never blank on a `transmission` row |
-| 14 | `filtration_added_mmcu` | `transmission` | `transmission[].filtration_added_mmcu` | mm Cu; use explicit `0` for none | omission policy pending Phase 0 |
-| 15 | `filtration_added_mmal` | `transmission` | `transmission[].filtration_added_mmal` | mm Al; use explicit `0` for none | omission policy pending Phase 0 |
+| 14 | `filtration_added_mmcu` | `transmission` | `transmission[].filtration_added_mmcu` | mm Cu; use explicit `0` for none | never blank on a `transmission` row |
+| 15 | `filtration_added_mmal` | `transmission` | `transmission[].filtration_added_mmal` | mm Al; use explicit `0` for none | never blank on a `transmission` row |
 | 16 | `k_patient_support` | `transmission` | `transmission[].k_patient_support` | dimensionless, `(0, 1]` | never blank on a `transmission` row |
 | 17 | `evidence_status` | `transmission` | `transmission[].evidence_status` | `measured` or `estimated` | never blank on a `transmission` row |
 | 18 | `date` | `transmission` | `transmission[].date` | ISO date `YYYY-MM-DD` | required for `measured` |
@@ -120,6 +121,13 @@ not apply. Coordinate lengths and sizes are **cm**; `kvp_kv` is **kV**; filtrati
 The shared `source` column is the one easy mistake: on a `profile` row it is the profile's provenance
 (`provenance.source`), on a `transmission` row it is that transmission row's evidence source
 (`transmission[].source`). They are different fields with the same column name.
+
+The 19-column examples use the implicit v1 tabular shape. An optional profile-row column
+`promote_coordinate_wildcard` accepts `true`/`false` (blank/absent means false). Promotion also requires GUI
+acknowledgement or CLI `--allow-equipment-profile-wildcard-promotion`; it never resolves conflicting custom
+claimants. Disable one conflicting profile. JSON aliases can be an explicit alias-to-model object; the existing
+single-model list remains valid shorthand. Numeric limits, errors, and canonical hashes are specified in
+`dev-docs/EQUIPMENT_PROFILE_SCHEMA.md`.
 
 ### Blank templates are not loadable
 
@@ -130,9 +138,10 @@ error naming the row and field. Fill in at least one domain before loading.
 
 ## Loading a profile
 
-**Not yet available.** The loader, GUI card, CLI option, and profile store described below are **planned and
-unimplemented**. Nothing in this folder is wired into any calculation path today, so none of these files loads
-yet — they are authored starting material for the feature, not a working import. See
+**Not yet available from the application.** An internal, inert parser now handles the JSON and CSV/TSV shapes
+described above, but it is not wired to any feature: no option opens these files and nothing reads a profile into
+a calculation. The GUI card, CLI option, and profile store described below are **planned and unimplemented**, and
+there is no way to load or activate a profile from the application today. See
 [dev-docs/plans/CUSTOM_EQUIPMENT_PROFILES_EXECUTION.md](../../../../dev-docs/plans/CUSTOM_EQUIPMENT_PROFILES_EXECUTION.md)
 for status.
 
@@ -151,11 +160,8 @@ setting** (counts and event indices only), and they reach output solely as gated
 through the existing `include_identifiers` opt-in.
 
 > The field set above is a **preliminary** schema: it is the shape the feature is being designed to, and it is
-> **not yet locked** — Phase 0 still has to settle the transmission bounds and coverage questions listed as
-> blockers in the execution plan. When the schema is locked, implementation may tighten limits (row counts,
-> text lengths) without changing the shape. Field names and the values in these examples are the current
-> authored ones and are subject to that lock.
+> **not yet locked** — the resolution and fallback rules are agreed in the execution plan, while Phase 0
+> still has to publish executable schemas, limits, errors, and hash rules. These files remain authoring
+> examples until tested against the real loader.
 
-Also note that these JSON and CSV files (plus the blank templates) are authored but **unverified against a real
-loader** — no loader exists yet. TSV and XLSX variants are still outstanding, and packaging of this folder into
-the wheel is not done.
+Also note: the JSON, CSV, and XLSX files are verified to produce identical profile hashes through the internal parser (a workbook built from the CSV parses to the same profiles as the JSON). The **XLSX adapter is inert** — no GUI, CLI, store, or calculation path uses it, and no application code loads these files. TSV and XLSX packaged variants are still outstanding (a tracked `.xlsx` needs hash-pinned human clearance first), and packaging of this folder into the wheel is not done.

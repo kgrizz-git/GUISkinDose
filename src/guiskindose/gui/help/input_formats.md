@@ -46,7 +46,13 @@ This is a spreadsheet whose columns are already the names produced by the RDSR p
 
 ## Normalized table
 
-This is GUISkinDose's own event table. Auto-detect needs at least **2** known columns, including an internal column such as `K_IRP`, `DSD`, `DSI`, `Tx`, or `acquisition_type_code`. `model`, `kVp`, and `acquisition_type` do not elect it. Values are already in internal units, and manufacturer coordinate corrections are not applied again.
+This is GUISkinDose's own event table. Auto-detect needs at least **2** known columns, including an internal column such as `K_IRP`, `DSD`, `DSI`, `Tx`, or `acquisition_type_code`. `model`, `manufacturer`, `kVp`, and `acquisition_type` do not elect it. Values are already in internal units, and manufacturer coordinate corrections are not applied again.
+
+An optional `manufacturer` column carries the equipment maker per event (exact spelling; blank means
+unknown). A table without it loads with a warning giving the event count. Events of one exam must
+share one maker *and* one model: mixed pairs in one exam are rejected, so split such tables (for
+example by study) before loading. Spelling variants of one maker (capitalization, punctuation) are
+one maker; blank continuations in DoseTrack `Equipment Name` repeat the row above.
 
 ## Qaelum, DoseMonitor, and DoseWatch
 

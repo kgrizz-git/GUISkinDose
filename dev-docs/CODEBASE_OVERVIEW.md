@@ -19,6 +19,7 @@ src/guiskindose/          # Main package
   cli_args.py              # argparse construction; re-exported via main.py
   input_adapters/          # Tabular CSV/TSV/XLSX schemas and TabularImportOptions
   analyze_data.py          # Core orchestration function
+  equipment_resolution.py  # Custom-profile session bridge (API slice; import-before-load only)
   phantom_class.py         # Phantom (patient / table / pad) model
   beam_class.py            # X-ray beam and detector model
   geom_calc.py             # Geometry calculations
@@ -169,6 +170,14 @@ Returns the output dict/JSON when `output_format` is `"dict"` or `"json"`, other
 ### `analyze_input_file()` — `main.py` (public API)
 
 The primary public function exported from `guiskindose`. Accepts a file path (RDSR, JSON, or tabular), a settings object, and optional schema/export parameters. Prefer this over `main()` in library usage.
+
+A frozen custom equipment-profile session (`equipment_profiles.assemble_session()`) can be bound
+on settings via the `equipment_profile_session` parameter (never serialized into configs). Raw
+inputs then resolve and apply the session during normalization; dict/JSON results carry
+`equipment_profile_match` with the per-exam record, notice, and session hashes. Pre-transformed
+inputs (`normalized` schema, preparsed `.json`, bare DataFrames) refuse closed with a nonempty
+session. Bridging logic lives in `equipment_resolution.py`; see
+[INPUT_FIELD_REFERENCE.md](INPUT_FIELD_REFERENCE.md) for the input contract.
 
 ### `analyze_normalized_data_with_custom_settings_object()` — `main.py`
 

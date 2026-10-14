@@ -434,7 +434,10 @@ def run_normalizer_pipeline(
         )
 
     try:
-        normalized_df, source_rows = rdsr_normalizer_with_source_rows(data_df, settings)
+        receipt_out: list = []
+        normalized_df, source_rows = rdsr_normalizer_with_source_rows(
+            data_df, settings, equipment_receipt_out=receipt_out
+        )
     except UserFacingInputError:
         # Value-free by contract; keep its specific message for the user.
         raise
@@ -469,4 +472,5 @@ def run_normalizer_pipeline(
         raw_data=raw_df,
         provenance=provenance,
         warnings=warnings,
+        equipment_receipt=receipt_out[0] if receipt_out else None,
     )

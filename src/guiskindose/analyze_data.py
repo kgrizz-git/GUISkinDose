@@ -28,6 +28,42 @@ from guiskindose.settings import PyskindoseSettings, initialize_settings
 logger = logging.getLogger(__name__)
 
 
+def _match_mapping_for_output(
+    settings: PyskindoseSettings, equipment_receipt: Any, frame: Any
+) -> dict[str, Any] | None:
+    """Validate a receipt's full binding and serialize it, or fail closed.
+
+    Returns ``None`` only when no session is configured (or it is empty) and
+    no receipt was supplied. A configured nonempty session with no receipt
+    means the input arrived already normalized; a receipt without a session
+    means forged provenance. Both fail closed.
+    """
+    from guiskindose.equipment_profiles.session import EquipmentProfileSession
+    from guiskindose.equipment_resolution import receipt_to_mapping
+
+    session = getattr(settings, "equipment_profile_session", None)
+    if session is None:
+        if equipment_receipt is not None:
+            raise ValueError(
+                "An equipment-profile receipt was supplied without a configured session."
+            )
+        return None
+    if not isinstance(session, EquipmentProfileSession):
+        raise ValueError(
+            "equipment_profile_session must be an EquipmentProfileSession or None, "
+            f"not {type(session).__name__}."
+        )
+    if equipment_receipt is None:
+        if len(session.profiles) > 0:
+            raise ValueError(
+                "A custom equipment-profile session is configured but this input carries no "
+                "resolved raw provenance. Load raw DICOM or raw-shaped tabular input so the "
+                "session can resolve, instead of pre-normalized data."
+            )
+        return None
+    return receipt_to_mapping(receipt=equipment_receipt, frame=frame, settings=settings)
+
+
 def _format_multi_exam_failure_warning(exam_id: str, exc: BaseException) -> str:
     """Build a user-facing warning when an exam raises during multi-exam calculation.
 
@@ -72,6 +108,8 @@ def _format_multi_exam_no_output_warning(exam_id: str) -> str:
 def analyze_data(
     normalized_data: pd.DataFrame,
     settings: str | dict | PyskindoseSettings,
+    *,
+    equipment_receipt: Any = None,
 ) -> dict[str, Any] | str | PySkinDoseOutput | None:
     """Analyze data och settings, and runs PySkinDose in desired mode.
 
@@ -81,6 +119,11 @@ def analyze_data(
         RDSR data, normalized for compliance with PySkinDose.
     settings : Union[str, dict, PyskindoseSettings]
         Settings class for PySkinDose
+    equipment_receipt : Any
+        Custom equipment-profile resolution record for this exam, if any.
+        Raw loaders attach it when a session is bound; direct callers with a
+        configured session but no record fail closed, since already-normalized
+        input carries no raw provenance to apply a session to.
 
     Returns
     -------
@@ -97,6 +140,8 @@ def analyze_data(
         raise ValueError(
             f"Invalid output format specified. Must be one of {'.'.join(c.RUN_ARGUMENTS_VALID_OUTPUT_FORMATS)}"
         )
+
+    equipment_profile_match = _match_mapping_for_output(settings, equipment_receipt, normalized_data)
 
     dprint("CALCULATION", "Creating table and pad phantoms")
     # create table, pad and patient phantoms.
@@ -120,7 +165,13 @@ def analyze_data(
             raise RuntimeError("Dose calculation did not produce output in calculate_dose mode.")
         dprint("PROCESSING", "Formatting analysis result for export")
         guiskindose_output: PySkinDoseOutput | dict[str, Any] | str = format_analysis_result_for_export(
-            output, patient=patient, table=table, pad=pad, data_norm=export_data_norm, settings=settings
+            output,
+            patient=patient,
+            table=table,
+            pad=pad,
+            data_norm=export_data_norm,
+            settings=settings,
+            equipment_profile_match=equipment_profile_match,
         )
 
         return guiskindose_output
@@ -144,6 +195,39 @@ def analyze_data(
         return output
 
     raise ValueError(f"Unhandled output format: {settings.output_format}")
+
+
+def _validate_session_records(exams: list[InputAdapterResult], settings: PyskindoseSettings) -> None:
+    """Validate every exam's receipt binding before any exam calculates.
+
+    Already-normalized exams carry no raw identity to apply a session to;
+    pretending otherwise would silently misreport. Fails before any exam
+    calculates, mirroring offset validation. Live-settings currency is
+    validated per exam at result assembly, after each exam restores its own
+    receipt — the shared settings object may still hold another exam here.
+    """
+    from guiskindose.equipment_profiles.session import EquipmentProfileSession
+    from guiskindose.equipment_resolution import validate_receipt_binding
+
+    session = getattr(settings, "equipment_profile_session", None)
+    if session is None:
+        if any(exam.equipment_receipt is not None for exam in exams):
+            raise ValueError("Equipment-profile receipts require a configured session.")
+        return
+    if not isinstance(session, EquipmentProfileSession):
+        raise ValueError(
+            "equipment_profile_session must be an EquipmentProfileSession or None, "
+            f"not {type(session).__name__}."
+        )
+    if len(session.profiles) == 0:
+        return
+    for index, exam in enumerate(exams):
+        try:
+            validate_receipt_binding(
+                receipt=exam.equipment_receipt, frame=exam.normalized_data, settings=settings
+            )
+        except ValueError as exc:
+            raise ValueError(f"{opaque_exam_label(index)}: {exc}") from None
 
 
 def _global_patient_offset(settings: PyskindoseSettings) -> list[float]:
@@ -300,6 +384,7 @@ def _exam_result(
         },
         output=output,
         warnings=warnings,
+        equipment_profile_match=_match_mapping_for_output(settings, exam.equipment_receipt, exam.normalized_data),
     )
 
 
@@ -311,6 +396,12 @@ def _process_exam(
     warnings: list[str],
 ) -> ExamResult | None:
     """Run geometry + dose calculation for a single loaded exam."""
+    if exam.equipment_receipt is not None:
+        from guiskindose.equipment_resolution import restore_receipt_to_settings
+
+        # The shared settings object still holds whichever exam loaded last:
+        # restore this exam's proven values before anything reads them.
+        restore_receipt_to_settings(exam.equipment_receipt, settings.normalization_settings)
     data_norm = calculate_rotation_matrices(exam.normalized_data)
     table, pad = _fresh_table_and_pad(settings)
     dprint("RENDERING", f"{exam_id}: creating geometry plot")
@@ -352,6 +443,11 @@ def analyze_multiple_exams(
     # Validate every configured offset before any exam produces output so a bad
     # later offset cannot leave a partial multi-exam result behind.
     _validate_per_exam_offsets(per_exam_offsets)
+
+    # Same atomicity for custom sessions: every exam must carry its resolved
+    # raw provenance before anything calculates, so a late failure cannot
+    # leave a partial result behind.
+    _validate_session_records(exams, settings)
 
     exam_results: list[ExamResult] = []
     run_warnings: list[str] = []

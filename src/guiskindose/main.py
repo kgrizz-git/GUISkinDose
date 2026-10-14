@@ -69,11 +69,17 @@ def _read_input_for_analysis(
     input_schema: str | None,
     sheet_name: str | int,
     import_options: TabularImportOptions | None = None,
+    *,
+    equipment_receipt_out: list | None = None,
 ) -> Any:
     """Load either a tabular input through its adapter or a legacy RDSR/JSON input."""
     reject_import_options_for_non_tabular([file_path], import_options)
     if Path(file_path).suffix.lower() not in TABULAR_SUFFIXES:
-        return read_and_normalise_rdsr_data(rdsr_filepath=str(file_path), settings=settings)
+        return read_and_normalise_rdsr_data(
+            rdsr_filepath=str(file_path),
+            settings=settings,
+            equipment_receipt_out=equipment_receipt_out,
+        )
 
     from guiskindose.input_adapters.registry import read_and_normalize_input
 
@@ -90,12 +96,19 @@ def _analysis_output_for_input(
     input_result: Any,
     settings: PyskindoseSettings,
     requested_output_format: str,
+    equipment_receipt: Any = None,
 ) -> Any:
     """Calculate a single normalized input or aggregate a multi-exam input."""
     if isinstance(input_result, pd.DataFrame):
-        return analyze_data(normalized_data=input_result, settings=settings)
+        return analyze_data(
+            normalized_data=input_result, settings=settings, equipment_receipt=equipment_receipt
+        )
     if not isinstance(input_result, list):
-        return analyze_data(normalized_data=input_result.normalized_data, settings=settings)
+        return analyze_data(
+            normalized_data=input_result.normalized_data,
+            settings=settings,
+            equipment_receipt=input_result.equipment_receipt,
+        )
 
     if requested_output_format == RUN_ARGUMENTS_OUTPUT_HTML:
         logger.warning("HTML output format is not supported for multi-exam tabular runs. Forcing to dict.")
@@ -154,11 +167,18 @@ def main(
 
     # Don't log file_path — RDSR paths/filenames can carry PHI.
     dprint("PROCESSING", "Reading and normalizing RDSR data")
-    data_norm = read_and_normalise_rdsr_data(rdsr_filepath=file_path, settings=settings)
+    equipment_records: list = []
+    data_norm = read_and_normalise_rdsr_data(
+        rdsr_filepath=file_path, settings=settings, equipment_receipt_out=equipment_records
+    )
     dprint("PROCESSING", f"RDSR data normalized successfully. Rows: {len(data_norm)}")
 
     dprint("PROCESSING", "Calling analyze_data")
-    output = analyze_data(normalized_data=data_norm, settings=settings)
+    output = analyze_data(
+        normalized_data=data_norm,
+        settings=settings,
+        equipment_receipt=equipment_records[0] if equipment_records else None,
+    )
     dprint("PROCESSING", "analyze_data finished")
 
     if settings.output_format in ("dict", "json"):
@@ -200,12 +220,35 @@ def analyze_input_file(
         non-tabular paths when any flag is set.
     """
     settings_obj = _settings_with_output_format(settings, output_format)
+    equipment_records: list = []
     input_result = _read_input_for_analysis(
-        file_path, settings_obj, input_schema, sheet_name, import_options=import_options
+        file_path,
+        settings_obj,
+        input_schema,
+        sheet_name,
+        import_options=import_options,
+        equipment_receipt_out=equipment_records,
     )
     if Path(file_path).suffix.lower() in TABULAR_SUFFIXES:
         _warn_for_tabular_input(input_result)
-    return _analysis_output_for_input(input_result, settings_obj, output_format)
+    return _analysis_output_for_input(
+        input_result,
+        settings_obj,
+        output_format,
+        equipment_receipt=equipment_records[0] if equipment_records else None,
+    )
+
+
+def _resolve_input_paths(file_paths: Sequence[str | Path]) -> list[Path]:
+    """Expand missing glob paths, preserving the established input ordering."""
+    resolved: list[Path] = []
+    for file_path in file_paths:
+        path = Path(file_path)
+        if not path.exists() and ("*" in str(path) or "?" in str(path)):
+            resolved.extend(sorted(path.parent.glob(path.name)))
+        else:
+            resolved.append(path)
+    return resolved
 
 
 def analyze_multiple_input_files(
@@ -251,13 +294,7 @@ def analyze_multiple_input_files(
 
     all_exams: list[InputAdapterResult] = []
 
-    resolved_paths: list[Path] = []
-    for fp in file_paths:
-        p = Path(fp)
-        if not p.exists() and ("*" in str(p) or "?" in str(p)):
-            resolved_paths.extend(sorted(p.parent.glob(p.name)))
-        else:
-            resolved_paths.append(p)
+    resolved_paths = _resolve_input_paths(file_paths)
 
     reject_import_options_for_non_tabular(resolved_paths, import_options)
 
@@ -277,7 +314,10 @@ def analyze_multiple_input_files(
             else:
                 all_exams.append(result)
         else:
-            data_norm = read_and_normalise_rdsr_data(rdsr_filepath=str(fp), settings=settings_obj)
+            equipment_records: list = []
+            data_norm = read_and_normalise_rdsr_data(
+                rdsr_filepath=str(fp), settings=settings_obj, equipment_receipt_out=equipment_records
+            )
             provenance = InputProvenance(
                 source_type=suffix.lstrip("."),
                 schema_name="rdsr",
@@ -296,6 +336,7 @@ def analyze_multiple_input_files(
                     raw_data=None,
                     provenance=provenance,
                     warnings=[],
+                    equipment_receipt=equipment_records[0] if equipment_records else None,
                 )
             )
 
@@ -443,13 +484,7 @@ def build_cli_export_source(
     pkg_logger = logging.getLogger("guiskindose")
     pkg_logger.addHandler(capture)
     try:
-        resolved: list[Path] = []
-        for fp in file_paths:
-            p = Path(fp)
-            if not p.exists() and ("*" in str(p) or "?" in str(p)):
-                resolved.extend(sorted(p.parent.glob(p.name)))
-            else:
-                resolved.append(p)
+        resolved = _resolve_input_paths(file_paths)
 
         reject_import_options_for_non_tabular(resolved, import_options)
 
@@ -483,6 +518,7 @@ def build_cli_export_source(
 
         # Single-exam path.
         single = resolved[0]
+        cli_resolution = None
         if single.suffix.lower() in TABULAR_SUFFIXES:
             adapter = read_and_normalize_input(
                 single,
@@ -495,12 +531,21 @@ def build_cli_export_source(
             data_norm = adapter.normalized_data
             inputs = [adapter]
             import_warnings = list(adapter.warnings)
+            cli_resolution = adapter.equipment_receipt
         else:
-            data_norm = read_and_normalise_rdsr_data(rdsr_filepath=str(single), settings=settings_obj)
+            equipment_records: list = []
+            data_norm = read_and_normalise_rdsr_data(
+                rdsr_filepath=str(single),
+                settings=settings_obj,
+                equipment_receipt_out=equipment_records,
+            )
             inputs = None
             import_warnings = []
+            cli_resolution = equipment_records[0] if equipment_records else None
 
-        output = analyze_data(normalized_data=data_norm, settings=settings_obj)
+        output = analyze_data(
+            normalized_data=data_norm, settings=settings_obj, equipment_receipt=cli_resolution
+        )
         return build_export_source_from_cli(
             settings_obj,
             output_dict=output if isinstance(output, dict) else None,
@@ -543,7 +588,10 @@ def _load_inputs_for_export(
             )
             inputs.extend(result if isinstance(result, list) else [result])
         else:
-            data_norm = read_and_normalise_rdsr_data(rdsr_filepath=str(fp), settings=settings_obj)
+            equipment_records: list = []
+            data_norm = read_and_normalise_rdsr_data(
+                rdsr_filepath=str(fp), settings=settings_obj, equipment_receipt_out=equipment_records
+            )
             inputs.append(
                 InputAdapterResult(
                     normalized_data=data_norm,
@@ -561,6 +609,7 @@ def _load_inputs_for_export(
                         warnings=[],
                     ),
                     warnings=[],
+                    equipment_receipt=equipment_records[0] if equipment_records else None,
                 )
             )
     return inputs
