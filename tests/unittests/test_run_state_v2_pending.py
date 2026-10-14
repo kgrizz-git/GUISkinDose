@@ -174,6 +174,24 @@ def test_csv_null_consumption_seeds_flags(tmp_path: Path) -> None:
     assert state.equipment_pending is None
 
 
+def test_dicom_null_consumption_seeds_globals() -> None:
+    """A null DICOM slot mirrors staged per-exam offsets into globals for calculation."""
+    document = _export_document(AppState())
+    document["equipment"] = {"schema_version": 1, "mode": "coordinates", "captures": [None]}
+    document["gui_state"]["exams"] = [{"swap_lat_lon": True, "d_lon": 9.0}]
+    state = _plane_state(None)
+    apply_run_state(document, state)
+    assert state.equipment_pending is not None
+    ok, _ = load_rdsr(_DICOM, state)
+    assert ok
+    meta = state.loaded_exam_meta[0]
+    assert meta["swap_lat_lon"] is True
+    assert meta["d_lon"] == 9.0
+    assert state.d_lon == 9.0
+    assert state.swap_lat_lon is True
+    assert state.equipment_pending is None
+
+
 def test_csv_capture_lifecycle_parity(session: Any, tmp_path: Path) -> None:
     """Vendor-tabular replay consumes, confirms, and calculates identically."""
     donor = _plane_state(session)

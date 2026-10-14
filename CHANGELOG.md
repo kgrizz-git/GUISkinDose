@@ -216,10 +216,12 @@ That keeps SemVer and contributor history organized.
 
 - **Equipment maker identity in normalized data** (2026-10-11) — every normalized event frame now
   carries a `manufacturer` column with the exact equipment-maker spelling (`None` when the source
-  carries none). The `normalized` tabular   schema accepts an optional `manufacturer` column; tables
+  carries none). The `normalized` tabular schema accepts an optional `manufacturer` column; tables
   without it load with a warning giving the event count. An exam carrying anything but one
-  maker/model pair is rejected with a value-free error instead of silently using the first pair.
-  Dose results, coordinates, and exports are unchanged (maker/model were already default-safe in reports).
+  maker/model pair is rejected with a value-free error instead of silently using the first pair;
+  the normalized tabular adapter propagates ``RdsrInputError`` so the GUI and CLI surface that
+  message instead of a generic read failure. Dose results, coordinates, and exports are unchanged
+  (maker/model were already default-safe in reports).
 
 - **Upload auto-detect failure hint** (2026-10-09) — when auto-detect cannot choose, the Upload
   message says it needs one source's own column and at least two recognized columns, and that it

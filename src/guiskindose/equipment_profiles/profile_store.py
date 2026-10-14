@@ -410,7 +410,11 @@ class ProfileStore:
     # -- public reads -------------------------------------------------------
 
     def read_revision(self, profile_id: str, revision: int | None = None) -> StoredRevision:
-        """Read one stored revision (the current revision when ``revision`` is None)."""
+        """Read one stored revision (the current revision when ``revision`` is None).
+
+        Raises ``StoreError`` with code ``STORE_NOT_FOUND`` when ``revision`` was evicted
+        at the per-profile retention cap (see ``save_new_revision``).
+        """
         name = check_profile_id_text(profile_id)
         wanted = (
             None

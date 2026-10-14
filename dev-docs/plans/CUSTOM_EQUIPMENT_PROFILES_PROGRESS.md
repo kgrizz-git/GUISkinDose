@@ -4,7 +4,7 @@ Implementation history for the active [execution plan](CUSTOM_EQUIPMENT_PROFILES
 Scientific requirements and phase acceptance gates remain in that plan and its linked contracts.
 
 - 2026-10-13 — **Run-state v2 migration slice (atomic).** Always-v2 writer
-  (null equipment when captur eless, maker/model default-safe); strict v1
+  (null equipment when captureless, maker/model default-safe); strict v1
   reader (count gate preserved, retention warnings, reserved-key warning,
   passthrough excludes the owned section); v2 decode against document count;
   trial confirmation of loaded frames with geometry-change refusal (intended

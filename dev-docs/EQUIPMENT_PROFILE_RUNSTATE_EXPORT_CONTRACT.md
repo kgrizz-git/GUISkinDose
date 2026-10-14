@@ -198,7 +198,7 @@ any mutation or export.
 1. Run-state v2 `equipment` emission (`serialize_run_state`) and application
    (`apply_run_state` + trial-build coverage). Owner: Phase 2.
    (Delivered 2026-10-13 as one atomic slice: always-v2 writer with null
-   when captur eless; strict v1 reader with retention warnings; v2 decode
+   when captureless; strict v1 reader with retention warnings; v2 decode
    against document count; trial confirmation of loaded frames with
    geometry-change refusal; FIFO pending staging with raw-load replay
    consumption for single-exam DICOM/vendor-tabular; calc threading through
