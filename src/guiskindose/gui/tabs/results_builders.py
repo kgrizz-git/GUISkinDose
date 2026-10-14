@@ -12,6 +12,8 @@ from typing import TYPE_CHECKING, Any
 
 from nicegui import run, ui
 
+from guiskindose.equipment_profile_display import format_equipment_profile_blocks
+
 from ..components import HelpButton
 from ..constants import COLORSCALES, MAX_INLINE_MAPS
 from ..dose_severity import (
@@ -19,6 +21,7 @@ from ..dose_severity import (
     apply_psd_presentation,
     build_psd_readout,
 )
+from ..equipment_profile_surfaces import post_calc_equipment_profile_blocks
 from ..figures import extract_exam_dose_map, make_dosemap_fig
 from ..state import state
 from ..summary_formatters import format_tube_summary
@@ -126,6 +129,7 @@ class ResultsTabController:
             self.refs.fluoro_metric.set_text(fmt_duration(fluoro) if fluoro is not None else "N/A")
             self._refresh_rotational_badge()
             self._refresh_tube_label()
+            self._refresh_equipment_profile_label()
         elif not state.is_multi_exam:
             # Invalidated (or never run): the readout must not keep showing a
             # stale banded value after the run it belonged to is gone. Back to
@@ -145,6 +149,9 @@ class ResultsTabController:
             if self.refs.tube_label is not None:
                 self.refs.tube_label.set_text("")
                 self.refs.tube_label.visible = False
+            if self.refs.equipment_profile_label is not None:
+                self.refs.equipment_profile_label.set_text("")
+                self.refs.equipment_profile_label.visible = False
 
     def _rotational_badge_text(self) -> str:
         """One-line rotational-handling summary for the Results badge.
@@ -195,13 +202,29 @@ class ResultsTabController:
         self.refs.tube_label.set_text(text)
         self.refs.tube_label.visible = bool(text)
 
+    def _refresh_equipment_profile_label(self) -> None:
+        """Show custom equipment-profile match + notice after a single-exam calculation."""
+        if self.refs.equipment_profile_label is None:
+            return
+        text = format_equipment_profile_blocks(post_calc_equipment_profile_blocks(state))
+        self.refs.equipment_profile_label.set_text(text)
+        self.refs.equipment_profile_label.visible = bool(text)
+
+    def _refresh_agg_equipment_profile_label(self, _res: Any) -> None:
+        """Show per-exam equipment-profile matches for a multi-exam run."""
+        if self.refs.agg_equipment_profile_label is None:
+            return
+        text = format_equipment_profile_blocks(post_calc_equipment_profile_blocks(state))
+        self.refs.agg_equipment_profile_label.set_text(text)
+        self.refs.agg_equipment_profile_label.visible = bool(text)
+
     def _refresh_agg_tube_label(self, res: Any) -> None:
         """Show per-exam per-tube dose breakdowns for a multi-exam run."""
         if self.refs.agg_tube_label is None:  # not built yet
             return
         blocks = [
-            (f"Exam {i + 1}", getattr(getattr(exam, "output", None), "tube_summary", None))
-            for i, exam in enumerate(getattr(res, "exams", []) or [])
+            (exam.exam_id, getattr(getattr(exam, "output", None), "tube_summary", None))
+            for exam in getattr(res, "exams", []) or []
         ]
         text = format_tube_summary(blocks)
         self.refs.agg_tube_label.set_text(text)
@@ -336,6 +359,9 @@ class ResultsTabController:
         if self.refs.agg_tube_label is not None:
             self.refs.agg_tube_label.set_text("")
             self.refs.agg_tube_label.visible = False
+        if self.refs.agg_equipment_profile_label is not None:
+            self.refs.agg_equipment_profile_label.set_text("")
+            self.refs.agg_equipment_profile_label.visible = False
 
     def _set_multi_exam_summary(self, res: Any) -> None:
         """Render aggregate dose, exam-count, and warning summaries."""
@@ -354,6 +380,7 @@ class ResultsTabController:
             self.refs.run_warnings_label.set_visibility(False)
         self._refresh_agg_rotational_badge(res)
         self._refresh_agg_tube_label(res)
+        self._refresh_agg_equipment_profile_label(res)
 
     def _set_multi_exam_totals(self) -> None:
         """Render DAP and fluoroscopy totals when those values are available."""
@@ -587,6 +614,7 @@ class ResultsViewRefs:
     fluoro_metric: ui.label = None  # type: ignore[assignment]
     rotational_badge: ui.label = None  # type: ignore[assignment]
     tube_label: ui.label = None  # type: ignore[assignment]
+    equipment_profile_label: ui.label = None  # type: ignore[assignment]
     dosemap_plot: ui.plotly = None  # type: ignore[assignment]
     dosemap_spinner: ui.spinner = None  # type: ignore[assignment]
     corr_table: ui.table = None  # type: ignore[assignment]
@@ -595,6 +623,7 @@ class ResultsViewRefs:
     agg_totals_metric: ui.label = None  # type: ignore[assignment]
     agg_rotational_badge: ui.label = None  # type: ignore[assignment]
     agg_tube_label: ui.label = None  # type: ignore[assignment]
+    agg_equipment_profile_label: ui.label = None  # type: ignore[assignment]
     run_warnings_label: ui.label = None  # type: ignore[assignment]
     agg_dosemap_plot: ui.plotly = None  # type: ignore[assignment]
     agg_dosemap_spinner: ui.spinner = None  # type: ignore[assignment]
@@ -652,6 +681,8 @@ def _build_single_exam_section(ctrl: ResultsTabController) -> None:
             ctrl.refs.rotational_badge.visible = False
         ctrl.refs.tube_label = ui.label("").classes("text-sm text-grey-7 whitespace-pre-line")
         ctrl.refs.tube_label.visible = False
+        ctrl.refs.equipment_profile_label = ui.label("").classes("text-sm text-grey-7 whitespace-pre-line")
+        ctrl.refs.equipment_profile_label.visible = False
         with ui.row().classes(_METRIC_ROW_CLASSES):
             with ui.card().classes("grow modern-card p-0 overflow-hidden relative"):
                 ctrl.refs.dosemap_plot = ui.plotly({}).classes("w-full").style("height:700px")
@@ -696,6 +727,8 @@ def _build_multi_exam_section(ctrl: ResultsTabController) -> None:
             ctrl.refs.agg_rotational_badge.visible = False
             ctrl.refs.agg_tube_label = ui.label("").classes("text-sm text-grey-7 whitespace-pre-line")
             ctrl.refs.agg_tube_label.visible = False
+            ctrl.refs.agg_equipment_profile_label = ui.label("").classes("text-sm text-grey-7 whitespace-pre-line")
+            ctrl.refs.agg_equipment_profile_label.visible = False
 
         ctrl.refs.run_warnings_label = ui.label("").classes("text-sm text-orange-400 whitespace-pre-wrap w-full")
         ctrl.refs.run_warnings_label.set_visibility(False)

@@ -216,6 +216,8 @@ class ExamSection:
     rotational_handling: dict[str, Any] | None = None
     # Per-tube rows (tube id, events, kerma, applied CF, partial-map peak).
     tube_summary: list[dict[str, Any]] | None = None
+    # Custom equipment-profile match record (additive; None when not used).
+    equipment_profile_match: dict[str, Any] | None = None
 
 
 @dataclass

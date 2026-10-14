@@ -59,7 +59,13 @@ def resolve_calculation_result(source: ExportSource) -> _Resolved:
     """
     if source.multi_exam_result is not None:
         result = source.multi_exam_result
-        views = [view_from_output(er.output) for er in result.exams]
+        views: list[ExamView] = []
+        for er in result.exams:
+            view = view_from_output(er.output)
+            wrapper_match = getattr(er, "equipment_profile_match", None)
+            if wrapper_match is not None:
+                view.equipment_profile_match = wrapper_match
+            views.append(view)
         exam_ids = [er.exam_id for er in result.exams]
         return _Resolved(
             is_multi_exam=True,
@@ -128,6 +134,7 @@ def _build_exam_section(view: ExamView, exam_src, exam_id: str) -> ExamSection:
         warnings=(list(exam_src.extra_warnings) if exam_src else []),
         rotational_handling=view.rotational_handling,
         tube_summary=view.tube_summary,
+        equipment_profile_match=view.equipment_profile_match,
     )
 
 

@@ -3,6 +3,11 @@
 Implementation history for the active [execution plan](CUSTOM_EQUIPMENT_PROFILES_EXECUTION.md).
 Scientific requirements and phase acceptance gates remain in that plan and its linked contracts.
 
+- 2026-10-14 — **Phase 2 review surfaces slice.** Shared value-free formatters
+  (`equipment_profile_display.py`); Calculate pre-calc and Results post-calc GUI
+  lines from captures/output; rich export optional per-exam match table (schema v3
+  additive). Phase 2 exit criteria still open (run-state migration items, full
+  cross-surface pinning tests, Phase 3 activation).
 - 2026-10-13 — **Run-state v2 migration slice (atomic).** Always-v2 writer
   (null equipment when captureless, maker/model default-safe); strict v1
   reader (count gate preserved, retention warnings, reserved-key warning,

@@ -471,3 +471,10 @@ def tube_summary_table(summary: list[dict[str, Any]] | None) -> list[list[str]]:
 def tube_blocks(payload: Any) -> list[tuple[str | None, list[dict[str, Any]] | None]]:
     """``(exam label or None, summary)`` per exam of an export payload (label only for multi-exam)."""
     return [(e.exam_id if payload.is_multi_exam else None, e.tube_summary) for e in payload.exams]
+
+
+def equipment_profile_blocks(payload: Any) -> list[tuple[str | None, dict[str, Any] | None]]:
+    """``(exam label or None, match)`` per exam (label only for multi-exam)."""
+    return [
+        (e.exam_id if payload.is_multi_exam else None, e.equipment_profile_match) for e in payload.exams
+    ]

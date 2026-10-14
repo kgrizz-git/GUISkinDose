@@ -21,6 +21,11 @@ That keeps SemVer and contributor history organized.
 
 ### Added
 
+- **Equipment profile review surfaces (Phase 2)** (2026-10-14) — Calculate and
+  Results show custom equipment-profile complete/partial match notices from staged
+  captures or calculation output; HTML/XLSX/DOCX/PDF rich reports add an optional
+  per-exam equipment-profile match table (export schema version 3 unchanged).
+
 - **Run-configuration equipment captures (experimental)** (2026-10-13) —
   saved configurations always use schema version 2 with one equipment entry
   per exam (`null` or a captured coordinate authority); scanner maker/model
