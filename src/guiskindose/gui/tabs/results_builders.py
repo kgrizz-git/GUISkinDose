@@ -34,6 +34,29 @@ _METRIC_ROW_CLASSES = "w-full gap-6"
 _METRIC_CARD_CLASSES = "modern-card grow q-pa-lg text-center"
 _MUTED_CAPTION_CLASSES = "text-caption text-grey-6"
 _EXAM_METRIC_LABEL_CLASSES = "text-[10px] text-grey-5 font-bold tracking-widest uppercase"
+_SECONDARY_DETAIL_LABEL_CLASSES = "text-sm text-grey-7 whitespace-pre-line"
+
+
+def _aggregate_rotational_handling_counts(res: Any) -> tuple[int, int, int]:
+    """Return (enveloped, static, disclosed_total) across multi-exam rotational rows."""
+    from guiskindose.rotational_envelope import is_disclosed_row
+
+    enveloped = 0
+    static = 0
+    total = 0
+    for exam in getattr(res, "exams", []) or []:
+        handling = getattr(getattr(exam, "output", None), "rotational_handling", None)
+        if not isinstance(handling, dict):
+            continue
+        for row in handling.get("rows", []):
+            if not is_disclosed_row(row):
+                continue
+            total += 1
+            if row.get("effective_handling") == "coverage":
+                enveloped += 1
+            elif row.get("effective_handling") == "static":
+                static += 1
+    return enveloped, static, total
 
 
 def multi_exam_results_ui_stale(last_run_id: int | None, calc_run_id: int) -> bool:
@@ -237,23 +260,7 @@ class ResultsTabController:
         never bare detection counts: an explicitly static run shows no
         envelope. Contradictory rows are disclosed rows too.
         """
-        from guiskindose.rotational_envelope import is_disclosed_row
-
-        enveloped = 0
-        static = 0
-        total = 0
-        for exam in getattr(res, "exams", []) or []:
-            handling = getattr(getattr(exam, "output", None), "rotational_handling", None)
-            if not isinstance(handling, dict):
-                continue
-            for row in handling.get("rows", []):
-                if not is_disclosed_row(row):
-                    continue
-                total += 1
-                if row.get("effective_handling") == "coverage":
-                    enveloped += 1
-                elif row.get("effective_handling") == "static":
-                    static += 1
+        enveloped, static, total = _aggregate_rotational_handling_counts(res)
         if enveloped + static <= 0:
             self.refs.agg_rotational_badge.set_text("")
             self.refs.agg_rotational_badge.visible = False
@@ -679,9 +686,9 @@ def _build_single_exam_section(ctrl: ResultsTabController) -> None:
         with ui.row().classes(_METRIC_ROW_CLASSES):
             ctrl.refs.rotational_badge = ui.label("").classes("text-sm text-grey-7")
             ctrl.refs.rotational_badge.visible = False
-        ctrl.refs.tube_label = ui.label("").classes("text-sm text-grey-7 whitespace-pre-line")
+        ctrl.refs.tube_label = ui.label("").classes(_SECONDARY_DETAIL_LABEL_CLASSES)
         ctrl.refs.tube_label.visible = False
-        ctrl.refs.equipment_profile_label = ui.label("").classes("text-sm text-grey-7 whitespace-pre-line")
+        ctrl.refs.equipment_profile_label = ui.label("").classes(_SECONDARY_DETAIL_LABEL_CLASSES)
         ctrl.refs.equipment_profile_label.visible = False
         with ui.row().classes(_METRIC_ROW_CLASSES):
             with ui.card().classes("grow modern-card p-0 overflow-hidden relative"):
@@ -725,9 +732,9 @@ def _build_multi_exam_section(ctrl: ResultsTabController) -> None:
             ctrl.refs.agg_totals_metric = ui.label("").classes("text-sm text-grey-4")
             ctrl.refs.agg_rotational_badge = ui.label("").classes("text-sm text-grey-7")
             ctrl.refs.agg_rotational_badge.visible = False
-            ctrl.refs.agg_tube_label = ui.label("").classes("text-sm text-grey-7 whitespace-pre-line")
+            ctrl.refs.agg_tube_label = ui.label("").classes(_SECONDARY_DETAIL_LABEL_CLASSES)
             ctrl.refs.agg_tube_label.visible = False
-            ctrl.refs.agg_equipment_profile_label = ui.label("").classes("text-sm text-grey-7 whitespace-pre-line")
+            ctrl.refs.agg_equipment_profile_label = ui.label("").classes(_SECONDARY_DETAIL_LABEL_CLASSES)
             ctrl.refs.agg_equipment_profile_label.visible = False
 
         ctrl.refs.run_warnings_label = ui.label("").classes("text-sm text-orange-400 whitespace-pre-wrap w-full")

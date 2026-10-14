@@ -101,8 +101,11 @@ value. Prefer removing or replacing data over adding an allowlist entry.
 The `sensitive-commit-message` local `commit-msg` hook applies the same value-free text rules to the message before a
 commit is created. Commit messages do not use the file-path allowlist: remove sensitive wording instead of trying to
 exempt it. The only exception is Git identity trailers (`Signed-off-by`, `Co-authored-by`, and similar) whose address
-is a known GitHub automation or noreply identity (Dependabot's GitHub support address, GitHub's `noreply.github.com`
-address, or any `users.noreply.github.com` noreply). Those trailers are ignored for `EMAIL_ADDRESS` in both the local
+is a known GitHub automation or vendor agent noreply identity (Dependabot's GitHub support address, GitHub's
+`noreply.github.com` address, any `users.noreply.github.com` noreply, and the allowlist in
+[`git_identity_trailers.py`](../scripts/git_identity_trailers.py) for common AI coding agents such as Anthropic,
+Cursor, OpenAI Codex, Qwen Coder, and Kilo Cloud Gastown agent addresses). Those trailers are ignored for
+`EMAIL_ADDRESS` in both the local
 commit-msg hook and the CI `check_ci_metadata.py` push-commit scan so Dependabot and GitHub noreply co-authors do not
 fail `main` privacy gates. Institutional or personal addresses in the same trailers still fail. This hook cannot change
 existing public history; use the [privacy incident response and history-audit runbook](PRIVACY_INCIDENT_RESPONSE.md)

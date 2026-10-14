@@ -1,12 +1,31 @@
 # Custom Equipment Profiles — Execution Plan
 
-Status: **Active — coordinate foundation and initial API slices implemented; phase acceptance and later features remain open**
+Status: **In progress — coordinate inputs, API/CLI/settings wiring, GUI sessions, run-state v2, and review surfaces implemented; full phase acceptance and later features remain open**
 Design authority: [CUSTOM_EQUIPMENT_PROFILES_SPEC.md](CUSTOM_EQUIPMENT_PROFILES_SPEC.md) (reviewed 2026-10-10)
 Contract lock reference: [EQUIPMENT_PROFILE_SCHEMA.md](../EQUIPMENT_PROFILE_SCHEMA.md) (common + coordinate domains)
-Created: 2026-10-09 · plan updated 2026-10-10
+Created: 2026-10-09 · plan updated 2026-10-14
 Parent roadmap: [CORRECTION_DATA_AND_SUPPORT_TRANSMISSION_PLAN.md](CORRECTION_DATA_AND_SUPPORT_TRANSMISSION_PLAN.md)
 Delivery: implement each slice on feature branches after its applicable Phase 0 locks; no direct-to-`main` work. Keep calculation,
 GUI, and persistence slices independently reviewable, but do not split any atomicity or audit contract named below.
+
+## Current implementation status (2026-10-14)
+
+- **Implemented:** canonical JSON/CSV/TSV/XLSX coordinate ingestion, validation/hashing/indexes,
+  revision store and immutable sessions; coordinate application through Python API, CLI, and settings JSON;
+  captured replay and GUI session/loader/calculation ownership; run-state v2 writer and v1 compatibility reader;
+  Calculate/Results review lines and additive rich-export per-exam match tables.
+- **Review follow-ups:** PR [#156](https://github.com/kgrizz-git/GUISkinDose/pull/156) refactors normalization,
+  receipt selection, and rotational summaries; hardens Sonar API diagnostics and documents verification gates.
+  Its follow-up commit `22002f4` passed the full local non-GUI/GUI suites, privacy scans, and Sonar quality gate.
+  The PR is submitted and unmerged; implementation does not imply release or completed phase acceptance.
+- **Still open:** full Phase 2 cross-surface acceptance, remaining legacy-normalization migration and owned
+  raw-replay transaction/pre-load multi-study handling; Phase 3 aliases/wildcards and atomic post-load activation;
+  Phase 4 transmission; Phase 5 GUI authoring/persistence; Phase 6 packaging/release proof.
+
+Detailed dated evidence is in [the progress history](CUSTOM_EQUIPMENT_PROFILES_PROGRESS.md).
+Earlier descriptions of core preparation describe the delivery stage at that time; the summary above and
+dated progress entries record subsequent wiring. Composite phase tasks stay open until all their acceptance
+requirements are met.
 
 ## Objective
 
@@ -109,17 +128,19 @@ Work:
       station/serial retain `include_identifiers` for per-event output and never enter logs; notes and profile paths are
       omitted by default. *(Contract locked 2026-10-11 in
       [EQUIPMENT_PROFILE_RUNSTATE_EXPORT_CONTRACT.md](../EQUIPMENT_PROFILE_RUNSTATE_EXPORT_CONTRACT.md) §§3–4, 8–9.
-      Implementation — including replacing the current manufacturer/model gating at
-      `src/guiskindose/gui/run_state.py:155-178` — remains open.)*
+      Run-state v2 now retains default-safe manufacturer/model fields; remaining rich-report v4 and
+      transmission work stays open.)*
 - [x] Lock run-state/rich-export schema bumps and old-profile compatibility reader (decision 18).
       *(Contract locked 2026-10-11 in [EQUIPMENT_PROFILE_RUNSTATE_EXPORT_CONTRACT.md](../EQUIPMENT_PROFILE_RUNSTATE_EXPORT_CONTRACT.md)
       §§2–3, 5–6: run-state 1→2, rich-report 3→4, dict/JSON export stays 3 while additive, v1 readers retained,
-      self-contained reproducibility without reopening stores/files. Emission and application remain open.)*
+      self-contained reproducibility without reopening stores/files. Run-state v2 emission and captured
+      replay application are implemented; remaining migration and rich-report v4 acceptance stay open.)*
 - [ ] Define the exact pre-calculation, Calculate, Results, and export representations for field inheritance,
       transmission partial coverage, active/unused profiles, and structured immutable match records (decision 20).
       *(Contract locked 2026-10-11 in [EQUIPMENT_PROFILE_RUNSTATE_EXPORT_CONTRACT.md](../EQUIPMENT_PROFILE_RUNSTATE_EXPORT_CONTRACT.md)
-      §7: coordinate API shape implemented; coordinate capture contract locked; GUI surfaces, rich-report v4,
-      and run-state v2 implementation remain open. Transmission representations remain unlocked until Phase 4.)*
+      §7: coordinate API shape, capture/run-state v2, and Calculate/Results review surfaces implemented;
+      additive rich-report v3 match tables delivered. Rich-report v4 and full cross-surface acceptance stay open.
+      Transmission representations remain unlocked until Phase 4.)*
 
 ### Resolution rules agreed 2026-10-10
 
@@ -157,8 +178,8 @@ fail closed in the coordinate-only slice. Do not mark incomplete Phase 0 items s
 publishes the implementation field model, tabular column set, types/enums/bounds, blank-cell semantics, canonical
 serialization and hash rules, conflict rules, match-record shapes, and error codes for the common and coordinate
 boundary, so the Phase 1 core package and the Phase 2 coordinate slice can proceed. This is **not** full Phase 0
-sign-off. Still outstanding for later slices: run-state and
-rich-export schema version locks and backward readers, XLSX fixtures and their approved-asset inventory
+sign-off. Run-state/rich-export version contracts are locked and the run-state v1 compatibility reader is
+implemented. Still outstanding for later slices: rich-report v4 implementation, XLSX fixtures and their approved-asset inventory
 evidence, transmission eligibility/evidence/grid fixtures, `MANIFEST.in` packaging inclusion, and the
 invalid-example fixture set with each locked error code.
 

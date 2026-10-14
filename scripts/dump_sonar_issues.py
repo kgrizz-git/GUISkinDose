@@ -15,9 +15,10 @@ count and summary paths are refreshed in place without touching
 ``last_scan_commit``. Dumps older than 30 days are pruned, always keeping the
 5 most recent timestamps.
 
-Stdlib-only. The token is read from ``SONAR_TOKEN`` (an exported value wins;
-otherwise the repo-root ``.env`` is parsed, never sourced) and is never
-printed or written anywhere. Non-200 responses abort without touching state.
+Stdlib-only. The token is read from ``SONAR_TOKEN`` or ``SONAR_CLOUD_TOKEN`` (an
+exported value wins; otherwise the repo-root ``.env`` is parsed, never sourced)
+and is never printed or written anywhere. Non-200 responses abort without
+touching state.
 """
 
 from __future__ import annotations
@@ -82,7 +83,7 @@ def repo_root() -> Path:
 
 
 def load_token_from_dotenv(root: Path) -> str | None:
-    """Parse SONAR_TOKEN out of the repo-local .env without sourcing it."""
+    """Parse Sonar tokens out of the repo-local .env without sourcing it."""
     env_file = root / ".env"
     if not env_file.is_file():
         return None
@@ -90,22 +91,58 @@ def load_token_from_dotenv(root: Path) -> str | None:
         text = env_file.read_text(encoding="utf-8")
     except (OSError, UnicodeDecodeError):
         return None
+    # Later assignments win for duplicate keys (same as typical shell sourcing).
+    found: dict[str, str] = {}
     for raw_line in text.splitlines():
         line = raw_line.strip()
         if not line or line.startswith("#") or "=" not in line:
             continue
         key, value = line.split("=", 1)
-        if key.strip() == "SONAR_TOKEN":
+        name = key.strip()
+        if name in {"SONAR_TOKEN", "SONAR_CLOUD_TOKEN"}:
             cleaned = clean_env_value(value)
             if cleaned:
-                return cleaned
-    return None
+                found[name] = cleaned
+    return found.get("SONAR_TOKEN") or found.get("SONAR_CLOUD_TOKEN")
+
+
+def load_cloud_token_from_dotenv(root: Path) -> str | None:
+    """Parse SONAR_CLOUD_TOKEN, else SONAR_TOKEN, from repo-local ``.env``."""
+    env_file = root / ".env"
+    if not env_file.is_file():
+        return None
+    try:
+        text = env_file.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return None
+    found: dict[str, str] = {}
+    for raw_line in text.splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        name = key.strip()
+        if name in {"SONAR_CLOUD_TOKEN", "SONAR_TOKEN"}:
+            cleaned = clean_env_value(value)
+            if cleaned:
+                found[name] = cleaned
+    return found.get("SONAR_CLOUD_TOKEN") or found.get("SONAR_TOKEN")
+
+
+def resolve_cloud_token(root: Path) -> str | None:
+    """Token for SonarCloud API calls (cloud token wins over loopback ``SONAR_TOKEN``)."""
+    for env_key in ("SONAR_CLOUD_TOKEN", "SONAR_TOKEN"):
+        exported = os.environ.get(env_key)
+        if exported and exported.strip():
+            return exported.strip()
+    return load_cloud_token_from_dotenv(root)
 
 
 def resolve_token(root: Path) -> str | None:
-    exported = os.environ.get("SONAR_TOKEN")
-    if exported and exported.strip():
-        return exported.strip()
+    for env_key in ("SONAR_TOKEN", "SONAR_CLOUD_TOKEN"):
+        exported = os.environ.get(env_key)
+        if exported and exported.strip():
+            return exported.strip()
     return load_token_from_dotenv(root)
 
 
@@ -178,7 +215,7 @@ def fetch_issues_page(host_url: str, token: str, component: str, page: int, page
     if not isinstance(payload, dict):
         raise RuntimeError("issue search returned a non-object response; state untouched")
     if payload.get("errors"):
-        raise RuntimeError(f"issue search returned errors: {payload['errors']}")
+        raise RuntimeError("issue search returned API errors; state untouched")
     if not isinstance(payload.get("issues"), list):
         raise RuntimeError("issue search response has no issues array; state untouched")
     _validate_issues(payload["issues"])
@@ -372,7 +409,11 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     token = resolve_token(root)
     if not token:
-        print("ERROR: SONAR_TOKEN is not set; export it or add it to repo-root .env.", file=sys.stderr)
+        print(
+            "ERROR: Sonar token missing; export SONAR_TOKEN or SONAR_CLOUD_TOKEN "
+            "(SONAR_TOKEN wins when both are set) or add one to repo-root .env.",
+            file=sys.stderr,
+        )
         return 2
     if args.page_size < 1 or args.cap < 1:
         print("ERROR: --page-size and --cap must be positive integers.", file=sys.stderr)
