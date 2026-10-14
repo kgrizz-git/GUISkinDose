@@ -30,9 +30,12 @@ a real Philips DoseTrack export.
 
 from __future__ import annotations
 
+from typing import Any
+
 import pandas as pd
 
 from guiskindose.constants import CID_10003_MEANING
+from guiskindose.equipment_profiles.capture import CapturedCoordinates
 from guiskindose.input_adapters.base import (
     AdapterContext,
     coerce_numeric_columns,
@@ -227,28 +230,81 @@ def _parse_philips_filter(val: object) -> tuple[float, float]:
         return float("nan"), float("nan")
 
 
+def _is_blank_equipment_name(value: object) -> bool:
+    """True for missing equipment names: None, NaN, or blank/whitespace text."""
+    if value is None:
+        return True
+    if isinstance(value, str):
+        return not value.strip()
+    candidate: Any = value
+    try:
+        return bool(pd.isna(candidate))
+    except (TypeError, ValueError):
+        return False
+
+
+def _forward_fill_equipment_names(raw_names: list[object]) -> list[object]:
+    """Repeat the previous row's equipment for blank cells (hierarchical exports).
+
+    pandas ffill only fills NaN, so blank text is forwarded here; leading
+    blanks stay missing. This never masks a real mix: distinct names still
+    reach the guard as distinct pairs.
+    """
+    filled: list[object] = []
+    last: object = None
+    for name in raw_names:
+        if _is_blank_equipment_name(name):
+            filled.append(last)
+        else:
+            last = name
+            filled.append(name)
+    return filled
+
+
+def _map_equipment_name(name: object) -> tuple[str | None, str | None, bool]:
+    """Map one equipment name to ``(maker, model, unknown)``; blanks stay missing."""
+    if _is_blank_equipment_name(name):
+        return None, None, False
+    model_name = str(name).strip()
+    maker = MODEL2MANUF.get(model_name)
+    if maker is None:
+        return model_name, model_name, True
+    return maker, model_name, False
+
+
 def _infer_manufacturer_from_equipment(data_df: pd.DataFrame, warnings: list[str]) -> pd.DataFrame:
-    """Infer Manufacturer/Model/StationName from DoseTrack Equipment Name."""
+    """Map each row's DoseTrack Equipment Name to Manufacturer/Model/StationName.
+
+    Per-row, before anything is collapsed: the model is the row's exact
+    equipment-name spelling and the maker follows the established
+    ``MODEL2MANUF`` rules (unknown names fall back to the equipment name
+    itself, blank names stay missing). A whole-column overwrite here would
+    destroy per-row identity before the Phase 1 guard can see a mix, so the
+    mapping is strictly row-wise; mixed frames fail closed downstream in
+    ``rdsr_normalizer``. Diagnostics are count-only — raw equipment names
+    never enter warnings.
+    """
     if "_dt_equipment_name" in data_df.columns:
-        model_names = data_df["_dt_equipment_name"].dropna().unique()
-        if len(model_names) == 0:
+        filled = _forward_fill_equipment_names(data_df["_dt_equipment_name"].tolist())
+        if all(_is_blank_equipment_name(name) for name in filled):
             raise ValueError("DoseTrack 'Equipment Name' column is empty; cannot infer manufacturer.")
-        if len(model_names) > 1:
+        makers: list[str | None] = []
+        models: list[str | None] = []
+        unknown = 0
+        for name in filled:
+            maker, model_name, is_unknown = _map_equipment_name(name)
+            makers.append(maker)
+            models.append(model_name)
+            if is_unknown:
+                unknown += 1
+        if unknown:
             warnings.append(
-                f"DoseTrack export contains multiple equipment names: {list(model_names)}. "
-                "Using the first for Manufacturer inference; rows may belong to different models."
+                f"DoseTrack adapter: {unknown} event(s) carry an equipment name outside the known "
+                f"list ({len(MODEL2MANUF)} known); their name is used as the manufacturer and "
+                "normalization may fall back. Verify the device before clinical use."
             )
-        model_name = str(model_names[0])
-        manufacturer = MODEL2MANUF.get(model_name)
-        if manufacturer is None:
-            warnings.append(
-                f"DoseTrack adapter: unknown equipment name {model_name!r}. "
-                f"Known models: {sorted(MODEL2MANUF.keys())}. "
-                "Manufacturer will be set to the model name; rdsr_normalizer may fail."
-            )
-            manufacturer = model_name
-        data_df["Manufacturer"] = manufacturer
-        data_df["ManufacturerModelName"] = model_name
+        data_df["Manufacturer"] = makers
+        data_df["ManufacturerModelName"] = models
         # Persist Equipment Name as StationName before drop so kerma-meter CF
         # can key on the tabular unit identity (often the model — see §6.1).
         data_df["StationName"] = data_df["_dt_equipment_name"]
@@ -365,12 +421,15 @@ def adapt(
     loaded: _RawLoad,
     original_filename: str,
     settings: PyskindoseSettings,
+    *,
+    equipment_capture_context: CapturedCoordinates | None = None,
 ) -> InputAdapterResult:
     """Convert a DoseTrack export to a normalized InputAdapterResult.
 
     Raises ValueError on blocking errors: missing Equipment Name (can't infer
     manufacturer), missing required columns, duplicate column mappings, or
     rdsr_normalizer() failure.
+    A validated capture replays offline through the shared pipeline instead.
     """
     return run_normalizer_pipeline(
         loaded,
@@ -381,4 +440,5 @@ def adapt(
         transform=_transform,
         original_filename=original_filename,
         settings=settings,
+        equipment_capture_context=equipment_capture_context,
     )

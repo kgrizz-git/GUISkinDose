@@ -18,11 +18,14 @@ if this page and the adapters disagree, trust the adapters and update this file.
 These **23** names are what `rdsr_normalizer()` produces and what the `normalized` tabular schema
 requires (`NORMALIZED_COLUMN_NAMES` / `NORMALIZED_REQUIRED_COLUMNS` in
 `input_adapters/normalized.py`). Case in the DataFrame matches the “Proper” column.
+`rdsr_normalizer()` additionally emits a canonical `manufacturer` column (see below), so
+raw-normalized frames carry **24** columns; the `normalized` schema accepts `manufacturer` as an
+optional 24th column and materializes it as all-`None` with a count-only legacy warning when absent.
 
 | Proper | Meaning (short) | Typical unit in contract |
 |--------|-----------------|---------------------------|
-| `model` | Equipment model string | — |
-| `DSD` | Source → detector distance | cm |
+| `manufacturer` | Equipment maker string, exact per-event spelling (optional on `normalized` input; always emitted by `rdsr_normalizer()`) | — |
+| `model` | Equipment model string | — || `DSD` | Source → detector distance | cm |
 | `DSI` | Source → isocenter distance | cm |
 | `DID` | Isocenter → detector distance | cm |
 | `DSIRP` | Source → IRP distance | cm |
@@ -41,11 +44,46 @@ requires (`NORMALIZED_COLUMN_NAMES` / `NORMALIZED_REQUIRED_COLUMNS` in
 ### Optional identity columns (kerma-meter CF)
 
 Not required for dose geometry, but used when kerma-meter correction is enabled:
-
 | Proper | Source examples |
 |--------|-----------------|
 | `station_name` | DICOM `StationName`; tabular equipment/room labels when preserved |
 | `device_serial` | DICOM `DeviceSerialNumber` |
+
+### Equipment identity contract (Phase 1, custom profiles)
+
+Coordinate identity is canonical manufacturer/model for one homogeneous exam: one exam carries
+exactly one canonical pair, both axes through the existing key normalizers (no vendor aliases).
+`rdsr_normalizer()` always emits `manufacturer` with the exact per-event maker spelling (`None`
+when the source carries none — never the strings `"none"`/`"nan"`). The `normalized` schema
+recognizes an optional `manufacturer` column (case-insensitive); a missing or entirely blank
+column loads as all-`None` with one count-only warning giving the event count. Anything but one
+canonical pair fails closed with a value-free error (pair count, plus the count of rows without
+maker identity when nonzero — never maker/model text): distinct canonical makers, same-maker
+model variation, and known+unknown mixes are all rejected, so no row silently borrows another
+row's identity. Key spelling variants (case, punctuation, spacing) collapse to one pair; distinct
+canonical keys (e.g. `Siemens` vs `Siemens Healthcare`) are mixed. An all-unknown frame stays
+compatible (legacy model-only path). Study-id groups are checked individually, so pairs may differ
+*across* exams, never *within* one. DoseTrack maps each row's Equipment Name through the
+established `MODEL2MANUF` rules (blank continuations repeat the row above; leading blanks stay
+missing) and is subject to the same guard. Validation and classification live in
+`src/guiskindose/exam_identity.py`. No custom coordinates are applied: this is identity only.
+
+### Custom equipment sessions (API slice)
+
+A frozen `EquipmentProfileSession` (built with `assemble_session()` from profile files, in-memory
+documents, and/or store snapshots) can be bound on settings (`PyskindoseSettings(...,
+equipment_profile_session=...)` or attribute assignment; never serialized into configs). Raw
+inputs (DICOM plus raw-shaped tabular) then resolve the exam identity against it during
+normalization and apply all 15 effective leaves before geometry calculation; dict/JSON results
+carry `equipment_profile_match` (match record, complete/partial notice, active-set hash, session
+provenance). Pre-transformed inputs — the `normalized` schema, preparsed `.json` frames, or a
+bare DataFrame via `analyze_data()` — refuse closed with a nonempty session, since there are no
+raw fields to re-derive from. Bridging logic lives in `src/guiskindose/equipment_resolution.py`;
+per-exam records travel on `InputAdapterResult`/`ExamResult` and `PySkinDoseOutput`, never on
+`NormalizationSettings`. Analysis checks a typed application receipt against the active session,
+canonical identity, retained event count, normalized numeric geometry, and effective settings.
+Receipts are published only after normalization succeeds; each exam restores its own settings.
+Well-typed records and notices must equal a fresh resolution of the bound session before output.
 
 ---
 
@@ -70,6 +108,12 @@ Minimum set the `generic_rdsr_like` adapter insists on before calling `rdsr_norm
 `TableLongitudinalPosition_mm`, `TableLateralPosition_mm`, `TableHeightPosition_mm`,
 `XRayFilterMaterial`, `XRayFilterThicknessMinimum_mm`, `XRayFilterThicknessMaximum_mm`,
 `PositionerPrimaryAngle_deg`, `PositionerSecondaryAngle_deg`, `KVP_kV`, `DoseRP_Gy`.
+
+Optional collimator shutters (millimetres, exact parser spellings) enable
+`field_size_mode: "ASD"` on raw tabular input. These columns are optional for
+CFA and required for ASD; absent or blank edges fail closed under ASD: `LeftShutter_mm`,
+`RightShutter_mm`, `TopShutter_mm`, `BottomShutter_mm` (see
+`generic_rdsr.py` patterns).
 
 Vendor adapters accept many header aliases; use `--input-preview-only` or the GUI import
 preview to see the resolved map and any missing required columns for a given file.

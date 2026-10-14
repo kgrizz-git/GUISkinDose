@@ -4,7 +4,13 @@
 
 **Execution order:** **Part I (commit)** → **Part II (Phase 0)** → **Part III (Phase 1)** → **Part IV-a (patient math)** → **Part IV-b (preview UX)** → **Part V (cross-cutting)**. Grep **Appendix A (T-items)** while coding. **Checklist** and **Appendix B (testing)** are exit gates. Part VI is optional polish.
 
-**Plan status:** **Completed / archived 2026-07-30.** Parts **I–V shipped** (2026-06-24). Manual multi-exam GUI smoke remains in `TO_DO.md`. Latest reviews: [Round 7](../../assessments/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN_ASSESSMENT_20260624T162147.md) · [Round 8](../../assessments/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN_ASSESSMENT_20260624T203736.md).
+**Plan status:** **Completed / archived 2026-07-30.** Parts **I–V shipped** (2026-06-24). Browser GUI
+smoke **done 2026-10-07** (headless Playwright): 3 bundled DICOMs uploaded together (3 exams, 70
+events); a per-exam offset on Exam 3 only (lon 0 → 25 cm) moved Exam 3's PSD 14.08 → 10.46 mGy while
+Exam 1 (1.09) and Exam 2 (0.00) were unchanged and the aggregate followed (14.08 → 10.46). Note: the
+bundled Philips example misses the phantom at default offsets (all events miss, PSD 0.00 with an
+all-miss alert). The native (pywebview) and Windows passes remain in `TO_DO.md` Manual Smokes.
+Latest reviews: [Round 7](../../assessments/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN_ASSESSMENT_20260624T162147.md) · [Round 8](../../assessments/MULTI_EXAM_GEOMETRY_OFFSETS_PLAN_ASSESSMENT_20260624T203736.md).
 
 **Terminology:** In this plan, **scrub** = slider tick path (each value change). **Debounced render** = `_schedule_debounced_render` trigger; **live preview** = `live_preview_allowed` gate + render. **Composite** = all exams' **events** in the Geometry preview (not the multi-exam dose map).
 

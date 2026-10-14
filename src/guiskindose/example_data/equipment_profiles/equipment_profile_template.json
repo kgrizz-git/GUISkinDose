@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "profiles": [
+    {
+      "profile_id": "",
+      "manufacturer": "",
+      "models": [""],
+      "manufacturer_aliases": [],
+      "model_aliases": [],
+      "provenance": {
+        "source": "",
+        "notes": ""
+      },
+      "coordinates": {},
+      "transmission": []
+    }
+  ]
+}

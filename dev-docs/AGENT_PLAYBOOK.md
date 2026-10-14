@@ -42,6 +42,11 @@ Do not add model-family files such as `KIMI.md` unless that tool has a documente
   - When completing a task, **remove it entirely** from `dev-docs/TO_DO.md`. Log user-facing changes in `CHANGELOG.md` under the 'Unreleased' section. Log under-the-hood work (like tests, refactoring, or CI/harness updates) in `dev-docs/MAINTENANCE_LOG.md` under the 'Unreleased' section.
   - **Manual Smokes:** If a plan or todo item is completely finished except for a pending manual smoke test, archive the plan (or remove the todo item) and bundle its manual smoke requirement into a consolidated "Manual Smokes" pointer in the **Next Up** section.
 - Archive completed or superseded execution plans under `dev-docs/plans/archive/` and update `dev-docs/index.md`.
+- **Split large branches/PRs.** Once a branch is heading past ~100 touched files (or a PR that a reviewer could not reasonably
+  read in one sitting), stop and split it into multiple PRs with disjoint file ownership: land the foundational slice first
+  (schema/loader/docs), then the behavior slices, each independently green. Oversized PRs are the failure mode that makes
+  review shallow and rollback risky — prefer several small PRs over one unreadable one. Suggested seams for this repo:
+  schema/data → engine → GUI → docs/help, and never split an atomicity, audit, or migration contract across PRs.
 - Keep scratch scripts and temporary outputs in gitignored paths such as `tmp/`, `scripts/scratch_*`, `*.tmp`, or
   `debug_*`, or delete them before finishing.
 

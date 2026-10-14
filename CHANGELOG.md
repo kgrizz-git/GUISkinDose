@@ -19,7 +19,215 @@ That keeps SemVer and contributor history organized.
 
 ## [Unreleased]
 
+### Added
+
+- **Equipment profile review surfaces (Phase 2)** (2026-10-14) — Calculate and
+  Results show custom equipment-profile complete/partial match notices from staged
+  captures or calculation output; HTML/XLSX/DOCX/PDF rich reports add an optional
+  per-exam equipment-profile match table (export schema version 3 unchanged).
+
+- **Run-configuration equipment captures (experimental)** (2026-10-13) —
+  saved configurations always use schema version 2 with one equipment entry
+  per exam (`null` or a captured coordinate authority); scanner maker/model
+  are now stored unconditionally. Loading validates every entry before
+  changing anything: mismatches refuse the whole import, unloaded exams
+  stage entries that later raw loads consume in order, and older documents
+  import as before with a warning when live equipment state exists. Saving
+  is blocked while entries are still staged; re-parsing with staged or
+  confirmed captures is refused. Staged entries validate fully (bounded
+  values, immutable overrides); conflicting provenance refuses rather than
+  silently keeping live authority. Pre-load multi-study restores and the
+  atomic raw-replay transaction stay open.
+
+- **GUI live custom-profile sessions (experimental)** (2026-10-13) — an
+  assembled coordinate session can be bound before any data load
+  (`bind_equipment_session`; binds with loaded exams, preview data, or an
+  in-flight operation refuse closed). DICOM and tabular loads then resolve
+  through the live session and mint one captured-coordinate authority plus a
+  private per-exam baseline snapshot per accepted exam; failed loads publish
+  nothing. Calculation consumes the captures through the existing capture
+  APIs with the live session stripped; edited frames keep their authority
+  and refuse loudly before dose instead of falling back silently. Captures
+  survive result resets. Run-state v2 import/export stays open.
+
+- **Settings-block equipment profiles in Python (experimental)** (2026-10-12) —
+  `PyskindoseSettings` and `initialize_settings` accept an optional `equipment_profiles`
+  block (`files` with `path`/`format`/`sheet`, `store` with `path`/`ids`), assembled
+  during construction with a keyword-only `settings_base_dir` (working directory by
+  default). Block+session conflicts refuse closed; invalid blocks raise value-free
+  errors past the legacy fallback; request paths never serialize.
+
+- **Settings-file equipment profiles on the CLI (experimental)** (2026-10-12) — settings
+  files (and inline JSON/dict configs) accept an optional `equipment_profiles` block
+  (`files` with `path`/`format`/`sheet`, `store` with `path`/`ids`; relative paths resolve
+  against the settings file's directory). CLI flags and the block compose into one candidate
+  assembled once and bound last; invalid blocks fail closed before any exam read; refused
+  in `--mode gui`. Direct constructor wiring stays open.
+
+- **Custom equipment-profile files on the CLI (experimental)** (2026-10-12) — repeatable
+  `--equipment-profile PATH` (JSON, CSV, TSV, XLSX; relative paths resolve against the
+  working directory) assembles one candidate session through the canonical file path and
+  binds it before any exam input is read, with optional global `--equipment-profile-sheet`
+  (sheet name or 0-based index; refused when no XLSX profile file is given) and explicit
+  read-only store selection via `--equipment-profile-store` (never created) plus repeatable
+  `--equipment-profile-id` (current revisions regardless of the enable flag; without IDs,
+  all enabled current records apply). Source,
+  conflict, and capability failures exit non-zero with a value-free error before any exam
+  read; refused in `--mode gui`. Coordinate-only profiles apply; transmission content,
+  wildcards without promotion, and alias maps are rejected by the initial gate. Store
+  management commands, settings-JSON, GUI, and rich-report integration are not part of this slice.
+
+- **Captured multi-file input through the public API (experimental)** (2026-10-12) —
+  `analyze_multiple_input_files()` accepts positional `equipment_capture_contexts=` (one
+  validated `CapturedCoordinates` or `None` per explicit file path — no globs — at most
+  64 files and 10_000 aggregate retained events): every authority and session conflict
+  is validated before any filesystem probe or read, set import options on non-tabular
+  paths fail closed, multi-study splits refuse so one file stays one exam, retained
+  events accumulate against the cap across null frames before the next load, and
+  calculation runs only after all files load privately through the existing multi-exam
+  capture path (isolated per-exam recipes, per-exam null baselines matching individual
+  baseline runs, offsets, matches; null entries stay baseline). Captures verify recipe,
+  geometry, identity, and count — not authenticity or full raw/dose content hashes.
+  Run-state, GUI, CLI, rich reports, transmission, and filter expansion are not part
+  of this slice.
+
+- **Direct capture analysis in `analyze_data` (experimental)** (2026-10-11) — single-exam
+  `analyze_data()` accepts a validated `CapturedCoordinates` via the keyword-only
+  `equipment_capture_context=` parameter and calculates from an already transformed frame with
+  no live session: caller settings are privately cloned, the captured recipe is prepared into
+  the clone, and frame identity/count/geometry plus all 15 leaves are confirmed before anything
+  calculates, with the stored match mapping reported under `equipment_profile_match`. Combining
+  a capture with a bound session or receipt fails closed. Multi-exam, run-state, GUI, CLI, and
+  rich-report integration are not part of this slice.
+
+- **Direct capture analysis in multi-exam runs (experimental)** (2026-10-11) —
+  `analyze_multiple_exams()` accepts positional `equipment_capture_contexts=` (one validated
+  capture or `None` per exam): live sessions and receipts are rejected up front, every provided
+  capture is validated against its own frame with isolated settings before any exam produces
+  output, per-exam offsets and warning downgrades apply on top of each prepared candidate, and
+  each `ExamResult` carries its stored match mapping. No raw replay, run-state, GUI, CLI, rich
+  reports, version bumps, or settings-bound capture fields in this slice.
+
+- **DICOM loader replay from captures (experimental)** (2026-10-11) —
+  `read_and_normalise_rdsr_data()` accepts a validated `CapturedCoordinates` via the
+  keyword-only `equipment_capture_context=` parameter for raw DICOM inputs: the captured
+  recipe is applied to a private settings clone before concept validation, live bundled
+  selection and session resolution are bypassed, and the post-filter frame is confirmed
+  before it is returned. Conflicts, preparsed JSON, and mismatches fail closed; the returned
+  frame feeds `analyze_data(...equipment_capture_context=...)` directly. No tabular replay,
+  run-state, GUI, CLI, rich exports, version bumps, or settings-bound fields in this slice.
+
+- **Raw tabular replay from captures (experimental)** (2026-10-11) —
+  `read_and_normalize_input()` accepts a validated `CapturedCoordinates` via the keyword-only
+  `equipment_capture_context=` parameter for raw `generic_rdsr_like`, `radimetrics`, and
+  `dosetrack` inputs: full pre-load validation, `normalized`-schema refusal, recipe replay
+  through the shared pipeline with bundled selection and session resolution bypassed, and
+  final confirmation after import options with no live receipt attached. Failures are closed
+  `CaptureError` codes that survive adapter wrapping. No main-flow, run-state, GUI, CLI, rich
+  reports, version bumps, settings-bound fields, or transmission in this slice.
+
+- **Optional shutter columns for generic tabular ASD** (2026-10-11) — the `generic_rdsr_like`
+  adapter maps the four canonical collimator-shutter edges (`LeftShutter_mm`,
+  `RightShutter_mm`, `TopShutter_mm`, `BottomShutter_mm`, millimetres) with numeric coercion,
+  so `field_size_mode: "ASD"` custom profiles work on raw tabular input. The columns stay
+  optional everywhere: absent or non-numeric edges fail closed only under ASD, and CFA inputs
+  never need them.
+
+- **Single-file captured input through the public API (experimental)** (2026-10-11) —
+  `analyze_input_file()` and `main()` accept a validated `CapturedCoordinates` via the
+  keyword-only `equipment_capture_context=` parameter for one raw file (DICOM or raw vendor
+  tabular, with schema/sheet/import options carried): conflicts, preparsed JSON, normalized
+  frames, multi-study splits, and plot setup fail closed before any source I/O, and the
+  confirmed frame calculates with the stored match mapping. No aggregation, multi-file, CLI
+  flags, run-state, GUI, rich reports, version bumps, or settings-bound fields in this slice.
+
+- **Custom equipment profiles in Python API results (experimental)** (2026-10-11) — binding a frozen
+  equipment-profile session on settings (`equipment_profile_session=`) applies matching custom
+  coordinates during raw input normalization, with per-exam match records, inheritance notices, and
+  session hashes reported under `equipment_profile_match` in dict/JSON results. Pre-transformed
+  inputs refuse a nonempty session instead of silently skipping it. GUI management, CLI flags, and
+  rich-report integration are not part of this slice.
+
+- **Equipment-profile session assembly (experimental, internal only)** (2026-10-11) — the internal
+  package gains a frozen multi-source session (file snapshots, in-memory documents, store snapshots)
+  with cross-kind conflict checks, capability gating, a compiled index prepared once, and per-exam
+  resolution without recompiling. **Inert like the rest of the package:** nothing reads a session
+  from any feature path, so results, exports, and settings are unchanged.
+
+- **Equipment-profile coordinate resolution core (experimental, internal only)** (2026-10-11) — the
+  internal package gains immutable custom-exact coordinate resolution over compiled indexes (custom
+  exact → bundled exact → bundled wildcard → Default, per-leaf inheritance, complete/partial
+  notices) plus canonical bundled profiles converted from the shipped normalization settings.
+  **Inert like the rest of the package:** nothing reads a resolution from any feature path, so
+  results, exports, and settings are unchanged.
+
+- **Equipment-profile XLSX reader (experimental, internal only)** — bounded workbook parsing
+  now validates archive inflation, actual worksheet coordinates and typed cells before producing
+  the same canonical profiles as JSON/CSV. Application activation remains outside this adapter slice.
+
+- **Equipment-profile CSV/TSV readers (experimental, internal only)** — flat tables now parse
+  into the same bounded, immutable canonical profiles as JSON. Application activation remains
+  outside this adapter slice.
+
+- **Equipment-profile starting files** (2026-10-10) — added synthetic JSON/CSV examples and blank
+  templates with authoring guidance. These describe the planned schema; equipment-profile loading,
+  activation, and GUI downloads are not implemented yet.
+
+- **Equipment-profile core library (experimental, inert)** (2026-10-10) — a new internal package
+  `guiskindose.equipment_profiles` parses and validates the planned equipment-profile JSON and
+  in-memory documents: immutable canonical models, structural validation, canonical serialization
+  and content hashing, duplicate and conflict detection, match-record types, and an initial
+  capability gate. **Nothing is wired to any feature.** No dose, normalization, GUI, CLI, or store
+  path reads this package yet, so results, exports, and settings are unchanged, and there is no way
+  to load or activate a profile from the application. It is scaffolding for the planned custom
+  equipment-profile feature described in
+  `dev-docs/plans/CUSTOM_EQUIPMENT_PROFILES_SPEC.md`.
+
+- **Equipment-profile lookup indexes (experimental, internal only)** (2026-10-11) — the same internal
+  package gains immutable compiled coordinate/transmission indexes: single-compilation lookup by canonical
+  manufacturer/model and model/literal plane, with aliases and wildcards stored and global conflicts
+  detected before publishing. Entries are strictly bounded, structurally re-validated through the existing
+  boundary with claimed hashes verified, and all public reprs are value-free. **Inert like the rest of the
+  package:** nothing reads an index from any feature path, so results, exports, and settings are unchanged.
+
+- **Equipment-profile local store (experimental, internal only)** (2026-10-11) — the same internal package
+  gains a transactional SQLite user profile store (`equipment_profiles.sqlite3` under `~/.guiskindose/`):
+  immutable per-profile revisions with canonical payloads and content hashes, optimistic-concurrency checks,
+  and immutable selected snapshots with a locked revision-set source hash. **Inert like the rest of the
+  package:** nothing reads or writes a store from any feature path, so results, exports, and settings are
+  unchanged.
+
 ### Changed
+
+- **Run-config export with many exams** — saving a run configuration with more than 64 loaded exams
+  and no equipment captures no longer fails the equipment emission path; the equipment section stays
+  ``null`` until at least one exam carries a capture.
+
+- **Equipment-profile store revision retention** — saving a new profile revision when 64 rows are already
+  retained deletes the oldest revision number in the same transaction (never the current pointer) so
+  ``current_revision`` can keep advancing; historical revision numbers may no longer be readable via
+  ``read_revision``.
+
+- Custom negative table-angle and third positioner-angle direction signs now preserve the zero-angle
+  arrays instead of causing a row-length error during normalization.
+
+- **GUI upload examples** — loading a bundled DICOM or tabular example now clears the exam list,
+  abandons staged run-configuration equipment entries (with the same warning as exam removal), and
+  rolls staged entries back if the example load fails.
+
+- **Single-exam staged run-config offsets** — when a staged v2 pending slot is consumed on load
+  for a single-exam session, per-exam geometry flags and patient offsets from
+  `loaded_exam_meta` mirror into the global fields used by single-exam dose calculation
+  (multi-exam already read per-exam meta; ordinary loads without pending still reset globals).
+
+- **Equipment maker identity in normalized data** (2026-10-11) — every normalized event frame now
+  carries a `manufacturer` column with the exact equipment-maker spelling (`None` when the source
+  carries none). The `normalized` tabular schema accepts an optional `manufacturer` column; tables
+  without it load with a warning giving the event count. An exam carrying anything but one
+  maker/model pair is rejected with a value-free error instead of silently using the first pair;
+  the normalized tabular adapter propagates ``RdsrInputError`` so the GUI and CLI surface that
+  message instead of a generic read failure. Dose results, coordinates, and exports are unchanged
+  (maker/model were already default-safe in reports).
 
 - **Upload auto-detect failure hint** (2026-10-09) — when auto-detect cannot choose, the Upload
   message says it needs one source's own column and at least two recognized columns, and that it
@@ -65,6 +273,9 @@ That keeps SemVer and contributor history organized.
   only `k_tab_mode` is written. The Corrections tab now has a mode select, and the info icon describes all three.
 
 ### Fixed
+
+- Experimental equipment captures reject non-string envelope modes and
+  non-string object keys before comparisons, with value-free errors.
 
 - **Raw RDSR-like auto-detect no longer elects on station or serial alone** (2026-10-09) —
   `StationName` and `DeviceSerialNumber` still count toward recall but no longer elect a raw

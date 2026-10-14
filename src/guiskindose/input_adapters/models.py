@@ -2,8 +2,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
 
 import pandas as pd
+
+if TYPE_CHECKING:
+    from guiskindose.equipment_profiles.capture import CapturedCoordinates
+    from guiskindose.equipment_resolution import EquipmentApplicationReceipt
+    from guiskindose.settings.normalization_settings import NormalizationSettings
 
 
 @dataclass
@@ -32,6 +38,17 @@ class InputAdapterResult:
     provenance: InputProvenance
     warnings: list[str] = field(default_factory=list)
     study_id: str | None = field(default=None)
+    equipment_receipt: EquipmentApplicationReceipt | None = field(default=None)
+    # Captured-coordinate authority minted at load on the exam's final frame
+    # (post-filter, post-transform). The value is frozen; loaders set it once
+    # and never clear it, so geometry edited afterwards refuses loudly at
+    # calculation instead of silently falling back to baseline.
+    equipment_capture: CapturedCoordinates | None = field(default=None)
+    # Genuine per-exam normalization snapshot retained at load (the receipt's
+    # proven leaves applied to an isolated copy — never shared last-load
+    # state). Feeds private baselines for capture-less entries in mixed
+    # captured calculation. Excluded from reprs; never serialized.
+    normalization_snapshot: NormalizationSettings | None = field(default=None, repr=False)
 
 
 @dataclass

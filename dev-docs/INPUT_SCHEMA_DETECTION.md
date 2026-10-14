@@ -107,7 +107,7 @@ Eligibility uses the header cells after the same `_normalize_str` collapse as sc
 | `radimetrics` | A cell whose text through `(rf)` is the start of a known Radimetrics column (older `Primary_Angle_(RF)`, newer `Primary Angle (RF) [°]`, including a later unit the fingerprint does not list). `(rf)` on any other wording, such as `Modality (RF)`, does not count. A cell containing `dap (total)` or `reference point dose (total)` also counts. | `Device`, `Equipment`, `kVp kV`, unsuffixed angles, distances, table positions, and a bare `Reference Point Dose` |
 | `dosetrack` | Exact fingerprint names `Equipment Name`, `Plane Code`, or `Tube Voltage Peak (kV)` | `Air Kerma (mGy)`, positioner angles, distances, table positions, `Filter Material` — DICOM-style tables use those labels too |
 | `generic_rdsr_like` | A concatenated parser-dump name such as `ManufacturerModelName` or `DoseRP_Gy`. The same words with a space (`Station Name`) do not match. | `Manufacturer` and `KVP_kV` (Radimetrics also uses `kVp kV`), plus `StationName` and `DeviceSerialNumber`, which count toward the score but do not elect |
-| `normalized` | An internal column such as `K_IRP`, `DSD`, `DSI`, `Tx`, or `acquisition_type_code` (also `acquisition_type_coding_scheme` and `acquisition_type_meaning`) | `model`, `kVp`, `acquisition_type`, `acquisition_plane`, and the optional station/serial names (`station_name`, `stationname`, `device_serial`, `deviceserialnumber`) |
+| `normalized` | An internal column such as `K_IRP`, `DSD`, `DSI`, `Tx`, or `acquisition_type_code` (also `acquisition_type_coding_scheme` and `acquisition_type_meaning`) | `model`, `manufacturer`, `kVp`, `acquisition_type`, `acquisition_plane`, and the optional station/serial names (`station_name`, `stationname`, `device_serial`, `deviceserialnumber`) |
 
 DICOM RDSR (`.dcm`) is not in this table. The loader routes it by suffix to `rdsr_parser` /
 `rdsr_normalizer`. Auto-detect never sees it. A spreadsheet that happens to use DICOM concept
@@ -144,10 +144,13 @@ what the Upload tab's info icon opens, and it is included in the Sphinx user gui
 | `Azurion` | Philips |
 | `Allura Clarity` | Philips |
 
-Any other name warns and is used as the manufacturer string. The same column is copied to the
+Any other name is used as the manufacturer string with a count-only warning (raw names never
+enter diagnostics). The same column is copied to the
 station name, which is the kerma-meter key. DoseTrack has no separate room column. Blank cells
 are forward-filled from the row above, because the export repeats the equipment name only on
-the first row of a group.
+the first row of a group; leading blanks stay missing. Mapping is strictly per-row — a file with
+several equipment identities fails closed downstream (see the identity contract in
+[INPUT_FIELD_REFERENCE.md](INPUT_FIELD_REFERENCE.md)), never silently under the first name.
 
 `Plane Code` uses the CID 10003 map above. A Philips filter cell is split on `;` into
 aluminium and copper (`Al;Cu`). Any other manufacturer copies that single thickness into both

@@ -161,7 +161,7 @@ remain separate commits or PRs if review size or risk warrants it.
 
 ### 3. Custom equipment profiles
 
-[CUSTOM_EQUIPMENT_PROFILES_PLAN.md](CUSTOM_EQUIPMENT_PROFILES_PLAN.md)
+[CUSTOM_EQUIPMENT_PROFILES_SPEC.md](CUSTOM_EQUIPMENT_PROFILES_SPEC.md)
 
 - Reusable manufacturer/model coordinate-origin profiles.
 - Validated custom patient-support transmission data.
