@@ -102,10 +102,36 @@ leave the prior state so the budget is not reset by a red scan). After history r
 blocks until a fresh scan re-anchors the state. Note: the push stage evaluates the checked-out HEAD, not the
 pushed refspecs — pushing another branch from this checkout is judged against HEAD's freshness.
 
-A current scan is the first step, not the end of review. Before pushing, inspect issues introduced since the
-previous scan in SonarQube's New Code view, especially bugs and vulnerabilities, and triage them even if the
-quality gate passed. The pre-push hook prints this reminder when the opt-in gate is enabled; it does not compare
-issue counts or classify findings automatically.
+### Freshness vs quality gate vs triage (do not conflate)
+
+Three separate checks apply when `SONAR_FRESHNESS_GATE=1`:
+
+| Check | What enforces it | Pass condition |
+| --- | --- | --- |
+| **Freshness** | `check_sonar_freshness.py` on commit/push | A successful local scan (`run_sonarqube_local.py` exit 0) re-anchored `tmp/sonar-state.json` within the commit budget |
+| **Quality gate** | `run_sonarqube_local.py` (waits on the server QG) | Server reports gate **OK** (e.g. `new_violations` on new code ≤ 0, coverage thresholds met) |
+| **Triage** | Human / agent policy (`AGENT_PLAYBOOK.md`) | Review **New Code** issues (bugs, vulnerabilities, hotspots) even when the gate is green |
+
+A **failed quality gate** means the scan did **not** succeed: `last_scan_commit` is **not** updated, freshness still
+blocks push, and you must **fix or explicitly get user approval to bypass** — not set `SONAR_FRESHNESS_GATE=0` or
+`--no-verify` to push anyway. After a red gate, read the runner summary or SonarQube **New Code** / **Issues** for
+the exact rule keys and paths (`new_violations` > 0 is the usual blocker on the default gate).
+
+Before pushing (opt-in gate on): (1) run `python scripts/run_sonarqube_local.py --generate-coverage` until exit 0;
+(2) optionally compare timestamped dumps from `dump_sonar_issues.py` (identities, not only totals); (3) triage bugs
+and vulnerabilities in New Code even if counts look unchanged.
+
+The pre-push hook prints a triage reminder when the opt-in gate is enabled; it does **not** compare issue counts or
+run the quality gate for you.
+
+### SonarCloud (main CI, optional local API check)
+
+Protected-`main` CI runs `sonar-scan` when `SONAR_PROTECTED_MAIN_ENABLED=true` and `SONAR_TOKEN` is set in GitHub
+secrets; the job waits on the cloud quality gate. For a **local** cloud check without starting Docker SonarQube, use
+the same project key as `sonar-project.properties`, set `SONAR_HOST_URL=https://sonarcloud.io`, and provide a
+SonarCloud user token via `SONAR_TOKEN` or a repo-local `.env` entry (some setups use `SONAR_CLOUD_TOKEN`; exported
+`SONAR_TOKEN` wins). Never print or commit tokens. `dump_sonar_issues.py --allow-remote` can snapshot cloud issues
+into gitignored `tmp/` when credentials and HTTPS are configured.
 
 `SONAR_TOKEN` is read from the exported environment or the repo-local `.env` by all three helpers
 (exported wins; the file is parsed, never sourced). `SONAR_HOST_URL` comes from the exported environment

@@ -628,18 +628,24 @@ def test_writer_refuses_pending() -> None:
     assert state.equipment_pending is not None
 
 
-def test_emission_bounds_before_comprehension() -> None:
-    """Capture-free exports skip the emission ceiling; captures refuse when over cap."""
+def test_emission_bounds_capture_free_exports_skip_ceiling() -> None:
+    """Capture-free exports skip the emission ceiling."""
     from guiskindose.gui.run_state_equipment import equipment_section_for_document
 
     assert equipment_section_for_document([object()] * 65) is None
     assert equipment_section_for_document([object()] * 64) is None
 
+
+def test_emission_bounds_capture_present_refuses_over_cap() -> None:
+    """Staged captures refuse when over the per-document exam cap."""
+    from guiskindose.gui.run_state_equipment import equipment_section_for_document
+
     class _Exam:
         equipment_capture = object()
 
+    over_cap = [_Exam()] * 65
     with pytest.raises(RunStateError) as excinfo:
-        equipment_section_for_document([_Exam()] * 65)
+        equipment_section_for_document(over_cap)
     assert excinfo.value.code == "invalid_equipment_capture"
 
 

@@ -201,6 +201,7 @@ def _issue(n: int) -> dict:
 
 def test_resolve_token_prefers_export_then_dotenv(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     (tmp_path / ".env").write_text("# c\nOTHER=1\nSONAR_TOKEN=\nSONAR_TOKEN='from-file' # note\n", encoding="utf-8")
+    monkeypatch.delenv("SONAR_CLOUD_TOKEN", raising=False)
     monkeypatch.setenv("SONAR_TOKEN", "  exported  ")
     assert dsi.resolve_token(tmp_path) == "exported"
     monkeypatch.delenv("SONAR_TOKEN")
@@ -210,6 +211,7 @@ def test_resolve_token_prefers_export_then_dotenv(tmp_path: Path, monkeypatch: p
 
 def test_non_utf8_dotenv_yields_no_token(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("SONAR_TOKEN", raising=False)
+    monkeypatch.delenv("SONAR_CLOUD_TOKEN", raising=False)
     (tmp_path / ".env").write_bytes(b"SONAR_TOKEN=\xff\xfe\n")
     assert dsi.resolve_token(tmp_path) is None
 
@@ -361,6 +363,7 @@ def test_main_refusals_and_fetch_failure(
     assert dsi.main(["--host-url", "http://localhost:9000"]) == 2  # no project key
     assert dsi.main(["--host-url", "http://localhost:9000", "--project-key", "k", "--cap", "0"]) == 2
     monkeypatch.delenv("SONAR_TOKEN")
+    monkeypatch.delenv("SONAR_CLOUD_TOKEN", raising=False)
     assert dsi.main(["--host-url", "http://localhost:9000", "--project-key", "k"]) == 2
     monkeypatch.setenv("SONAR_TOKEN", "tok")
     _stub_pages(monkeypatch, [503])

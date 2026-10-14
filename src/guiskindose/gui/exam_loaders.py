@@ -75,6 +75,36 @@ def _raw_extracted_view(result) -> pd.DataFrame | None:
         return raw
 
 
+def _normalized_rdsr_dataframe(
+    data_parsed: Any,
+    *,
+    settings: Any,
+    live: Any,
+    replay_capture: CapturedCoordinates | None,
+) -> tuple[pd.DataFrame, Any, list[Any]]:
+    """Normalize parsed RDSR rows (live session, replay capture, or plain)."""
+    session_receipts: list[Any] = []
+    if replay_capture is not None:
+        replay_base = copy.copy(settings)
+        replay_base.equipment_profile_session = None
+        replay_settings = prepare_replay_settings(context=replay_capture, settings=replay_base)
+        df = rdsr_normalizer(
+            data_parsed,
+            settings=replay_settings,
+            equipment_receipt_out=None,
+            equipment_capture_context=replay_capture,
+        )
+        norm = replay_settings.normalization_settings
+    else:
+        df = rdsr_normalizer(
+            data_parsed,
+            settings=settings,
+            equipment_receipt_out=session_receipts if live is not None else None,
+        )
+        norm = settings.normalization_settings
+    return df, norm, session_receipts
+
+
 def _load_candidate(state: AppState) -> AppState:
     """Bound live authority before copying candidate exam lists."""
     session = state.equipment_profile_session
@@ -131,30 +161,12 @@ def load_rdsr(file_path: Path, state: AppState) -> tuple[bool, str]:
         data_raw = pydicom.dcmread(str(file_path))
         data_parsed = rdsr_parser(data_raw, silence_pydicom_warnings=settings.silence_pydicom_warnings)
 
-        # Normalize (never modifies data_parsed). Replay runs the staged
-        # captured recipe with no live resolution and publishes no receipt;
-        # a bound session publishes one genuine receipt for this exam, and
-        # without either nothing is issued.
-        session_receipts: list = []
-        if replay_capture is not None:
-            replay_base = copy.copy(settings)
-            replay_base.equipment_profile_session = None
-            replay_settings = prepare_replay_settings(context=replay_capture, settings=replay_base)
-            df = rdsr_normalizer(
-                data_parsed,
-                settings=replay_settings,
-                equipment_receipt_out=None,
-                equipment_capture_context=replay_capture,
-            )
-            norm = replay_settings.normalization_settings
-        else:
-            df = rdsr_normalizer(
-                data_parsed,
-                settings=settings,
-                equipment_receipt_out=session_receipts if live is not None else None,
-            )
-            norm = settings.normalization_settings
-
+        df, norm, session_receipts = _normalized_rdsr_dataframe(
+            data_parsed,
+            settings=settings,
+            live=live,
+            replay_capture=replay_capture,
+        )
         df = _drop_zero_kvp_rows(df, settings)
 
         # Filter, transform, bound, and authorize on the candidate frame.
