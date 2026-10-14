@@ -25,6 +25,7 @@ from guiskindose.gui.run_state import (
     snapshot_app_state,
 )
 from guiskindose.gui.settings_builder import build_settings
+from guiskindose.gui.state import AppState
 from guiskindose.privacy import safe_error_event, safe_user_error
 
 from ..components import HelpButton
@@ -73,6 +74,10 @@ def build_run_config_card(ctx: PageContext) -> None:
 
 async def _on_save(include_ids: ui.checkbox, status_label: ui.label) -> None:
     """Serialize the live run state and persist it (native dialog or download)."""
+    if _pending_blocks_export(state):
+        ui.notify(_EXPORT_PENDING_MESSAGE, type="negative")
+        status_label.set_text("Save blocked: staged equipment entries pending.")
+        return
     try:
         settings_obj = build_settings(state)
         document = serialize_run_state(
@@ -113,7 +118,53 @@ _IMPORT_ERROR_MESSAGES = {
     "invalid_settings": (
         "Cannot apply run configuration: the imported settings failed validation. Check the log for details."
     ),
+    "invalid_equipment_capture": (
+        "Cannot apply run configuration: the equipment section is invalid or conflicts "
+        "with the live session or loaded exams. Resolve the conflict, then re-import."
+    ),
+    "unsupported_equipment_capture_version": (
+        "Cannot apply run configuration: the equipment section needs a newer application version."
+    ),
+    "equipment_geometry_mismatch": (
+        "Cannot apply run configuration: the equipment section does not match the loaded exams. "
+        "Load the same inputs in the same order and count, then re-import."
+    ),
 }
+
+_RESEQUENCE_EQUIPMENT_MESSAGE = (
+    "Re-parse blocked: equipment captures are staged or confirmed, and re-parsing "
+    "would invalidate them outside the atomic replay path. Finish staged loads "
+    "first, or unload and reload the exams, then re-import."
+)
+
+_EXPORT_PENDING_MESSAGE = (
+    "Run configuration cannot be saved while equipment captures are still staged — "
+    "load the remaining exams first."
+)
+
+
+def _equipment_blocks_resequence(app_state: AppState) -> bool:
+    """True when staged or confirmed equipment forbids the re-parse path.
+
+    Re-parsing would rebase frames outside the owned atomic replay
+    transaction (Phase 3); the caller rolls back instead. Pure helper so
+    the rule is unit-testable without UI.
+    """
+    if app_state.equipment_pending:
+        return True
+    return any(
+        getattr(exam, "equipment_capture", None) is not None for exam in app_state.loaded_exams
+    )
+
+
+def _pending_blocks_export(app_state: AppState) -> bool:
+    """True while equipment entries are staged for unloaded exams.
+
+    Exporting would either drop the staged authority silently or emit a
+    partial document; the caller refuses with a fixed message instead. Pure
+    helper so the rule is unit-testable without UI.
+    """
+    return app_state.equipment_pending is not None
 
 
 async def _do_load(e: Any, ctx: PageContext, status_label: ui.label) -> None:
@@ -178,7 +229,13 @@ async def _do_load(e: Any, ctx: PageContext, status_label: ui.label) -> None:
         return
     reset_results()
     _refresh_all(ctx)
-    status_label.set_text(f"Loaded run configuration ({result.applied_exams} exam(s)).")
+    if state.equipment_pending:
+        status_label.set_text(
+            f"Loaded run configuration ({result.applied_exams} exam(s), "
+            f"{len(state.equipment_pending)} equipment entries staged for unloaded exams)."
+        )
+    else:
+        status_label.set_text(f"Loaded run configuration ({result.applied_exams} exam(s)).")
     ui.notify(f"Run configuration loaded ({result.applied_exams} exam(s)).", color="positive")
 
 
@@ -219,6 +276,9 @@ async def _resequence_reparse_if_needed(document: dict, schema_or_sheet_changed:
     """
     if not schema_or_sheet_changed:
         return True
+    if _equipment_blocks_resequence(state):
+        ui.notify(_RESEQUENCE_EQUIPMENT_MESSAGE, type="negative")
+        return False
     if state.is_multi_exam or state.input_source_type not in ("csv", "tsv", "xlsx") or state.file_path is None:
         ui.notify(
             "Schema/sheet changed with multiple (or non-tabular) inputs — "

@@ -23,10 +23,15 @@ import re
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pandas as pd
 
+from guiskindose.equipment_profiles.capture import (
+    CODE_INVALID_EQUIPMENT_CAPTURE,
+    CapturedCoordinates,
+    CaptureError,
+)
 from guiskindose.input_adapters.column_mapper import (
     check_duplicate_mappings,
     detect_header_row,
@@ -351,6 +356,47 @@ def attach_procedure_dose_totals(data_df: pd.DataFrame, ctx: AdapterContext) -> 
                 )
 
 
+def _invoke_normalizer(
+    data_df: pd.DataFrame, settings: PyskindoseSettings, equipment_capture_context: Any
+) -> tuple[pd.DataFrame, list[int], list[Any]]:
+    """Run the checked normalizer hook with capture-aware error normalization.
+
+    Capture replays publish nothing: the receipt list stays live-only, closed
+    capture codes (and capture-mode enforcement failures) survive unwrapped,
+    and upstream header/transform failures become closed errors instead of
+    leaking raw causes. Legacy failures keep the established ValueError shape.
+    """
+    from guiskindose.rdsr_normalizer import rdsr_normalizer_with_source_rows
+
+    try:
+        receipt_out: list = []
+        receipt_sink = None if equipment_capture_context is not None else receipt_out
+        normalized_df, source_rows = rdsr_normalizer_with_source_rows(
+            data_df, settings, equipment_receipt_out=receipt_sink,
+            equipment_capture_context=equipment_capture_context,
+        )
+    except CaptureError:
+        raise
+    except UserFacingInputError:
+        # Value-free by contract; keep its specific message for the user.
+        if equipment_capture_context is not None:
+            raise CaptureError(
+                "Equipment capture replay failed closed during normalization.",
+                CODE_INVALID_EQUIPMENT_CAPTURE,
+            ) from None
+        raise
+    except Exception as exc:
+        if equipment_capture_context is not None:
+            raise CaptureError(
+                "Equipment capture replay failed closed during normalization.",
+                CODE_INVALID_EQUIPMENT_CAPTURE,
+            ) from None
+        raise ValueError(
+            f"RDSR normalization failed (error_type={exception_class_name(exc)})."
+        ) from exc
+    return normalized_df, source_rows, receipt_out
+
+
 def run_normalizer_pipeline(
     loaded: _RawLoad,
     *,
@@ -362,6 +408,7 @@ def run_normalizer_pipeline(
     original_filename: str,
     settings: PyskindoseSettings,
     consumed_columns: Callable[[list[str], pd.DataFrame], set[str]] | None = None,
+    equipment_capture_context: CapturedCoordinates | None = None,
 ) -> InputAdapterResult:
     """Run the shared header→map→transform→normalize pipeline.
 
@@ -389,8 +436,6 @@ def run_normalizer_pipeline(
         On duplicate column mappings, missing required columns, or
         rdsr_normalizer() failure.
     """
-    from guiskindose.rdsr_normalizer import rdsr_normalizer_with_source_rows
-
     warnings: list[str] = []
     raw_df = loaded.raw_df
 
@@ -433,18 +478,9 @@ def run_normalizer_pipeline(
             f"Column map attempted: {column_map}."
         )
 
-    try:
-        receipt_out: list = []
-        normalized_df, source_rows = rdsr_normalizer_with_source_rows(
-            data_df, settings, equipment_receipt_out=receipt_out
-        )
-    except UserFacingInputError:
-        # Value-free by contract; keep its specific message for the user.
-        raise
-    except Exception as exc:
-        raise ValueError(
-            f"RDSR normalization failed (error_type={exception_class_name(exc)})."
-        ) from exc
+    normalized_df, source_rows, receipt_out = _invoke_normalizer(
+        data_df, settings, equipment_capture_context
+    )
 
     # rdsr_normalizer() rebuilds the frame from scratch, so carry the optional
     # dosimetric columns across by input position (dropped zero-dose events skipped).

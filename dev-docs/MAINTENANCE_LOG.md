@@ -8,6 +8,10 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ## [Unreleased]
 
+- Guard equipment GUI workflow tests with the optional NiceGUI dependency so the core CI matrix can collect without GUI extras; the GUI-enabled suite still executes all workflow regressions.
+
+- Run-state v2 final review: validate effective single-exam global flags and retained capture geometry before import mutation; revalidate copied frozen overrides at the loader boundary. Regression coverage includes null and absent equipment sections.
+
 - Radimetrics unknown-model diagnostics report only the model count; raw equipment names remain local.
 
 ### Changed
@@ -15,6 +19,10 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 - **Equipment-profile PR CodeQL review** (2026-10-13) — removed unused constants and dead test
   setup; made the three-value resolution return explicit for static analysis. Updated the execution
   plan header to distinguish delivered coordinate foundations from outstanding acceptance/later phases.
+- **Consolidated replay/GUI delivery review** (2026-10-13) — kept all capture, CLI/settings, GUI,
+  and run-state commits in the second dependent PR. Read-only URI regression paths now exercise
+  spaces, Unicode, `#`, and literal percent escapes using filenames legal on Windows. Single-capture
+  calculation checks patient-offset handle isolation before production, matching the multi-exam guard.
 
 - **Equipment-profile delivery consolidation** (2026-10-13) — grouped engine/session/API work into
   one prerequisite PR and capture/replay/configuration/GUI work into a second PR, preserving the
@@ -22,6 +30,180 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
   and CodeQL corrections; empty direct API application now fails before changing settings.
   XLSX source-hash tests compare the exact byte snapshot parsed, avoiding ZIP timestamp races.
 
+- **Run-state v2 migration slice** (2026-10-13) — always-v2 writer, strict v1
+  reader with retention warnings, trial confirmation + pending staging +
+  replay consumption, calc threading, snapshot/rollback coverage, resequence
+  and export guards; `run_state_trial.py` split holds the size cap (trial
+  settings moved verbatim); complexity ratchet updated (stale apply entry
+  removed). Review follow-ups in the same slice: hardened pending entries,
+  registry defer-confirm seam, null-inclusive bounds tokens, writer refusal
+  on staged pending, canonical-equivalence conflict gate with atomic
+  publish. No CLI/store/transmission/rich-report changes. Targeted checks
+  passed; ruff, basedpyright, complexity, size, freshness, help-registry, and
+  UI-copy gates clean.
+
+- **GUI authority parent review** (2026-10-12) — candidate and calculation counts are bounded before list copies; captured contexts are revalidated and aggregate bounds use current frame rows before any baseline snapshot is copied.
+
+- **GUI equipment session ownership** (2026-10-13) — session home, checked bind
+  seam (loaded/preview/busy refusals), loader receipt/rebind/mint with per-exam
+  snapshots via candidate-based whole-file atomicity, count-first bounds,
+  calc threading with gated private baselines; `InputAdapterResult`
+  `equipment_capture` / repr-hidden `normalization_snapshot` fields;
+  `reset_results` accepts an optional target (default singleton, callers
+  unchanged). No run-state changes. Targeted checks passed; ruff,
+  basedpyright, complexity, size, and freshness gates clean.
+
+- Run-state trial settings validation now uses a fixed error message with the underlying exception suppressed; privacy Semgrep identified the raw exception text after the shared error-class move.
+
+- **Capture codec parent review** (2026-10-12) — exact string keys and envelope
+  modes are checked before equality or membership, closing hostile-object
+  acceptance and raw exception leaks through the run-state boundary.
+
+- **Run-state equipment-envelope boundary** (2026-10-12) — `RunStateError` moved
+  unchanged to `gui/run_state_errors.py` (re-exported; backcompat alias only);
+  inert `gui/run_state_equipment.py` decode/emit wrappers with code translation
+  under a bounded root-gated diagnostic discipline (count-before-decode,
+  budget-first localization, exact-str code gate, no key lookups on hostile
+  keys, untranslated cancellation, no I/O).
+  No writer/application wiring, no version bump. 49 boundary tests; ruff,
+  basedpyright, complexity, size, and freshness gates clean.
+- **Direct Python settings source support** (2026-10-12) — `PyskindoseSettings` /
+  `initialize_settings` assemble `equipment_profiles` blocks (keyword-only
+  `settings_base_dir`); shared strict-JSON extraction; CLI composes flags+config
+  assembling once. 16 constructor tests; ruff, basedpyright, complexity, size, and
+  freshness gates clean.
+- **Headless CLI settings-JSON wiring** (2026-10-12) — settings-file base capture,
+  transient block strip, single-candidate CLI+config composition in `prepare_cli_settings`,
+  GUI config guard; shared pure-parser seam reused. Parent takeover after the provider
+  rate limit completed pre-construction validation, shared CLI store/ID checks,
+  duplicate-profile JSON rejection, two-store composition, and positive preview/multi
+  regressions. Targeted checks passed; ruff, basedpyright,
+  complexity, size, and freshness gates clean. Companion §4 now describes wired
+  behavior; direct constructor wiring stays open.
+- **Settings-JSON source requests (inert)** (2026-10-12) — new app-layer
+  `settings_equipment_profiles` helper (exact request grammar, base-dir path rules,
+  pre-I/O validation, read-only store composition). Review fixes: base-resolved
+  store paths, pre-open format/sheet gates, validated-request seam, genuine spies.
+  Additional parent-review regressions close store-key lookup, base-string subclass,
+  ID-string subclass, and invalid sheet Unicode boundaries; the XLSX lazy-import
+  test now restores removed modules and sheet spies target the stable adapter seam.
+  Grammar
+  + composition policy in the new settings-sources companion (registered in the docs
+  index); no wiring, no CHANGELOG.
+- **CLI existing-store selection** (2026-10-12) — new `ProfileStore.open_read_only`
+  factory plus `--equipment-profile-store` / `--equipment-profile-id` composed in
+  `cli_equipment_profiles`. Review hardening: hostile-hook path boundary, read-only
+  lifetime flag with pre-statement write refusal, normalized cleanup with preserved
+  cancellation, honest WAL wording. 20 tests; ruff, basedpyright, complexity, size,
+  and freshness gates clean. Schema §12 lock; packaged README and contract §10 updated.
+- **CLI coordinate profile file inputs** (2026-10-12) — new `cli_equipment_profiles`
+  helper (`--equipment-profile` repeat + `--equipment-profile-sheet`); `prepare_cli_settings`
+  moved verbatim to `cli_settings` with session binding (`main.py` at 748 lines, public
+  re-export unchanged). Review fixes: canonical named-sheet seam (single snapshot,
+  preflight before open), strict request bounds, pre-bound refusal with staged caller
+  homes. 17 CLI tests + 12 sheet tests; ruff, basedpyright, complexity, size,
+  and freshness gates clean. Packaged README stale claims corrected; contract §10 heading/item 4 updated.
+- **Captured multi-file input through the public API** (2026-10-12) — new
+  `equipment_captured_multi` helper behind `analyze_multiple_input_files(...,
+  equipment_capture_contexts=)`; single-file raw loading refactored into the shared
+  `load_captured_exam` seam; `resolve_input_paths` moved verbatim to the helper
+  (`main.py` at 797 lines). Review fixes: explicit-paths-only capture mode with
+  zero-filesystem-probe validation, cumulative retained-event cap, full shield
+  isolation, per-exam null baselines, public options seam. 22 tests; ruff,
+  basedpyright, complexity, size, and freshness gates clean. Contract §7/§10.6
+  updated.
+- **Single-file captured input review fixes** (2026-10-11) — `main` refuses tabular
+  pre-I/O via `analyze_captured_main_input`; set import options on non-tabular paths fail
+  closed pre-I/O; caller settings are deep-copied via `shielded_settings_for_capture`;
+  source read failures neutralize to a closed `CaptureError`. 17 tests; `main.py` at 794
+  lines; ruff, basedpyright, complexity, and size gates clean.
+- **Single-file captured input through the public API** (2026-10-11) — `analyze_input_file`
+  and `main` gain keyword-only `equipment_capture_context=` for one raw file; new
+  `src/guiskindose/equipment_captured_input.py` owns the captured-only orchestration.
+  Preparsed JSON, normalized frames, multi-study splits, and plot setup fail closed. 17
+  tests; ruff, basedpyright, complexity, size, and freshness gates clean. No aggregation,
+  multi-file, CLI flags, run-state, GUI, rich reports, version bumps, or settings-bound
+  fields.
+- **Generic shutter columns for tabular ASD** (2026-10-11) — `generic_rdsr_like` maps four
+  optional canonical shutter edges with numeric coercion; missing/invalid edges fail closed
+  under ASD, CFA paths unchanged. 8 tests; gates clean. No Radimetrics/DoseTrack guessing,
+  metadata expansion, normalized-output changes, calibration/profile changes, or auto-election
+  changes.
+- **Captured tabular replay parent review** (2026-10-11) — existing live receipts are
+  validated before coordinate import options and rebound only afterward; corrupt original
+  geometry hashes fail before transformation. Captured load/header errors use closed codes
+  with suppressed causes, and confirmation checks the candidate used by normalization.
+
+- **Raw tabular replay from captures** (2026-10-11) — `read_and_normalize_input()` gains
+  keyword-only `equipment_capture_context=` for `generic_rdsr_like`, `radimetrics`, and
+  `dosetrack`: pre-load validation, `normalized` refusal, recipe application through the
+  shared pipeline into the checked normalizer hook, final confirmation after import options,
+  no live receipt attached. Review fixes: production rebind of live post-options receipts,
+  single shared preparation, restored hook receipt rejection, closed capture-mode errors,
+  real-Philips ASD shutter refusal. 18 tests; ruff, basedpyright,
+  complexity, size, and freshness gates clean. No main, run-state,
+  GUI/CLI, rich reports, version bumps, settings-bound fields, or transmission.
+- **Captured DICOM replay parent review** (2026-10-11) — capture checks precede raw-frame
+  work, public replay preparation rejects live sessions, and path/settings setup stays outside
+  exception assertions. The focused replay/analysis/confirmation suites passed 92 tests.
+
+- **DICOM loader replay from captures** (2026-10-11) — `read_and_normalise_rdsr_data()` gains
+  keyword-only `equipment_capture_context=` (raw DICOM only): pre-I/O conflict refusals, recipe
+  application on a verified private clone before concept validation, bypassed bundled selection
+  via a narrow `rdsr_normalizer` hook with no receipt publication, and final confirmation after
+  the existing invalid-row policy. New `prepare_replay_settings` in `equipment_confirmation.py`.
+  Review fixes: full pre-I/O context validation, hook-level recipe precondition via reusable
+  candidate checks, restored normalizer field documentation. 20 tests (real-loader parity,
+  offline, filters, tamper, bounds); ruff, basedpyright,
+  complexity, size, and freshness gates clean. Baseline/live loader paths byte-identical. No
+  main/registry/tabular, run-state, GUI/CLI, rich exports, version bumps, or settings-bound
+  fields.
+- **Capture multi-exam parent review** (2026-10-11) — added the shared patient-offset
+  regression, isolated exception-test setup, and consumed preflight offsets during calculation.
+  The XLSX source-hash test now hashes the exact workbook byte snapshot it parses, avoiding
+  differences between independently generated ZIP timestamps. No scanner or gate changes.
+
+- **Direct capture analysis, multi-exam** (2026-10-11) — `analyze_multiple_exams()` gains
+  keyword-only `equipment_capture_contexts=`: positional capture-or-null entries with shape,
+  alignment, count, and aggregate-event bounds; upfront session/receipt rejection and
+  per-exam prepare/confirm with isolated settings before any production; per-exam offsets and
+  warning downgrades on top of prepared candidates; stored matches into `ExamResult`. Review
+  fixes: final-work preflight with patient-offset isolation, constructor-validator event
+  totals, shared limit constants, honest list/tuple annotation. 24 tests; ruff, basedpyright,
+  complexity, size, and freshness gates clean. No raw replay,
+  run-state, GUI/CLI, rich export, version bumps, or settings-bound fields.
+- **Direct capture analysis, single-exam** (2026-10-11) — `analyze_data()` gains keyword-only
+  `equipment_capture_context=`: with a validated capture it rejects live sessions/receipts,
+  clones caller settings privately, prepares/confirms via the existing confirmation boundary
+  before any calculation, and reports the stored match mapping. Callers keep their settings
+  and frames byte-equivalent; no-capture behavior and live receipt validation unchanged. 17
+  tests (parity, offline, tamper-before-calculation, forged-receipt, keysets); gates clean.
+  Review fixes: working-copy isolation across root, normalization vectors, phantom, and
+  dimension before candidate assignment (self-returning/raising/shared-child clone hooks
+  fail closed with no calculation and unchanged caller state); ASD parity on the real Philips
+  loader; row-2 identity rejection; setup hoisted out of raises blocks. 23 tests.
+  Multi-exam, run-state, GUI/CLI, rich export, and version bumps remain open.
+- **Captured-application preparation/confirmation (app prep)** (2026-10-11) — new
+  `src/guiskindose/equipment_confirmation.py`: frozen `CapturedApplicationReceipt` plus pure
+  candidate preparation and closed confirmation against confirmed frames (identity/count/
+  geometry-v1/15 fields/labels); `equipment_capture.py` publishes the bounded
+  `frame_geometry_rows` helper (sole existing-file touch). Review fixes: all-rows identity via
+  shared canonical pairs, exact live field types, receipt exact-str method with bounded keys,
+  clone shared-handle verification with closed deepcopy failures. 48 tests; ruff,
+  basedpyright, complexity, size, and freshness gates clean. No session binding, replay,
+  analysis, or export wiring.
+- **Capture codec foundation, review-hardened (standalone)** (2026-10-11) — producer moved
+  to `src/guiskindose/equipment_capture.py` and validates the current receipt/frame/settings
+  through the public bridge before any digest; core codec imports no bridge/frame/settings code.
+  Immutable construction fully validates with safe reprs and full revalidation on emit; declared-
+  then-actual length caps on geometry/frame/envelope paths; overflow/surrogate/depth/node guards;
+  session kind/format/hash/revision coherence with aggregate totals; notice entry↔leaf
+  cross-checks; producer regressions on real DICOM/CSV normalizer receipts. Parent review additionally
+  fixed input-vs-selected identity validation (Default/wildcard captures), actual geometry row width,
+  bounded column reads, pre-allocation JSON guards, canonical leaf construction, and source-manifest
+  membership. Targeted validation and normal gates cover the final implementation; ruff,
+  basedpyright, complexity, size, and freshness gates clean. No existing bridge/session internals
+  modified; no run-state/GUI/export/CLI wiring or version bumps.
 - **Run-state/export contract lock (docs only)** (2026-10-11) — new
   `dev-docs/EQUIPMENT_PROFILE_RUNSTATE_EXPORT_CONTRACT.md` locks SPEC decisions 13/18/20 from actual
   seams: run-state 1→2, rich-report 3→4, dict/JSON export stays 3 while additive; default-safe maker/model

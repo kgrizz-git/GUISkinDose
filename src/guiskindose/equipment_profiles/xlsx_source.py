@@ -466,7 +466,7 @@ def _check_catalog_parts(raw: bytes, worksheets: Any, source_kind: str) -> None:
             raise EquipmentProfileError(ProfileErrorCode.MALFORMED_CONTAINER, source_kind=source_kind)
 
 
-def _rows(raw: bytes, *, selected: int | None, source_kind: str) -> Iterator[ParsedRow]:
+def _rows(raw: bytes, *, selected: int | str | None, source_kind: str) -> Iterator[ParsedRow]:
     """Preflight the container and its XML, then stream validated flat rows.
 
     The container inflation, the container's structure, and every worksheet part's actual coordinates are
@@ -476,17 +476,23 @@ def _rows(raw: bytes, *, selected: int | None, source_kind: str) -> Iterator[Par
     from guiskindose.equipment_profiles.xlsx_preflight import (
         preflight_container,
         resolve_sheet,
+        sheet_limit,
     )
     from guiskindose.equipment_profiles.xlsx_xml import validate_worksheet_parts
 
-    preflight_container(raw, source_kind=source_kind)
+    part_count = preflight_container(raw, source_kind=source_kind)
     validate_worksheet_parts(raw, source_kind=source_kind)
+    if part_count > sheet_limit():
+        raise EquipmentProfileError(
+            ProfileErrorCode.SHEET_LIMIT_EXCEEDED, source_kind=source_kind, count=part_count
+        )
 
     workbook = _open_workbook(raw, source_kind)
     try:
         worksheets = _worksheets(workbook)
         count = len(worksheets)
-        index = resolve_sheet(count, selected, source_kind=source_kind)
+        titles = [getattr(worksheet, "title", "") for worksheet in worksheets]
+        index = resolve_sheet(count, selected, titles=titles, source_kind=source_kind)
         _check_catalog_parts(raw, worksheets, source_kind)
         sheet = worksheets[index]
         # The declared dimension was deliberately not trusted for sizing: discard it so the reader yields the
@@ -519,7 +525,7 @@ def _ordered_names(positions: Mapping[str, int]) -> tuple[str, ...]:
     return tuple(ordered)
 
 
-def _guarded_rows(raw: bytes, *, selected: int | None, source_kind: str) -> Iterator[ParsedRow]:
+def _guarded_rows(raw: bytes, *, selected: int | str | None, source_kind: str) -> Iterator[ParsedRow]:
     """Boundary over the whole untrusted-container path: preflight, reader, and iteration.
 
     Every library family this path can raise is normalized to one fixed code with the raw cause suppressed.
@@ -534,10 +540,12 @@ def _guarded_rows(raw: bytes, *, selected: int | None, source_kind: str) -> Iter
         raise EquipmentProfileError(ProfileErrorCode.MALFORMED_CONTAINER, source_kind=source_kind) from None
 
 
-def parse_xlsx_bytes(raw: bytes, *, sheet: int | None = None) -> ParsedDocument:
+def parse_xlsx_bytes(raw: bytes, *, sheet: int | str | None = None) -> ParsedDocument:
     """Parse and validate an XLSX profile document from raw bytes.
 
-    ``sheet`` is the zero-based sheet index to read; every workbook defaults to its first sheet.
+    ``sheet`` is the zero-based sheet index or the exact sheet title to read;
+    every workbook defaults to its first sheet. Titles resolve against the
+    opened workbook's own catalog on these same bytes and are never retained.
     """
     if not raw:
         raise EquipmentProfileError(ProfileErrorCode.EMPTY_SOURCE, source_kind=SOURCE_KIND_XLSX)
@@ -553,7 +561,7 @@ def parse_xlsx_bytes(raw: bytes, *, sheet: int | None = None) -> ParsedDocument:
     )
 
 
-def parse_xlsx_file(path: str | os.PathLike[str], *, sheet: int | None = None) -> ParsedDocument:
+def parse_xlsx_file(path: str | os.PathLike[str], *, sheet: int | str | None = None) -> ParsedDocument:
     """Read, parse, and validate an XLSX profile file.
 
     The path never appears in an error. The file is read with one bounded read of at most

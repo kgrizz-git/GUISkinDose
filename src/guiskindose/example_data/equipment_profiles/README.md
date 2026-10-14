@@ -2,8 +2,7 @@
 
 These files are starting points for your own profiles. Every equipment name, number, and date in them is
 **fictional** — nothing here describes a real scanner or a real measurement. Copy a file and replace the values
-with your own data. Nothing here is loadable yet (see *Loading a profile*), so this is authoring reference, not
-a working import.
+with your own data.
 
 - `equipment_profile_example.json` / `.csv` — the same three profiles in both supported shapes, filled in.
 - `equipment_profile_template.json` / `.csv` — blank starting points (header/skeleton only).
@@ -76,8 +75,8 @@ plan); a fully supplied profile omits nothing. Unknown fields are rejected.
 
 ## Tabular shape
 
-CSV, TSV, and XLSX use **one** flat table (the same rows and columns in every tabular format; XLSX is the same
-table on one sheet, chosen by sheet). Each row is one record, selected by `record_type`:
+CSV, TSV, and XLSX use **one** flat table (the same rows and columns in every tabular format; XLSX reads the
+same table from one sheet, chosen by 0-based index or exact sheet title). Each row is one record, selected by `record_type`:
 
 - `profile` — one row per profile: identity (`manufacturer`, `models`, aliases) and provenance. List values use
   `|` as the separator (`DemoScope2000|DS2000`); an empty list is an empty cell.
@@ -123,11 +122,12 @@ The shared `source` column is the one easy mistake: on a `profile` row it is the
 (`transmission[].source`). They are different fields with the same column name.
 
 The 19-column examples use the implicit v1 tabular shape. An optional profile-row column
-`promote_coordinate_wildcard` accepts `true`/`false` (blank/absent means false). Promotion also requires GUI
-acknowledgement or CLI `--allow-equipment-profile-wildcard-promotion`; it never resolves conflicting custom
-claimants. Disable one conflicting profile. JSON aliases can be an explicit alias-to-model object; the existing
-single-model list remains valid shorthand. Numeric limits, errors, and canonical hashes are specified in
-`dev-docs/EQUIPMENT_PROFILE_SCHEMA.md`.
+`promote_coordinate_wildcard` accepts `true`/`false` (blank/absent means false). Wildcard
+promotion requires explicit acknowledgement through a supporting interface; the current
+CLI file flow offers none, so wildcard profiles fail closed there. Promotion never resolves
+conflicting custom claimants. Disable one conflicting profile. JSON aliases can be an explicit
+alias-to-model object; the existing single-model list remains valid shorthand. Numeric limits,
+errors, and canonical hashes are specified in `dev-docs/EQUIPMENT_PROFILE_SCHEMA.md`.
 
 ### Blank templates are not loadable
 
@@ -138,30 +138,44 @@ error naming the row and field. Fill in at least one domain before loading.
 
 ## Loading a profile
 
-**Not yet available from the application.** An internal, inert parser now handles the JSON and CSV/TSV shapes
-described above, but it is not wired to any feature: no option opens these files and nothing reads a profile into
-a calculation. The GUI card, CLI option, and profile store described below are **planned and unimplemented**, and
-there is no way to load or activate a profile from the application today. See
-[dev-docs/plans/CUSTOM_EQUIPMENT_PROFILES_EXECUTION.md](../../../../dev-docs/plans/CUSTOM_EQUIPMENT_PROFILES_EXECUTION.md)
-for status.
+Coordinate-only files load today; transmission content is rejected wholesale by the
+initial coordinate-only capability gate (see below). Available entry points:
 
-Once implemented, the intended entry points are:
+- **Python API:** `assemble_session(documents=[...])` / `assemble_session(files=[FileSource(...)])`
+  from `guiskindose.equipment_profiles`, bound as `PyskindoseSettings(...,
+  equipment_profile_session=session)` before loading raw input.
+- **CLI:** `guiskindose --equipment-profile my_profile.json` (repeatable; JSON, CSV, TSV, and
+  XLSX accepted; relative paths resolve against the working directory), with optional global
+  `--equipment-profile-sheet` (sheet name or 0-based index) for XLSX workbooks. An explicit
+  existing store database composes via `--equipment-profile-store` (read-only, never created)
+  with optional repeatable `--equipment-profile-id` (current revisions regardless of the enable
+  flag; without IDs, all enabled current records apply). Assembly
+  failures exit non-zero with a value-free error before any exam input is read. Refused in
+  `--mode gui`. A settings file may carry its own sources under an `equipment_profiles`
+  block (`files` with `path`/`format`/`sheet`, `store` with `path`/`ids`); relative paths
+  resolve against the settings file's directory, and CLI flags compose with the block
+  into one candidate assembled once. Save/enable/delete commands, store management, and
+  direct constructor wiring are not available from the CLI.
+- **Still planned and unimplemented:** GUI import/activation/download and profile-store management commands. See
+  [dev-docs/plans/CUSTOM_EQUIPMENT_PROFILES_EXECUTION.md](../../../../dev-docs/plans/CUSTOM_EQUIPMENT_PROFILES_EXECUTION.md)
+  for status.
 
-- **GUI:** Settings → Equipment Profiles → import the file, review the validation preview, then activate before
-  loading data.
-- **CLI:** `guiskindose --equipment-profile my_profile.json` (repeatable; JSON, CSV, TSV, and XLSX accepted).
-- **In-app:** Equipment Profiles → *Download example* / *Download blank template* gives you these files at any time.
-- **Profile store:** saved profiles can be kept in GUISkinDose's local profile store so you do not have to keep
-  the file around.
+The three filled examples above are each rejected **wholesale** under the initial
+coordinate-only gate — no subset is applied from a rejected file. Transmission rows,
+model wildcards without promotion acknowledgement, and manufacturer aliases are
+all beyond the current activation; write exact, coordinate-only, alias-free files
+to load today.
+Blank templates remain invalid until filled (see above).
 
 Privacy split: manufacturer and model names are ordinary audit data and may appear in reports and logs.
 Station names and serial numbers are site-identifying: they are **never written to logs or diagnostics under any
 setting** (counts and event indices only), and they reach output solely as gated fields in per-event exports
 through the existing `include_identifiers` opt-in.
 
-> The field set above is a **preliminary** schema: it is the shape the feature is being designed to, and it is
-> **not yet locked** — the resolution and fallback rules are agreed in the execution plan, while Phase 0
-> still has to publish executable schemas, limits, errors, and hash rules. These files remain authoring
-> examples until tested against the real loader.
+The field set above follows the locked schema, resolution, and fallback rules in
+`dev-docs/EQUIPMENT_PROFILE_SCHEMA.md` and the run-state contract.
 
-Also note: the JSON, CSV, and XLSX files are verified to produce identical profile hashes through the internal parser (a workbook built from the CSV parses to the same profiles as the JSON). The **XLSX adapter is inert** — no GUI, CLI, store, or calculation path uses it, and no application code loads these files. TSV and XLSX packaged variants are still outstanding (a tracked `.xlsx` needs hash-pinned human clearance first), and packaging of this folder into the wheel is not done.
+Also note: the JSON, CSV, and XLSX shapes are verified to produce identical profile hashes through the
+parser (a workbook built from the CSV parses to the same profiles as the JSON). TSV and XLSX packaged
+variants are still outstanding (a tracked `.xlsx` needs hash-pinned human clearance first), and packaging
+of this folder into the wheel is not done.

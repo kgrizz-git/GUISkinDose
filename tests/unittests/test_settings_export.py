@@ -357,8 +357,10 @@ def test_serializer_redacts_identifiers_by_default():
     assert exam["study_id"] is None
     assert exam["file_name"] is None
     assert exam["file_path"] is None
-    assert exam["input_manufacturer"] is None
-    assert exam["input_model"] is None
+    # Maker/model spellings are default-safe equipment content (contract §4):
+    # the v2 writer emits them unconditionally.
+    assert exam["input_manufacturer"] == "Acme"
+    assert exam["input_model"] == "X1000"
     # Non-identifying reconstruction state survives redaction.
     assert exam["d_lon"] == 1.0
     assert exam["flip_tx"] is True
@@ -508,7 +510,7 @@ def test_applier_rejects_bad_envelope():
     with pytest.raises(RunStateError):
         validate_run_state_document({"schema": "something.else", "schema_version": 1})
     with pytest.raises(RunStateError):
-        validate_run_state_document({"schema": RUN_STATE_SCHEMA, "schema_version": 2})
+        validate_run_state_document({"schema": RUN_STATE_SCHEMA, "schema_version": 3})
     with pytest.raises(RunStateError):
         validate_run_state_document({"schema": RUN_STATE_SCHEMA, "schema_version": "1"})
     with pytest.raises(RunStateError):

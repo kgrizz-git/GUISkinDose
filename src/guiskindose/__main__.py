@@ -16,6 +16,14 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from guiskindose.cli_args import import_options_from_args
+from guiskindose.cli_equipment_profiles import (
+    GUI_EQUIPMENT_PROFILES_MESSAGE,
+    equipment_profile_args_present,
+)
+from guiskindose.cli_settings import (
+    GUI_SETTINGS_EQUIPMENT_PROFILES_MESSAGE,
+    settings_equipment_block_present,
+)
 from guiskindose.constants import RUN_ARGUMENTS_MODE_GUI
 from guiskindose.debug import configure_logging
 from guiskindose.input_adapters.import_options import (
@@ -169,7 +177,7 @@ def _run_single_file(
 
 def _run_headless(args: argparse.Namespace, import_opts: TabularImportOptions) -> None:
     """Dispatch export or dose calculation for non-GUI CLI invocations."""
-    run_settings = prepare_cli_settings(args)
+    run_settings = _call_or_exit(lambda: prepare_cli_settings(args))
     file_paths = _resolve_file_paths(args.file_path or [])
     if getattr(args, "export_format", None):
         _validate_export_or_exit(args, has_files=bool(file_paths))
@@ -215,6 +223,12 @@ def cli() -> None:
     if args.mode == RUN_ARGUMENTS_MODE_GUI:
         if import_opts.any_set():
             print(GUI_IMPORT_OPTIONS_MESSAGE, file=sys.stderr)
+            sys.exit(1)
+        if equipment_profile_args_present(args):
+            print(GUI_EQUIPMENT_PROFILES_MESSAGE, file=sys.stderr)
+            sys.exit(1)
+        if settings_equipment_block_present(args):
+            print(GUI_SETTINGS_EQUIPMENT_PROFILES_MESSAGE, file=sys.stderr)
             sys.exit(1)
         from guiskindose.gui.app import run_gui
 

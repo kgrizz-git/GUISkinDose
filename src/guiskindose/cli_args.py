@@ -51,6 +51,7 @@ def get_argument_parser(arguments) -> argparse.Namespace:
     )
     _add_top_level_args(parser)
     _add_input_args(parser)
+    _add_equipment_args(parser)
     _add_export_args(parser)
     add_kerma_meter_cli_arguments(parser)
     return parser.parse_args(arguments)
@@ -216,6 +217,61 @@ def _add_input_args(parser: argparse.ArgumentParser) -> None:
         default=False,
         dest="flip_ap2",
         help="Post-normalization expert override: negate Ap2 (secondary angle) after adapter normalization.",
+    )
+
+
+def _add_equipment_args(parser: argparse.ArgumentParser) -> None:
+    """Custom equipment-profile file inputs (experimental, headless only)."""
+    parser.add_argument(
+        "--equipment-profile",
+        required=False,
+        default=None,
+        action="append",
+        dest="equipment_profile",
+        help=(
+            "Path to a custom equipment-profile file (JSON, CSV, TSV, or XLSX). "
+            "Repeatable; all files assemble into one candidate session before any "
+            "exam input is read. Relative paths resolve against the working directory."
+        ),
+    )
+
+    parser.add_argument(
+        "--equipment-profile-sheet",
+        required=False,
+        default=None,
+        dest="equipment_profile_sheet",
+        help=(
+            "Global XLSX sheet selector for --equipment-profile workbooks: a sheet "
+            "name or 0-based index (default: first sheet). Refused when no XLSX "
+            "profile file is given."
+        ),
+    )
+
+    parser.add_argument(
+        "--equipment-profile-store",
+        required=False,
+        default=None,
+        dest="equipment_profile_store",
+        help=(
+            "Path to an existing equipment-profile store database (read-only; "
+            "never created). Composes with --equipment-profile files into one "
+            "candidate session before any exam input is read. Relative paths "
+            "resolve against the working directory."
+        ),
+    )
+
+    parser.add_argument(
+        "--equipment-profile-id",
+        required=False,
+        default=None,
+        action="append",
+        dest="equipment_profile_id",
+        help=(
+            "Stored profile ID to select at its current revision, regardless of "
+            "its enable flag (requires --equipment-profile-store; repeatable; "
+            "one-run selection, never persisted). Without IDs, all enabled "
+            "current records are used."
+        ),
     )
 
 

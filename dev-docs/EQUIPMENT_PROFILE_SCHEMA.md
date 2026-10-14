@@ -291,11 +291,16 @@ only JSON, CSV, or TSV never imports the spreadsheet stack. The workbook is open
 | Workbooks | Selection |
 |---|---|
 | exactly 1 | sheet `0` is the default; an explicit `sheet=0` is also accepted |
-| 2 or more | `sheet=None` selects the first worksheet; an explicit index selects another |
-| out of range, negative, or non-integer | `unknown_sheet` |
+| 2 or more | `sheet=None` selects the first worksheet; an explicit index or exact title selects another |
+| out of range, negative, non-integer, unknown or ambiguous title | `unknown_sheet` |
 
-More than 16 worksheets is `sheet_limit_exceeded`. Sheet **names are never used for selection, are never
-retained, and never appear in an error** — only the resolved zero-based index does.
+More than 16 worksheets is `sheet_limit_exceeded`: standard worksheet-part
+counts are bounded before the reader opens, and the actual reader catalog is bounded
+before title traversal or worksheet row iteration. Sheet **titles resolve against the opened
+workbook's own catalog on the same bounded bytes used for hashing and parsing**
+— exact match only; a title held by more than one worksheet fails closed as
+ambiguous. Titles are transient and never retained: only the resolved zero-based
+index flows on, and no title ever appears in an error.
 
 **Typed cell policy.**
 
@@ -612,6 +617,21 @@ re-verified on reads. All SQL is parameterized. Every `sqlite3` failure collapse
 `store_*` code (`store_conflict`, `store_corruption`, `unsupported_store_version`, `store_not_found`,
 `store_unavailable`, `store_limit_exceeded`) with the raw cause suppressed and `source_kind: "store"` on
 every failure.
+
+**Read-only factory lock.** `ProfileStore.open_read_only(path)` opens an explicit existing database
+without creating the main database, schema, parent directories, journals, or migrations: the path escapes into a `mode=ro`
+URI (spaces, unicode, `#`, `?` cannot break parsing), the connection sets `query_only = ON` as a
+second safeguard, and empty/unversioned/foreign/corrupt/future databases fail closed (missing or
+unopenable is `store_unavailable`; empty or unversioned content is `store_corruption`; future versions
+stay `unsupported_store_version`). A read-only handle refuses `initialize()` before any filesystem
+access and refuses writes before any statement runs, so no write lock is ever attempted; the
+read-only flag survives `close()`. Version and schema validate through the existing verify path
+before any payload, with per-transaction re-verification unchanged; every mutation attempt through
+the handle fails coded and the handle closes on all failure paths. Committed content — including
+WAL-committed rows — reads normally (`immutable=1` is deliberately unused: it would ignore the
+WAL and read stale content). Auxiliary effects such as `-shm`/`-wal` handling follow SQLite and
+platform behavior and are not claimed absent. No schema redesign or version bump in this
+slice.
 
 ## 13. Compiled lookup indexes
 

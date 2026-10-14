@@ -149,6 +149,11 @@ validation and round-trip fixtures; do not persist an unversioned pandas fingerp
 Import remains synchronous, GUI-light, and offline-safe; candidate normalization and
 publication follow their phase's transaction boundary, not hidden I/O in the reader.
 
+Geometry row counts at any boundary (checksum input, frame extraction, envelope
+emission) are capped at the aggregate-row bound (10,000 retained rows); declared
+lengths are checked before iterating and an actual counter binds iteration even
+for lying lengths.
+
 ## 7. Representations (decision 20)
 
 Match records are immutable snapshots at every surface, never mutable
@@ -162,7 +167,7 @@ status/source displays remain unlocked until Phase 4.
 | Surface | Shape | State |
 |---|---|---|
 | Pre-calculation / Calculate / Results (GUI) | Effective leaves, inherited sources, notices, active/unused profiles per exam, before calculation | **OPEN** (Phase 2/3) |
-| Python API results | `equipment_profile_match` mapping on dict/JSON (`analyze_data` → `receipt_to_mapping`) | Implemented (7b8530e) |
+| Python API results | `equipment_profile_match` mapping on dict/JSON (`analyze_data` → `receipt_to_mapping`); single-exam direct-capture analysis via `equipment_capture_context=` and multi-exam via positional `equipment_capture_contexts=` (clone, prepare, confirm, stored mapping); single-file replay with `equipment_capture_context=` via `analyze_input_file` (DICOM + raw vendor tabular) or `main` (DICOM only; run-state/GUI still open); multi-file replay with `equipment_capture_contexts=` via `analyze_multiple_input_files` (one capture or `None` per explicit file, ≤64 files, ≤10_000 aggregate retained events, splits refuse, loads private before calculation) | Implemented (7b8530e; direct-capture slices 2026-10-11; multi-file replay 2026-10-12) |
 | Rich report (`ExportPayload` v4) | Per-exam equipment block: validated match, effective recipe, count and versioned geometry checksum; maker/model default-visible; provenance joins Settings & equipment | **OPEN** (Phase 5) |
 | Run state v2 | §3 capture | **OPEN** (Phase 2) |
 
@@ -188,18 +193,55 @@ value enters a capture until Phase 4 locks and implements those shapes. Unknown 
 unsupported capture mode/capability is rejected during candidate validation before
 any mutation or export.
 
-## 10. Exact incomplete implementation (not started)
+## 10. Exact partial implementation (delivered stack vs still-open)
 
 1. Run-state v2 `equipment` emission (`serialize_run_state`) and application
    (`apply_run_state` + trial-build coverage). Owner: Phase 2.
+   (Delivered 2026-10-13 as one atomic slice: always-v2 writer with null
+   when captureless; strict v1 reader with retention warnings; v2 decode
+   against document count; trial confirmation of loaded frames with
+   geometry-change refusal; FIFO pending staging with raw-load replay
+   consumption for single-exam DICOM/vendor-tabular; calc threading through
+   existing capture APIs; whole-import snapshot rollback. Review hardening in
+   the same slice: strict immutable pending entries with pre-read
+   revalidation, deferred-confirm replay seam, null-inclusive bounds, writer
+   refusal on staged pending, canonical-equivalence conflict gate with atomic
+   publish. Still open here:
+   the owned atomic raw-replay transaction for reparse/geometry changes,
+   pre-load multi-study splits (refused explicitly), and GUI
+   pre-calculation/Calculate/Results equipment surfaces (item 3). Neither
+   the phase nor items 1–5 are claimed complete by this lock.)
 2. Rich-report v4 per-exam equipment block (collector + writer rows). Owner: Phase 5.
 3. GUI pre-calculation / Calculate / Results equipment surfaces. Owner: Phase 2/3.
-4. CLI session-source syntax and wildcard-promotion flag. Owner: Phase 2.
+4. CLI wildcard-promotion flag. Owner: Phase 2.
+   (CLI file-source syntax — repeatable `--equipment-profile` plus
+   `--equipment-profile-sheet` — explicit read-only store selection
+   (`--equipment-profile-store` plus `--equipment-profile-id`), the
+   settings-file `equipment_profiles` block composed with CLI flags into one
+   candidate, and direct `PyskindoseSettings` / `initialize_settings` source
+   support, delivered 2026-10-12; the promotion flag stays open.)
 5. Old run-profile compatibility reader beyond today's `normalization_settings`
    handling. Owner: Phase 2 (single owner, nowhere else).
 6. Typed captured authority, versioned geometry/capture checksums, strict validators,
-   and offline round-trip/atomic rollback fixtures. Owner: Phase 2/3 at their respective boundaries.
+   offline replay paths, and atomic pre-calculation validation (codec, confirmation,
+   single/multi analysis, DICOM/tabular replay, single/multi-file public APIs) —
+   **delivered**; open remainder: run-state v2 emission/application round-trip with
+   rollback fixtures. Owner: Phase 2 at its boundary (see also item 1). Neither the
+   phase nor items 1–5 are claimed complete by this lock. (2026-10-13: the v2
+   emission/application round-trip with snapshot rollback is delivered for
+   single-exam DICOM and vendor-tabular loads plus already-loaded multi-exam
+   restore and calculation; the pre-load multi-study gap and the owned
+   raw-replay transaction remain open under items 1–3.) The inert parse/emit
+   boundary plus `RunStateError` translation (`gui/run_state_equipment.py`,
+   `gui/run_state_errors.py`, 2026-10-12) is delivered as foundation only: no
+   writer, application, or rollback rides on it yet, and it exposes no partial
+   v2 support — the user atomic-migration contract stays whole for the
+   implementing slice. Its diagnostics are bounded and root-gated
+   (count-before-decode, budget-first localization, exact-str code gate), so
+   oversized or hostile documents cannot trigger unbounded second traversals.
 7. Replacing the `run_state.py:155-178` maker/model gate with §4 default-safe
    emission. Owner: the v2 implementing slice.
 
-None of the above is marked complete by this lock.
+Items 1–5 and 7 are still open, and no phase is marked complete by this lock;
+item 6 records the delivered capture stack against its still-open run-state
+remainder.

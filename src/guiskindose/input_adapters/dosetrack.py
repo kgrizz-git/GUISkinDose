@@ -35,6 +35,7 @@ from typing import Any
 import pandas as pd
 
 from guiskindose.constants import CID_10003_MEANING
+from guiskindose.equipment_profiles.capture import CapturedCoordinates
 from guiskindose.input_adapters.base import (
     AdapterContext,
     coerce_numeric_columns,
@@ -420,12 +421,15 @@ def adapt(
     loaded: _RawLoad,
     original_filename: str,
     settings: PyskindoseSettings,
+    *,
+    equipment_capture_context: CapturedCoordinates | None = None,
 ) -> InputAdapterResult:
     """Convert a DoseTrack export to a normalized InputAdapterResult.
 
     Raises ValueError on blocking errors: missing Equipment Name (can't infer
     manufacturer), missing required columns, duplicate column mappings, or
     rdsr_normalizer() failure.
+    A validated capture replays offline through the shared pipeline instead.
     """
     return run_normalizer_pipeline(
         loaded,
@@ -436,4 +440,5 @@ def adapt(
         transform=_transform,
         original_filename=original_filename,
         settings=settings,
+        equipment_capture_context=equipment_capture_context,
     )

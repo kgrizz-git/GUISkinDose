@@ -13,14 +13,14 @@ import pandas as pd
 
 from guiskindose.analyze_data import analyze_data, analyze_multiple_exams
 from guiskindose.cli_args import get_argument_parser as _cli_args_get_argument_parser
-from guiskindose.cli_kerma_meter import apply_kerma_meter_cli_flags
+from guiskindose.cli_settings import prepare_cli_settings as prepare_cli_settings
 from guiskindose.constants import (
     RUN_ARGUMENTS_OUTPUT_DICT,
     RUN_ARGUMENTS_OUTPUT_HTML,
     RUN_ARGUMENTS_OUTPUT_JSON,
 )
 from guiskindose.debug import dprint
-from guiskindose.dev_data import DEVELOPMENT_PARAMETERS
+from guiskindose.equipment_profiles.capture import CapturedCoordinates
 from guiskindose.format_export_data import MultiExamResult, PySkinDoseOutput
 from guiskindose.helpers.parse_settings_to_settings_class import (
     parse_settings_to_settings_class,
@@ -34,7 +34,7 @@ from guiskindose.input_adapters.import_options import (
     reject_import_options_for_non_tabular,
     reject_non_tabular_paths,
 )
-from guiskindose.privacy import opaque_exam_label, safe_user_error, safe_warning
+from guiskindose.privacy import opaque_exam_label, safe_warning
 from guiskindose.settings import PyskindoseSettings
 
 if TYPE_CHECKING:
@@ -141,6 +141,8 @@ def _print_input_preview(result: Any, exam_index: int, include_sensitive_values:
 def main(
     file_path: str | None = None,
     settings: str | dict | PyskindoseSettings | None = None,
+    *,
+    equipment_capture_context: CapturedCoordinates | None = None,
 ):
     """Run PySkinDose.
 
@@ -161,9 +163,16 @@ def main(
         Setting file in either dict, json string format, or as a
         PyskindoseSettings object. By default, settings_examples.json is
         enabled.
+    equipment_capture_context : CapturedCoordinates | None
+        DICOM-file capture replay only; tabular, JSON, normalized, multi-study, setup refuse.
 
     """
     settings = parse_settings_to_settings_class(settings=settings)
+
+    if equipment_capture_context is not None:
+        from guiskindose.equipment_captured_input import analyze_captured_main_input
+
+        return analyze_captured_main_input(file_path, settings, equipment_capture_context)
 
     # Don't log file_path — RDSR paths/filenames can carry PHI.
     dprint("PROCESSING", "Reading and normalizing RDSR data")
@@ -194,6 +203,7 @@ def analyze_input_file(
     sheet_name: str | int = 0,
     output_format: str = RUN_ARGUMENTS_OUTPUT_DICT,
     import_options: TabularImportOptions | None = None,
+    equipment_capture_context: CapturedCoordinates | None = None,
 ) -> Any:
     """Run PySkinDose from a tabular file (.csv, .tsv, .xlsx) or DICOM/JSON.
 
@@ -218,8 +228,21 @@ def analyze_input_file(
     import_options:
         Optional post-normalization coordinate overrides. Rejected for
         non-tabular paths when any flag is set.
+    equipment_capture_context:
+        Raw-file capture replay only; JSON, normalized, multi-study, setup refuse.
     """
+    if equipment_capture_context is not None and isinstance(settings, PyskindoseSettings):
+        from guiskindose.equipment_captured_input import shielded_settings_for_capture
+
+        settings = shielded_settings_for_capture(settings)
     settings_obj = _settings_with_output_format(settings, output_format)
+    if equipment_capture_context is not None:
+        from guiskindose.equipment_captured_input import analyze_captured_input_file
+
+        return analyze_captured_input_file(
+            file_path, settings=settings_obj, input_schema=input_schema, sheet_name=sheet_name,
+            import_options=import_options, equipment_capture_context=equipment_capture_context,
+        )
     equipment_records: list = []
     input_result = _read_input_for_analysis(
         file_path,
@@ -239,18 +262,6 @@ def analyze_input_file(
     )
 
 
-def _resolve_input_paths(file_paths: Sequence[str | Path]) -> list[Path]:
-    """Expand missing glob paths, preserving the established input ordering."""
-    resolved: list[Path] = []
-    for file_path in file_paths:
-        path = Path(file_path)
-        if not path.exists() and ("*" in str(path) or "?" in str(path)):
-            resolved.extend(sorted(path.parent.glob(path.name)))
-        else:
-            resolved.append(path)
-    return resolved
-
-
 def analyze_multiple_input_files(
     file_paths: Sequence[str | Path],
     settings: str | dict | PyskindoseSettings | None = None,
@@ -259,6 +270,9 @@ def analyze_multiple_input_files(
     sheet_name: str | int = 0,
     per_exam_offsets: list[list[float]] | None = None,
     import_options: TabularImportOptions | None = None,
+    equipment_capture_contexts: list[CapturedCoordinates | None]
+    | tuple[CapturedCoordinates | None, ...]
+    | None = None,
 ) -> MultiExamResult:
     """Run PySkinDose on a list of input files, treating each as a separate exam.
 
@@ -282,7 +296,18 @@ def analyze_multiple_input_files(
     import_options:
         Optional post-normalization coordinate overrides applied to every
         tabular exam. Rejected if any resolved path is not tabular.
+    equipment_capture_contexts:
+        One capture or None per explicit file; splits fail closed, sessions/receipts refuse.
     """
+    if equipment_capture_contexts is not None:
+        from guiskindose.equipment_captured_multi import analyze_captured_multiple_input_files
+
+        return analyze_captured_multiple_input_files(
+            file_paths, settings=settings, input_schema=input_schema, sheet_name=sheet_name,
+            per_exam_offsets=per_exam_offsets, import_options=import_options,
+            equipment_capture_contexts=equipment_capture_contexts,
+        )
+    from guiskindose.equipment_captured_multi import resolve_input_paths
     from guiskindose.input_adapters.models import InputAdapterResult, InputProvenance
     from guiskindose.input_adapters.registry import read_and_normalize_input
 
@@ -294,7 +319,7 @@ def analyze_multiple_input_files(
 
     all_exams: list[InputAdapterResult] = []
 
-    resolved_paths = _resolve_input_paths(file_paths)
+    resolved_paths = resolve_input_paths(file_paths)
 
     reject_import_options_for_non_tabular(resolved_paths, import_options)
 
@@ -471,6 +496,7 @@ def build_cli_export_source(
     Handles single RDSR / tabular files and multi-file (multi-exam) runs, forcing
     ``output_format='dict'`` and capturing calculation warnings.
     """
+    from guiskindose.equipment_captured_multi import resolve_input_paths
     from guiskindose.export import build_export_source_from_cli
     from guiskindose.input_adapters.registry import read_and_normalize_input
 
@@ -484,7 +510,7 @@ def build_cli_export_source(
     pkg_logger = logging.getLogger("guiskindose")
     pkg_logger.addHandler(capture)
     try:
-        resolved = _resolve_input_paths(file_paths)
+        resolved = resolve_input_paths(file_paths)
 
         reject_import_options_for_non_tabular(resolved, import_options)
 
@@ -713,55 +739,6 @@ def print_cli_result(result: Any, *, aggregate_only: bool = False) -> None:
     if hasattr(result, "to_dict"):
         result = result.to_dict()
     print(result if isinstance(result, str) else _json.dumps(result))
-
-
-def prepare_cli_settings(args: "argparse.Namespace") -> PyskindoseSettings:
-    """Build the run settings for a headless CLI invocation, shared by both entry points.
-
-    ``--settings`` may be a path to a JSON file or a JSON string (a path is read,
-    never echoed). With no ``--settings`` the development parameters are used. The
-    kerma-meter flags (including ``--kerma-meter-calibration-date``) and
-    ``--plane-code-map`` are then applied onto the concrete settings object.
-
-    Parameters
-    ----------
-    args : argparse.Namespace
-        Parsed CLI arguments.
-
-    Returns
-    -------
-    PyskindoseSettings
-        Settings ready for ``main()`` / the analyze helpers.
-
-    Raises
-    ------
-    SystemExit
-        If ``--settings`` names a file that does not exist. The message never
-        contains the path.
-    """
-    raw = args.settings
-    if raw is None:
-        logger.warning("No settings specified. Running with development parameters")
-        raw = DEVELOPMENT_PARAMETERS
-    elif isinstance(raw, Path) or (isinstance(raw, str) and not raw.lstrip().startswith("{")):
-        # A path (or a string that is not a JSON object): read it, or fail cleanly.
-        try:
-            is_file = Path(raw).is_file()
-        except OSError:
-            is_file = False
-        if not is_file:
-            raise SystemExit(safe_user_error("settings_file_not_found"))
-        raw = Path(raw).read_text(encoding="utf-8")
-    settings = parse_settings_to_settings_class(settings=raw)
-    if getattr(args, "output_format", None):
-        settings.output_format = args.output_format
-    apply_kerma_meter_cli_flags(settings, args)
-    plane_code_map_raw = getattr(args, "plane_code_map", None)
-    if plane_code_map_raw is not None:
-        from guiskindose.input_adapters.plane_code_map import parse_plane_code_map
-
-        settings.dosetrack_plane_code_map = parse_plane_code_map(plane_code_map_raw)
-    return settings
 
 
 if __name__ == "__main__":

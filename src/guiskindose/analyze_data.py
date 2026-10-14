@@ -10,6 +10,18 @@ import pandas as pd
 from guiskindose import constants as c
 from guiskindose.calculate_dose.calculate_dose import calculate_dose
 from guiskindose.debug import dprint
+from guiskindose.equipment_confirmation import (
+    _check_capture_baseline_request,
+    _prepare_captured_exams,
+    _validate_capture_baselines,
+    _validate_capture_contexts,
+    check_captured_work_isolated,
+)
+from guiskindose.equipment_profiles.capture import (
+    CODE_INVALID_EQUIPMENT_CAPTURE,
+    CapturedCoordinates,
+    CaptureError,
+)
 from guiskindose.format_export_data import (
     ExamResult,
     MultiExamResult,
@@ -24,8 +36,10 @@ from guiskindose.plotting.create_dose_map_plot import create_dose_map_plot
 from guiskindose.plotting.create_geometry_plot import create_geometry_plot
 from guiskindose.privacy import exception_class_name, opaque_exam_label, safe_error_event
 from guiskindose.settings import PyskindoseSettings, initialize_settings
+from guiskindose.settings.normalization_settings import NormalizationSettings
 
 logger = logging.getLogger(__name__)
+_CAPTURE_SETTINGS_ERROR = "Equipment capture cannot be applied to these settings."
 
 
 def _match_mapping_for_output(
@@ -62,6 +76,56 @@ def _match_mapping_for_output(
             )
         return None
     return receipt_to_mapping(receipt=equipment_receipt, frame=frame, settings=settings)
+
+
+def _apply_capture_context(
+    settings: PyskindoseSettings,
+    normalized_data: pd.DataFrame,
+    equipment_receipt: Any,
+    capture_context: Any,
+) -> tuple[PyskindoseSettings, dict[str, Any]]:
+    """Calculate from a captured authority on an already transformed frame.
+
+    Rejects a simultaneous live session or receipt, clones the caller
+    settings privately, prepares the captured recipe into the clone, and
+    confirms frame and candidate before anything calculates. The caller's
+    settings home is preserved on success and failure alike. Returns the
+    working settings plus the stored validated match mapping for output.
+    """
+    from guiskindose.equipment_confirmation import (
+        confirm_captured_application,
+        prepare_captured_candidate,
+    )
+
+    if type(capture_context) is not CapturedCoordinates:
+        raise CaptureError(
+            "Equipment capture context must be a CapturedCoordinates or None.",
+            CODE_INVALID_EQUIPMENT_CAPTURE,
+        )
+    if getattr(settings, "equipment_profile_session", None) is not None or equipment_receipt is not None:
+        raise CaptureError(
+            "A captured equipment context cannot be combined with a live session or receipt.",
+            CODE_INVALID_EQUIPMENT_CAPTURE,
+        )
+    candidate = prepare_captured_candidate(context=capture_context, norm=settings.normalization_settings)
+    try:
+        work_settings = copy.deepcopy(settings)
+    except Exception:
+        # Untrusted boundary: the caller owns the settings graph, so any copy
+        # failure (including hostile __deepcopy__ hooks) is closed, never raw.
+        raise CaptureError(
+            _CAPTURE_SETTINGS_ERROR,
+            CODE_INVALID_EQUIPMENT_CAPTURE,
+        ) from None
+    _check_work_isolated(work_settings, settings)
+    work_settings.normalization_settings = candidate
+    _, equipment_profile_match = confirm_captured_application(
+        context=capture_context, frame=normalized_data, candidate=candidate
+    )
+    return work_settings, equipment_profile_match
+
+
+_check_work_isolated = check_captured_work_isolated
 
 
 def _format_multi_exam_failure_warning(exam_id: str, exc: BaseException) -> str:
@@ -110,6 +174,7 @@ def analyze_data(
     settings: str | dict | PyskindoseSettings,
     *,
     equipment_receipt: Any = None,
+    equipment_capture_context: CapturedCoordinates | None = None,
 ) -> dict[str, Any] | str | PySkinDoseOutput | None:
     """Analyze data och settings, and runs PySkinDose in desired mode.
 
@@ -124,6 +189,19 @@ def analyze_data(
         Raw loaders attach it when a session is bound; direct callers with a
         configured session but no record fail closed, since already-normalized
         input carries no raw provenance to apply a session to.
+    equipment_capture_context : CapturedCoordinates | None
+        Validated captured-coordinate authority for single-exam calculation
+        without a live session. The passed frame must already be transformed
+        (this path never replays raw normalization): the caller's settings
+        are privately cloned, the captured recipe is prepared into the clone,
+        and the frame is confirmed (identity, count, geometry, all 15 leaves)
+        before any calculation, plot, or cache mutation. The stored validated
+        match mapping is used for output. Never combined with a bound session
+        or an equipment receipt; the context is never serialized as settings
+        config and no file, store, bundle, or live resolver is contacted. The working copy is
+        verified isolated (root plus normalization, phantom, and dimension homes) before the
+        candidate lands, so custom clone hooks that share caller state fail closed; ordinary
+        settings subclasses copy cleanly and keep working.
 
     Returns
     -------
@@ -141,7 +219,12 @@ def analyze_data(
             f"Invalid output format specified. Must be one of {'.'.join(c.RUN_ARGUMENTS_VALID_OUTPUT_FORMATS)}"
         )
 
-    equipment_profile_match = _match_mapping_for_output(settings, equipment_receipt, normalized_data)
+    if equipment_capture_context is None:
+        equipment_profile_match = _match_mapping_for_output(settings, equipment_receipt, normalized_data)
+    else:
+        settings, equipment_profile_match = _apply_capture_context(
+            settings, normalized_data, equipment_receipt, equipment_capture_context
+        )
 
     dprint("CALCULATION", "Creating table and pad phantoms")
     # create table, pad and patient phantoms.
@@ -363,8 +446,11 @@ def _exam_result(
     output: PySkinDoseOutput,
     data_norm: pd.DataFrame,
     warnings: list[str],
+    equipment_profile_match: dict[str, Any] | None = None,
 ) -> ExamResult:
     """Assemble the per-exam result dict after a successful dose calculation."""
+    if equipment_profile_match is None:
+        equipment_profile_match = _match_mapping_for_output(settings, exam.equipment_receipt, exam.normalized_data)
     return ExamResult(
         exam_id=exam_id,
         source_file=exam.provenance.original_filename,
@@ -384,7 +470,7 @@ def _exam_result(
         },
         output=output,
         warnings=warnings,
-        equipment_profile_match=_match_mapping_for_output(settings, exam.equipment_receipt, exam.normalized_data),
+        equipment_profile_match=equipment_profile_match,
     )
 
 
@@ -394,8 +480,15 @@ def _process_exam(
     effective_offset: list[float],
     settings: PyskindoseSettings,
     warnings: list[str],
+    equipment_profile_match: dict[str, Any] | None = None,
 ) -> ExamResult | None:
-    """Run geometry + dose calculation for a single loaded exam."""
+    """Run geometry + dose calculation for a single loaded exam.
+
+    A stored captured match bypasses live receipt handling; ``None`` keeps
+    the established live path (receipt restore plus mapping validation).
+    Captured mode never carries live receipts, so the restore branch stays
+    dormant there by construction.
+    """
     if exam.equipment_receipt is not None:
         from guiskindose.equipment_resolution import restore_receipt_to_settings
 
@@ -420,7 +513,10 @@ def _process_exam(
     output = _multi_exam_output(patient, table, pad, raw_output, settings, export_data_norm)
     dprint("RENDERING", f"{exam_id}: creating dose map plot")
     create_dose_map_plot(patient=patient, settings=settings, dose_map=output.dose_map)
-    return _exam_result(exam, exam_id, effective_offset, settings, output, export_data_norm, warnings)
+    return _exam_result(
+        exam, exam_id, effective_offset, settings, output, export_data_norm, warnings,
+        equipment_profile_match=equipment_profile_match,
+    )
 
 
 def analyze_multiple_exams(
@@ -428,12 +524,28 @@ def analyze_multiple_exams(
     settings: str | dict | PyskindoseSettings,
     per_exam_offsets: list[list[float]] | None = None,
     per_exam_extra_warnings: list[list[str]] | None = None,
+    *,
+    equipment_capture_contexts: list[CapturedCoordinates | None] | tuple[CapturedCoordinates | None, ...] | None = None,
+    per_exam_baselines: list[NormalizationSettings | None] | tuple[NormalizationSettings | None, ...] | None = None,
 ) -> MultiExamResult:
     """Process a list of exams on a shared phantom mesh topology.
 
     A fresh table and pad are created for every exam because their positioning
     uses incremental translation. Failed exams are retained as run warnings and
     do not discard successful results.
+
+    ``equipment_capture_contexts`` optionally carries one validated captured
+    authority per exam position as an exact builtin list or tuple
+    (``None`` entries stay unspecified baseline, never fake provenance).
+    With captures, any configured live session or per-exam live receipt fails
+    closed, and every provided capture is validated against its own frame —
+    with isolated private settings — before any exam produces output, so a
+    bad later capture leaves no partial result. Each captured exam calculates
+    on its own prepared work settings, so normalization from one exam is
+    never borrowed by another. ``per_exam_baselines`` optionally carries one
+    private normalization snapshot per exam position (``None`` for captured
+    entries); a null entry then calculates on its own baseline instead of the
+    shared last-load state. Baselines without capture contexts fail closed.
     """
     settings = initialize_settings(settings)
     downgrade_beam_warning = settings.beam_miss_warn == "per_event"
@@ -443,6 +555,18 @@ def analyze_multiple_exams(
     # Validate every configured offset before any exam produces output so a bad
     # later offset cannot leave a partial multi-exam result behind.
     _validate_per_exam_offsets(per_exam_offsets)
+
+    _check_capture_baseline_request(equipment_capture_contexts, per_exam_baselines)
+    captured: list[tuple[PyskindoseSettings, dict[str, Any] | None, list[float]]] | None = None
+    if equipment_capture_contexts is not None:
+        # Captured mode first: shape, session/receipt rejection, and every
+        # capture validated before the live session path below can misread
+        # the mixed authority as a live failure with a different error.
+        aligned = _validate_capture_contexts(exams, equipment_capture_contexts)
+        baselines = _validate_capture_baselines(per_exam_baselines, aligned)
+        captured = _prepare_captured_exams(
+            exams, aligned, settings, per_exam_offsets, downgrade_beam_warning, baselines
+        )
 
     # Same atomicity for custom sessions: every exam must carry its resolved
     # raw provenance before anything calculates, so a late failure cannot
@@ -458,10 +582,17 @@ def analyze_multiple_exams(
     for index, exam in enumerate(exams):
         exam_id = opaque_exam_label(index)
         warnings = _exam_warnings(exam, index, per_exam_extra_warnings)
-        effective_offset = _effective_patient_offset(global_offset, per_exam_offsets, index)
-        exam_settings = _settings_for_exam(settings, effective_offset, downgrade_beam_warning)
+        if captured is None:
+            effective_offset = _effective_patient_offset(global_offset, per_exam_offsets, index)
+            exam_work = _settings_for_exam(settings, effective_offset, downgrade_beam_warning)
+            stored_match = None
+        else:
+            exam_work, stored_match, effective_offset = captured[index]
         try:
-            result = _process_exam(exam, exam_id, effective_offset, exam_settings, warnings)
+            result = _process_exam(
+                exam, exam_id, effective_offset, exam_work, warnings,
+                equipment_profile_match=stored_match,
+            )
         except Exception as exc:
             safe_error_event(logger, "multi_exam_analysis", exc, level=logging.WARNING)
             # Excluded exams never become ExamResult rows, so import / per-exam

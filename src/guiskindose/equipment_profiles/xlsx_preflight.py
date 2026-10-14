@@ -167,13 +167,21 @@ def preflight_container(raw: bytes, *, source_kind: str = SOURCE_KIND_XLSX) -> i
         return worksheet_part_count(archive.infolist())
 
 
-def resolve_sheet(worksheet_count: int, selected: int | None, *, source_kind: str = SOURCE_KIND_XLSX) -> int:
-    """Resolve the zero-based sheet index to read against the workbook's own worksheet count.
+def resolve_sheet(
+    worksheet_count: int,
+    selected: int | str | None,
+    *,
+    source_kind: str = SOURCE_KIND_XLSX,
+    titles: Sequence[str] = (),
+) -> int:
+    """Resolve the sheet to read against the workbook's own worksheet catalog.
 
     Every workbook defaults to sheet ``0``, as specified by the source-format contract.
-    An out-of-range, negative, or non-integer explicit selection is
-    ``unknown_sheet``. Sheet **names are never used here and are never retained**, so no name can reach a
-    diagnostic.
+    An out-of-range, negative, or non-integer explicit index is ``unknown_sheet``.
+    An exact title selects the catalog position holding it; an absent title — or a
+    title held by more than one worksheet (ambiguous forged catalog) — is
+    ``unknown_sheet``. Titles are transient: only the resolved index flows on, and no
+    title ever reaches an error.
     """
     if worksheet_count <= 0:
         raise EquipmentProfileError(ProfileErrorCode.EMPTY_SOURCE, source_kind=source_kind)
@@ -184,8 +192,13 @@ def resolve_sheet(worksheet_count: int, selected: int | None, *, source_kind: st
         )
     if selected is None:
         return 0
-    if not isinstance(selected, int) or isinstance(selected, bool):
+    if type(selected) not in (int, str):
         raise EquipmentProfileError(ProfileErrorCode.UNKNOWN_SHEET, source_kind=source_kind)
+    if isinstance(selected, str):
+        matches = [index for index, title in enumerate(titles) if title == selected]
+        if len(matches) != 1:
+            raise EquipmentProfileError(ProfileErrorCode.UNKNOWN_SHEET, source_kind=source_kind)
+        return matches[0]
     if selected < 0 or selected >= worksheet_count:
         raise EquipmentProfileError(ProfileErrorCode.UNKNOWN_SHEET, source_kind=source_kind)
     return selected
