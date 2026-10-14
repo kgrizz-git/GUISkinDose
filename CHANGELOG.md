@@ -25,7 +25,8 @@ That keeps SemVer and contributor history organized.
   SonarQube new-code violations stay at zero after equipment-profile UI work; no user-facing
   dose/GUI behavior change. Adds `scripts/check_sonarcloud_gate.py` for SonarCloud gate and
   new-code issue visibility; fixes SonarCloud new-code bug `pythonbugs:S2583` in `main()` receipt
-  selection; agent docs separate freshness, quality-gate pass, and manual triage.
+  selection; agent docs separate freshness, quality-gate pass, and manual triage. Privacy harness
+  allowlists common AI agent `Co-authored-by` noreply trailers so `main` push metadata scans match PR behavior.
 
 ### Added
 

@@ -10,6 +10,8 @@ Typical use before or after a ``main`` push when ``sonar-scan`` is enabled:
     python scripts/check_sonarcloud_gate.py
     python scripts/check_sonarcloud_gate.py --fail-on-error
 
+Exits 0 when the gate is red unless ``--fail-on-error`` is set (report-only default).
+
 Cloud **new code** reflects the last analysis SonarCloud recorded (usually ``main``
 after CI ``sonar-scan``), not an unmerged PR branch until that analysis lands.
 """
@@ -30,7 +32,7 @@ _REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from scripts.dump_sonar_issues import (
+from scripts.dump_sonar_issues import (  # noqa: E402
     _NO_REDIRECT_OPENER,
     project_key_from_properties,
     repo_root,
@@ -168,7 +170,9 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     try:
         status_payload = fetch_project_status(host, token, project_key)
-        issues_payload = fetch_new_code_issues(host, token, project_key, page_size=max(args.sample_limit, 50), issue_types=None)
+        issues_payload = fetch_new_code_issues(
+            host, token, project_key, page_size=max(args.sample_limit, 50), issue_types=None
+        )
         bugs_payload = fetch_new_code_issues(host, token, project_key, page_size=10, issue_types="BUG")
     except (RuntimeError, HTTPError, json.JSONDecodeError) as exc:
         print(f"ERROR: SonarCloud query failed ({exc}).", file=sys.stderr)

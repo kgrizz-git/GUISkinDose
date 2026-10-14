@@ -14,6 +14,8 @@ import pytest
 
 import scripts.dump_sonar_issues as dsi
 
+_FAKE_SONAR_TOKEN = "zz-fake-sonar-test-credential-zz"
+
 
 def test_loopback_hosts_allowed_and_remote_refused() -> None:
     assert dsi.check_host_loopback("http://localhost:9000", allow_remote=False)
@@ -328,7 +330,7 @@ def _fake_repo(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, *, key: bool = T
     if key:
         (tmp_path / "sonar-project.properties").write_text("sonar.projectKey=k\n", encoding="utf-8")
     monkeypatch.setattr(dsi, "repo_root", lambda: tmp_path)
-    monkeypatch.setenv("SONAR_TOKEN", "tok")
+    monkeypatch.setenv("SONAR_TOKEN", _FAKE_SONAR_TOKEN)
     return tmp_path
 
 
@@ -346,7 +348,7 @@ def test_main_writes_dumps_and_refreshes_state(
     out = capsys.readouterr().out
     assert "issues on record: 1" in out
     assert "State counts refreshed" in out
-    assert "tok" not in out
+    assert _FAKE_SONAR_TOKEN not in out
     assert json.loads((root / "tmp" / "sonar-latest-issues.json").read_text(encoding="utf-8"))[0]["line"] == 1
     refreshed = json.loads(state.read_text(encoding="utf-8"))
     assert refreshed["issues_count"] == 1
@@ -380,8 +382,8 @@ def test_main_refusals_and_fetch_failure(
     monkeypatch.delenv("SONAR_TOKEN")
     monkeypatch.delenv("SONAR_CLOUD_TOKEN", raising=False)
     assert dsi.main(["--host-url", "http://localhost:9000", "--project-key", "k"]) == 2
-    monkeypatch.setenv("SONAR_TOKEN", "tok")
+    monkeypatch.setenv("SONAR_TOKEN", _FAKE_SONAR_TOKEN)
     _stub_pages(monkeypatch, [503])
     assert dsi.main(["--host-url", "http://localhost:9000", "--project-key", "k"]) == 1
     assert not (root / "tmp").exists()
-    assert "tok" not in capsys.readouterr().err
+    assert _FAKE_SONAR_TOKEN not in capsys.readouterr().err

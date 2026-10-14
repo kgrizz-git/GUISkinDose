@@ -154,7 +154,8 @@ For a full unresolved-issue dump to gitignored `tmp/`, use `dump_sonar_issues.py
 | `dump_sonar_issues.py` | loopback | `SONAR_TOKEN`, else `SONAR_CLOUD_TOKEN` |
 | `check_sonarcloud_gate.py` | `https://sonarcloud.io` | `SONAR_CLOUD_TOKEN`, else `SONAR_TOKEN` |
 
-`.env` duplicate keys use **last assignment wins**. Loopback helpers also read `SONAR_HOST_URL` from the environment
+`.env` duplicate keys: later non-empty assignments win (empty values are skipped, so an earlier value can
+remain). Loopback helpers also read `SONAR_HOST_URL` from the environment
 (overridable via `--host-url`); the local runner falls back to `.env` so `python scripts/run_sonarqube_local.py` works
 without an export dance.
 

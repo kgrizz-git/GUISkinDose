@@ -119,6 +119,11 @@ be archived.
 
 ### Harness / Repo Hygiene
 
+- [ ] **SonarCloud issues API filter** — `scripts/check_sonarcloud_gate.py` still uses `types=BUG` for the
+  new-code sample; migrate to `impactSoftwareQualities` when SonarCloud documents stable query parameters
+  (see SonarCloud API deprecation notices).
+- [ ] **Dedupe Sonar `.env` token parsing** — share dotenv token resolution between `dump_sonar_issues.py` and
+  `check_sonarcloud_gate.py` if duplication shows up as a Sonar smell or drifts in behavior.
 - [ ] **Worktree hook environment tracking** — `commit-msg` hook path resolution is worktree-aware (`resolve_commit_message_path` checks `--git-common-dir`/`--git-dir`). Pre-push hooks (basedpyright, gui-test-placement) still resolve `guiskindose` from whichever editable install is on `PATH` — document or detect venv resolution when running pre-push hooks from linked worktrees.
 - [ ] **Retire the pre-rename compatibility shims** — three independent pieces with different
   triggers (semgrep rules-file rename and rule-ID rename: any time, atomic diff required, no
