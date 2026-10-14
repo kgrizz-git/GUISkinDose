@@ -741,10 +741,6 @@ def print_cli_result(result: Any, *, aggregate_only: bool = False) -> None:
     print(result if isinstance(result, str) else _json.dumps(result))
 
 
-# Bound for importers (`from guiskindose.main import prepare_cli_settings`) and static checks.
-_PUBLIC_API = (prepare_cli_settings,)
-
-
 if __name__ == "__main__":
     from guiskindose.__main__ import cli
 

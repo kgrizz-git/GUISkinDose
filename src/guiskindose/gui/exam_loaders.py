@@ -383,7 +383,6 @@ def _parse_tabular(
     # before the drop runs. A capture slot replays the recipe instead of
     # resolving live; a null slot loads with live behavior but seeds the
     # document's flags.
-    pending, entry, replay_capture = _peek_pending_entry(state, live)
     if replace_existing and pending:
         raise UserFacingInputError(
             "Cannot re-parse inputs while run-configuration equipment is staged; "

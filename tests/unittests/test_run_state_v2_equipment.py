@@ -629,13 +629,18 @@ def test_writer_refuses_pending() -> None:
 
 
 def test_emission_bounds_before_comprehension() -> None:
-    """Oversized exam lists refuse before any entry is materialized."""
+    """Capture-free exports skip the emission ceiling; captures refuse when over cap."""
     from guiskindose.gui.run_state_equipment import equipment_section_for_document
 
-    with pytest.raises(RunStateError) as excinfo:
-        equipment_section_for_document([object()] * 65)
-    assert excinfo.value.code == "invalid_equipment_capture"
+    assert equipment_section_for_document([object()] * 65) is None
     assert equipment_section_for_document([object()] * 64) is None
+
+    class _Exam:
+        equipment_capture = object()
+
+    with pytest.raises(RunStateError) as excinfo:
+        equipment_section_for_document([_Exam()] * 65)
+    assert excinfo.value.code == "invalid_equipment_capture"
 
 
 def test_pending_bounds_before_materialization() -> None:

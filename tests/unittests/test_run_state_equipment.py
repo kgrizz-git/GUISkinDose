@@ -214,15 +214,22 @@ def test_decode_count_mismatch_rejects_whole_section(
     assert calls == []
 
 
-@pytest.mark.parametrize("exam_count", [True, -1, 65, "1", 1.0, None])
+@pytest.mark.parametrize("exam_count", [True, -1, "1", 1.0, None])
 def test_decode_exam_count_mistypes_fail_closed(
     dicom_capture: CapturedCoordinates, exam_count: Any
 ) -> None:
-    """Booleans, negatives, over-64, and non-integers never align."""
+    """Booleans, negatives, and non-integers never align."""
     section = envelope_to_mapping([dicom_capture])
     with pytest.raises(RunStateError) as excinfo:
         decode_equipment_section(section, exam_count=exam_count)
     assert excinfo.value.code == CODE_INVALID_EQUIPMENT_CAPTURE
+
+
+def test_decode_exam_count_over_cap_message(dicom_capture: CapturedCoordinates) -> None:
+    """Over-64 counts surface a dedicated bound message, not a generic mismatch."""
+    section = envelope_to_mapping([dicom_capture])
+    with pytest.raises(RunStateError, match="Too many exams for equipment capture section"):
+        decode_equipment_section(section, exam_count=65)
 
 
 @pytest.mark.parametrize("section", ["{\"a\": 1}", 5, ["captures"]])

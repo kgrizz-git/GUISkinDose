@@ -19,9 +19,6 @@ That keeps SemVer and contributor history organized.
 
 ## [Unreleased]
 
-- Experimental equipment captures reject non-string envelope modes and
-  non-string object keys before comparisons, with value-free errors.
-
 ### Added
 
 - **Run-configuration equipment captures (experimental)** (2026-10-13) —
@@ -197,6 +194,10 @@ That keeps SemVer and contributor history organized.
 
 ### Changed
 
+- **Run-config export with many exams** — saving a run configuration with more than 64 loaded exams
+  and no equipment captures no longer fails the equipment emission path; the equipment section stays
+  ``null`` until at least one exam carries a capture.
+
 - **Equipment-profile store revision retention** — saving a new profile revision when 64 rows are already
   retained deletes the oldest revision number in the same transaction (never the current pointer) so
   ``current_revision`` can keep advancing; historical revision numbers may no longer be readable via
@@ -267,6 +268,9 @@ That keeps SemVer and contributor history organized.
   only `k_tab_mode` is written. The Corrections tab now has a mode select, and the info icon describes all three.
 
 ### Fixed
+
+- Experimental equipment captures reject non-string envelope modes and
+  non-string object keys before comparisons, with value-free errors.
 
 - **Raw RDSR-like auto-detect no longer elects on station or serial alone** (2026-10-09) —
   `StationName` and `DeviceSerialNumber` still count toward recall but no longer elect a raw

@@ -118,7 +118,7 @@ def _parse_sheet_selector(raw: Any) -> int | str | None:
         return _checked_sheet_index(int(digits))
     if len(stripped) > 1 and stripped[0] == "-" and stripped[1:].isascii() and stripped[1:].isdigit():
         raise UserFacingInputError(_INVALID_SHEET_MESSAGE)
-    return raw
+    return stripped
 
 
 def _checked_sheet_index(index: int) -> int:

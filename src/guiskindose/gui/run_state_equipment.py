@@ -87,7 +87,14 @@ _COUNT_MESSAGE = "Equipment capture section does not match the exam count."
 
 def _checked_exam_count(exam_count: Any) -> int:
     """Require an exact exam count in 0..64; booleans and mistypes fail closed."""
-    if type(exam_count) is not int or not 0 <= exam_count <= CAPTURE_MAX_CAPTURES:
+    if type(exam_count) is not int:
+        raise RunStateError(_COUNT_MESSAGE, code=CODE_INVALID_EQUIPMENT_CAPTURE)
+    if exam_count > CAPTURE_MAX_CAPTURES:
+        raise RunStateError(
+            "Too many exams for equipment capture section.",
+            code=CODE_INVALID_EQUIPMENT_CAPTURE,
+        )
+    if exam_count < 0:
         raise RunStateError(_COUNT_MESSAGE, code=CODE_INVALID_EQUIPMENT_CAPTURE)
     return exam_count
 
@@ -274,7 +281,7 @@ _OFFSET_MESSAGE = "Equipment pending entry offsets must be finite numbers."
 _IMMUTABLE_MESSAGE = "Staged equipment overrides are immutable."
 
 
-class ImmutableOverrideError(Exception):
+class ImmutableOverrideError(LookupError):
     """Raised when code attempts to delete from a staged override mapping."""
 
 
@@ -530,14 +537,14 @@ def equipment_section_for_document(exams: Any) -> dict[str, Any] | None:
             "Equipment emission needs a loaded exam list.",
             code=CODE_INVALID_EQUIPMENT_CAPTURE,
         )
+    contexts = [getattr(exam, "equipment_capture", None) for exam in exams]
+    if not any(context is not None for context in contexts):
+        return None
     if len(exams) > CAPTURE_MAX_CAPTURES:
         raise RunStateError(
             "Too many loaded exams for equipment emission.",
             code=CODE_INVALID_EQUIPMENT_CAPTURE,
         )
-    contexts = [getattr(exam, "equipment_capture", None) for exam in exams]
-    if not any(context is not None for context in contexts):
-        return None
     return emit_equipment_section(contexts, exam_count=len(contexts))
 
 

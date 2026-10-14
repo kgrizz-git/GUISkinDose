@@ -491,7 +491,6 @@ def _rows(raw: bytes, *, selected: int | str | None, source_kind: str) -> Iterat
     try:
         worksheets = _worksheets(workbook)
         count = len(worksheets)
-        resolve_sheet(count, None, source_kind=source_kind)
         titles = [getattr(worksheet, "title", "") for worksheet in worksheets]
         index = resolve_sheet(count, selected, titles=titles, source_kind=source_kind)
         _check_catalog_parts(raw, worksheets, source_kind)

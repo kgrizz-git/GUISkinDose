@@ -279,8 +279,9 @@ both a block and `equipment_profile_session` (refused closed). Request paths
 never appear in exports or `to_settings_dict`.
 
 Pre-transformed inputs (`normalized` tables, preparsed `.json`, bare DataFrames) refuse a
-nonempty session instead of silently skipping it. GUI management and rich-report
-integration are not part of this slice.
+nonempty session instead of silently skipping it. In-app equipment-profile store
+authoring and rich-report integration are not part of this slice (GUI session binding
+and run-configuration capture replay ship separately on the equipment run-state branch).
 
 ```bash
 guiskindose --file-path study.dcm --equipment-profile my_profile.json

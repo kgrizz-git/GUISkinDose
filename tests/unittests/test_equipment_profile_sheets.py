@@ -420,12 +420,12 @@ def test_invalid_selector_rejects_before_profile_reads(monkeypatch: pytest.Monke
     assert reads == []
 
 
-def test_cli_sheet_title_keeps_whitespace(tmp_path: Path) -> None:
-    title = "  Profile data  "
+def test_cli_sheet_title_strips_outer_whitespace(tmp_path: Path) -> None:
+    title = "Profile data"
     raw = _workbook_bytes([(title, _siemens_table())])
     path = tmp_path / "profile.xlsx"
     path.write_bytes(raw)
-    args = _argv_namespace([path], sheet=title)
+    args = _argv_namespace([path], sheet=f"  {title}  ")
     actual = equipment_session_from_args(args)
     expected = assemble_session(files=[FileSource(path, sheet=0)])
     assert actual is not None
