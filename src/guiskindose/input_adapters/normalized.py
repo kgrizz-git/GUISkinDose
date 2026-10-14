@@ -20,7 +20,6 @@ from guiskindose.input_adapters.base import extract_table
 from guiskindose.input_adapters.column_mapper import detect_header_row
 from guiskindose.input_adapters.models import InputAdapterResult, InputProvenance
 from guiskindose.input_adapters.tabular_loader import _RawLoad
-from guiskindose.rdsr_input_checks import RdsrInputError
 
 # Canonical column names produced by rdsr_normalizer(), lowercased for comparison.
 # ``manufacturer`` is recognized but NOT required: legacy normalized tables
@@ -276,15 +275,12 @@ def _apply_manufacturer_contract(data_df: pd.DataFrame, warnings: list[str]) -> 
 def _require_single_identity(data_df: pd.DataFrame, *, exam_index: int | None) -> None:
     """Fail closed unless one exam carries exactly one canonical identity pair.
 
-    Raises ``ValueError`` with a value-free message (opaque exam position,
-    pair count, and missing-maker row count only). Split groups are checked
-    individually with their positions, so makers/models may differ *across*
-    study-id groups, never *within* one exam.
+    Raises :class:`~guiskindose.rdsr_input_checks.RdsrInputError` (a
+    :class:`~guiskindose.privacy.UserFacingInputError`) with a value-free
+    message. Split groups are checked individually with their positions, so
+    makers/models may differ *across* study-id groups, never *within* one exam.
     """
-    try:
-        require_homogeneous_identity(data_df, exam_index=exam_index)
-    except RdsrInputError as exc:
-        raise ValueError(str(exc)) from None
+    require_homogeneous_identity(data_df, exam_index=exam_index)
 
 
 def _validate_normalized(data_df: pd.DataFrame, column_map: dict[str, str]) -> list[str]:

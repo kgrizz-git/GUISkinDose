@@ -91,6 +91,13 @@ def save_new_revision(
     absence; updating an existing record **requires** ``expected_current_revision``, so an accidental
     omission cannot overwrite newer content. A brand-new record starts **disabled** with generation 1; a
     recreated ID continues its tombstoned generation and revision number, never reusing either.
+
+    When a profile already retains ``MAX_REVISIONS_PER_PROFILE`` rows, the oldest stored revision (lowest
+    revision number, never the current pointer) is deleted in the same transaction before the new row is
+    inserted. ``current_revision`` still advances monotonically; ``read_revision(profile_id, n)`` may
+    return ``STORE_NOT_FOUND`` for numbers that were evicted. Callers must not assume every historical
+    revision number remains fetchable forever.
+
     Unsupported feature capabilities may be persisted but are never activated or applied here; activation
     is a separate, later step.
     """
@@ -270,7 +277,11 @@ def _revision_count(connection: sqlite3.Connection, profile_id: str) -> int:
 
 
 def _prune_oldest_revision_if_at_capacity(connection: sqlite3.Connection, profile_id: str) -> None:
-    """Drop the oldest retained revision when at capacity so a new one can be inserted."""
+    """Drop the oldest retained revision when at capacity so a new one can be inserted.
+
+    Runs inside the caller's ``BEGIN IMMEDIATE`` transaction; rolls back with the save on failure.
+    Never deletes the row referenced by ``profile_records.current_revision``.
+    """
     if _revision_count(connection, profile_id) < _store_schema.MAX_REVISIONS_PER_PROFILE:
         return
     try:

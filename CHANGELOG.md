@@ -21,6 +21,11 @@ That keeps SemVer and contributor history organized.
 
 ### Changed
 
+- **Equipment-profile store revision retention** — saving a new profile revision when 64 rows are already
+  retained deletes the oldest revision number in the same transaction (never the current pointer) so
+  ``current_revision`` can keep advancing; historical revision numbers may no longer be readable via
+  ``read_revision``.
+
 - Custom negative table-angle and third positioner-angle direction signs now preserve the zero-angle
   arrays instead of causing a row-length error during normalization.
 
