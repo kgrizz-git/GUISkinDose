@@ -29,13 +29,14 @@ _GIT_IDENTITY_TRAILER_LINE = re.compile(
 
 # Vendor-published automation noreply addresses (exact match, case-insensitive).
 # Split ``user@domain`` literals so the sensitive-content gate does not flag this module.
+_NOREPLY_AT = "noreply@"
 _ALLOWED_EXACT_TRAILER_EMAILS: frozenset[str] = frozenset(
     {
         "support@" + "github.com",
-        "noreply@" + "github.com",
-        "noreply@" + "anthropic.com",  # Claude Code / Anthropic agents
+        _NOREPLY_AT + "github.com",
+        _NOREPLY_AT + "anthropic.com",  # Claude Code / Anthropic agents
         "cursoragent@" + "cursor.com",  # Cursor IDE + cloud agents
-        "noreply@" + "openai.com",  # OpenAI Codex default commit_attribution
+        _NOREPLY_AT + "openai.com",  # OpenAI Codex default commit_attribution
         "qwen-coder@" + "alibabacloud.com",  # Qwen Coder co-author trailer
     }
 )
