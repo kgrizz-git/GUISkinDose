@@ -215,7 +215,7 @@ def fetch_issues_page(host_url: str, token: str, component: str, page: int, page
     if not isinstance(payload, dict):
         raise RuntimeError("issue search returned a non-object response; state untouched")
     if payload.get("errors"):
-        raise RuntimeError(f"issue search returned errors: {payload['errors']}")
+        raise RuntimeError("issue search returned API errors; state untouched")
     if not isinstance(payload.get("issues"), list):
         raise RuntimeError("issue search response has no issues array; state untouched")
     _validate_issues(payload["issues"])

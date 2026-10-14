@@ -54,11 +54,14 @@ def _get_json(host_url: str, token: str, path: str, query: dict[str, str]) -> di
         raise RuntimeError(f"request failed ({type(exc).__name__})") from exc
     if status != 200:
         raise RuntimeError(f"HTTP {status}")
-    payload = json.loads(body.decode("utf-8"))
+    try:
+        payload = json.loads(body.decode("utf-8"))
+    except ValueError as exc:
+        raise RuntimeError("invalid JSON response") from exc
     if not isinstance(payload, dict):
         raise RuntimeError("non-object JSON response")
     if payload.get("errors"):
-        raise RuntimeError(f"API errors: {payload['errors']}")
+        raise RuntimeError("API returned errors")
     return payload
 
 
@@ -171,7 +174,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         status_payload = fetch_project_status(host, token, project_key)
         issues_payload = fetch_new_code_issues(
-            host, token, project_key, page_size=max(args.sample_limit, 50), issue_types=None
+            host, token, project_key, page_size=min(max(args.sample_limit, 50), 500), issue_types=None
         )
         bugs_payload = fetch_new_code_issues(host, token, project_key, page_size=10, issue_types="BUG")
     except (RuntimeError, HTTPError, json.JSONDecodeError) as exc:

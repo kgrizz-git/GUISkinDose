@@ -8,6 +8,10 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ## [Unreleased]
 
+- Sonar helper review: suppress raw API error bodies, handle invalid response encoding safely,
+  and cap SonarCloud issue requests at the supported 500-entry page size. Offline regressions
+  cover credential redaction, malformed responses, and quality-gate exit codes.
+
 - Extend `git_identity_trailers.py` so AI agent `Co-authored-by` trailers (Anthropic, Cursor, OpenAI Codex,
   Qwen Coder, Kilo Gastown agents, plus existing GitHub noreply bots) do not fail `check_ci_metadata.py` on
   `main` pushes; institutional addresses in trailers still fail.

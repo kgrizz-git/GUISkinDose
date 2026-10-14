@@ -311,7 +311,7 @@ def test_fetch_all_issues_paginates_and_truncates(monkeypatch: pytest.MonkeyPatc
     [
         (500, "HTTP 500"),
         (b"not json", "invalid JSON"),
-        ({"errors": [{"msg": "x"}]}, "returned errors"),
+        ({"errors": [{"msg": "x"}]}, "returned API errors"),
         ({"paging": {}}, "no issues array"),
         ({"issues": ["x"]}, "non-object issue"),
         ({"issues": [{"component": 3}]}, "non-text component"),
@@ -324,6 +324,13 @@ def test_fetch_issues_page_failures_raise(monkeypatch: pytest.MonkeyPatch, page:
     _stub_pages(monkeypatch, [page])
     with pytest.raises(RuntimeError, match=match):
         dsi.fetch_issues_page("http://localhost:9000", "tok", "k", 1, 10)
+
+
+def test_fetch_issues_page_does_not_echo_api_errors(monkeypatch: pytest.MonkeyPatch) -> None:
+    _stub_pages(monkeypatch, [{"errors": [{"msg": _FAKE_SONAR_TOKEN}]}])
+    with pytest.raises(RuntimeError, match="returned API errors") as excinfo:
+        dsi.fetch_issues_page("http://localhost:9000", _FAKE_SONAR_TOKEN, "k", 1, 10)
+    assert _FAKE_SONAR_TOKEN not in str(excinfo.value)
 
 
 def _fake_repo(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, *, key: bool = True) -> Path:
