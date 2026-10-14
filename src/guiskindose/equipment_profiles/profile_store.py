@@ -272,6 +272,17 @@ class ProfileStore:
     def _create_schema(self, connection: sqlite3.Connection) -> None:
         connection.execute("BEGIN IMMEDIATE")
         try:
+            version = self._user_version(connection)
+            tables = table_names(connection)
+            if version == 1 or tables:
+                connection.execute("ROLLBACK")
+                if version == 1:
+                    verify_schema(connection)
+                elif version == 0 and tables:
+                    raise store_error(ProfileErrorCode.STORE_CORRUPTION)
+                else:
+                    raise store_error(ProfileErrorCode.UNSUPPORTED_STORE_VERSION)
+                return
             for statement in schema_statements():
                 connection.execute(statement)
             connection.execute(

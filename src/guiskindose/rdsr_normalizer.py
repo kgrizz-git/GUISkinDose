@@ -347,10 +347,10 @@ def rdsr_normalizer_with_source_rows(
     collapse_duplicate_scalars(data_parsed)
     ensure_device_columns(data_parsed)
     # Phase 1 identity contract: one homogeneous (manufacturer, model) exam per
-    # frame. Mixed canonical manufacturers fail closed here — before
-    # update_used_settings reads row 0 — so a mixed frame can never silently
-    # normalize under the first pair. Same-maker model variation keeps the
-    # established row-0 selection.
+    # frame. Mixed canonical makers, same-maker model variation, and
+    # known+unknown identity mixes all fail closed here — before
+    # update_used_settings reads row 0 — so no row may silently borrow another
+    # row's identity.
     require_homogeneous_identity(data_parsed)
 
     if equipment_capture_context is None:

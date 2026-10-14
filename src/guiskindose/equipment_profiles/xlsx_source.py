@@ -507,6 +507,7 @@ def _rows(raw: bytes, *, selected: int | str | None, source_kind: str) -> Iterat
             if header is None:
                 names = tuple(_row_cells(row, None, source_kind, data_rows))
                 header = validate_header(names, source_kind)
+                data_rows = 1
                 continue
             yield parse_row(
                 _row_cells(row, _ordered_names(header), source_kind, data_rows),

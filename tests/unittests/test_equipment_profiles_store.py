@@ -548,7 +548,10 @@ def test_tampered_payload_and_hash_are_rejected_on_read(tmp_path: Path) -> None:
     target = tmp_path / "profiles.sqlite3"
 
     raw = sqlite3.connect(str(target))
-    raw.execute("UPDATE profile_revisions SET payload_json = '{\"schema_version\": 1, \"other\": true}'")
+    raw.execute(
+        "UPDATE profile_revisions SET payload_json = ? WHERE profile_id = ?",
+        ('{"schema_version": 1, "other": true}', "demo-partial"),
+    )
     raw.commit()
     raw.close()
     with pytest.raises(EquipmentProfileError) as excinfo:
@@ -561,7 +564,12 @@ def test_tampered_payload_and_hash_are_rejected_on_read(tmp_path: Path) -> None:
     assert excinfo.value.source_kind == "store"
 
     raw = sqlite3.connect(str(target))
-    raw.execute("UPDATE profile_revisions SET payload_json = 'not json', profile_hash = '0' * 64")
+    invalid_payload = "not json"
+    invalid_hash = "0" * 64
+    raw.execute(
+        "UPDATE profile_revisions SET payload_json = ?, profile_hash = ? WHERE profile_id = ?",
+        (invalid_payload, invalid_hash, "demo-partial"),
+    )
     raw.commit()
     raw.close()
     with pytest.raises(EquipmentProfileError) as excinfo:
@@ -575,7 +583,11 @@ def test_tampered_hash_with_valid_payload_is_rejected(tmp_path: Path) -> None:
     target = tmp_path / "profiles.sqlite3"
 
     raw = sqlite3.connect(str(target))
-    raw.execute("UPDATE profile_revisions SET profile_hash = 'f' * 64")
+    tampered_hash = "f" * 64
+    raw.execute(
+        "UPDATE profile_revisions SET profile_hash = ? WHERE profile_id = ?",
+        (tampered_hash, "demo-partial"),
+    )
     raw.commit()
     raw.close()
 
@@ -642,9 +654,13 @@ def test_global_record_and_revision_caps(monkeypatch: pytest.MonkeyPatch, tmp_pa
     assert _code(excinfo) is ProfileErrorCode.STORE_LIMIT_EXCEEDED
 
     retry = _coordinate_profile()
+    third = store.save_new_revision(retry, expected_current_revision=2)
+    assert third.current_revision == 3
     with pytest.raises(EquipmentProfileError) as excinfo:
-        store.save_new_revision(retry, expected_current_revision=2)
-    assert _code(excinfo) is ProfileErrorCode.STORE_LIMIT_EXCEEDED
+        store.read_revision("demo-partial", revision=1)
+    assert _code(excinfo) is ProfileErrorCode.STORE_NOT_FOUND
+    assert store.read_revision("demo-partial", revision=2) is not None
+    assert store.read_revision("demo-partial", revision=3) is not None
 
 
 def test_snapshot_aggregate_row_ceiling(tmp_path: Path) -> None:
