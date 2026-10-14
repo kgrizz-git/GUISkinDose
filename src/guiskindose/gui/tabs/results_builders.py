@@ -223,8 +223,8 @@ class ResultsTabController:
         if self.refs.agg_tube_label is None:  # not built yet
             return
         blocks = [
-            (f"Exam {i + 1}", getattr(getattr(exam, "output", None), "tube_summary", None))
-            for i, exam in enumerate(getattr(res, "exams", []) or [])
+            (exam.exam_id, getattr(getattr(exam, "output", None), "tube_summary", None))
+            for exam in getattr(res, "exams", []) or []
         ]
         text = format_tube_summary(blocks)
         self.refs.agg_tube_label.set_text(text)

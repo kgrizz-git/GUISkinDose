@@ -183,6 +183,40 @@ def test_payload_multi_exam_object():
     assert "run warning" in payload.warnings.run_warnings
 
 
+def test_payload_multi_exam_equipment_match_on_exam_result_wrapper() -> None:
+    """Match lives on ExamResult, not PySkinDoseOutput — export must still surface it."""
+    wrapper_match = {
+        "profile_id": "p-wrap",
+        "source": "custom",
+        "level": "exact",
+        "notice": {"kind": "partial", "entries": [], "text": "partial match notice"},
+    }
+    o1 = _two_event_output()
+    result = SimpleNamespace(
+        exams=[
+            SimpleNamespace(
+                exam_id="opaque-a",
+                source_file="a.dcm",
+                patient_offset=[0, 0, 0],
+                output=_fake_output_obj(o1),
+                warnings=[],
+                equipment_profile_match=wrapper_match,
+            ),
+        ],
+        aggregate_dose_map=np.array([1.0, 2.0, 0.6]),
+        aggregate_psd=2.0,
+        total_events=2,
+        warnings=[],
+    )
+    src = ExportSource(
+        execution_context="cli",
+        multi_exam_result=cast(Any, result),
+        exams=[ExportExamSource("opaque-a", pd.DataFrame(), None, "a.dcm", _settings(), (0, 0, 0))],
+    )
+    payload = collect_export_payload(src, with_images=False)
+    assert payload.exams[0].equipment_profile_match == wrapper_match
+
+
 def test_object_view_keeps_an_explicit_empty_corrected_kerma() -> None:
     """Only None, not an explicit empty sequence, falls back to reported kerma."""
     output = _fake_output_obj(_two_event_output())

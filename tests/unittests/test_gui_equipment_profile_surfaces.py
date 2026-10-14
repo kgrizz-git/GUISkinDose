@@ -86,12 +86,15 @@ def test_post_calc_non_dict_output_empty() -> None:
 
 
 def test_post_calc_multi_mixed_matches() -> None:
-    out_with = SimpleNamespace(equipment_profile_match=_match("yes"), to_dict=lambda: {})
-    out_without = SimpleNamespace(equipment_profile_match=None, to_dict=lambda: {})
     app_state = SimpleNamespace(
         is_multi_exam=True,
-        multi_exam_result=SimpleNamespace(exams=[SimpleNamespace(output=out_with), SimpleNamespace(output=out_without)]),
+        multi_exam_result=SimpleNamespace(
+            exams=[
+                SimpleNamespace(exam_id="opaque-a", equipment_profile_match=_match("yes"), output=object()),
+                SimpleNamespace(exam_id="opaque-b", equipment_profile_match=None, output=object()),
+            ]
+        ),
         output=None,
     )
     blocks = post_calc_equipment_profile_blocks(app_state)
-    assert blocks == [("Exam 1", _match("yes"))]
+    assert blocks == [("opaque-a", _match("yes"))]

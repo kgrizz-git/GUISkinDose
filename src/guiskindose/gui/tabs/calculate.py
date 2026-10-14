@@ -647,11 +647,12 @@ def _build_input_data_summary() -> None:
             equipment_profile_summary = ui.label(_format_equipment_profile_precalc_summary()).classes(
                 "text-[11px] text-grey-6 whitespace-pre-line w-full"
             )
-            for attr in ("input_revision", "calc_run_id"):
-                equipment_profile_summary.bind_text_from(state, attr, backward=_equipment_profile_precalc_summary_backward)
-                equipment_profile_summary.bind_visibility_from(
-                    state, attr, backward=_equipment_profile_precalc_visible_backward
-                )
+            equipment_profile_summary.bind_text_from(
+                state, "input_revision", backward=_equipment_profile_precalc_summary_backward
+            )
+            equipment_profile_summary.bind_visibility_from(
+                state, "input_revision", backward=_equipment_profile_precalc_visible_backward
+            )
 
 
 def _build_phantom_setup_summary() -> None:

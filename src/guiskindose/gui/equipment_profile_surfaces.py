@@ -42,15 +42,10 @@ def post_calc_equipment_profile_blocks(app_state: AppState) -> list[tuple[str | 
     """Per-exam match mappings from the last calculation output."""
     if app_state.is_multi_exam and app_state.multi_exam_result is not None:
         blocks: list[tuple[str | None, dict[str, Any] | None]] = []
-        for index, exam in enumerate(app_state.multi_exam_result.exams):
-            output = getattr(exam, "output", None)
-            match = None
-            if output is not None:
-                match = getattr(output, "equipment_profile_match", None)
-                if match is None and hasattr(output, "to_dict"):
-                    match = output.to_dict().get("equipment_profile_match")
+        for exam in app_state.multi_exam_result.exams:
+            match = getattr(exam, "equipment_profile_match", None)
             if has_equipment_profile_content(match):
-                blocks.append((f"Exam {index + 1}", match))
+                blocks.append((exam.exam_id, match))
         return blocks
 
     output = app_state.output
