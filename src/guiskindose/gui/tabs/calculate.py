@@ -68,6 +68,17 @@ class _PlaneAuditCache:
 _plane_audit_cache = _PlaneAuditCache()
 
 
+@dataclass
+class _EquipmentProfilePrecalcCache:
+    """Mutable cache for the equipment-profile pre-calc summary string."""
+
+    key: object | None = None
+    value: str | None = None
+
+
+_equipment_precalc_cache = _EquipmentProfilePrecalcCache()
+
+
 def _format_patient_offsets() -> str:
     """Format the current patient-offset summary string for the Calculate card."""
     return format_patient_offsets(state)
@@ -530,9 +541,34 @@ class _CalculationController:
         return self.controls
 
 
+def _equipment_profile_precalc_fingerprint() -> tuple[object, ...]:
+    """Stable key so ``bind_text_from`` refreshes reuse one capture decode pass."""
+    capture_ids: list[object] = []
+    for exam in state.loaded_exams:
+        capture = getattr(exam, "equipment_capture", None)
+        capture_ids.append(id(capture) if capture is not None else None)
+    return (state.input_revision, state.calc_run_id, len(state.loaded_exams), tuple(capture_ids))
+
+
+def _equipment_profile_precalc_summary_backward(_v: object) -> str:
+    """NiceGUI ``bind_text_from`` backward for the equipment-profile summary."""
+    return _format_equipment_profile_precalc_summary()
+
+
+def _equipment_profile_precalc_visible_backward(_v: object) -> bool:
+    """NiceGUI ``bind_visibility_from`` backward for the equipment-profile summary."""
+    return bool(_format_equipment_profile_precalc_summary())
+
+
 def _format_equipment_profile_precalc_summary() -> str:
     """Privacy-safe custom equipment-profile match lines for loaded exams."""
-    return format_equipment_profile_blocks(pre_calc_equipment_profile_blocks(state))
+    key = _equipment_profile_precalc_fingerprint()
+    if key == _equipment_precalc_cache.key and _equipment_precalc_cache.value is not None:
+        return _equipment_precalc_cache.value
+    value = format_equipment_profile_blocks(pre_calc_equipment_profile_blocks(state))
+    _equipment_precalc_cache.key = key
+    _equipment_precalc_cache.value = value
+    return value
 
 
 def _format_plane_identity_audit() -> str:
@@ -611,14 +647,10 @@ def _build_input_data_summary() -> None:
             equipment_profile_summary = ui.label(_format_equipment_profile_precalc_summary()).classes(
                 "text-[11px] text-grey-6 whitespace-pre-line w-full"
             )
-            equipment_profile_summary.bind_visibility_from(
-                state,
-                "input_revision",
-                backward=lambda _v: bool(_format_equipment_profile_precalc_summary()),
-            )
             for attr in ("input_revision", "calc_run_id"):
-                equipment_profile_summary.bind_text_from(
-                    state, attr, backward=lambda _v: _format_equipment_profile_precalc_summary()
+                equipment_profile_summary.bind_text_from(state, attr, backward=_equipment_profile_precalc_summary_backward)
+                equipment_profile_summary.bind_visibility_from(
+                    state, attr, backward=_equipment_profile_precalc_visible_backward
                 )
 
 

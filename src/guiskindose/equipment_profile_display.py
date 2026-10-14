@@ -38,7 +38,7 @@ def equipment_match_kind_label(match: dict[str, Any]) -> str:
         return "Complete"
     if kind == RESOLUTION_PARTIAL:
         return "Partial"
-    return str(kind) if kind is not None else "Unknown"
+    return "Unknown"
 
 
 def equipment_match_row_cells(match: dict[str, Any]) -> list[str]:
