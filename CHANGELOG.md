@@ -19,6 +19,12 @@ That keeps SemVer and contributor history organized.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Sonar new-code quality gate** (2026-10-14) — Refactors and test adjustments so local
+  SonarQube new-code violations stay at zero after equipment-profile UI work; agent docs now
+  separate freshness, quality-gate pass, and manual issue triage.
+
 ### Added
 
 - **Equipment profile review surfaces (Phase 2)** (2026-10-14) — Calculate and
