@@ -144,6 +144,8 @@ Authentication uses `SONAR_CLOUD_TOKEN` or `SONAR_TOKEN` from the environment or
 `SONAR_CLOUD_TOKEN` wins for this script; see `.env.example`). Tokens are never printed. The report lists failing gate
 conditions (for example `new_reliability_rating` is driven by **new-code bugs**, not only smell `new_violations`) and
 a sample of unresolved `inNewCodePeriod` issues.
+Console samples contain only issue types, severities, and rule keys; project identifiers and source filenames
+are omitted. Missing or non-object project-status responses fail with a fixed query-error message.
 
 For a full unresolved-issue dump to gitignored `tmp/`, use `dump_sonar_issues.py --host-url https://sonarcloud.io
 --allow-remote`.

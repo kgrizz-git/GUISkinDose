@@ -66,7 +66,10 @@ def _get_json(host_url: str, token: str, path: str, query: dict[str, str]) -> di
 
 
 def fetch_project_status(host_url: str, token: str, project_key: str) -> dict[str, Any]:
-    return _get_json(host_url, token, "/api/qualitygates/project_status", {"projectKey": project_key})
+    payload = _get_json(host_url, token, "/api/qualitygates/project_status", {"projectKey": project_key})
+    if not isinstance(payload.get("projectStatus"), dict):
+        raise RuntimeError("invalid project status response")
+    return payload
 
 
 def fetch_new_code_issues(
@@ -84,12 +87,7 @@ def fetch_new_code_issues(
     return _get_json(host_url, token, "/api/issues/search", query)
 
 
-def _short_component(component: str) -> str:
-    return component.rsplit(":", 1)[-1] if component else "?"
-
-
 def format_gate_report(
-    project_key: str,
     status_payload: dict[str, Any],
     issues_payload: dict[str, Any],
     bugs_payload: dict[str, Any],
@@ -98,7 +96,7 @@ def format_gate_report(
 ) -> str:
     project_status = status_payload.get("projectStatus", {})
     gate = project_status.get("status", "UNKNOWN")
-    lines = [f"SonarCloud project {project_key}: quality gate status={gate}", ""]
+    lines = [f"SonarCloud quality gate status={gate}", ""]
     lines.append("Gate conditions (non-OK):")
     conditions = project_status.get("conditions") or []
     failing = [c for c in conditions if isinstance(c, dict) and c.get("status") != "OK"]
@@ -126,8 +124,7 @@ def format_gate_report(
             if not isinstance(issue, dict):
                 continue
             lines.append(
-                f"  - [{issue.get('type', '?')}] {issue.get('severity', '?')} {issue.get('rule', '?')} "
-                f"{_short_component(str(issue.get('component', '')))}:{issue.get('line', '')}"
+                f"  - [{issue.get('type', '?')}] {issue.get('severity', '?')} {issue.get('rule', '?')}"
             )
     lines.append("")
     lines.append(
@@ -181,7 +178,6 @@ def main(argv: list[str] | None = None) -> int:
         print(f"ERROR: SonarCloud query failed ({exc}).", file=sys.stderr)
         return 1
     report = format_gate_report(
-        project_key,
         status_payload,
         issues_payload,
         bugs_payload,

@@ -8,6 +8,9 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ## [Unreleased]
 
+- SonarCloud review follow-up: console reports omit project keys and source filenames; malformed
+  `projectStatus` values fail as private query errors before formatting. Offline regressions cover both.
+
 - Equipment-profile plan status now explicitly records in-progress delivery through coordinate wiring,
   GUI sessions, run-state v2, and review surfaces; refresh the roadmap pointer and retain open phase acceptance.
 

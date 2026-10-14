@@ -11,7 +11,6 @@ import scripts.check_sonarcloud_gate as gate
 
 def test_format_gate_report_lists_failing_conditions() -> None:
     text = gate.format_gate_report(
-        "proj-key",
         {
             "projectStatus": {
                 "status": "ERROR",
@@ -29,6 +28,40 @@ def test_format_gate_report_lists_failing_conditions() -> None:
     assert "new_reliability_rating" in text
     assert "new_coverage" not in text
     assert "bugs=1" in text
+    assert "src/a.py" not in text
+    assert "p:" not in text
+
+
+def test_main_report_omits_project_and_source_identifiers(monkeypatch, capsys) -> None:
+    monkeypatch.setattr(gate, "resolve_cloud_token", lambda _root: "offline-test")
+    monkeypatch.setattr(gate, "fetch_project_status", lambda *_args: {"projectStatus": {"status": "OK"}})
+    monkeypatch.setattr(
+        gate, "fetch_new_code_issues",
+        lambda *_args, **_kwargs: {
+            "total": 1,
+            "issues": [{"type": "BUG", "rule": "python:S1", "component": "private-project:private-source.py"}],
+        },
+    )
+    assert gate.main(["--project-key", "private-project"]) == 0
+    output = capsys.readouterr()
+    assert "status=OK" in output.out
+    assert "python:S1" in output.out
+    assert "private-project" not in output.out + output.err
+    assert "private-source.py" not in output.out + output.err
+
+
+@pytest.mark.parametrize("payload", [{}, {"projectStatus": None}, {"projectStatus": []}, {"projectStatus": "private-value"}])
+def test_main_rejects_malformed_project_status(payload, monkeypatch, capsys) -> None:
+    monkeypatch.setattr(gate, "resolve_cloud_token", lambda _root: "offline-test")
+    monkeypatch.setattr(gate, "_get_json", lambda *_args: payload)
+    fetch_issues = MagicMock()
+    monkeypatch.setattr(gate, "fetch_new_code_issues", fetch_issues)
+    assert gate.main(["--project-key", "k"]) == 1
+    fetch_issues.assert_not_called()
+    output = capsys.readouterr()
+    assert "query failed (invalid project status response)" in output.err
+    assert "private-value" not in output.err
+    assert output.out == ""
 
 
 def test_main_missing_token_returns_2(tmp_path, monkeypatch) -> None:
