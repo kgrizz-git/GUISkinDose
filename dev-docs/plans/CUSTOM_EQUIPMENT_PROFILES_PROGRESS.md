@@ -1,7 +1,16 @@
 # Custom Equipment Profiles — Progress History
 
+Status: **In progress — coordinate implementation and review surfaces delivered; full phase acceptance and later features remain open.**
+
 Implementation history for the active [execution plan](CUSTOM_EQUIPMENT_PROFILES_EXECUTION.md).
 Scientific requirements and phase acceptance gates remain in that plan and its linked contracts.
+
+- 2026-10-14 — **PR #156 review follow-ups.** Normalization/rotational-summary refactors and published-receipt
+  selection preserve behavior; SonarCloud diagnostics suppress raw API errors, handle malformed responses,
+  and cap issue page sizes. Follow-up commit `22002f4`: 3,490 non-GUI tests and 423 GUI tests passed
+  (four non-GUI skips), privacy scanners clean, local Sonar quality gate and push hooks passed.
+  PR submitted and unmerged. Execution-plan status now summarizes delivered wiring and open acceptance;
+  no Phase 2 completion claimed.
 
 - 2026-10-14 — **Phase 2 review surfaces slice.** Shared value-free formatters
   (`equipment_profile_display.py`); Calculate pre-calc and Results post-calc GUI

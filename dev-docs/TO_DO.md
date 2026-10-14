@@ -21,10 +21,11 @@ be archived.
 
 - [ ] **Manual Smokes** — native-window and Windows file-dialog passes remain for the user; see
    "Manual Smokes" in Active Work.
-- [ ] **Reusable custom equipment profiles** — spec + phased execution plan ready to implement:
+- [ ] **Reusable custom equipment profiles (in progress)** — coordinate inputs, API/CLI/settings wiring,
+   GUI sessions, run-state v2, and review surfaces implemented:
    [CUSTOM_EQUIPMENT_PROFILES_SPEC.md](plans/CUSTOM_EQUIPMENT_PROFILES_SPEC.md) /
    [CUSTOM_EQUIPMENT_PROFILES_EXECUTION.md](plans/CUSTOM_EQUIPMENT_PROFILES_EXECUTION.md);
-   next step is Phase 0 sign-off (see the plan's decision log).
+   next: close remaining Phase 2 acceptance and per-slice contracts; later activation/transmission/authoring work remains open.
 - [ ] **Geometry-driven support transmission** — See the correction-data roadmap in
   Active Work / [GEOMETRY_DRIVEN_SUPPORT_TRANSMISSION_PLAN.md](plans/GEOMETRY_DRIVEN_SUPPORT_TRANSMISSION_PLAN.md).
 

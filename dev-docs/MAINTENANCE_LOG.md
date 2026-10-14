@@ -8,6 +8,9 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ## [Unreleased]
 
+- Equipment-profile plan status now explicitly records in-progress delivery through coordinate wiring,
+  GUI sessions, run-state v2, and review surfaces; refresh the roadmap pointer and retain open phase acceptance.
+
 - Sonar helper review: suppress raw API error bodies, handle invalid response encoding safely,
   and cap SonarCloud issue requests at the supported 500-entry page size. Offline regressions
   cover credential redaction, malformed responses, and quality-gate exit codes.
