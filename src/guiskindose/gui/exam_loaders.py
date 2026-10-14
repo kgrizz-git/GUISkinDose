@@ -38,7 +38,7 @@ from .exam_transforms import (
     rebuild_rdsr_df,
 )
 from .geometry_preview import on_exams_loaded
-from .offset_handlers import reset_global_offsets_on_new_load
+from .offset_handlers import reset_global_offsets_on_new_load, sync_single_exam_globals_from_meta
 from .settings_builder import build_settings, refresh_normalization_warnings
 from .state import AppState
 
@@ -230,8 +230,9 @@ def load_rdsr(file_path: Path, state: AppState) -> tuple[bool, str]:
             "table_origin_override": override_value,
             # Per-exam patient offset (Phase 2.3): staged document offsets for
             # pending consumption, else the pre-reset globals; editable per
-            # exam in the loaded-exam list. Only consumed in multi-exam mode
-            # (analyze_multiple_exams); single-exam uses global.
+            # exam in the loaded-exam list. Single-exam calculation reads
+            # globals, so adoption syncs meta back via
+            # sync_single_exam_globals_from_meta when len==1.
             "d_lon": entry.d_lon if entry is not None else seed_d_lon,
             "d_ver": entry.d_ver if entry is not None else seed_d_ver,
             "d_lat": entry.d_lat if entry is not None else seed_d_lat,
@@ -244,6 +245,8 @@ def load_rdsr(file_path: Path, state: AppState) -> tuple[bool, str]:
         rebuild_rdsr_df(work)
         on_exams_loaded(work)
         work.is_multi_exam = len(work.loaded_exams) > 1
+        if entry is not None and not work.is_multi_exam:
+            sync_single_exam_globals_from_meta(work)
 
         # Raw copy only once the file is accepted (last-loaded DICOM wins for
         # the raw preview); on the candidate, a rejected file never replaces it.
@@ -425,6 +428,8 @@ def _parse_tabular(
         start=start,
     )
     _finalize_tabular_state(work, file_path, out[0])
+    if entry is not None and not work.is_multi_exam:
+        sync_single_exam_globals_from_meta(work)
     state.__dict__.update(work.__dict__)
     if pending:
         state.equipment_pending = pending[1:] or None

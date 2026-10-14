@@ -31,6 +31,12 @@ def restore_globals_from_exam_meta(app_state: AppState, meta0: dict) -> None:
     app_state.d_lat = float(meta0.get("d_lat", 0.0))
 
 
+def sync_single_exam_globals_from_meta(app_state: AppState) -> None:
+    """Mirror the sole loaded exam's meta into globals for single-exam calculation."""
+    if len(app_state.loaded_exam_meta) == 1:
+        restore_globals_from_exam_meta(app_state, app_state.loaded_exam_meta[0])
+
+
 def sync_global_patient_offset_to_single_exam_meta(app_state: AppState) -> None:
     """Mirror global patient offset into meta[0] when only one exam is loaded."""
     if len(app_state.loaded_exams) == 1 and app_state.loaded_exam_meta:

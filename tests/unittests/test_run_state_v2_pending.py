@@ -164,6 +164,8 @@ def test_csv_null_consumption_seeds_flags(tmp_path: Path) -> None:
     meta = state.loaded_exam_meta[0]
     assert meta["swap_lat_lon"] is True
     assert meta["d_lon"] == 9.0
+    assert state.d_lon == 9.0
+    assert state.swap_lat_lon is True
     exam = state.loaded_exams[0]
     assert exam.equipment_capture is None
     base = meta["base_data"]

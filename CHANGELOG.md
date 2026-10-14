@@ -204,6 +204,10 @@ That keeps SemVer and contributor history organized.
   abandons staged run-configuration equipment entries (with the same warning as exam removal), and
   rolls staged entries back if the example load fails.
 
+- **Single-exam staged run-config offsets** — after a staged v2 import, loading the lone exam now
+  mirrors per-exam geometry flags and patient offsets from `loaded_exam_meta` into the global
+  fields used by single-exam dose calculation (multi-exam already read per-exam meta).
+
 - **Equipment maker identity in normalized data** (2026-10-11) — every normalized event frame now
   carries a `manufacturer` column with the exact equipment-maker spelling (`None` when the source
   carries none). The `normalized` tabular   schema accepts an optional `manufacturer` column; tables
