@@ -60,47 +60,6 @@ jobs:
       contents: read
     uses: ./.github/workflows/privacy-gates.yml
 
-  request-coderabbit:
-    # Fires as soon as privacy-gates succeeds (D14) — does not wait for matrix/Sonar.
-    # Dependabot runs have a read-only token, including human reruns of its PRs.
-    needs: [schedule-gate, privacy-gates]
-    if: >
-      needs.schedule-gate.outputs.should_run == 'true' &&
-      github.event_name == 'pull_request' &&
-      github.actor != 'dependabot[bot]' &&
-      github.event.pull_request.user.login != 'dependabot[bot]' &&
-      github.event.pull_request.head.repo.full_name == github.repository
-    runs-on: ubuntu-latest
-    permissions:
-      pull-requests: write
-      contents: read
-    steps:
-    - name: Request CodeRabbit review after privacy-gates
-      uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3  # v9
-      with:
-        script: |
-          const marker = `<!-- coderabbit-privacy-gate:${context.payload.pull_request.head.sha} -->`;
-
-          const comments = await github.paginate(github.rest.issues.listComments, {
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            issue_number: context.issue.number,
-            per_page: 100,
-          });
-          if (comments.some(comment =>
-            comment.user?.login === 'github-actions[bot]' && comment.body?.includes(marker)
-          )) {
-            console.log('CodeRabbit review already requested for this commit.');
-            return;
-          }
-
-          await github.rest.issues.createComment({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            issue_number: context.issue.number,
-            body: `@coderabbitai review\n\nPrivacy gate passed for ${context.payload.pull_request.head.sha}.\n\n${marker}`
-          });
-
   static-analysis:
     needs: [schedule-gate, privacy-gates]
     if: needs.schedule-gate.outputs.should_run == 'true'

@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+if ! command -v uv > /dev/null 2>&1; then
+    echo "ERROR: uv not found; the locked git hooks require uv."
+    echo "Install uv, then run: uv sync --extra dev --extra gui --locked"
+    exit 1
+fi
+
 # Verify pre-commit is available (requires pip install -e ".[dev,gui]" first)
 if ! command -v pre-commit > /dev/null 2>&1; then
     echo "ERROR: pre-commit not found." >&2

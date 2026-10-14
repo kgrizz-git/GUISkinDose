@@ -28,6 +28,108 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  hook-release-monitor:
+    # Metadata-only, separate from the job that executes unpinned third-party tools.
+    # No checkout or dependency installation; the token never enters repository code.
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      issues: write
+    steps:
+    - name: Track newer Gitleaks hook releases
+      id: hook_release_check
+      uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3  # v9
+      with:
+        script: |
+          const { owner, repo } = context.repo;
+          const marker = '<!-- gitleaks-hook-version-drift -->';
+          const { data: config } = await github.rest.repos.getContent({
+            owner, repo, path: '.pre-commit-config.yaml', ref: context.sha,
+          });
+          if (config.type !== 'file' || config.encoding !== 'base64') {
+            throw new Error('Hook configuration response is invalid.');
+          }
+          const text = Buffer.from(config.content, 'base64').toString('utf8');
+          const match = text.match(/repo: https:\/\/github\.com\/gitleaks\/gitleaks\s+rev: (v\d+\.\d+\.\d+)\s/);
+          if (!match) throw new Error('Pinned Gitleaks hook version is missing.');
+          const pinned = match[1];
+          const { data: release } = await github.rest.repos.getLatestRelease({ owner: 'gitleaks', repo: 'gitleaks' });
+          if (!/^v\d+\.\d+\.\d+$/.test(release.tag_name)) {
+            throw new Error('Gitleaks release version is invalid.');
+          }
+          const latest = release.tag_name;
+          const left = latest.slice(1).split('.').map(Number);
+          const right = pinned.slice(1).split('.').map(Number);
+          const firstDifferent = left.findIndex((value, index) => value !== right[index]);
+          const newer = firstDifferent >= 0 && left[firstDifferent] > right[firstDifferent];
+          const issues = await github.paginate(github.rest.issues.listForRepo, {
+            owner, repo, state: 'open', labels: 'dependencies', per_page: 100,
+          });
+          const owned = marker => issues.filter(issue => !issue.pull_request &&
+            issue.user?.login === 'github-actions[bot]' && (issue.body || '').includes(marker));
+          const existing = owned(marker);
+          for (const issue of owned('<!-- gitleaks-hook-monitor-failure -->')) {
+            await github.rest.issues.update({ owner, repo, issue_number: issue.number,
+              state: 'closed', state_reason: 'completed' });
+          }
+          if (!newer) {
+            for (const issue of existing) {
+              await github.rest.issues.update({ owner, repo, issue_number: issue.number,
+                state: 'closed', state_reason: 'completed' });
+            }
+            core.info('Gitleaks hook is current.');
+            return;
+          }
+          const body = [marker, '', `Pinned Gitleaks hook: ${pinned}; latest stable release: ${latest}.`,
+            '', 'Update the hook in a feature branch and review the resulting changes:',
+            '```', 'pre-commit autoupdate --repo https://github.com/gitleaks/gitleaks',
+            'pre-commit run gitleaks --all-files', '```',
+            'Run the normal commit/push gates before publishing a PR. This monitor never edits pins or bypasses hooks.',
+          ].join('\n');
+          if (existing.length) {
+            if (existing[0].body !== body) {
+              await github.rest.issues.update({ owner, repo, issue_number: existing[0].number, body });
+            }
+            for (const duplicate of existing.slice(1)) {
+              await github.rest.issues.update({ owner, repo, issue_number: duplicate.number,
+                state: 'closed', state_reason: 'completed' });
+            }
+          } else {
+            await github.rest.issues.create({ owner, repo, title: 'Update pinned Gitleaks git hook',
+              body, labels: ['dependencies'] });
+          }
+
+    - name: Report hook monitor failure
+      if: failure() && steps.hook_release_check.outcome == 'failure'
+      uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3  # v9
+      with:
+        script: |
+          const { owner, repo } = context.repo;
+          const marker = '<!-- gitleaks-hook-monitor-failure -->';
+          const runUrl = `${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId}`;
+          const body = [marker, '', 'The metadata-only Gitleaks hook release check failed.',
+            'Check upstream availability, hook tag format, and API permissions before rerunning ci-latest on main.',
+            `Run: ${runUrl}`, 'No hook pin was changed. A later successful metadata check closes this issue.',
+          ].join('\n');
+          const issues = await github.paginate(github.rest.issues.listForRepo, {
+            owner, repo, state: 'open', labels: 'dependencies', per_page: 100,
+          });
+          const existing = issues.filter(issue => !issue.pull_request &&
+            issue.user?.login === 'github-actions[bot]' && (issue.body || '').includes(marker));
+          if (existing.length) {
+            if (existing[0].body !== body) {
+              await github.rest.issues.update({ owner, repo, issue_number: existing[0].number, body });
+            }
+            for (const duplicate of existing.slice(1)) {
+              await github.rest.issues.update({ owner, repo, issue_number: duplicate.number,
+                state: 'closed', state_reason: 'completed' });
+            }
+          } else {
+            await github.rest.issues.create({ owner, repo, title: 'Gitleaks hook release monitor failed',
+              body, labels: ['dependencies'] });
+          }
+
   latest-deps:
     runs-on: ubuntu-latest
     steps:
