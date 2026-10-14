@@ -109,6 +109,20 @@ def _tube_blocks(payload: ExportPayload) -> list[str]:
     return [f"<h2>{_esc(TUBE_SECTION_TITLE)}</h2>", _table(rows), f"<p><em>{_esc(TUBE_NOTE)}</em></p>"]
 
 
+def _equipment_profile_blocks(payload: ExportPayload) -> list[str]:
+    """Custom equipment-profile match table (empty when no exam has a match record)."""
+    from guiskindose.equipment_profile_display import (
+        EQUIPMENT_PROFILE_SECTION_TITLE,
+        equipment_profile_report_table,
+    )
+    from guiskindose.export.sections import equipment_profile_blocks
+
+    rows = equipment_profile_report_table(equipment_profile_blocks(payload))
+    if len(rows) < 2:
+        return []
+    return [f"<h2>{_esc(EQUIPMENT_PROFILE_SECTION_TITLE)}</h2>", _table(rows)]
+
+
 def render_html_bytes(payload: ExportPayload) -> bytes:
     """Render the HTML report to an in-memory bytes payload."""
     m = payload.meta
@@ -144,6 +158,7 @@ def render_html_bytes(payload: ExportPayload) -> bytes:
         body.append(f"<p><em>{_esc(KERMA_METER_WEIGHTING_FOOTNOTE)}</em></p>")
 
     body.extend(_tube_blocks(payload))
+    body.extend(_equipment_profile_blocks(payload))
 
     body.append("<h2>Settings &amp; equipment</h2>")
     for exam in payload.exams:

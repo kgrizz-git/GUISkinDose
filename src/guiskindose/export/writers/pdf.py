@@ -190,6 +190,22 @@ def _tube_flow(payload: ExportPayload) -> list:
     return [Spacer(1, 8), Paragraph(TUBE_SECTION_TITLE, _H2), _table(rows, widths), Spacer(1, 4), Paragraph(TUBE_NOTE, _BODY)]
 
 
+def _equipment_profile_flow(payload: ExportPayload) -> list:
+    """Build equipment-profile match flowables (empty when no exam has a match record)."""
+    from guiskindose.equipment_profile_display import (
+        EQUIPMENT_PROFILE_SECTION_TITLE,
+        equipment_profile_report_table,
+    )
+    from guiskindose.export.sections import equipment_profile_blocks
+
+    rows = equipment_profile_report_table(equipment_profile_blocks(payload))
+    if len(rows) < 2:
+        return []
+    n_cols = len(rows[0])
+    widths = [_CONTENT_WIDTH / n_cols] * n_cols
+    return [Spacer(1, 8), Paragraph(EQUIPMENT_PROFILE_SECTION_TITLE, _H2), _table(rows, widths)]
+
+
 def _images_flow(payload: ExportPayload) -> list:
     """Build dose-map image flowables for the PDF body."""
     flow: list[Any] = [Paragraph("Dose-map images", _H2)]
@@ -232,6 +248,7 @@ def _story(payload: ExportPayload) -> list:
 
     story += _corrections_flow(payload)
     story += _tube_flow(payload)
+    story += _equipment_profile_flow(payload)
     if payload.images:
         story.append(PageBreak())
         story += _images_flow(payload)

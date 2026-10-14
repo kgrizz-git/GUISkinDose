@@ -227,6 +227,21 @@ def _tube_sheet(wb: Workbook, payload: ExportPayload) -> bool:
     return True
 
 
+def _equipment_profile_sheet(wb: Workbook, payload: ExportPayload) -> bool:
+    """Populate the equipment-profile match sheet; False when no exam has a match record."""
+    from guiskindose.equipment_profile_display import equipment_profile_report_table
+    from guiskindose.export.sections import equipment_profile_blocks
+
+    rows = equipment_profile_report_table(equipment_profile_blocks(payload))
+    if len(rows) < 2:
+        return False
+    ws = _new_sheet(wb, "Equipment profile")
+    ws.sheet_view.showGridLines = True
+    _write_rows(ws, rows, start_row=1, header=True)
+    _autofit(ws)
+    return True
+
+
 def _rotational_sheet(wb: Workbook, payload: ExportPayload) -> bool:
     """Populate the Rotational handling sheet; return False when nothing to show."""
     from guiskindose.export.sections import (
@@ -311,6 +326,7 @@ def build_workbook(payload: ExportPayload) -> Workbook:
     _settings_sheet(wb, payload)
     _corrections_sheet(wb, payload)
     _tube_sheet(wb, payload)
+    _equipment_profile_sheet(wb, payload)
     _rotational_sheet(wb, payload)
     _warnings_sheet(wb, payload)
     _images_sheet(wb, payload)

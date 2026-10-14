@@ -11,9 +11,12 @@ from dataclasses import dataclass
 
 from nicegui import run, ui
 
+from guiskindose.equipment_profile_display import format_equipment_profile_blocks
+
 from ..components import HelpButton
 from ..concurrency import operation_guard, require_io_result
 from ..dose_severity import apply_psd_presentation, reset_psd_label
+from ..equipment_profile_surfaces import pre_calc_equipment_profile_blocks
 from ..helpers import below_floor_event_count, format_input_scanner_label, run_calculation
 from ..page_context import PageContext
 from ..state import state
@@ -527,6 +530,11 @@ class _CalculationController:
         return self.controls
 
 
+def _format_equipment_profile_precalc_summary() -> str:
+    """Privacy-safe custom equipment-profile match lines for loaded exams."""
+    return format_equipment_profile_blocks(pre_calc_equipment_profile_blocks(state))
+
+
 def _format_plane_identity_audit() -> str:
     """Return a compact, privacy-safe plane-identity audit string for the active frame.
 
@@ -599,6 +607,18 @@ def _build_input_data_summary() -> None:
                 ui.label("Plane identity audit:").classes(_SUMMARY_LABEL_CLASSES)
                 ui.label().bind_text_from(state, "rdsr_df", backward=lambda _v: _format_plane_identity_audit()).classes(
                     _SUMMARY_VALUE_CLASSES
+                )
+            equipment_profile_summary = ui.label(_format_equipment_profile_precalc_summary()).classes(
+                "text-[11px] text-grey-6 whitespace-pre-line w-full"
+            )
+            equipment_profile_summary.bind_visibility_from(
+                state,
+                "input_revision",
+                backward=lambda _v: bool(_format_equipment_profile_precalc_summary()),
+            )
+            for attr in ("input_revision", "calc_run_id"):
+                equipment_profile_summary.bind_text_from(
+                    state, attr, backward=lambda _v: _format_equipment_profile_precalc_summary()
                 )
 
 

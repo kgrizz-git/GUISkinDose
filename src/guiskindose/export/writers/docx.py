@@ -107,6 +107,7 @@ def build_document(payload: ExportPayload):
     _add_settings_section(doc, payload)
     _add_corrections_section(doc, payload)
     _add_tube_section(doc, payload)
+    _add_equipment_profile_section(doc, payload)
     _add_rotational_section(doc, payload)
     _add_image_section(doc, payload)
     return doc
@@ -205,6 +206,21 @@ def _add_tube_section(doc, payload: ExportPayload) -> None:
     doc.add_heading(TUBE_SECTION_TITLE, level=2)
     _table(doc, rows)
     doc.add_paragraph(TUBE_NOTE)
+
+
+def _add_equipment_profile_section(doc, payload: ExportPayload) -> None:
+    """Custom equipment-profile match table (one row per exam when present)."""
+    from guiskindose.equipment_profile_display import (
+        EQUIPMENT_PROFILE_SECTION_TITLE,
+        equipment_profile_report_table,
+    )
+    from guiskindose.export.sections import equipment_profile_blocks
+
+    rows = equipment_profile_report_table(equipment_profile_blocks(payload))
+    if len(rows) < 2:
+        return
+    doc.add_heading(EQUIPMENT_PROFILE_SECTION_TITLE, level=2)
+    _table(doc, rows)
 
 
 def _add_rotational_section(doc, payload: ExportPayload) -> None:
