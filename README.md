@@ -252,10 +252,13 @@ on settings before loading **raw** input (DICOM or raw-shaped tabular). Matching
 match, inheritance notice, and session hashes under `equipment_profile_match`:
 
 ```python
+from guiskindose import PyskindoseSettings, load_settings_example_json
 from guiskindose.equipment_profiles import assemble_session
+from guiskindose.main import analyze_input_file
 
 session = assemble_session(documents=[{"schema_version": 1, "profiles": [...]}])
 settings = PyskindoseSettings(settings=load_settings_example_json(), equipment_profile_session=session)
+settings.mode = "calculate_dose"
 output = analyze_input_file("study.dcm", settings=settings)
 print(output["equipment_profile_match"]["notice"]["text"])
 ```

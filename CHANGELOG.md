@@ -82,13 +82,6 @@ That keeps SemVer and contributor history organized.
 
 - **Equipment-profile local store (experimental, internal only)** (2026-10-11) — the same internal package
   gains a transactional SQLite user profile store (`equipment_profiles.sqlite3` under `~/.guiskindose/`):
-  immutable per-profile revisions with canonical payloads and content hashes, required revision checks on
-  update, and immutable selected snapshots with a locked revision-set source hash. **Inert like the rest of
-  the package:** nothing reads or writes a store from any feature path, so results, exports, and settings are
-  unchanged.
-
-- **Equipment-profile local store (experimental, internal only)** (2026-10-11) — the same internal package
-  gains a transactional SQLite user profile store (`equipment_profiles.sqlite3` under `~/.guiskindose/`):
   immutable per-profile revisions with canonical payloads and content hashes, optimistic-concurrency checks,
   and immutable selected snapshots with a locked revision-set source hash. **Inert like the rest of the
   package:** nothing reads or writes a store from any feature path, so results, exports, and settings are

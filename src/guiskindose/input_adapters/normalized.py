@@ -15,16 +15,12 @@ from pathlib import Path
 
 import pandas as pd
 
-from guiskindose.exam_identity import (
-    canonical_identity_pairs,
-    clean_identity_value,
-    missing_maker_rows,
-)
+from guiskindose.exam_identity import clean_identity_value, require_homogeneous_identity
 from guiskindose.input_adapters.base import extract_table
 from guiskindose.input_adapters.column_mapper import detect_header_row
 from guiskindose.input_adapters.models import InputAdapterResult, InputProvenance
 from guiskindose.input_adapters.tabular_loader import _RawLoad
-from guiskindose.privacy import opaque_exam_label
+from guiskindose.rdsr_input_checks import RdsrInputError
 
 # Canonical column names produced by rdsr_normalizer(), lowercased for comparison.
 # ``manufacturer`` is recognized but NOT required: legacy normalized tables
@@ -285,17 +281,10 @@ def _require_single_identity(data_df: pd.DataFrame, *, exam_index: int | None) -
     individually with their positions, so makers/models may differ *across*
     study-id groups, never *within* one exam.
     """
-    pairs = canonical_identity_pairs(data_df)
-    if len(pairs) <= 1:
-        return
-    label = opaque_exam_label(exam_index) if exam_index is not None else "exam"
-    missing = missing_maker_rows(data_df)
-    detail = f" ({missing} event(s) without maker identity)" if missing else ""
-    raise ValueError(
-        f"{label}: events carry {len(pairs)} distinct equipment identities "
-        f"(manufacturer/model){detail}, which cannot share one exam. "
-        "Split the input so each exam covers one manufacturer and model."
-    )
+    try:
+        require_homogeneous_identity(data_df, exam_index=exam_index)
+    except RdsrInputError as exc:
+        raise ValueError(str(exc)) from None
 
 
 def _validate_normalized(data_df: pd.DataFrame, column_map: dict[str, str]) -> list[str]:

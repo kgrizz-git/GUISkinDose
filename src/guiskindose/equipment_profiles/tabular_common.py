@@ -74,14 +74,6 @@ def decode_tabular_bytes(raw: bytes, source_kind: str) -> str:
         ) from None
     if text.startswith(_UTF8_BOM):
         text = text[1:]
-    for index, char in enumerate(text):
-        code = ord(char)
-        if any(low <= code <= high for low, high in _SURROGATE_RANGES):
-            raise EquipmentProfileError(
-                ProfileErrorCode.UNSUPPORTED_SOURCE_ENCODING,
-                source_kind=source_kind,
-                row_index=index,
-            )
     return text
 
 

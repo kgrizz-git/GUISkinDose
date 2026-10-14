@@ -73,7 +73,7 @@ def _new_revision_numbers(
     if current != expected:
         raise store_error(ProfileErrorCode.STORE_CONFLICT)
     generation = read_revision_number(record[3]) + 1
-    _check_revision_capacity(connection, profile.profile_id)
+    _prune_oldest_revision_if_at_capacity(connection, profile.profile_id)
     revision, enabled = current + 1, read_flag(record[1])
     if enabled:
         _validate_would_be_enabled(connection, profile, exclude=profile.profile_id)
@@ -257,17 +257,38 @@ def _check_identity_capacity_for_create(connection: sqlite3.Connection) -> None:
         )
 
 
-def _check_revision_capacity(connection: sqlite3.Connection, profile_id: str) -> None:
+def _revision_count(connection: sqlite3.Connection, profile_id: str) -> int:
     try:
         count = connection.execute(
             "SELECT COUNT(*) FROM profile_revisions WHERE profile_id = ?", (profile_id,)
         ).fetchone()
     except sqlite3.Error as exc:
         raise normalize_db_error(type(exc)) from None
-    if count is None or not isinstance(count[0], int) or count[0] >= _store_schema.MAX_REVISIONS_PER_PROFILE:
-        raise store_error(
-            ProfileErrorCode.STORE_LIMIT_EXCEEDED, count=_store_schema.MAX_REVISIONS_PER_PROFILE
+    if count is None or not isinstance(count[0], int):
+        raise store_error(ProfileErrorCode.STORE_CORRUPTION)
+    return count[0]
+
+
+def _prune_oldest_revision_if_at_capacity(connection: sqlite3.Connection, profile_id: str) -> None:
+    """Drop the oldest retained revision when at capacity so a new one can be inserted."""
+    if _revision_count(connection, profile_id) < _store_schema.MAX_REVISIONS_PER_PROFILE:
+        return
+    try:
+        row = connection.execute(
+            "SELECT MIN(revision) FROM profile_revisions WHERE profile_id = ?",
+            (profile_id,),
+        ).fetchone()
+    except sqlite3.Error as exc:
+        raise normalize_db_error(type(exc)) from None
+    if row is None or row[0] is None or not isinstance(row[0], int):
+        raise store_error(ProfileErrorCode.STORE_CORRUPTION)
+    try:
+        connection.execute(
+            "DELETE FROM profile_revisions WHERE profile_id = ? AND revision = ?",
+            (profile_id, row[0]),
         )
+    except sqlite3.Error as exc:
+        raise normalize_db_error(type(exc)) from None
 
 
 def _validate_would_be_enabled(

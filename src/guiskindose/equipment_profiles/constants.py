@@ -205,7 +205,13 @@ SOURCE_KIND_GUI = "gui"
 SOURCE_KIND_STORE = "store"
 
 #: Source kinds with an implemented adapter in the current core slice.
-IMPLEMENTED_SOURCE_KINDS = (SOURCE_KIND_JSON, SOURCE_KIND_MEMORY, SOURCE_KIND_CSV, SOURCE_KIND_TSV)
+IMPLEMENTED_SOURCE_KINDS = (
+    SOURCE_KIND_JSON,
+    SOURCE_KIND_MEMORY,
+    SOURCE_KIND_CSV,
+    SOURCE_KIND_TSV,
+    SOURCE_KIND_XLSX,
+)
 
 #: Every documented source kind. The rest are reserved for their adapters.
 SOURCE_KINDS = (
