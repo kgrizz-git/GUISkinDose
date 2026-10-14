@@ -82,7 +82,12 @@ def _normalized_rdsr_dataframe(
     live: Any,
     replay_capture: CapturedCoordinates | None,
 ) -> tuple[pd.DataFrame, Any, list[Any]]:
-    """Normalize parsed RDSR rows (live session, replay capture, or plain)."""
+    """Normalize parsed RDSR rows (live session, replay capture, or plain).
+
+    Never mutates ``data_parsed``. Replay runs the staged capture recipe and
+    publishes no equipment receipt; a bound live session may append one receipt
+    to ``session_receipts``; with neither, no receipt is issued.
+    """
     session_receipts: list[Any] = []
     if replay_capture is not None:
         replay_base = copy.copy(settings)

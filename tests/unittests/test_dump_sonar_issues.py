@@ -199,6 +199,21 @@ def _issue(n: int) -> dict:
     return {"severity": "MINOR", "rule": "python:S1", "component": f"k:src/f{n}.py", "line": n, "message": "m"}
 
 
+def test_resolve_cloud_token_prefers_cloud_export(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("SONAR_TOKEN", raising=False)
+    monkeypatch.delenv("SONAR_CLOUD_TOKEN", raising=False)
+    monkeypatch.setenv("SONAR_TOKEN", "loopback")
+    monkeypatch.setenv("SONAR_CLOUD_TOKEN", "cloud-export")
+    assert dsi.resolve_cloud_token(tmp_path) == "cloud-export"
+
+
+def test_resolve_cloud_token_from_dotenv_cloud_only(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("SONAR_TOKEN", raising=False)
+    monkeypatch.delenv("SONAR_CLOUD_TOKEN", raising=False)
+    (tmp_path / ".env").write_text("SONAR_CLOUD_TOKEN=from-cloud\n", encoding="utf-8")
+    assert dsi.resolve_cloud_token(tmp_path) == "from-cloud"
+
+
 def test_resolve_token_prefers_export_then_dotenv(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     (tmp_path / ".env").write_text("# c\nOTHER=1\nSONAR_TOKEN=\nSONAR_TOKEN='from-file' # note\n", encoding="utf-8")
     monkeypatch.delenv("SONAR_CLOUD_TOKEN", raising=False)

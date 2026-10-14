@@ -649,6 +649,23 @@ def test_emission_bounds_capture_present_refuses_over_cap() -> None:
     assert excinfo.value.code == "invalid_equipment_capture"
 
 
+def test_emission_bounds_capture_present_at_cap_passes_count_check() -> None:
+    """The per-document exam cap rejects only when len(exams) > CAPTURE_MAX_CAPTURES."""
+    from guiskindose.gui.run_state_equipment import equipment_section_for_document
+
+    class _Exam:
+        equipment_capture = object()
+
+    at_cap = [_Exam()] * 64
+    over_cap = [_Exam()] * 65
+    with pytest.raises(RunStateError, match="Too many loaded exams") as excinfo:
+        equipment_section_for_document(over_cap)
+    assert excinfo.value.code == "invalid_equipment_capture"
+    with pytest.raises(RunStateError) as excinfo:
+        equipment_section_for_document(at_cap)
+    assert "Too many loaded exams" not in str(excinfo.value)
+
+
 def test_pending_bounds_before_materialization() -> None:
     """Oversized staging inputs refuse before any entry is validated."""
     with pytest.raises(RunStateError) as excinfo:

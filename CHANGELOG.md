@@ -22,8 +22,10 @@ That keeps SemVer and contributor history organized.
 ### Fixed
 
 - **Sonar new-code quality gate** (2026-10-14) — Refactors and test adjustments so local
-  SonarQube new-code violations stay at zero after equipment-profile UI work; agent docs now
-  separate freshness, quality-gate pass, and manual issue triage.
+  SonarQube new-code violations stay at zero after equipment-profile UI work; no user-facing
+  dose/GUI behavior change. Adds `scripts/check_sonarcloud_gate.py` for SonarCloud gate and
+  new-code issue visibility; fixes SonarCloud new-code bug `pythonbugs:S2583` in `main()` receipt
+  selection; agent docs separate freshness, quality-gate pass, and manual triage.
 
 ### Added
 

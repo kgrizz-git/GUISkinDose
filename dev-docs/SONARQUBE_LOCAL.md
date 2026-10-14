@@ -124,20 +124,39 @@ and vulnerabilities in New Code even if counts look unchanged.
 The pre-push hook prints a triage reminder when the opt-in gate is enabled; it does **not** compare issue counts or
 run the quality gate for you.
 
-### SonarCloud (main CI, optional local API check)
+### SonarCloud (main CI + local API check)
 
 Protected-`main` CI runs `sonar-scan` when `SONAR_PROTECTED_MAIN_ENABLED=true` and `SONAR_TOKEN` is set in GitHub
-secrets; the job waits on the cloud quality gate. For a **local** cloud check without starting Docker SonarQube, use
-the same project key as `sonar-project.properties`, set `SONAR_HOST_URL=https://sonarcloud.io`, and provide a
-SonarCloud user token via `SONAR_TOKEN` or a repo-local `.env` entry (some setups use `SONAR_CLOUD_TOKEN`; exported
-`SONAR_TOKEN` wins). Never print or commit tokens. `dump_sonar_issues.py --allow-remote` can snapshot cloud issues
-into gitignored `tmp/` when credentials and HTTPS are configured.
+secrets; the job waits on the cloud quality gate.
 
-`SONAR_TOKEN` is read from the exported environment or the repo-local `.env` by all three helpers
-(exported wins; the file is parsed, never sourced). `SONAR_HOST_URL` comes from the exported environment
-in the gate and dump helpers (overridable per-invocation via `--host-url`); the runner additionally falls
-back to `.env`, so a plain `python scripts/run_sonarqube_local.py` works in any shell on any OS — no
-`export` dance needed.
+**Local Docker SonarQube and SonarCloud are not the same snapshot.** A green local gate means the working tree passed
+your loopback server; SonarCloud still reflects the **last cloud analysis** (usually a `main` push). An open PR does
+not update cloud new-code issues until that branch is analyzed (typically after merge and `sonar-scan`).
+
+To inspect cloud gate status and new-code issues without the Docker server:
+
+```bash
+python scripts/check_sonarcloud_gate.py
+python scripts/check_sonarcloud_gate.py --fail-on-error   # exit 1 when gate status != OK
+```
+
+Authentication uses `SONAR_CLOUD_TOKEN` or `SONAR_TOKEN` from the environment or repo-local `.env` (exported
+`SONAR_CLOUD_TOKEN` wins for this script; see `.env.example`). Tokens are never printed. The report lists failing gate
+conditions (for example `new_reliability_rating` is driven by **new-code bugs**, not only smell `new_violations`) and
+a sample of unresolved `inNewCodePeriod` issues.
+
+For a full unresolved-issue dump to gitignored `tmp/`, use `dump_sonar_issues.py --host-url https://sonarcloud.io
+--allow-remote`.
+
+| Helper | Default host | Token resolution |
+| --- | --- | --- |
+| `run_sonarqube_local.py` | `http://localhost:9000` | `SONAR_TOKEN` (export wins, else `.env`) |
+| `dump_sonar_issues.py` | loopback | `SONAR_TOKEN`, else `SONAR_CLOUD_TOKEN` |
+| `check_sonarcloud_gate.py` | `https://sonarcloud.io` | `SONAR_CLOUD_TOKEN`, else `SONAR_TOKEN` |
+
+`.env` duplicate keys use **last assignment wins**. Loopback helpers also read `SONAR_HOST_URL` from the environment
+(overridable via `--host-url`); the local runner falls back to `.env` so `python scripts/run_sonarqube_local.py` works
+without an export dance.
 
 ```bash
 # Enable the gate, then scan to create the baseline state:
@@ -150,13 +169,15 @@ python scripts/run_sonarqube_local.py --generate-coverage  # start the local ser
 `scripts/dump_sonar_issues.py` queries unresolved issues for the `sonar.projectKey` in
 `sonar-project.properties` and writes `tmp/sonar-issues/<UTC>.json` plus a `.md` summary, with stable
 `tmp/sonar-latest-issues.*` pointers the gate references. Dumps older than 30 days are pruned (always keeping
-the 5 most recent). The token comes from `SONAR_TOKEN` (exported or repo-local `.env`) and is never printed;
+the 5 most recent). Tokens come from `SONAR_TOKEN` or `SONAR_CLOUD_TOKEN` (see table above) and are never printed;
 non-200 API responses abort without touching state. When a state file exists, issue counts are refreshed in
 place without changing `last_scan_commit`. A non-loopback `--allow-remote` host must use HTTPS, and the credentialed request refuses
-redirects so the token is never forwarded to another URL.
+redirects so the token is never forwarded to another URL. For SonarCloud snapshots, see **SonarCloud (main CI + local
+API check)** above.
 
 ```bash
 python scripts/dump_sonar_issues.py
+python scripts/dump_sonar_issues.py --host-url https://sonarcloud.io --allow-remote
 ```
 
 For a local comparison, keep the previous timestamped dump and run the command after the new scan. Compare issue
