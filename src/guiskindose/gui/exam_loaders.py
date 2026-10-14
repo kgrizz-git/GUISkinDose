@@ -245,8 +245,6 @@ def load_rdsr(file_path: Path, state: AppState) -> tuple[bool, str]:
         rebuild_rdsr_df(work)
         on_exams_loaded(work)
         work.is_multi_exam = len(work.loaded_exams) > 1
-        if entry is not None and not work.is_multi_exam:
-            sync_single_exam_globals_from_meta(work)
 
         # Raw copy only once the file is accepted (last-loaded DICOM wins for
         # the raw preview); on the candidate, a rejected file never replaces it.
@@ -269,6 +267,8 @@ def load_rdsr(file_path: Path, state: AppState) -> tuple[bool, str]:
         work.table_offset_y = norm.trans_offset.y
         work.table_offset_z = norm.trans_offset.z
         refresh_normalization_warnings(work)
+        if entry is not None and not work.is_multi_exam:
+            sync_single_exam_globals_from_meta(work)
 
         state.__dict__.update(work.__dict__)
         if pending:

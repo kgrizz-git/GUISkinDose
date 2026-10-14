@@ -32,9 +32,27 @@ def restore_globals_from_exam_meta(app_state: AppState, meta0: dict) -> None:
 
 
 def sync_single_exam_globals_from_meta(app_state: AppState) -> None:
-    """Mirror the sole loaded exam's meta into globals for single-exam calculation."""
-    if len(app_state.loaded_exam_meta) == 1:
-        restore_globals_from_exam_meta(app_state, app_state.loaded_exam_meta[0])
+    """Mirror staged per-exam geometry into globals for single-exam calculation.
+
+    Called only when a run-config pending slot is consumed on load (see
+    ``exam_loaders``). This is the reverse of
+    ``run_state._sync_single_exam_couplings``, which runs after
+    ``apply_run_state`` and copies globals into ``meta[0]`` so user edits win
+    until the next import. End-to-end: document globals at import → staged
+    per-exam meta at load → globals on user edit.
+
+    Does not touch ``normalization_method`` (display fields are set separately
+    on the load path).
+    """
+    if len(app_state.loaded_exam_meta) != 1:
+        return
+    meta0 = app_state.loaded_exam_meta[0]
+    app_state.swap_lat_lon = bool(meta0.get("swap_lat_lon", False))
+    app_state.flip_ap1 = bool(meta0.get("flip_ap1", False))
+    app_state.flip_ap2 = bool(meta0.get("flip_ap2", False))
+    app_state.d_lon = float(meta0.get("d_lon", 0.0))
+    app_state.d_ver = float(meta0.get("d_ver", 0.0))
+    app_state.d_lat = float(meta0.get("d_lat", 0.0))
 
 
 def sync_global_patient_offset_to_single_exam_meta(app_state: AppState) -> None:

@@ -565,9 +565,12 @@ rejected with a value-free error **without mutating the file**. Future versions 
 none is pretended here.
 
 **Revisions and metadata.** `store_id` is a random opaque 32-hex identifier recorded once at initialization.
-Revisions are immutable: each stores the canonical profile JSON payload, its content `profile_hash`, a
+Revisions are immutable rows: each stores the canonical profile JSON payload, its content `profile_hash`, a
 positive integer revision, a stored row count, and a UTC timestamp, with a per-record current-revision
-pointer, a monotonically bumped `generation` token, and an enabled flag. Timestamps and enablement are audit
+pointer, a monotonically bumped `generation` token, and an enabled flag. At most 64 revision rows are
+retained per profile; when a new revision is saved at capacity, the lowest revision number (never the
+current pointer) is deleted in the same transaction. `current_revision` still advances monotonically, but
+`read_revision(profile_id, n)` may return `store_not_found` for evicted numbers. Timestamps and enablement are audit
 data, never hashed. No origin filename, path, station name, or serial number is stored. Bounded
 `provenance.source`/`notes` are retained privately inside the payload but are never logged, errored, or
 exported by default.
@@ -607,7 +610,8 @@ selected revisions for later activation — never a filename or path.
 **Bounds, checked before querying or materializing.** At most 64 unique selected IDs (duplicates rejected, IDs
 pattern-checked); at most 10,000 aggregate logical rows (summed from stored per-revision counts before
 payloads are read, rechecked after parsing); 8 MiB per revision payload (length and storage type queried
-before the text is fetched); 256 records and 64 revisions per profile; listing capped at 64 with validated
+before the text is fetched); 256 records and at most 64 retained revision rows per profile (oldest evicted
+on save at capacity); listing capped at 64 with validated
 offsets; caller integers range-checked to SQLite's 64-bit limits before binding; global growth caps
 re-verified on reads. All SQL is parameterized. Every `sqlite3` failure collapses to a stable value-free
 `store_*` code (`store_conflict`, `store_corruption`, `unsupported_store_version`, `store_not_found`,

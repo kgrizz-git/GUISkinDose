@@ -2,7 +2,9 @@
 
 This module implements the store side of the contract in ``dev-docs/EQUIPMENT_PROFILE_SCHEMA.md`` §12. It is a
 separate, user-owned SQLite database — never ``corrections_db_path``, never bundled package data — holding
-canonical profile payloads with immutable per-profile revisions. There is no application, GUI, CLI,
+canonical profile payloads with immutable per-profile revision *rows* (each insert is never updated).
+At most ``MAX_REVISIONS_PER_PROFILE`` rows are retained per profile; older revision numbers may be
+evicted on save so ``current_revision`` can keep advancing. There is no application, GUI, CLI,
 normalization, or dose-path wiring here: callers persist and reload validated profiles, and a later activation
 step consumes the immutable snapshots this module hands back.
 
@@ -270,6 +272,8 @@ class ProfileStore:
         return read_count(row[0], minimum=0)
 
     def _create_schema(self, connection: sqlite3.Connection) -> None:
+        # TOCTOU hardening: ``initialize()`` already gates creation, but another
+        # process may create the schema between that check and this write lock.
         connection.execute("BEGIN IMMEDIATE")
         try:
             version = self._user_version(connection)

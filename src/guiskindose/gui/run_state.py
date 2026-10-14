@@ -688,9 +688,11 @@ def _sync_single_exam_couplings(app_state: AppState) -> None:
 
     Same direction as `offset_handlers.sync_global_patient_offset_to_single_exam_meta`
     (offsets) and the `import_preview` toggle behavior: single-exam
-    calculation consumes the globals, so globals win on conflict. Inlined
-    here because `offset_handlers` imports NiceGUI-bound `page_context` and
-    this module stays GUI-light.
+    calculation consumes the globals, so globals win on conflict after import.
+    Staged loads that consume a pending slot first copy document per-exam meta
+    into globals via `offset_handlers.sync_single_exam_globals_from_meta` (see
+    `exam_loaders`). Inlined here because `offset_handlers` imports
+    NiceGUI-bound `page_context` and this module stays GUI-light.
     """
     if len(app_state.loaded_exam_meta) != 1:
         return

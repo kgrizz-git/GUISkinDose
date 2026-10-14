@@ -197,6 +197,11 @@ That keeps SemVer and contributor history organized.
 
 ### Changed
 
+- **Equipment-profile store revision retention** — saving a new profile revision when 64 rows are already
+  retained deletes the oldest revision number in the same transaction (never the current pointer) so
+  ``current_revision`` can keep advancing; historical revision numbers may no longer be readable via
+  ``read_revision``.
+
 - Custom negative table-angle and third positioner-angle direction signs now preserve the zero-angle
   arrays instead of causing a row-length error during normalization.
 
@@ -204,9 +209,10 @@ That keeps SemVer and contributor history organized.
   abandons staged run-configuration equipment entries (with the same warning as exam removal), and
   rolls staged entries back if the example load fails.
 
-- **Single-exam staged run-config offsets** — after a staged v2 import, loading the lone exam now
-  mirrors per-exam geometry flags and patient offsets from `loaded_exam_meta` into the global
-  fields used by single-exam dose calculation (multi-exam already read per-exam meta).
+- **Single-exam staged run-config offsets** — when a staged v2 pending slot is consumed on load
+  for a single-exam session, per-exam geometry flags and patient offsets from
+  `loaded_exam_meta` mirror into the global fields used by single-exam dose calculation
+  (multi-exam already read per-exam meta; ordinary loads without pending still reset globals).
 
 - **Equipment maker identity in normalized data** (2026-10-11) — every normalized event frame now
   carries a `manufacturer` column with the exact equipment-maker spelling (`None` when the source
