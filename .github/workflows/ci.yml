@@ -62,10 +62,13 @@ jobs:
 
   request-coderabbit:
     # Fires as soon as privacy-gates succeeds (D14) — does not wait for matrix/Sonar.
+    # Dependabot runs have a read-only token, including human reruns of its PRs.
     needs: [schedule-gate, privacy-gates]
     if: >
       needs.schedule-gate.outputs.should_run == 'true' &&
       github.event_name == 'pull_request' &&
+      github.actor != 'dependabot[bot]' &&
+      github.event.pull_request.user.login != 'dependabot[bot]' &&
       github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     permissions:

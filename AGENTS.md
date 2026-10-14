@@ -207,9 +207,9 @@ that disagrees with CI makes the gate advisory without saying so.
 The version of record is `dev-docs/privacy_tool_inventory.json`; `tools/semgrep/pyproject.toml`
 repeats it because uv needs a literal requirement, and a test asserts the two agree. Both entry
 points (`scripts/run_semgrep_owasp.py`, `scripts/run_semgrep_privacy.py`) resolve through
-`semgrep_tool`, so the hook and CI cannot diverge. Nothing bumps the pin automatically —
-`.github/dependabot.yml` scopes the pip ecosystem to `directory: /`, so Dependabot sees neither
-lock — so the weekly `ci-latest` workflow runs the scan against the newest Semgrep as a drift probe
+`semgrep_tool`, so the hook and CI cannot diverge. Dependabot uses uv for the root project and
+the isolated scanner project; the scanner entry refreshes transitive lock versions only and ignores
+the inventory-controlled Semgrep pin. The weekly `ci-latest` workflow runs the newest Semgrep as a drift probe
 and opens a tracking issue when it breaks. Bumping means editing the inventory *and* re-running
 `uv lock --project tools/semgrep`. Doing only one fails loudly at gate time: `semgrep_argv`
 compares the inventory against the tool manifest before it will run the locked command, and

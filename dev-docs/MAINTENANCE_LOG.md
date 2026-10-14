@@ -8,6 +8,10 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ## [Unreleased]
 
+- Dependabot now uses the uv ecosystem for root manifest/lock updates and isolated Semgrep transitive
+  lock refreshes. Gate tools are reviewed individually; Ruff lock/hook/complexity version parity is
+  tested. Dependabot PRs skip the token-writing CodeRabbit request job while all validation gates remain enabled.
+
 - SonarCloud review follow-up: console reports omit project keys and source filenames; malformed
   `projectStatus` values fail as private query errors before formatting. Offline regressions cover both.
 

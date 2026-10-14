@@ -2,18 +2,47 @@
 # https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
 #
 # Weekly checks open grouped PRs for routine minor/patch bumps so review stays
-# focused. Major version bumps stay ungrouped for individual review.
+# focused. Gate tools and major version bumps stay ungrouped for individual review.
 
 version: 2
 updates:
-  - package-ecosystem: pip
+  # uv updates pyproject.toml and uv.lock together; CI keeps --locked enabled.
+  - package-ecosystem: uv
     directory: /
+    versioning-strategy: increase-if-necessary
     schedule:
       interval: weekly
       day: monday
     open-pull-requests-limit: 5
     groups:
       python-minor-and-patch:
+        patterns:
+          - "*"
+        exclude-patterns:
+          - "ruff"
+          - "basedpyright"
+          - "bandit"
+          - "pip-audit"
+          - "pre-commit"
+          - "shellcheck-py"
+        update-types:
+          - "minor"
+          - "patch"
+
+  # Refresh scanner transitives without changing the inventory-controlled Semgrep pin.
+  - package-ecosystem: uv
+    directory: /tools/semgrep
+    versioning-strategy: lockfile-only
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3
+    allow:
+      - dependency-type: all
+    ignore:
+      - dependency-name: semgrep
+    groups:
+      semgrep-transitives-minor-and-patch:
         patterns:
           - "*"
         update-types:

@@ -34,6 +34,8 @@ def test_coderabbit_remains_requested_only_after_the_privacy_gate() -> None:
     assert "needs: [schedule-gate, privacy-gates]" in coderabbit
     assert "github.event_name == 'pull_request'" in coderabbit
     assert "github.event.pull_request.head.repo.full_name == github.repository" in coderabbit
+    assert "github.actor != 'dependabot[bot]'" in coderabbit
+    assert "github.event.pull_request.user.login != 'dependabot[bot]'" in coderabbit
     assert "github.event.pull_request.draft == false" not in coderabbit
     assert "actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3  # v9" in coderabbit
     assert "@coderabbitai review" in coderabbit

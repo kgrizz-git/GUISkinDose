@@ -75,7 +75,7 @@ Agents working in this repository should be able to answer three questions quick
 | Shell-script lint (ShellCheck) | `shellcheck-py` pre-commit hook + CI `static-analysis` job |
 | Type-check helpers | `scripts/type_baseline.sh`, `.basedpyright/README.md` |
 | Release build | `.github/workflows/release.yml` |
-| Dependency and Actions updates | `.github/dependabot.yml` (weekly Monday; minor/patch grouped per ecosystem; majors ungrouped) |
+| Dependency and Actions updates | `.github/dependabot.yml` (weekly Monday; uv root + isolated Semgrep lock + Actions; routine minor/patch grouped, gate tools and majors ungrouped) |
 
 ## Documentation conventions
 
@@ -268,6 +268,31 @@ validation only.
 | **Before each release** | Re-run full doc-freshness; resolve stale-pattern warnings; bump `pyproject.toml` and `CHANGELOG.md`; verify harness rows in `FEATURE_INVENTORY.md` §0 match `[Unreleased]` |
 
 **Release gate (target):** stale-pattern advisory warnings should become CI-blocking in the release workflow before the semver tag is cut. Until wired, maintainers clear warnings manually as part of release prep.
+
+### Dependency update review
+
+Dependabot uses `uv` at `/` so manifest edits carry an updated `uv.lock`; `increase-if-necessary`
+preserves existing requirements when they already admit the new version. CI still installs with `--locked`.
+Gate tools (Ruff, Basedpyright, Bandit, pip-audit, pre-commit, ShellCheck) are excluded from the routine
+minor/patch group and arrive as individual PRs. Review behavior changes even for pre-1.0 minor updates.
+
+For a Ruff update, coordinate `pyproject.toml`, `uv.lock`, the `.pre-commit-config.yaml` Ruff revision,
+and the complexity baseline's `tool_version` in one reviewed change. Run the complexity ratchet described
+above; the pin-parity test blocks partial updates. Refresh third-party notices when root dependencies change.
+No dependency upgrade or notice regeneration is included in a configuration-only workflow change.
+
+The separate `/tools/semgrep` uv entry uses `lockfile-only`, allows transitive dependencies, and ignores
+Semgrep itself. It cannot widen scanner manifest constraints or change the inventory-controlled scanner pin.
+Keep the isolated project outside the root workspace. Scanner-version upgrades still require inventory/manifest
+coordination, relocking, and the weekly latest-scanner probe's review; constraints that prevent a transitive
+security fix require a deliberate scanner upgrade rather than relaxing the lock gate.
+
+Dependabot-triggered runs have a read-only token. The CodeRabbit request job excludes both the bot actor
+and bot-authored PRs (including human reruns); privacy admission and all test/security jobs still apply.
+Maintainers can request bot-PR review after checking that the exact head's privacy gate passed.
+See [uv integration](https://docs.astral.sh/uv/guides/integration/dependabot/),
+[Dependabot options](https://docs.github.com/en/code-security/reference/supply-chain-security/dependabot-options-reference),
+and [bot workflow restrictions](https://docs.github.com/en/code-security/reference/supply-chain-security/dependabot-on-actions).
 
 CI runs doc-freshness on Ubuntu for every push/PR (links and inventory contradictions only).
 
