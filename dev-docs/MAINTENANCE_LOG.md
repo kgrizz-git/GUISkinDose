@@ -8,6 +8,11 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ## [Unreleased]
 
+- `dependency-audit.yml` gains a `vulnerable-actions` job: pinned zizmor 1.31.0 runs its
+  `known-vulnerable-actions` audit (each SHA pin resolved to its tag and checked against GitHub's advisory
+  database) and fails on any finding or on a zizmor error; other zizmor audits are ignored. GitHub's
+  Dependabot alerts cover only semver-tag references, never SHA pins, so this was otherwise unmonitored.
+
 - Add `.github/workflows/dependency-audit.yml`: a weekly (plus manual) `contents: read` run of
   `scripts/audit_dependencies.py` against the root `uv.lock` with no schedule gate. `ci.yml`'s weekly run
   is skipped when HEAD is unchanged, so a newly published advisory could otherwise never fail CI on a

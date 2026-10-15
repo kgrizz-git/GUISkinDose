@@ -55,7 +55,7 @@ Agents working in this repository should be able to answer three questions quick
 | Project packaging and tool configuration | `pyproject.toml` |
 | Release history and semver notes | `CHANGELOG.md` |
 | CI | `.github/workflows/ci.yml` |
-| Weekly dependency audit (scheduled, ungated) | `.github/workflows/dependency-audit.yml` (runs `scripts/audit_dependencies.py` on `uv.lock` even when HEAD is unchanged) |
+| Weekly dependency audit (scheduled, ungated) | `.github/workflows/dependency-audit.yml` (runs `scripts/audit_dependencies.py` on `uv.lock` even when HEAD is unchanged; a second job runs zizmor's `known-vulnerable-actions` audit, since Dependabot never alerts on SHA-pinned actions) |
 | Latest-deps canary (scheduled) | `.github/workflows/ci-latest.yml` (unpinned install; soft-fails with issue notify so `main` stays green) |
 | Local git hooks | `.pre-commit-config.yaml` |
 | Changelog enforcement (CI on PRs + pre-push) | `scripts/check_changelog.py` |

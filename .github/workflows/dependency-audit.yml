@@ -1,4 +1,4 @@
-# Weekly vulnerability audit of the committed uv.lock.
+# Weekly vulnerability audit of the committed uv.lock and of the pinned GitHub Actions.
 #
 # ci.yml also runs scripts/audit_dependencies.py (static-analysis job), but its weekly
 # schedule is skipped by `schedule-gate` whenever HEAD has not moved since the last
@@ -10,6 +10,12 @@
 # Action SHAs and uv/Python versions mirror ci.yml's static-analysis job.
 # Scope: root uv.lock only. tools/semgrep/uv.lock is not audited here (the wrapper has
 # no path argument); see the "audit the locked tool environments" item in dev-docs/TO_DO.md.
+#
+# Second job (vulnerable-actions): zizmor's known-vulnerable-actions audit over every workflow.
+# This repo pins actions by commit SHA, and Dependabot raises alerts only for actions referenced
+# by semver tag, so a vulnerable pinned action would otherwise never be flagged. zizmor resolves
+# each SHA to its tag and queries GitHub's advisory database with the job's read-only token.
+# Other zizmor audits are ignored; zizmor itself erroring fails the job.
 
 name: dependency-audit
 
@@ -45,3 +51,55 @@ jobs:
     - name: Audit locked dependencies for known vulnerabilities
       # CI=true makes the wrapper pass --locked, so a stale uv.lock also fails.
       run: python scripts/audit_dependencies.py
+
+  # Dependabot alerts are never raised for actions pinned by commit SHA (only
+  # for semver tags), so check pinned actions against GitHub's advisory
+  # database here. zizmor resolves each SHA to its release tag. Only the
+  # known-vulnerable-actions audit fails the job; other zizmor findings are
+  # out of scope for this check.
+  vulnerable-actions:
+    name: Known-vulnerable actions (zizmor)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      with:
+        persist-credentials: false
+    - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+      with:
+        python-version: '3.12'
+    - name: Install zizmor
+      run: "pip install --only-binary=:all: zizmor==1.31.0"
+    - name: Check actions against GitHub security advisories
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        set +e
+        zizmor --format=json . > zizmor.json
+        rc=$?
+        set -e
+        # 0 = no findings, 10-14 = findings by severity; anything else
+        # (e.g. 1) means the audit itself failed, which must not pass.
+        if [ "$rc" -ne 0 ] && { [ "$rc" -lt 10 ] || [ "$rc" -gt 14 ]; }; then
+          echo "::error::zizmor failed (exit $rc)"
+          exit 1
+        fi
+        python3 - <<'PY'
+        import json
+        import sys
+
+        findings = [
+            f for f in json.load(open("zizmor.json"))
+            if f["ident"] == "known-vulnerable-actions" and not f.get("ignored")
+        ]
+        for f in findings:
+            loc = f["locations"][0]
+            path = loc["symbolic"]["key"]["Local"]["verbatim_path"]
+            line = loc["concrete"]["location"]["start_point"]["row"] + 1
+            note = loc["symbolic"].get("annotation", "")
+            print(f"::error file={path},line={line}::{f['desc']}: {note}")
+        print(f"{len(findings)} known-vulnerable action reference(s)")
+        sys.exit(1 if findings else 0)
+        PY
