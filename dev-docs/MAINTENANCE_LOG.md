@@ -8,6 +8,11 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ## [Unreleased]
 
+- Dependency-update hardening: every Dependabot ecosystem now waits a 7-day release cooldown
+  (security updates are not delayed), guarded by a policy test. The complexity gate's Ruff
+  `tool_version` mismatch error names the `check_complexity.py --update` command, and a failed
+  gate in CI writes a read-only `--update` preview and caps diff to the job summary.
+
 - Windows CI follow-up: allow 60 seconds for the offline Node monitor harness, including process startup
   under parallel runner load. The prior 10-second bound timed out on its first Windows invocation;
   all monitor assertions and the finite subprocess deadline remain enforced.
