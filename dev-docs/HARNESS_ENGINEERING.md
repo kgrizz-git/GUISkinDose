@@ -209,6 +209,9 @@ CI runs `python scripts/check_complexity.py` inside the locked `.venv` from
   and fail the gate.
 - When upgrading Ruff, run `--update` to record the newly locked `tool_version`
   (it also lowers or drops caps) and remeasure with `--check`; historical caps retain their own version.
+  The mismatch error names this command. When the gate fails in CI, a read-only follow-up step writes
+  the `--update` output and the resulting `complexity_caps.json` diff to the job summary, so a reviewer
+  can see whether a Ruff bump is version-only; it never commits or pushes, and the job stays red.
   Scores must still respect the existing caps, so a scoring change that raises a
   function above its cap requires a code reduction or separately reviewed policy change.
 - SonarQube `python:S3776` is a separate review signal (cognitive complexity); its findings
@@ -273,6 +276,9 @@ validation only.
 
 Dependabot uses `uv` at `/` so manifest edits carry an updated `uv.lock`; `increase-if-necessary`
 preserves existing requirements when they already admit the new version. CI still installs with `--locked`.
+Every ecosystem has a 7-day `cooldown`, so a newly published release is proposed only after a week in
+which a hijacked or broken upload can be caught and yanked upstream; Dependabot security updates are not delayed.
+A policy test keeps the cooldown on every ecosystem.
 Gate tools (Ruff, Basedpyright, Bandit, pip-audit, pre-commit, ShellCheck) are excluded from the routine
 minor/patch group and arrive as individual PRs. Review behavior changes even for pre-1.0 minor updates.
 

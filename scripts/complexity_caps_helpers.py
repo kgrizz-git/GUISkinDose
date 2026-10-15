@@ -309,7 +309,11 @@ def validate_caps_document(data: Any, tool_version: str) -> list[str]:
     if not isinstance(data["tool_version"], str) or re.fullmatch(r"\d+\.\d+\.\d+", data["tool_version"]) is None:
         errors.append("tool_version must be a Ruff version in X.Y.Z form")
     elif data["tool_version"] != tool_version:
-        errors.append(f"tool_version {data['tool_version']!r} does not match locked ruff {tool_version!r}")
+        errors.append(
+            f"tool_version {data['tool_version']!r} does not match locked ruff {tool_version!r}; after a Ruff"
+            " upgrade, run `uv run --extra dev --extra gui --locked python scripts/check_complexity.py --update`"
+            " and commit dev-docs/complexity_caps.json (dev-docs/HARNESS_ENGINEERING.md, Complexity gate)"
+        )
     if data["threshold"] != THRESHOLD:
         errors.append(f"threshold must be {THRESHOLD}")
     errors.extend(_validate_cap_entries(data["caps"]))
