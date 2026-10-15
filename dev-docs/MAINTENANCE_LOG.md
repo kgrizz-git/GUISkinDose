@@ -8,6 +8,10 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ## [Unreleased]
 
+- Windows CI follow-up: allow 60 seconds for the offline Node monitor harness, including process startup
+  under parallel runner load. The prior 10-second bound timed out on its first Windows invocation;
+  all monitor assertions and the finite subprocess deadline remain enforced.
+
 - Hook maintenance review: Ruff, Bandit, and ShellCheck now run from the project lock instead of drifting
   remote hook pins (local Bandit previously lagged CI). Upgrade the Gitleaks hook to v8.30.1 and add a
   separate metadata-only weekly release monitor that tracks newer pins with one bot-owned dependency issue,

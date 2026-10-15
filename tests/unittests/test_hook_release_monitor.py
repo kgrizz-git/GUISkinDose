@@ -10,6 +10,8 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[2]
 NODE = shutil.which("node")
+# Include cold process startup and runner contention, particularly on Windows.
+NODE_TIMEOUT_SECONDS = 60
 pytestmark = pytest.mark.skipif(NODE is None, reason="Node.js is needed for the GitHub-script reproduction")
 
 
@@ -50,7 +52,7 @@ new AsyncFunction('github', 'context', 'core', script)(github, context, core)
     result = subprocess.run(
         [NODE, "-e", harness],
         input=json.dumps({"script": script, "fixture": fixture}),
-        capture_output=True, text=True, check=True, timeout=10,
+        capture_output=True, text=True, check=True, timeout=NODE_TIMEOUT_SECONDS,
     )
     return json.loads(result.stdout)
 
