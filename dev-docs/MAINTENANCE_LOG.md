@@ -8,6 +8,11 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ## [Unreleased]
 
+- Add `.github/workflows/dependency-audit.yml`: a weekly (plus manual) `contents: read` run of
+  `scripts/audit_dependencies.py` against the root `uv.lock` with no schedule gate. `ci.yml`'s weekly run
+  is skipped when HEAD is unchanged, so a newly published advisory could otherwise never fail CI on a
+  quiet repository. `tools/semgrep/uv.lock` remains unaudited (tracked in `dev-docs/TO_DO.md`).
+
 - Dependency-update hardening: every Dependabot ecosystem now waits a 7-day release cooldown
   (security updates are not delayed), guarded by a policy test. The complexity gate's Ruff
   `tool_version` mismatch error names the `check_complexity.py --update` command, and a failed

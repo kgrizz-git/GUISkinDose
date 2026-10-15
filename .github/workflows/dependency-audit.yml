@@ -1,0 +1,47 @@
+# Weekly vulnerability audit of the committed uv.lock.
+#
+# ci.yml also runs scripts/audit_dependencies.py (static-analysis job), but its weekly
+# schedule is skipped by `schedule-gate` whenever HEAD has not moved since the last
+# scheduled run. On a quiet repository a newly published advisory against a locked
+# dependency would then never turn CI red. This workflow has no gate: it re-audits the
+# same lockfile every week so new advisory data alone is enough to fail it.
+#
+# Only uv + Python are needed: `uv audit` reads uv.lock directly, so no `uv sync`.
+# Action SHAs and uv/Python versions mirror ci.yml's static-analysis job.
+# Scope: root uv.lock only. tools/semgrep/uv.lock is not audited here (the wrapper has
+# no path argument); see the "audit the locked tool environments" item in dev-docs/TO_DO.md.
+
+name: dependency-audit
+
+on:
+  schedule:
+    - cron: '41 4 * * 3'   # Wednesdays 04:41 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dependency-audit-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      with:
+        persist-credentials: false
+    - name: Install uv
+      uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884  # v10.3.0
+      with:
+        version: ">=0.11.19"
+    - name: Set up Python
+      uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+      with:
+        python-version: '3.12'
+    - name: Audit locked dependencies for known vulnerabilities
+      # CI=true makes the wrapper pass --locked, so a stale uv.lock also fails.
+      run: python scripts/audit_dependencies.py
