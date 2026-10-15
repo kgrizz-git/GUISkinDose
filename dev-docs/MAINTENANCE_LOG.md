@@ -8,6 +8,13 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ## [Unreleased]
 
+- `release.yml` re-pins `pypa/gh-action-pypi-publish` from `c1b3402` to `dc37677` (`# v1.14.2`). The old
+  SHA was not a release tag but a commit on the sunset `master` branch (v1.5.1 + 5, Docker-based, `password`
+  required, no Trusted Publishing support), so the OIDC publish step could not have worked and neither
+  Dependabot nor zizmor's `known-vulnerable-actions` could map it to a version. The step passes no `with:`
+  inputs; v1.14.2 defaults `attestations`, `verbose`, and `print-hash` to `true` (PEP 740 attestations use the
+  job's existing `id-token: write`).
+
 - `dependency-audit.yml` gains a `vulnerable-actions` job: pinned zizmor 1.31.0 runs its
   `known-vulnerable-actions` audit (each SHA pin resolved to its tag and checked against GitHub's advisory
   database) and fails on any finding or on a zizmor error; other zizmor audits are ignored. GitHub's
