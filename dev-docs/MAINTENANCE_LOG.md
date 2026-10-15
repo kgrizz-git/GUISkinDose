@@ -8,6 +8,11 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ## [Unreleased]
 
+- `dependency-audit.yml` hardening: the zizmor step now fails closed when `GH_TOKEN` is empty (without a
+  token zizmor silently skips its online audits, including `known-vulnerable-actions`, and would pass), and
+  per-finding location parsing tolerates findings without a local path instead of raising `KeyError`. The
+  `audit` job gains `timeout-minutes: 10`.
+
 - `release.yml` re-pins `pypa/gh-action-pypi-publish` from `c1b3402` to `dc37677` (`# v1.14.2`). The old
   SHA was not a release tag but a commit on the sunset `master` branch (v1.5.1 + 5, Docker-based, `password`
   required, no Trusted Publishing support), so the OIDC publish step could not have worked and neither
