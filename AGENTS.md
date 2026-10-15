@@ -131,7 +131,7 @@ schema accepts it as optional with a count-only legacy warning when absent, and 
 Custom equipment-profile sessions (`equipment_profiles.assemble_session()`) bind on settings via the never-serialized `equipment_profile_session` parameter and apply to raw inputs only (pre-transformed inputs refuse closed); per-exam match records surface under `equipment_profile_match` in dict/JSON results (`src/guiskindose/equipment_resolution.py`).
 5. Robustness/physics: the HVL and `k_tab` lookups now **interpolate** off-grid filtration and **clamp** (never extrapolate) out-of-range queries, warning per event (`grid_interp.py`). Events below the 25 kV HVL floor are handled by a user-selectable policy — `below_floor_kvp_policy` ∈ `exam_average` (default) / `snap` / `skip` / `manual` (`geom_calc.apply_below_floor_kvp_policy()`), surfaced as a Physics setting + a pre-calc prompt. See `dev-docs/plans/archive/hvl-interpolation-and-below-floor-kvp.md`.
 6. Kerma-meter correction factors resolve per exam and equipment × tube as manual entry for that exam > calibration file (optional `valid_from`/`valid_to` periods, chosen per exam in the GUI or by `--kerma-meter-calibration-date`; never read from exam dates) > `default_factor`; a set file always loads. The GUI asks about missing pairs at load time (setting `ask_for_missing`, default on, replacing `prompt_at_calc`; the legacy `mode` setting and `--kerma-meter-correction-mode` flag are deprecated and mapped). Exams with no equipment identity get a per-exam unit choice. CLI runs never prompt and log one count-only warning per exam. Biplane studies also report dose by tube (`tube_summary`, partial maps summing to the combined map; per-tube peaks do not sum to the PSD). See `dev-docs/plans/archive/KERMA_METER_CF_WORKFLOW_PLAN.md`.
-7. Harness focus: keep `AGENTS.md` and `dev-docs/` synchronized with behavior and use the checks in `dev-docs/HARNESS_ENGINEERING.md`. New or changed images, DICOM, and opaque binaries require an exact approved-inventory hash; extensionless files are scanned as text only when their complete contents are valid, NUL-free UTF-8. See `PRIVACY_AND_SENSITIVE_ASSETS.md`. OWASP Semgrep runs locally after `privacy-gates`; tokenized SonarCloud is now **enabled** — `main` is protected by a ruleset and `SONAR_PROTECTED_MAIN_ENABLED=true`, so the `sonar-scan` job runs on `main` pushes only (never on a PR head), still gated behind `privacy-gates` + `build` and skipped if `SONAR_TOKEN` is absent. CodeRabbit auto-review is off and CI requests it after `privacy-gates`, but a manual CodeRabbit command can bypass that ordering, so its filters are defense in depth rather than an admission boundary.
+7. Harness focus: keep `AGENTS.md` and `dev-docs/` synchronized with behavior and use the checks in `dev-docs/HARNESS_ENGINEERING.md`. New or changed images, DICOM, and opaque binaries require an exact approved-inventory hash; extensionless files are scanned as text only when their complete contents are valid, NUL-free UTF-8. See `PRIVACY_AND_SENSITIVE_ASSETS.md`. OWASP Semgrep runs locally after `privacy-gates`; tokenized SonarCloud is now **enabled** — `main` is protected by a ruleset and `SONAR_PROTECTED_MAIN_ENABLED=true`, so the `sonar-scan` job runs on `main` pushes only (never on a PR head), still gated behind `privacy-gates` + `build` and skipped if `SONAR_TOKEN` is absent. CodeRabbit auto-review is off; the obsolete CI bot-comment request job is removed because its comments no longer trigger review. Request review through a supported maintainer action only after the exact head passes `privacy-gates`; path filters remain defense in depth rather than an admission boundary.
 8. **Phantom library:** MPFB/Blender true-shape catalog Phases 0–4 are complete (23 base clinical meshes shipped, plus `*_arms_down` twins; runbook archived at [dev-docs/plans/archive/AUTOMATED_PHANTOM_LIBRARY_PLAN.md](dev-docs/plans/archive/AUTOMATED_PHANTOM_LIBRARY_PLAN.md)). Further phantoms and optional user-imported custom meshes remain open in `dev-docs/TO_DO.md` and [dev-docs/ADDITIONAL_PHANTOMS.md](dev-docs/ADDITIONAL_PHANTOMS.md).
 
 ## Development setup
@@ -183,6 +183,10 @@ bash scripts/setup-dev.sh
 scripts\setup-dev.bat
 ```
 
+Ruff, Bandit, and ShellCheck hooks run through `uv run --locked --extra dev --extra gui`, using the same
+versions as CI. Gitleaks retains a reviewed release pin; `ci-latest` checks upstream release metadata
+weekly and tracks newer versions without automatically changing the hook.
+
 To run hooks manually:
 
 ```bash
@@ -207,9 +211,9 @@ that disagrees with CI makes the gate advisory without saying so.
 The version of record is `dev-docs/privacy_tool_inventory.json`; `tools/semgrep/pyproject.toml`
 repeats it because uv needs a literal requirement, and a test asserts the two agree. Both entry
 points (`scripts/run_semgrep_owasp.py`, `scripts/run_semgrep_privacy.py`) resolve through
-`semgrep_tool`, so the hook and CI cannot diverge. Nothing bumps the pin automatically —
-`.github/dependabot.yml` scopes the pip ecosystem to `directory: /`, so Dependabot sees neither
-lock — so the weekly `ci-latest` workflow runs the scan against the newest Semgrep as a drift probe
+`semgrep_tool`, so the hook and CI cannot diverge. Dependabot uses uv for the root project and
+the isolated scanner project; the scanner entry refreshes transitive lock versions only and ignores
+the inventory-controlled Semgrep pin. The weekly `ci-latest` workflow runs the newest Semgrep as a drift probe
 and opens a tracking issue when it breaks. Bumping means editing the inventory *and* re-running
 `uv lock --project tools/semgrep`. Doing only one fails loudly at gate time: `semgrep_argv`
 compares the inventory against the tool manifest before it will run the locked command, and

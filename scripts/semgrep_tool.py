@@ -54,10 +54,9 @@ _TOOL_MANIFEST: Final = "pyproject.toml"
 _TOOL_ENV_DIRNAME: Final = ".venv"
 
 # Set by the weekly `ci-latest` probe to run the newest Semgrep instead of the pin.
-# Nothing auto-bumps this pin (it is intentionally outside the root uv.lock, and
-# `.github/dependabot.yml` scopes the pip ecosystem to `directory: /`, so Dependabot
-# sees neither lock), so that probe is what surfaces drift and upstream breakage; a
-# human then bumps the inventory version and relocks tools/semgrep.
+# Dependabot refreshes isolated transitive lock versions but ignores the Semgrep pin.
+# The probe surfaces scanner drift and upstream breakage; a human then bumps the
+# inventory version and relocks tools/semgrep together.
 #
 # Honoured ONLY in CI. Locally it would be an unaudited way to run an arbitrary
 # scanner version through the same blocking gates, which is the opposite of the

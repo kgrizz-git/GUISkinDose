@@ -75,7 +75,7 @@ Agents working in this repository should be able to answer three questions quick
 | Shell-script lint (ShellCheck) | `shellcheck-py` pre-commit hook + CI `static-analysis` job |
 | Type-check helpers | `scripts/type_baseline.sh`, `.basedpyright/README.md` |
 | Release build | `.github/workflows/release.yml` |
-| Dependency and Actions updates | `.github/dependabot.yml` (weekly Monday; minor/patch grouped per ecosystem; majors ungrouped) |
+| Dependency and Actions updates | `.github/dependabot.yml` (weekly Monday; uv root + isolated Semgrep lock + Actions; routine minor/patch grouped, gate tools and majors ungrouped) |
 
 ## Documentation conventions
 
@@ -268,6 +268,47 @@ validation only.
 | **Before each release** | Re-run full doc-freshness; resolve stale-pattern warnings; bump `pyproject.toml` and `CHANGELOG.md`; verify harness rows in `FEATURE_INVENTORY.md` §0 match `[Unreleased]` |
 
 **Release gate (target):** stale-pattern advisory warnings should become CI-blocking in the release workflow before the semver tag is cut. Until wired, maintainers clear warnings manually as part of release prep.
+
+### Dependency update review
+
+Dependabot uses `uv` at `/` so manifest edits carry an updated `uv.lock`; `increase-if-necessary`
+preserves existing requirements when they already admit the new version. CI still installs with `--locked`.
+Gate tools (Ruff, Basedpyright, Bandit, pip-audit, pre-commit, ShellCheck) are excluded from the routine
+minor/patch group and arrive as individual PRs. Review behavior changes even for pre-1.0 minor updates.
+
+Ruff, Bandit, and ShellCheck hooks now run through `uv run --locked --extra dev --extra gui`,
+so they use the same versions as CI without separate remote hook pins. Both hook-install launchers
+check that uv is available before installing hooks. PyYAML is an explicit dev dependency for YAML policy tests. For a Ruff update, coordinate
+`pyproject.toml`, `uv.lock`, and the complexity baseline's `tool_version` in one reviewed change. Run the complexity ratchet described
+above; the lock/baseline parity test blocks partial updates. Refresh third-party notices when root dependencies change.
+Configuration-only changes do not require notice regeneration; verify the inventory after dependency declarations change.
+
+The separate `/tools/semgrep` uv entry uses `lockfile-only`, allows transitive dependencies, and ignores
+Semgrep itself. It cannot widen scanner manifest constraints or change the inventory-controlled scanner pin.
+Keep the isolated project outside the root workspace. Scanner-version upgrades still require inventory/manifest
+coordination, relocking, and the weekly latest-scanner probe's review; constraints that prevent a transitive
+security fix require a deliberate scanner upgrade rather than relaxing the lock gate.
+
+Gitleaks is the remaining remote hook, pinned to a reviewed release. The metadata-only
+`hook-release-monitor` job in `ci-latest` compares the pinned tag with the latest stable upstream release,
+opens or updates one bot-owned dependency issue when it is newer, reconciles duplicate bot issues, and
+closes its drift issues once the pin catches up. Metadata failures keep the monitor job red and open/update
+a separate actionable bot-owned issue; the next successful check closes that failure issue.
+It never checks out code, installs tools, edits pins, pushes, or opens PRs. This keeps its issue-writing
+credential separate from the unpinned-dependency test job. It runs on the weekly schedule and manual
+dispatches on `main`; manual dispatches on other branches skip the monitor. To upgrade in a feature branch:
+
+```bash
+pre-commit autoupdate --repo https://github.com/gitleaks/gitleaks
+pre-commit run gitleaks --all-files
+```
+
+Dependabot-triggered runs have a read-only token. The obsolete CodeRabbit comment-request job is removed
+for all PRs because bot comments no longer trigger reviews. Maintainers should use a supported review action
+only after checking that the exact head's privacy gate passed; cloud review filters remain defense in depth.
+See [uv integration](https://docs.astral.sh/uv/guides/integration/dependabot/),
+[Dependabot options](https://docs.github.com/en/code-security/reference/supply-chain-security/dependabot-options-reference),
+and [bot workflow restrictions](https://docs.github.com/en/code-security/reference/supply-chain-security/dependabot-on-actions).
 
 CI runs doc-freshness on Ubuntu for every push/PR (links and inventory contradictions only).
 
@@ -514,7 +555,7 @@ Other CI jobs (typecheck, bandit, pip-audit, GUI smoke, package build, doc-fresh
 | Dependency auditors | `uv audit` on `uv.lock` with `pip-audit` fallback via `scripts/audit_dependencies.py` — runs in the Ubuntu `static-analysis` job and the local pre-push hook. (The former main-only `safety scan` cloud job was removed with the `safety` dev dependency; it duplicated the OSV/PyPA advisory data both auditors already query.) |
 | PR coverage gate | Ubuntu `coverage-pr` on pull requests after `privacy-gates`: combined non-GUI+GUI `coverage` ≥80% of `src/guiskindose/*`, plus `diff-cover` ≥80% of lines changed vs the PR base (base branch fetched with full history so merge-base stays valid when `main` moves). This is the single coverage standard (80%); the matrix `build` job runs tests only (no coverage gate), and `sonar-scan` enforces ≥80% new-code coverage on `main`. |
 | `python scripts/check_licenses.py` | Ubuntu `static-analysis` job (forbidden licenses; `--check-notices`) |
-| CodeRabbit | Auto-review off (`.coderabbit.yaml`); path filters exclude sensitive surfaces; `request-coderabbit` job posts `@coderabbitai review` after `privacy-gates` on same-repository PRs (including drafts; deduped per head SHA). The same-repository guard prevents CI from posting comments on fork PRs. Manual CodeRabbit requests bypass the CI ordering, so this is not a trusted privacy boundary. |
+| CodeRabbit | Auto-review off (`.coderabbit.yaml`); sensitive path filters retained. The obsolete CI bot-comment request job is removed. Maintainers use a supported review action after the exact head passes privacy admission; filters are defense in depth, not an admission boundary. |
 | pre-commit (local) | `.pre-commit-config.yaml` — commit: ruff, gitleaks, shellcheck, bandit, doc/help checks, backup cleanup; pre-push: basedpyright, semgrep, check-changelog |
 
 Release publishing still runs `python -m build` in `.github/workflows/release.yml` on tag creation.

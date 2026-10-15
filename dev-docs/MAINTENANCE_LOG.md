@@ -8,6 +8,21 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ## [Unreleased]
 
+- Windows CI follow-up: allow 60 seconds for the offline Node monitor harness, including process startup
+  under parallel runner load. The prior 10-second bound timed out on its first Windows invocation;
+  all monitor assertions and the finite subprocess deadline remain enforced.
+
+- Hook maintenance review: Ruff, Bandit, and ShellCheck now run from the project lock instead of drifting
+  remote hook pins (local Bandit previously lagged CI). Upgrade the Gitleaks hook to v8.30.1 and add a
+  separate metadata-only weekly release monitor that tracks newer pins with one bot-owned dependency issue,
+  reconciles duplicates, and reports metadata failures without exposing upstream payloads. Hook installers
+  check for uv early; YAML policy tests declare PyYAML directly. Replace the dead CodeRabbit request job
+  and its regression expectations; retain privacy-first gates.
+
+- Dependabot now uses the uv ecosystem for root manifest/lock updates and isolated Semgrep transitive
+  lock refreshes. Gate tools are reviewed individually; Ruff lock/complexity version parity is
+  tested. The obsolete CodeRabbit bot-comment request job is removed for all PRs.
+
 - SonarCloud review follow-up: console reports omit project keys and source filenames; malformed
   `projectStatus` values fail as private query errors before formatting. Offline regressions cover both.
 

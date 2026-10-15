@@ -1,6 +1,13 @@
 @echo off
 setlocal enabledelayedexpansion
 
+where uv >nul 2>&1
+if %ERRORLEVEL% NEQ 0 (
+    echo [ERROR] uv not found; the locked git hooks require uv.
+    echo Install uv, then run: uv sync --extra dev --extra gui --locked
+    exit /b 1
+)
+
 where pre-commit >nul 2>&1
 if %ERRORLEVEL% NEQ 0 (
     echo [ERROR] pre-commit not found.
