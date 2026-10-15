@@ -8,6 +8,8 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ## [Unreleased]
 
+- `dependency-audit.yml`: the zizmor JSON report is now written to `$RUNNER_TEMP` instead of the checkout, so a PR that commits a `zizmor.json` symlink cannot make the shell redirect truncate a workflow file before zizmor scans it (hiding a vulnerable action).
+
 - `dependency-audit.yml` hardening: the zizmor step now fails closed when `GH_TOKEN` is empty (without a
   token zizmor silently skips its online audits, including `known-vulnerable-actions`, and would pass), and
   per-finding location parsing tolerates findings without a local path instead of raising `KeyError`. The
