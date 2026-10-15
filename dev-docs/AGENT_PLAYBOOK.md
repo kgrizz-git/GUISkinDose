@@ -81,6 +81,24 @@ Treat PHI/PII exposure as a first-class defect — in committed content **and** 
   `dev-docs/privacy_admission_policy.json`; standard Git has no dependable pre-add hook, so commit/push/CI are the
   enforcement boundaries.
 
+## Git hooks — no bypass
+
+Pre-commit and pre-push hooks (plus opt-in gates such as Sonar freshness when
+`SONAR_FRESHNESS_GATE=1` in `.env`) are mandatory boundaries. Agents must not
+circumvent them without **explicit user permission for that specific commit or
+push**.
+
+Forbidden without that permission:
+
+- `git commit --no-verify`, `git push --no-verify`, or `-n` on commit/push
+- Disabling gates via environment for the command (e.g. `SONAR_FRESHNESS_GATE=0`,
+  `SKIP=…`, `HUSKY=0`)
+- Skipping documented remediation (privacy receipts, local Sonar scan) in favor of
+  pushing anyway
+
+When a hook fails: stop, show the failure, fix the cause or ask the user — do not
+self-approve a bypass because the failure seems pre-existing or unrelated.
+
 ## Before Finishing
 
 Run the smallest meaningful verification set for the change. Common checks:
@@ -99,10 +117,13 @@ basedpyright
 For narrow script changes, run that script's unit tests and the script itself. For GUI changes, run the relevant
 NiceGUI user-simulation tests under `tests/gui/` or `tests/unittests/test_gui_*.py`.
 
-When the local SonarQube freshness gate requires a scan, also review issues introduced since the previous scan,
-especially bugs and vulnerabilities. Use the local New Code view or the private timestamped issue dumps in
-`dev-docs/SONARQUBE_LOCAL.md`; triage new findings before pushing even if the quality gate passes. The hook only
-reminds you of this review and does not enforce an issue-count comparison.
+When the local Sonar freshness gate is on (`SONAR_FRESHNESS_GATE=1`), a push requires **both** a fresh successful
+scan **and** a **green** local quality gate (`run_sonarqube_local.py` exit 0). A failed gate (e.g.
+`new_violations` > 0) is blocking: fix the listed issues or ask the user before any bypass — do not disable the
+freshness gate or hooks to push. After a **green** gate, still triage New Code bugs and vulnerabilities (local UI
+or `dump_sonar_issues.py`); the hook does not compare issue counts. See **Freshness vs quality gate vs triage** in
+`dev-docs/SONARQUBE_LOCAL.md`. Optional SonarCloud status uses the same token/host pattern documented there (never
+log the token).
 
 `playwright` and `pytest-playwright` are installed (part of `[dev]`) with a Chromium headless shell. Use Playwright
 only when explicitly asked to verify visual layout — for example, when running the `/verify` skill on a CSS or

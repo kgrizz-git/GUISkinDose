@@ -83,6 +83,7 @@ phantom-gen = [
     "scikit-image>=0.22",
 ]
 dev = [
+    "PyYAML>=6",
     "basedpyright>=1.23",
     "defusedxml>=0.7.1",
     "pandas-stubs>=2.2",

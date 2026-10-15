@@ -17,10 +17,10 @@
 #
 # Deliberately NOT a uv workspace member of the root project: joining the workspace
 # would merge these dependencies back into the root resolution and undo the isolation.
-# `.github/dependabot.yml` scopes the pip ecosystem to `directory: /`, so nothing bumps
-# this lock automatically either; the version of record is
-# dev-docs/privacy_tool_inventory.json and the weekly `ci-latest` drift probe is what
-# surfaces upstream movement.
+# Dependabot refreshes this project's transitive lock versions with lockfile-only uv
+# updates, ignoring Semgrep itself. The version of record remains
+# dev-docs/privacy_tool_inventory.json; the weekly `ci-latest` probe surfaces scanner
+# movement so inventory and manifest pins can be upgraded together after review.
 [project]
 name = "guiskindose-semgrep-tool"
 version = "0"

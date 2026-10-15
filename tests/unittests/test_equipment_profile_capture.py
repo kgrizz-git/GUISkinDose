@@ -61,6 +61,7 @@ from guiskindose.equipment_profiles.capture_codec import (
 from guiskindose.equipment_profiles.resolver import LEAF_ORDER, ResolutionNotice
 from guiskindose.equipment_resolution import (
     EquipmentApplicationReceipt,
+    first_published_equipment_receipt,
     receipt_to_mapping,
 )
 from guiskindose.helpers.read_and_normalize_rdsr_data import read_and_normalise_rdsr_data
@@ -834,3 +835,10 @@ def test_uninitialized_context_emission_fails_closed() -> None:
     incomplete = object.__new__(CapturedCoordinates)
     with pytest.raises(CaptureError):
         capture_to_mapping(incomplete)
+
+
+def test_first_published_equipment_receipt_returns_first_or_none() -> None:
+    assert first_published_equipment_receipt([]) is None
+    first = object()
+    second = object()
+    assert first_published_equipment_receipt([first, second]) is first

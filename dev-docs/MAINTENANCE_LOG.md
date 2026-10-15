@@ -8,6 +8,35 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ## [Unreleased]
 
+- Windows CI follow-up: allow 60 seconds for the offline Node monitor harness, including process startup
+  under parallel runner load. The prior 10-second bound timed out on its first Windows invocation;
+  all monitor assertions and the finite subprocess deadline remain enforced.
+
+- Hook maintenance review: Ruff, Bandit, and ShellCheck now run from the project lock instead of drifting
+  remote hook pins (local Bandit previously lagged CI). Upgrade the Gitleaks hook to v8.30.1 and add a
+  separate metadata-only weekly release monitor that tracks newer pins with one bot-owned dependency issue,
+  reconciles duplicates, and reports metadata failures without exposing upstream payloads. Hook installers
+  check for uv early; YAML policy tests declare PyYAML directly. Replace the dead CodeRabbit request job
+  and its regression expectations; retain privacy-first gates.
+
+- Dependabot now uses the uv ecosystem for root manifest/lock updates and isolated Semgrep transitive
+  lock refreshes. Gate tools are reviewed individually; Ruff lock/complexity version parity is
+  tested. The obsolete CodeRabbit bot-comment request job is removed for all PRs.
+
+- SonarCloud review follow-up: console reports omit project keys and source filenames; malformed
+  `projectStatus` values fail as private query errors before formatting. Offline regressions cover both.
+
+- Equipment-profile plan status now explicitly records in-progress delivery through coordinate wiring,
+  GUI sessions, run-state v2, and review surfaces; refresh the roadmap pointer and retain open phase acceptance.
+
+- Sonar helper review: suppress raw API error bodies, handle invalid response encoding safely,
+  and cap SonarCloud issue requests at the supported 500-entry page size. Offline regressions
+  cover credential redaction, malformed responses, and quality-gate exit codes.
+
+- Extend `git_identity_trailers.py` so AI agent `Co-authored-by` trailers (Anthropic, Cursor, OpenAI Codex,
+  Qwen Coder, Kilo Gastown agents, plus existing GitHub noreply bots) do not fail `check_ci_metadata.py` on
+  `main` pushes; institutional addresses in trailers still fail.
+
 - Guard equipment GUI workflow tests with the optional NiceGUI dependency so the core CI matrix can collect without GUI extras; the GUI-enabled suite still executes all workflow regressions.
 
 - Run-state v2 final review: validate effective single-exam global flags and retained capture geometry before import mutation; revalidate copied frozen overrides at the loader boundary. Regression coverage includes null and absent equipment sections.

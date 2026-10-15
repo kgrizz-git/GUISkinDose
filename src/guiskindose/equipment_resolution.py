@@ -113,6 +113,13 @@ class EquipmentApplicationReceipt:
         return f"EquipmentApplicationReceipt(events={self.event_count!r}, method={self.method!r})"
 
 
+def first_published_equipment_receipt(records: list[Any]) -> EquipmentApplicationReceipt | None:
+    """Return the first receipt appended during normalization, when one was published."""
+    if len(records) < 1:
+        return None
+    return records[0]
+
+
 def _session_or_none(settings: Any) -> EquipmentProfileSession | None:
     """Return the bound session, failing closed on a mis-typed attribute."""
     session = getattr(settings, "equipment_profile_session", None)

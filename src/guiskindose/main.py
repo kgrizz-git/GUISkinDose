@@ -21,6 +21,7 @@ from guiskindose.constants import (
 )
 from guiskindose.debug import dprint
 from guiskindose.equipment_profiles.capture import CapturedCoordinates
+from guiskindose.equipment_resolution import first_published_equipment_receipt
 from guiskindose.format_export_data import MultiExamResult, PySkinDoseOutput
 from guiskindose.helpers.parse_settings_to_settings_class import (
     parse_settings_to_settings_class,
@@ -186,7 +187,7 @@ def main(
     output = analyze_data(
         normalized_data=data_norm,
         settings=settings,
-        equipment_receipt=equipment_records[0] if equipment_records else None,
+        equipment_receipt=first_published_equipment_receipt(equipment_records),
     )
     dprint("PROCESSING", "analyze_data finished")
 
@@ -258,7 +259,7 @@ def analyze_input_file(
         input_result,
         settings_obj,
         output_format,
-        equipment_receipt=equipment_records[0] if equipment_records else None,
+        equipment_receipt=first_published_equipment_receipt(equipment_records),
     )
 
 
@@ -361,7 +362,7 @@ def analyze_multiple_input_files(
                     raw_data=None,
                     provenance=provenance,
                     warnings=[],
-                    equipment_receipt=equipment_records[0] if equipment_records else None,
+                    equipment_receipt=first_published_equipment_receipt(equipment_records),
                 )
             )
 
@@ -567,7 +568,7 @@ def build_cli_export_source(
             )
             inputs = None
             import_warnings = []
-            cli_resolution = equipment_records[0] if equipment_records else None
+            cli_resolution = first_published_equipment_receipt(equipment_records)
 
         output = analyze_data(
             normalized_data=data_norm, settings=settings_obj, equipment_receipt=cli_resolution
@@ -635,7 +636,7 @@ def _load_inputs_for_export(
                         warnings=[],
                     ),
                     warnings=[],
-                    equipment_receipt=equipment_records[0] if equipment_records else None,
+                    equipment_receipt=first_published_equipment_receipt(equipment_records),
                 )
             )
     return inputs

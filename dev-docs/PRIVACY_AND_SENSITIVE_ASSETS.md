@@ -101,8 +101,11 @@ value. Prefer removing or replacing data over adding an allowlist entry.
 The `sensitive-commit-message` local `commit-msg` hook applies the same value-free text rules to the message before a
 commit is created. Commit messages do not use the file-path allowlist: remove sensitive wording instead of trying to
 exempt it. The only exception is Git identity trailers (`Signed-off-by`, `Co-authored-by`, and similar) whose address
-is a known GitHub automation or noreply identity (Dependabot's GitHub support address, GitHub's `noreply.github.com`
-address, or any `users.noreply.github.com` noreply). Those trailers are ignored for `EMAIL_ADDRESS` in both the local
+is a known GitHub automation or vendor agent noreply identity (Dependabot's GitHub support address, GitHub's
+`noreply.github.com` address, any `users.noreply.github.com` noreply, and the allowlist in
+[`git_identity_trailers.py`](../scripts/git_identity_trailers.py) for common AI coding agents such as Anthropic,
+Cursor, OpenAI Codex, Qwen Coder, and Kilo Cloud Gastown agent addresses). Those trailers are ignored for
+`EMAIL_ADDRESS` in both the local
 commit-msg hook and the CI `check_ci_metadata.py` push-commit scan so Dependabot and GitHub noreply co-authors do not
 fail `main` privacy gates. Institutional or personal addresses in the same trailers still fail. This hook cannot change
 existing public history; use the [privacy incident response and history-audit runbook](PRIVACY_INCIDENT_RESPONSE.md)
@@ -212,7 +215,7 @@ content) so containment stays effective.
 | Tool | Kind | Sensitive-surface policy |
 |---|---|---|
 | SonarCloud (`sonar.exclusions` / `.sonarcloud.properties`) | Cloud upload | Enabled only for protected `main`: `SONAR_PROTECTED_MAIN_ENABLED=true` and the `SONAR_TOKEN` repository secret are required. Tokenized analysis runs on `main` pushes only, never a PR head. Exclude `example_data` / `phantom_data` / `table_data`, `tests/fixtures`, `dev-docs`, DICOM (including `.dicom`)/images/documents/tabular/DB dumps, `tmp` / `PlotOutputs` / `htmlcov` / `coverage.xml`. Keep GUI **in** coverage. |
-| CodeRabbit (`.coderabbit.yaml` `path_filters`) | Cloud PR review | CI requests review after `privacy-gates`; quoted `!` globs exclude the same sensitive file classes. Auto-review is off, but a manual `@coderabbitai review` command can bypass CI ordering, so filters are defense in depth—not an admission-control boundary. |
+| CodeRabbit (`.coderabbit.yaml` `path_filters`) | Cloud PR review | No CI bot-comment trigger (the former request job is removed). Auto-review is off; maintainers request review through a supported action after the exact head passes privacy admission. Quoted `!` globs exclude sensitive file classes; filters remain defense in depth rather than an admission-control boundary. |
 | OWASP Semgrep (Actions + pre-push) | Local CLI | **Include-list** roots only: `src scripts .github/workflows docs/source/conf.py`; CI also excludes example/phantom/table data and fixtures. Semgrep Cloud App remains disabled. |
 | Privacy Semgrep (`run_semgrep_privacy.py`) | Local CLI | Scans `src` / `scripts` / `tests` **code** paths; do not strip for “privacy.” |
 | `check_sensitive_content` / admission | Local gates | **Never** exclude for convenience — containment layer. |

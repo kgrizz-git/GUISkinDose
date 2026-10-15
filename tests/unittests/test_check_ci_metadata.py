@@ -39,6 +39,34 @@ def test_ci_metadata_allows_github_noreply_coauthored_trailer() -> None:
     assert scan_event_payload({"commits": [{"message": message}]}) == []
 
 
+@pytest.mark.parametrize(
+    ("display_name", "email"),
+    [
+        ("Claude Opus 5.5", "noreply@" + "anthropic.com"),
+        ("Cursor", "cursoragent@" + "cursor.com"),
+        ("Codex", "noreply@" + "openai.com"),
+        ("Qwen Coder", "qwen-coder@" + "alibabacloud.com"),
+        ("Toast (Polecat)", "toast@" + "gastown.kilo.ai"),
+        ("kiloconnect[bot]", "240665456+kiloconnect[bot]@" + "users.noreply.github.com"),
+    ],
+)
+def test_ci_metadata_allows_ai_agent_coauthored_trailers(display_name: str, email: str) -> None:
+    message = f"fix(run-state): example\n\nCo-authored-by: {display_name} <{email}>\n"
+    assert is_allowlisted_git_identity_trailer(f"Co-authored-by: {display_name} <{email}>")
+    assert scan_event_payload({"commits": [{"message": message}]}) == []
+
+
+def test_ci_metadata_allows_anthropic_trailer_on_multiline_commit_like_pr147() -> None:
+    """Regression: #147 merge push failed when an included commit had a Claude co-author trailer."""
+    anthropic = "noreply@" + "anthropic.com"
+    message = (
+        "fix(run-state): let |= on frozen overrides decline instead of raising\n\n"
+        "Adds a regression assertion for that behavior.\n\n"
+        f"Co-Authored-By: Claude Opus 5.5 <{anthropic}>\n"
+    )
+    assert scan_event_payload({"commits": [{"message": message}]}) == []
+
+
 @pytest.mark.parametrize("field", ["title", "body"])
 def test_ci_metadata_flags_approved_trailers_in_pull_request_fields(field: str) -> None:
     """Allowlisted trailers apply only to push commit messages, not PR title/body."""

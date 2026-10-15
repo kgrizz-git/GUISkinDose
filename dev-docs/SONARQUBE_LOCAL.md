@@ -102,16 +102,64 @@ leave the prior state so the budget is not reset by a red scan). After history r
 blocks until a fresh scan re-anchors the state. Note: the push stage evaluates the checked-out HEAD, not the
 pushed refspecs — pushing another branch from this checkout is judged against HEAD's freshness.
 
-A current scan is the first step, not the end of review. Before pushing, inspect issues introduced since the
-previous scan in SonarQube's New Code view, especially bugs and vulnerabilities, and triage them even if the
-quality gate passed. The pre-push hook prints this reminder when the opt-in gate is enabled; it does not compare
-issue counts or classify findings automatically.
+### Freshness vs quality gate vs triage (do not conflate)
 
-`SONAR_TOKEN` is read from the exported environment or the repo-local `.env` by all three helpers
-(exported wins; the file is parsed, never sourced). `SONAR_HOST_URL` comes from the exported environment
-in the gate and dump helpers (overridable per-invocation via `--host-url`); the runner additionally falls
-back to `.env`, so a plain `python scripts/run_sonarqube_local.py` works in any shell on any OS — no
-`export` dance needed.
+Three separate checks apply when `SONAR_FRESHNESS_GATE=1`:
+
+| Check | What enforces it | Pass condition |
+| --- | --- | --- |
+| **Freshness** | `check_sonar_freshness.py` on commit/push | A successful local scan (`run_sonarqube_local.py` exit 0) re-anchored `tmp/sonar-state.json` within the commit budget |
+| **Quality gate** | `run_sonarqube_local.py` (waits on the server QG) | Server reports gate **OK** (e.g. `new_violations` on new code ≤ 0, coverage thresholds met) |
+| **Triage** | Human / agent policy (`AGENT_PLAYBOOK.md`) | Review **New Code** issues (bugs, vulnerabilities, hotspots) even when the gate is green |
+
+A **failed quality gate** means the scan did **not** succeed: `last_scan_commit` is **not** updated, freshness still
+blocks push, and you must **fix or explicitly get user approval to bypass** — not set `SONAR_FRESHNESS_GATE=0` or
+`--no-verify` to push anyway. After a red gate, read the runner summary or SonarQube **New Code** / **Issues** for
+the exact rule keys and paths (`new_violations` > 0 is the usual blocker on the default gate).
+
+Before pushing (opt-in gate on): (1) run `python scripts/run_sonarqube_local.py --generate-coverage` until exit 0;
+(2) optionally compare timestamped dumps from `dump_sonar_issues.py` (identities, not only totals); (3) triage bugs
+and vulnerabilities in New Code even if counts look unchanged.
+
+The pre-push hook prints a triage reminder when the opt-in gate is enabled; it does **not** compare issue counts or
+run the quality gate for you.
+
+### SonarCloud (main CI + local API check)
+
+Protected-`main` CI runs `sonar-scan` when `SONAR_PROTECTED_MAIN_ENABLED=true` and `SONAR_TOKEN` is set in GitHub
+secrets; the job waits on the cloud quality gate.
+
+**Local Docker SonarQube and SonarCloud are not the same snapshot.** A green local gate means the working tree passed
+your loopback server; SonarCloud still reflects the **last cloud analysis** (usually a `main` push). An open PR does
+not update cloud new-code issues until that branch is analyzed (typically after merge and `sonar-scan`).
+
+To inspect cloud gate status and new-code issues without the Docker server:
+
+```bash
+python scripts/check_sonarcloud_gate.py
+python scripts/check_sonarcloud_gate.py --fail-on-error   # exit 1 when gate status != OK
+```
+
+Authentication uses `SONAR_CLOUD_TOKEN` or `SONAR_TOKEN` from the environment or repo-local `.env` (exported
+`SONAR_CLOUD_TOKEN` wins for this script; see `.env.example`). Tokens are never printed. The report lists failing gate
+conditions (for example `new_reliability_rating` is driven by **new-code bugs**, not only smell `new_violations`) and
+a sample of unresolved `inNewCodePeriod` issues.
+Console samples contain only issue types, severities, and rule keys; project identifiers and source filenames
+are omitted. Missing or non-object project-status responses fail with a fixed query-error message.
+
+For a full unresolved-issue dump to gitignored `tmp/`, use `dump_sonar_issues.py --host-url https://sonarcloud.io
+--allow-remote`.
+
+| Helper | Default host | Token resolution |
+| --- | --- | --- |
+| `run_sonarqube_local.py` | `http://localhost:9000` | `SONAR_TOKEN` (export wins, else `.env`) |
+| `dump_sonar_issues.py` | loopback | `SONAR_TOKEN`, else `SONAR_CLOUD_TOKEN` |
+| `check_sonarcloud_gate.py` | `https://sonarcloud.io` | `SONAR_CLOUD_TOKEN`, else `SONAR_TOKEN` |
+
+`.env` duplicate keys: later non-empty assignments win (empty values are skipped, so an earlier value can
+remain). Loopback helpers also read `SONAR_HOST_URL` from the environment
+(overridable via `--host-url`); the local runner falls back to `.env` so `python scripts/run_sonarqube_local.py` works
+without an export dance.
 
 ```bash
 # Enable the gate, then scan to create the baseline state:
@@ -124,13 +172,15 @@ python scripts/run_sonarqube_local.py --generate-coverage  # start the local ser
 `scripts/dump_sonar_issues.py` queries unresolved issues for the `sonar.projectKey` in
 `sonar-project.properties` and writes `tmp/sonar-issues/<UTC>.json` plus a `.md` summary, with stable
 `tmp/sonar-latest-issues.*` pointers the gate references. Dumps older than 30 days are pruned (always keeping
-the 5 most recent). The token comes from `SONAR_TOKEN` (exported or repo-local `.env`) and is never printed;
+the 5 most recent). Tokens come from `SONAR_TOKEN` or `SONAR_CLOUD_TOKEN` (see table above) and are never printed;
 non-200 API responses abort without touching state. When a state file exists, issue counts are refreshed in
 place without changing `last_scan_commit`. A non-loopback `--allow-remote` host must use HTTPS, and the credentialed request refuses
-redirects so the token is never forwarded to another URL.
+redirects so the token is never forwarded to another URL. For SonarCloud snapshots, see **SonarCloud (main CI + local
+API check)** above.
 
 ```bash
 python scripts/dump_sonar_issues.py
+python scripts/dump_sonar_issues.py --host-url https://sonarcloud.io --allow-remote
 ```
 
 For a local comparison, keep the previous timestamped dump and run the command after the new scan. Compare issue
