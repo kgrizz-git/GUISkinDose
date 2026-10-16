@@ -48,3 +48,9 @@ def test_dependabot_uses_uv_and_preserves_the_scanner_pin() -> None:
     assert scanner["versioning-strategy"] == "lockfile-only"
     assert scanner["allow"] == [{"dependency-type": "all"}]
     assert scanner["ignore"] == [{"dependency-name": "semgrep"}]
+
+
+def test_dependabot_waits_out_a_release_cooldown() -> None:
+    """Every ecosystem waits 7 days so a hijacked release can be yanked before it is proposed."""
+    config = yaml.safe_load((ROOT / ".github/dependabot.yml").read_text(encoding="utf-8"))
+    assert [entry.get("cooldown") for entry in config["updates"]] == [{"default-days": 7}] * len(config["updates"])

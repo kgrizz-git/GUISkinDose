@@ -83,4 +83,4 @@ jobs:
       # release is created; until a trusted publisher is registered it will FAIL rather
       # than publish silently, and releases are maintainer-triggered only.
       if: startsWith(github.ref, 'refs/tags')
-      uses: pypa/gh-action-pypi-publish@c1b34028248d0c9f7d90fe29fef2122e2276ff6f  # commit-pinned (immutable SHA; not a floating branch ref)
+      uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33  # v1.14.2

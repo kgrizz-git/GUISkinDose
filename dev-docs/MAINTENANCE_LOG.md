@@ -8,6 +8,35 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ## [Unreleased]
 
+- `dependency-audit.yml`: the zizmor JSON report is now written to `$RUNNER_TEMP` instead of the checkout, so a PR that commits a `zizmor.json` symlink cannot make the shell redirect truncate a workflow file before zizmor scans it (hiding a vulnerable action).
+
+- `dependency-audit.yml` hardening: the zizmor step now fails closed when `GH_TOKEN` is empty (without a
+  token zizmor silently skips its online audits, including `known-vulnerable-actions`, and would pass), and
+  per-finding location parsing tolerates findings without a local path instead of raising `KeyError`. The
+  `audit` job gains `timeout-minutes: 10`.
+
+- `release.yml` re-pins `pypa/gh-action-pypi-publish` from `c1b3402` to `dc37677` (`# v1.14.2`). The old
+  SHA was not a release tag but a commit on the sunset `master` branch (v1.5.1 + 5, Docker-based, `password`
+  required, no Trusted Publishing support), so the OIDC publish step could not have worked and neither
+  Dependabot nor zizmor's `known-vulnerable-actions` could map it to a version. The step passes no `with:`
+  inputs; v1.14.2 defaults `attestations`, `verbose`, and `print-hash` to `true` (PEP 740 attestations use the
+  job's existing `id-token: write`).
+
+- `dependency-audit.yml` gains a `vulnerable-actions` job: pinned zizmor 1.31.0 runs its
+  `known-vulnerable-actions` audit (each SHA pin resolved to its tag and checked against GitHub's advisory
+  database) and fails on any finding or on a zizmor error; other zizmor audits are ignored. GitHub's
+  Dependabot alerts cover only semver-tag references, never SHA pins, so this was otherwise unmonitored.
+
+- Add `.github/workflows/dependency-audit.yml`: a weekly (plus manual) `contents: read` run of
+  `scripts/audit_dependencies.py` against the root `uv.lock` with no schedule gate. `ci.yml`'s weekly run
+  is skipped when HEAD is unchanged, so a newly published advisory could otherwise never fail CI on a
+  quiet repository. `tools/semgrep/uv.lock` remains unaudited (tracked in `dev-docs/TO_DO.md`).
+
+- Dependency-update hardening: every Dependabot ecosystem now waits a 7-day release cooldown
+  (security updates are not delayed), guarded by a policy test. The complexity gate's Ruff
+  `tool_version` mismatch error names the `check_complexity.py --update` command, and a failed
+  gate in CI writes a read-only `--update` preview and caps diff to the job summary.
+
 - Windows CI follow-up: allow 60 seconds for the offline Node monitor harness, including process startup
   under parallel runner load. The prior 10-second bound timed out on its first Windows invocation;
   all monitor assertions and the finite subprocess deadline remain enforced.

@@ -92,6 +92,7 @@ jobs:
     - name: Activate environment
       run: echo "$GITHUB_WORKSPACE/.venv/bin" >> "$GITHUB_PATH"
     - name: Complexity gate (Ruff C901 caps)
+      id: complexity
       env:
         GITHUB_BASE_REF: ${{ github.base_ref }}
         COMPLEXITY_BEFORE_SHA: ${{ github.event.before }}
@@ -103,6 +104,26 @@ jobs:
           git fetch --no-tags origin "$GITHUB_BASE_REF"
         fi
         python scripts/check_complexity.py
+    - name: Preview the complexity baseline update (read-only)
+      # On a failed gate (typically a Ruff upgrade), show what `--update` would write so the
+      # reviewer can see whether the bump is version-only. Writes only to this throwaway
+      # checkout and the job summary; nothing is committed or pushed, and the job stays red.
+      if: failure() && steps.complexity.outcome == 'failure'
+      env:
+        GITHUB_BASE_REF: ${{ github.base_ref }}
+        COMPLEXITY_BEFORE_SHA: ${{ github.event.before }}
+      run: |
+        {
+          echo '### Complexity baseline: `check_complexity.py --update` preview'
+          echo '```'
+          python scripts/check_complexity.py --update 2>&1 || true
+          echo '```'
+          echo '```diff'
+          git diff -- dev-docs/complexity_caps.json
+          echo '```'
+          echo 'Apply locally with `uv run --extra dev --extra gui --locked python scripts/check_complexity.py --update`'
+          echo 'and commit `dev-docs/complexity_caps.json` after review.'
+        } >> "$GITHUB_STEP_SUMMARY"
     - name: Check changelog updated (PR only)
       if: github.event_name == 'pull_request'
       env:

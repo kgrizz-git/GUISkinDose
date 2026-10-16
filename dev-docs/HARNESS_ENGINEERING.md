@@ -55,6 +55,7 @@ Agents working in this repository should be able to answer three questions quick
 | Project packaging and tool configuration | `pyproject.toml` |
 | Release history and semver notes | `CHANGELOG.md` |
 | CI | `.github/workflows/ci.yml` |
+| Weekly dependency audit (scheduled, ungated) | `.github/workflows/dependency-audit.yml` (runs `scripts/audit_dependencies.py` on `uv.lock` even when HEAD is unchanged; a second job runs zizmor's `known-vulnerable-actions` audit, since Dependabot never alerts on SHA-pinned actions) |
 | Latest-deps canary (scheduled) | `.github/workflows/ci-latest.yml` (unpinned install; soft-fails with issue notify so `main` stays green) |
 | Local git hooks | `.pre-commit-config.yaml` |
 | Changelog enforcement (CI on PRs + pre-push) | `scripts/check_changelog.py` |
@@ -209,6 +210,9 @@ CI runs `python scripts/check_complexity.py` inside the locked `.venv` from
   and fail the gate.
 - When upgrading Ruff, run `--update` to record the newly locked `tool_version`
   (it also lowers or drops caps) and remeasure with `--check`; historical caps retain their own version.
+  The mismatch error names this command. When the gate fails in CI, a read-only follow-up step writes
+  the `--update` output and the resulting `complexity_caps.json` diff to the job summary, so a reviewer
+  can see whether a Ruff bump is version-only; it never commits or pushes, and the job stays red.
   Scores must still respect the existing caps, so a scoring change that raises a
   function above its cap requires a code reduction or separately reviewed policy change.
 - SonarQube `python:S3776` is a separate review signal (cognitive complexity); its findings
@@ -273,6 +277,9 @@ validation only.
 
 Dependabot uses `uv` at `/` so manifest edits carry an updated `uv.lock`; `increase-if-necessary`
 preserves existing requirements when they already admit the new version. CI still installs with `--locked`.
+Every ecosystem has a 7-day `cooldown`, so a newly published release is proposed only after a week in
+which a hijacked or broken upload can be caught and yanked upstream; Dependabot security updates are not delayed.
+A policy test keeps the cooldown on every ecosystem.
 Gate tools (Ruff, Basedpyright, Bandit, pip-audit, pre-commit, ShellCheck) are excluded from the routine
 minor/patch group and arrive as individual PRs. Review behavior changes even for pre-1.0 minor updates.
 
@@ -394,7 +401,8 @@ python scripts/audit_dependencies.py
 
 Auditing is orchestrated by a wrapper script [scripts/audit_dependencies.py](../scripts/audit_dependencies.py) which checks locked dependencies using `uv audit` when `uv` (>= 0.11.19) is installed and a `uv.lock` is present. Locally the wrapper passes `--frozen` (audit the committed lockfile without relocking or downloading an interpreter); in CI it passes `--locked` so a stale `uv.lock` fails loudly. Otherwise, it falls back to auditing the active environment using `pip-audit --desc on`.
 
-CI runs the same audit (Ubuntu, Python 3.12, with `uv` installed).
+CI runs the same audit (Ubuntu, Python 3.12, with `uv` installed) in the `static-analysis` job, and `.github/workflows/dependency-audit.yml` repeats it weekly
+without `ci.yml`'s schedule gate, so a newly published advisory fails a scheduled run even on a quiet week.
 
 **Policy:**
 

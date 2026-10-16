@@ -3,6 +3,8 @@
 #
 # Weekly checks open grouped PRs for routine minor/patch bumps so review stays
 # focused. Gate tools and major version bumps stay ungrouped for individual review.
+# A 7-day cooldown leaves time for a hijacked or broken release to be caught and
+# yanked upstream before Dependabot proposes it; security updates are not delayed.
 
 version: 2
 updates:
@@ -14,6 +16,8 @@ updates:
       interval: weekly
       day: monday
     open-pull-requests-limit: 5
+    cooldown:
+      default-days: 7
     groups:
       python-minor-and-patch:
         patterns:
@@ -37,6 +41,8 @@ updates:
       interval: weekly
       day: monday
     open-pull-requests-limit: 3
+    cooldown:
+      default-days: 7
     allow:
       - dependency-type: all
     ignore:
@@ -55,6 +61,8 @@ updates:
       interval: weekly
       day: monday
     open-pull-requests-limit: 5
+    cooldown:
+      default-days: 7
     groups:
       github-actions-minor-and-patch:
         patterns:
