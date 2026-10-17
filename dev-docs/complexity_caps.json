@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "metric": "ruff-c901",
-  "tool_version": "0.16.2",
+  "tool_version": "0.17.0",
   "threshold": 10,
   "caps": [
     {
