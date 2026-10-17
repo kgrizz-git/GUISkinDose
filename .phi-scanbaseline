@@ -21,7 +21,7 @@ entries:
   value_hash: 4337d83778f793daca54e8a972fd87be2ec457faeb9034200611b04f1f78f32b
   severity: high
   created_at: '2026-07-18T00:36:14+00:00'
-  expires_at: '2026-10-16T00:36:14+00:00'
+  expires_at: '2027-01-15T04:41:03+00:00'
 - file_path: tests/fixtures/tabular_inputs/generic_rdsr_events.csv
   line_number: 1
   line_content_hash: 7c86503a2899f7d5e3316e993faa0981beee9c923a3a4baa3c67e0a60a471880
@@ -30,7 +30,7 @@ entries:
   value_hash: 49526bf447d0b9c57f3d5ed9371d17e8293a02f72e548c57f6879f515f103b1c
   severity: high
   created_at: '2026-07-18T00:36:14+00:00'
-  expires_at: '2026-10-16T00:36:14+00:00'
+  expires_at: '2027-01-15T04:41:03+00:00'
 - file_path: tests/fixtures/tabular_inputs/generic_rdsr_events.csv
   line_number: 2
   line_content_hash: 88fd9c44c462931f1c95900fe6a19b6eff50eee1fc79ffdf58a17cb6af678cb1
@@ -39,7 +39,7 @@ entries:
   value_hash: 89954e670ec8ec9bb4a84fc7f50c43c2ba9963076948a83a6cee05c158415026
   severity: high
   created_at: '2026-07-18T00:36:14+00:00'
-  expires_at: '2026-10-16T00:36:14+00:00'
+  expires_at: '2027-01-15T04:41:03+00:00'
 - file_path: tests/fixtures/tabular_inputs/dosetrack_events.csv
   line_number: 1
   line_content_hash: f1d1aef0424aef005cb78e553d210786300e01cc8d2b908e5ae2d1e7254db238
@@ -48,7 +48,7 @@ entries:
   value_hash: 76e113b2a5775ba830aa77ba1e12980f8cab9200faa51fafcf3d26a16483c632
   severity: high
   created_at: '2026-07-18T00:36:14+00:00'
-  expires_at: '2026-10-16T00:36:14+00:00'
+  expires_at: '2027-01-15T04:41:03+00:00'
 - file_path: tests/fixtures/tabular_inputs/dosetrack_events.csv
   line_number: 2
   line_content_hash: 156829b5249a8bb6e053763457bf58086e928c51c51ae2a952a1842a4967d9a2
@@ -57,7 +57,7 @@ entries:
   value_hash: 939dd7bbdc6c4b1f34106687bd6926220ddd8396892d9d1bc98396fa89ac87a1
   severity: high
   created_at: '2026-07-18T00:36:14+00:00'
-  expires_at: '2026-10-16T00:36:14+00:00'
+  expires_at: '2027-01-15T04:41:03+00:00'
 - file_path: tests/fixtures/tabular_inputs/dosetrack_events.csv
   line_number: 2
   line_content_hash: 88fd9c44c462931f1c95900fe6a19b6eff50eee1fc79ffdf58a17cb6af678cb1
@@ -66,7 +66,7 @@ entries:
   value_hash: 89954e670ec8ec9bb4a84fc7f50c43c2ba9963076948a83a6cee05c158415026
   severity: high
   created_at: '2026-07-18T00:36:14+00:00'
-  expires_at: '2026-10-16T00:36:14+00:00'
+  expires_at: '2027-01-15T04:41:03+00:00'
 - file_path: tests/fixtures/tabular_inputs/normalized_events_semicolon_decimalcomma.csv
   line_number: 2
   line_content_hash: 7efbf5810be04a08d3ec9413c23adb1a3c3c32974779b4dedc66c5f009896139
@@ -75,7 +75,7 @@ entries:
   value_hash: 9a14a19e434922c22ceb79849756b689a2dc71b17a5056a60cf4137a9b32fc1f
   severity: high
   created_at: '2026-07-18T00:36:14+00:00'
-  expires_at: '2026-10-16T00:36:14+00:00'
+  expires_at: '2027-01-15T04:41:03+00:00'
 - file_path: tests/fixtures/tabular_inputs/normalized_events.csv
   line_number: 2
   line_content_hash: 7efbf5810be04a08d3ec9413c23adb1a3c3c32974779b4dedc66c5f009896139
@@ -84,7 +84,7 @@ entries:
   value_hash: 9a14a19e434922c22ceb79849756b689a2dc71b17a5056a60cf4137a9b32fc1f
   severity: high
   created_at: '2026-07-18T00:36:14+00:00'
-  expires_at: '2026-10-16T00:36:14+00:00'
+  expires_at: '2027-01-15T04:41:03+00:00'
 - file_path: tests/fixtures/tabular_inputs/normalized_events.tsv
   line_number: 2
   line_content_hash: 7efbf5810be04a08d3ec9413c23adb1a3c3c32974779b4dedc66c5f009896139
@@ -93,7 +93,7 @@ entries:
   value_hash: 9a14a19e434922c22ceb79849756b689a2dc71b17a5056a60cf4137a9b32fc1f
   severity: high
   created_at: '2026-07-18T00:36:14+00:00'
-  expires_at: '2026-10-16T00:36:14+00:00'
+  expires_at: '2027-01-15T04:41:03+00:00'
 - file_path: tests/fixtures/tabular_inputs/radimetrics_events_legacy.csv
   line_number: 2
   line_content_hash: 7efbf5810be04a08d3ec9413c23adb1a3c3c32974779b4dedc66c5f009896139
@@ -102,7 +102,7 @@ entries:
   value_hash: 9a14a19e434922c22ceb79849756b689a2dc71b17a5056a60cf4137a9b32fc1f
   severity: high
   created_at: '2026-07-18T00:36:14+00:00'
-  expires_at: '2026-10-16T00:36:14+00:00'
+  expires_at: '2027-01-15T04:41:03+00:00'
 - file_path: tests/fixtures/tabular_inputs/normalized_events_multistudy.csv
   line_number: 2
   line_content_hash: 7efbf5810be04a08d3ec9413c23adb1a3c3c32974779b4dedc66c5f009896139
@@ -111,7 +111,7 @@ entries:
   value_hash: 9a14a19e434922c22ceb79849756b689a2dc71b17a5056a60cf4137a9b32fc1f
   severity: high
   created_at: '2026-07-18T00:36:14+00:00'
-  expires_at: '2026-10-16T00:36:14+00:00'
+  expires_at: '2027-01-15T04:41:03+00:00'
 - file_path: src/guiskindose/table_data/correction_medium_and_backscatter.csv
   line_number: 1
   line_content_hash: 7efbf5810be04a08d3ec9413c23adb1a3c3c32974779b4dedc66c5f009896139
@@ -120,7 +120,7 @@ entries:
   value_hash: 9a14a19e434922c22ceb79849756b689a2dc71b17a5056a60cf4137a9b32fc1f
   severity: high
   created_at: '2026-07-18T00:36:14+00:00'
-  expires_at: '2026-10-16T00:36:14+00:00'
+  expires_at: '2027-01-15T04:41:03+00:00'
 - file_path: src/guiskindose/table_data/device_info.csv
   line_number: 1
   line_content_hash: f44c6ca32163ca44abea41dfb019e347e37c620605263ac317ced3b571bebb6f
@@ -138,7 +138,7 @@ entries:
   value_hash: 9a14a19e434922c22ceb79849756b689a2dc71b17a5056a60cf4137a9b32fc1f
   severity: high
   created_at: '2026-07-18T00:36:14+00:00'
-  expires_at: '2026-10-16T00:36:14+00:00'
+  expires_at: '2027-01-15T04:41:03+00:00'
 - file_path: src/guiskindose/example_data/kerma_meter/calibration_factors_example.csv
   line_number: 1
   line_content_hash: 8bbb69dbf3facdc9748263ff1e373816c55353b0daedcf1824d171fcf0ffe2af
