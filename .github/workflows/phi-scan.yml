@@ -31,6 +31,15 @@ jobs:
           git archive --format=tar HEAD | tar -x -C "$RUNNER_TEMP/phi-scan-input"
       - name: Run phi-scan (quiet; no report upload)
         working-directory: ${{ runner.temp }}/phi-scan-input
-        run: >-
-          uvx --from 'phi-scan==0.7.0' phi-scan scan .
-          --config "$GITHUB_WORKSPACE/.phi-scanner.yml" --baseline --no-cache --quiet --workers 4
+        run: |
+          set -euo pipefail
+          if ! uvx --from 'phi-scan==0.7.0' phi-scan scan . \
+            --config "$GITHUB_WORKSPACE/.phi-scanner.yml" \
+            --baseline --no-cache --quiet --workers 4; then
+            echo "::group::phi-scan findings (re-run without --quiet)"
+            uvx --from 'phi-scan==0.7.0' phi-scan scan . \
+              --config "$GITHUB_WORKSPACE/.phi-scanner.yml" \
+              --baseline --no-cache --workers 4
+            echo "::endgroup::"
+            exit 1
+          fi
