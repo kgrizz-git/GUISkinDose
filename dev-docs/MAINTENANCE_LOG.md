@@ -8,6 +8,14 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ## [Unreleased]
 
+- **Code scanning alert cleanup** (2026-10-17) — cleared six open CodeQL quality alerts:
+  removed a dead `prepare_cli_settings` import, dropped unused test module constants,
+  replaced the GUI static-route bool guard with a small registration holder (same
+  idempotence; GUI security tests reset `.registered`), extracted
+  `verify_distribution._report_result()` so failure aggregation is visible to flow
+  analysis, and kept the shared Philips CSV fixture row referenced locally for import-only
+  siblings.
+
 - `dependency-audit.yml`: the zizmor JSON report is now written to `$RUNNER_TEMP` instead of the checkout, so a PR that commits a `zizmor.json` symlink cannot make the shell redirect truncate a workflow file before zizmor scans it (hiding a vulnerable action).
 
 - `dependency-audit.yml` hardening: the zizmor step now fails closed when `GH_TOKEN` is empty (without a

@@ -13,7 +13,6 @@ import pandas as pd
 
 from guiskindose.analyze_data import analyze_data, analyze_multiple_exams
 from guiskindose.cli_args import get_argument_parser as _cli_args_get_argument_parser
-from guiskindose.cli_settings import prepare_cli_settings as prepare_cli_settings
 from guiskindose.constants import (
     RUN_ARGUMENTS_OUTPUT_DICT,
     RUN_ARGUMENTS_OUTPUT_HTML,
@@ -399,7 +398,7 @@ def preview_input_file(
     include_sensitive_values : bool
         Deprecated no-op; never enables identifier or event-value output.
     settings : PyskindoseSettings | None
-        Run settings from :func:`prepare_cli_settings`.
+        Run settings from :func:`guiskindose.cli_settings.prepare_cli_settings`.
     import_options : TabularImportOptions | None
         Optional post-normalization coordinate overrides.
     """

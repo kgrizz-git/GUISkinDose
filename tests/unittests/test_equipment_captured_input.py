@@ -49,6 +49,10 @@ _GENERIC_PHILIPS_ROW = (
     "Philips,Allura Clarity,Fluoroscopy,Single Plane,1198,785,37.8,40.6,294.1,0.01,"
     "Copper or Copper compound,0.6,0.6,-0.1,-1.1,77.0,0.00003,130.0,130.0,163.5,163.5"
 )
+# Imported by sibling tests; keep a local reference so static analysis sees the fixture row.
+assert "Philips" in _GENERIC_PHILIPS_ROW
+
+
 def _siemens_coordinates() -> dict[str, Any]:
     return {
         "translation_offset": {"x": 5.0, "y": -3.5, "z": 0.0},

@@ -79,7 +79,7 @@ def _isolate_loopback_security(monkeypatch):
 
     monkeypatch.setattr(gui_app.app, "add_middleware", lambda *args, **kwargs: None)
     monkeypatch.setattr(gui_app, "_open_browser_when_ready", lambda *args, **kwargs: None)
-    # NOTE: _STATIC_REGISTERED is intentionally not reset here. The
+    # NOTE: _static_files_registration is intentionally not reset here. The
     # user-simulation harness reloads gui.app, so this fixture's module
     # reference may differ from the one test modules hold; tests asserting on
     # registration reset the flag on their own reference instead.

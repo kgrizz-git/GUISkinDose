@@ -54,7 +54,6 @@ _JSON_PATH = _EXAMPLE_DIR / "equipment_profile_example.json"
 _FLAT_COLUMN_NAMES: tuple[str, ...] = tuple(
     next(csv.reader(io.StringIO(_CSV_PATH.read_text(encoding="utf-8"))))
 )
-_WIDTH = len(_FLAT_COLUMN_NAMES)
 _PROMOTION_COLUMN = "promote_coordinate_wildcard"
 
 

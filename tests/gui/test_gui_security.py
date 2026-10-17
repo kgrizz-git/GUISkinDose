@@ -131,7 +131,7 @@ def test_run_gui_registers_bundled_static_files(monkeypatch) -> None:
     captured: dict = {}
     # Reset on this module's own reference: the user-simulation harness
     # reloads gui.app, so conftest cannot reset it for us (see below).
-    monkeypatch.setattr(gui_app, "_STATIC_REGISTERED", False)
+    gui_app._static_files_registration.registered = False
     monkeypatch.setattr(gui_app.ui, "run", lambda **kw: captured.update(kw))
     monkeypatch.setattr(
         gui_app.app,
@@ -151,7 +151,7 @@ def test_static_registration_is_idempotent(monkeypatch) -> None:
     # Same-reference reset: gui.app is reloaded by the user-simulation
     # harness, so this module's reference may be stale relative to
     # sys.modules — reset and call through the identical object.
-    monkeypatch.setattr(gui_app, "_STATIC_REGISTERED", False)
+    gui_app._static_files_registration.registered = False
     monkeypatch.setattr(gui_app.ui, "run", lambda **kw: None)
     monkeypatch.setattr(
         gui_app.app, "add_static_files", lambda *args, **kw: calls.append(args)
