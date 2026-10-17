@@ -92,7 +92,10 @@ dev = [
     "bandit>=1.8",
     "shellcheck-py>=0.11",
     "pre-commit>=4.0",
-    "pytest>=7.0",
+    # pytest 9.1 captures logs from non-propagating loggers (pytest-dev/pytest#3697).
+    # NiceGUI's user fixture then fails tests that log ERROR, including the
+    # simulated-emit reconnect_timeout lookup. 9.0.3 keeps the current suite green.
+    "pytest>=7.0,<9.1",
     "pytest-cov>=5.0",
     "pytest-xdist>=3.5",
     "diff-cover>=10.0",

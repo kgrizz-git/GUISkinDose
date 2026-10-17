@@ -120,6 +120,12 @@ be archived.
 
 ### Harness / Repo Hygiene
 
+- [ ] **Pytest 9.1 GUI log capture** — pytest 9.1 records logs from loggers that do not propagate
+  (pytest-dev/pytest#3697). NiceGUI's user fixture then fails GUI tests that already log ERROR,
+  and `tests/gui/test_run_state_roundtrip.py` can hang. The 2026-10-17 dependency bump kept
+  `pytest>=7.0,<9.1` and took NiceGUI 3.18, which passes that file on pytest 9.0.3. Setting
+  `reconnect_timeout` alone did not clear the failures. **Acceptance:** the GUI suite is green
+  on pytest 9.1, expected ERROR logs are distinct from unexpected ones, and the upper pin is removed.
 - [ ] **SonarCloud issues API filter** — `scripts/check_sonarcloud_gate.py` still uses `types=BUG` for the
   new-code sample; migrate to `impactSoftwareQualities` when SonarCloud documents stable query parameters
   (see SonarCloud API deprecation notices).

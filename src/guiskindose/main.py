@@ -402,7 +402,7 @@ def preview_input_file(
     include_sensitive_values : bool
         Deprecated no-op; never enables identifier or event-value output.
     settings : PyskindoseSettings | None
-        Run settings from :func:`guiskindose.cli_settings.prepare_cli_settings`.
+        Run settings from :func:`prepare_cli_settings`.
     import_options : TabularImportOptions | None
         Optional post-normalization coordinate overrides.
     """
