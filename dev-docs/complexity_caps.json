@@ -32,7 +32,7 @@
     {
       "path": "scripts/verify_distribution.py",
       "function": "main",
-      "cap": 18
+      "cap": 17
     },
     {
       "path": "src/guiskindose/calculate_dose/rotational_event.py",

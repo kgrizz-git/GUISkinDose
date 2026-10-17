@@ -19,7 +19,24 @@ That keeps SemVer and contributor history organized.
 
 ## [Unreleased]
 
+### Security
+
+- **Dependency updates** (2026-10-17) — NiceGUI 3.18.0 rejects uploads to disabled or hidden
+  `ui.upload` elements (GHSA-9mxh-cwxr-cxjj). Pandas 3.0.6, tqdm 4.70.1, kaleido 1.5.0,
+  and reportlab 5.0.1 move forward with no dose-calculation or GUI behavior change.
+  Pytest stays below 9.1 so the existing GUI suite keeps passing. Package version stays
+  `1.0.0` until the next release (patch-level when cut).
+
 ### Fixed
+
+- **phi-scan scheduled workflow** (2026-10-17) — Refreshed expired `.phi-scanbaseline`
+  entries (90-day review window) so the advisory CSV/TSV scan passes again; the workflow
+  now re-runs without `--quiet` when the scan fails so CI logs show findings, and runs
+  on pull requests that change the baseline or phi-scan config (not all CSV edits).
+
+- **Code scanning (CodeQL)** (2026-10-17) — Internal quality cleanup for open CodeQL alerts
+  (unused test fixtures, GUI static-route idempotence guard, distribution proof reporting);
+  no change to dose calculation or GUI behavior.
 
 - **Sonar new-code quality gate** (2026-10-14) — Refactors and test adjustments so local
   SonarQube new-code violations stay at zero after equipment-profile UI work; no user-facing

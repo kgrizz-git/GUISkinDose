@@ -88,12 +88,16 @@ def material_symbols_stylesheet_href() -> str:
     return f"{_STATIC_URL}/fonts/material-symbols-outlined.css"
 
 
-# Read on a LATER call by register_gui_static_files() below, which is the whole point of
-# the guard. CodeQL's py/unused-global-variable misses that cross-call read and flags this
-# line; the alert is dismissed as a false positive. Do not "clean it up" into
-# functools.cache: tests/gui/test_gui_security.py monkeypatches this flag and
-# tests/gui/conftest.py documents why it is deliberately not reset between tests.
-_STATIC_REGISTERED = False
+class _StaticFilesRegistration:
+    """Process-local idempotence guard for ``register_gui_static_files()``."""
+
+    __slots__ = ("registered",)
+
+    def __init__(self) -> None:
+        self.registered = False
+
+
+_static_files_registration = _StaticFilesRegistration()
 
 
 def register_gui_static_files() -> None:
@@ -102,11 +106,10 @@ def register_gui_static_files() -> None:
     Idempotent: repeated ``run_gui()`` calls in one process (REPL, dev
     reloads) must not stack duplicate static routes.
     """
-    global _STATIC_REGISTERED
-    if _STATIC_REGISTERED:
+    if _static_files_registration.registered:
         return
     app.add_static_files(_STATIC_URL, _STATIC_DIR)
-    _STATIC_REGISTERED = True
+    _static_files_registration.registered = True
 
 
 def _update_nav_classes(nav_buttons: list[tuple[ui.button, str]]) -> None:

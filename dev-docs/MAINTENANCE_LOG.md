@@ -8,6 +8,17 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ## [Unreleased]
 
+- **Code scanning alert cleanup** (2026-10-17) — cleared six open CodeQL quality alerts:
+  re-exported `prepare_cli_settings` via module assignment (avoids CodeQL unused-import
+  while keeping the public `guiskindose.main` API), dropped unused test module constants,
+  replaced the GUI static-route bool guard with a small registration holder (same
+  idempotence; GUI security tests monkeypatch `.registered` so pytest restores the
+  previous value), extracted `verify_distribution._report_result()` so failure
+  aggregation is visible to flow analysis, and covered the shared Philips CSV fixture
+  row with a local header-alignment test so import-only siblings still see a used definition.
+
+- Safe minor/patch dependency lock refresh from PR #164, including NiceGUI 3.14.0 → 3.18.0. Pytest stays on 9.0.3 (`pytest>=7.0,<9.1`): 9.1 captures logs from non-propagating loggers, and NiceGUI's user fixture then fails round-trip tests that already log ERROR. On pytest 9.0.3, NiceGUI 3.18 passes `tests/gui/test_run_state_roundtrip.py` without a harness change.
+
 - `dependency-audit.yml`: the zizmor JSON report is now written to `$RUNNER_TEMP` instead of the checkout, so a PR that commits a `zizmor.json` symlink cannot make the shell redirect truncate a workflow file before zizmor scans it (hiding a vulnerable action).
 
 - `dependency-audit.yml` hardening: the zizmor step now fails closed when `GH_TOKEN` is empty (without a

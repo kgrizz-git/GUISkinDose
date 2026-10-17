@@ -129,9 +129,10 @@ def test_icon_font_is_bundled_locally() -> None:
 def test_run_gui_registers_bundled_static_files(monkeypatch) -> None:
     """run_gui() must mount the package static dir before starting the server."""
     captured: dict = {}
-    # Reset on this module's own reference: the user-simulation harness
-    # reloads gui.app, so conftest cannot reset it for us (see below).
-    monkeypatch.setattr(gui_app, "_STATIC_REGISTERED", False)
+    # Monkeypatch this module's own reference: the user-simulation harness
+    # reloads gui.app, so conftest cannot reset it for us. Pytest restores the
+    # previous value so a mocked mount cannot leave the guard stuck on.
+    monkeypatch.setattr(gui_app._static_files_registration, "registered", False)
     monkeypatch.setattr(gui_app.ui, "run", lambda **kw: captured.update(kw))
     monkeypatch.setattr(
         gui_app.app,
@@ -148,10 +149,10 @@ def test_run_gui_registers_bundled_static_files(monkeypatch) -> None:
 def test_static_registration_is_idempotent(monkeypatch) -> None:
     """Repeated run_gui() calls must not stack duplicate static routes."""
     calls: list = []
-    # Same-reference reset: gui.app is reloaded by the user-simulation
+    # Same-reference monkeypatch: gui.app is reloaded by the user-simulation
     # harness, so this module's reference may be stale relative to
-    # sys.modules — reset and call through the identical object.
-    monkeypatch.setattr(gui_app, "_STATIC_REGISTERED", False)
+    # sys.modules — patch and call through the identical object.
+    monkeypatch.setattr(gui_app._static_files_registration, "registered", False)
     monkeypatch.setattr(gui_app.ui, "run", lambda **kw: None)
     monkeypatch.setattr(
         gui_app.app, "add_static_files", lambda *args, **kw: calls.append(args)

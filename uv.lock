@@ -1401,7 +1401,7 @@ requires-dist = [
     { name = "pydata-sphinx-theme", marker = "extra == 'docs'" },
     { name = "pydicom", specifier = ">=2.0" },
     { name = "pypdf", specifier = ">=6.16.1" },
-    { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0" },
+    { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0,<9.1" },
     { name = "pytest-asyncio", marker = "extra == 'gui'", specifier = ">=0.24" },
     { name = "pytest-asyncio", marker = "extra == 'gui-native'", specifier = ">=0.24" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=5.0" },

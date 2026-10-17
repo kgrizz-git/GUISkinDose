@@ -31,8 +31,6 @@ from tests.unittests.test_equipment_captured_input import (
     _siemens_coordinates,
 )
 
-_SHEET_SENTINEL = "SENTINEL_SHEET"
-
 
 def _siemens_doc() -> dict[str, Any]:
     return {
