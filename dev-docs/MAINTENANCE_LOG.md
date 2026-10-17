@@ -8,6 +8,8 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ## [Unreleased]
 
+- Safe minor/patch dependency lock refresh from PR #164, including NiceGUI 3.14.0 → 3.18.0. Pytest stays on 9.0.3 (`pytest>=7.0,<9.1`): 9.1 captures logs from non-propagating loggers, and NiceGUI's user fixture then fails round-trip tests that already log ERROR. On pytest 9.0.3, NiceGUI 3.18 passes `tests/gui/test_run_state_roundtrip.py` without a harness change.
+
 - `dependency-audit.yml`: the zizmor JSON report is now written to `$RUNNER_TEMP` instead of the checkout, so a PR that commits a `zizmor.json` symlink cannot make the shell redirect truncate a workflow file before zizmor scans it (hiding a vulnerable action).
 
 - `dependency-audit.yml` hardening: the zizmor step now fails closed when `GH_TOKEN` is empty (without a

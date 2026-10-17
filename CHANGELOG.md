@@ -19,6 +19,14 @@ That keeps SemVer and contributor history organized.
 
 ## [Unreleased]
 
+### Security
+
+- **Dependency updates** (2026-10-17) — NiceGUI 3.18.0 rejects uploads to disabled or hidden
+  `ui.upload` elements (GHSA-9mxh-cwxr-cxjj). Pandas 3.0.6, tqdm 4.70.1, kaleido 1.5.0,
+  and reportlab 5.0.1 move forward with no dose-calculation or GUI behavior change.
+  Pytest stays below 9.1 so the existing GUI suite keeps passing. Package version stays
+  `1.0.0` until the next release (patch-level when cut).
+
 ### Fixed
 
 - **phi-scan scheduled workflow** (2026-10-17) — Refreshed expired `.phi-scanbaseline`
