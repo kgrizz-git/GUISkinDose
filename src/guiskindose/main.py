@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any
 
 import pandas as pd
 
+from guiskindose import cli_settings
 from guiskindose.analyze_data import analyze_data, analyze_multiple_exams
 from guiskindose.cli_args import get_argument_parser as _cli_args_get_argument_parser
 from guiskindose.constants import (
@@ -36,6 +37,9 @@ from guiskindose.input_adapters.import_options import (
 )
 from guiskindose.privacy import opaque_exam_label, safe_warning
 from guiskindose.settings import PyskindoseSettings
+
+# Public re-export for ``guiskindose.__main__`` and CLI tests (see cli_settings module).
+prepare_cli_settings = cli_settings.prepare_cli_settings
 
 if TYPE_CHECKING:
     import argparse
