@@ -21,6 +21,10 @@ That keeps SemVer and contributor history organized.
 
 ### Fixed
 
+- **Code scanning (CodeQL)** (2026-10-17) — Internal quality cleanup for open CodeQL alerts
+  (unused test fixtures, GUI static-route idempotence guard, distribution proof reporting);
+  no change to dose calculation or GUI behavior.
+
 - **Sonar new-code quality gate** (2026-10-14) — Refactors and test adjustments so local
   SonarQube new-code violations stay at zero after equipment-profile UI work; no user-facing
   dose/GUI behavior change. Adds `scripts/check_sonarcloud_gate.py` for SonarCloud gate and

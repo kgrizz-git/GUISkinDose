@@ -9,7 +9,8 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 ## [Unreleased]
 
 - **Code scanning alert cleanup** (2026-10-17) — cleared six open CodeQL quality alerts:
-  removed a dead `prepare_cli_settings` import, dropped unused test module constants,
+  re-exported `prepare_cli_settings` via module assignment (avoids CodeQL unused-import
+  while keeping the public `guiskindose.main` API), dropped unused test module constants,
   replaced the GUI static-route bool guard with a small registration holder (same
   idempotence; GUI security tests reset `.registered`), extracted
   `verify_distribution._report_result()` so failure aggregation is visible to flow
