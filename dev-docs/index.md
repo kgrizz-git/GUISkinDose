@@ -12,7 +12,7 @@ Catalog of every file under `dev-docs/`. Start from [AGENTS.md](../AGENTS.md) fo
 |---|---|
 | [AGENT_PLAYBOOK.md](AGENT_PLAYBOOK.md) | Shared workflow guidance for coding agents; tool-specific pointer files should refer here instead of duplicating rules. |
 | [FORK_MAINTAINER_GUIDE.md](FORK_MAINTAINER_GUIDE.md) | Practical upstream-attribution, GitHub governance, privacy, release, and worktree guidance for maintaining this PySkinDose fork. |
-| [RELEASES_AND_DISTRIBUTION.md](RELEASES_AND_DISTRIBUTION.md) | **Hub** — distribution channels, changelog vs GitHub Release notes, SemVer, release checklist; links PyPI and deferred portable executables. |
+| [RELEASES_AND_DISTRIBUTION.md](RELEASES_AND_DISTRIBUTION.md) | **Hub** — distribution channels, changelog vs GitHub Release notes, SemVer, release checklist; links PyPI and the portable app plan. |
 | [../PUBLISHING.md](../PUBLISHING.md) | PyPI Trusted Publishing detail (`release.yml`); inert until a GitHub Release is created. |
 | [../CONTRIBUTING.md](../CONTRIBUTING.md) | Contributor setup, PR workflow, privacy rules, and pointers to agent playbooks. |
 | [../SUPPORT.md](../SUPPORT.md) | Support channels, intended-use boundary, and no-PHI rules. |
@@ -44,7 +44,7 @@ Catalog of every file under `dev-docs/`. Start from [AGENTS.md](../AGENTS.md) fo
 | [PRIVACY_AND_SENSITIVE_ASSETS.md](PRIVACY_AND_SENSITIVE_ASSETS.md) | Public-repository privacy policy, DICOM/image review requirements, approved-asset inventory, and scanner use. |
 | [PRIVACY_INCIDENT_RESPONSE.md](PRIVACY_INCIDENT_RESPONSE.md) | Private evidence, historical audit, containment, rewrite/notification, verification, and privacy release checklist runbook. |
 | [references/LOCAL_PII_MODELS.md](references/LOCAL_PII_MODELS.md) | Local advisory PII/PHI model comparison, macOS/LM Studio boundaries, and synthetic-fixture evaluation protocol. |
-| [references/PORTABLE_EXECUTABLE_PACKAGING.md](references/PORTABLE_EXECUTABLE_PACKAGING.md) | Research note: NiceGUI/`nicegui-pack` portable GUI executables; Java-wrap non-goals; deferred spike criteria. |
+| [references/PORTABLE_EXECUTABLE_PACKAGING.md](references/PORTABLE_EXECUTABLE_PACKAGING.md) | Research note: NiceGUI/`nicegui-pack` portable GUI executables; Java-wrap non-goals. Execution plan: [plans/PORTABLE_APP_PLAN.md](plans/PORTABLE_APP_PLAN.md). |
 | [SONARQUBE_LOCAL.md](SONARQUBE_LOCAL.md) | Optional loopback-only SonarQube Community Build runner, private result tracking, and local quality-gate workflow. |
 | [../scripts/check_help_registry.py](../scripts/check_help_registry.py) | Validates `dev-docs/help_registry.json`, source GUI help pages, mirrored bundled help files, GUI `HelpButton` references, and orphaned help files. |
 | [../scripts/check_ui_copy.py](../scripts/check_ui_copy.py) | Validates `dev-docs/ui_copy.json` and `dev-docs/glossary.json`; checks `copy_text()` usage and terminology warnings. |
@@ -95,6 +95,7 @@ Long-lived topic source-of-truth plans. Convention: [HARNESS_ENGINEERING.md](HAR
 | [plans/GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md](plans/GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md) | **Follow-on source of truth** — sanitize public fixtures, enforce conditional OCR/Presidio/DICOM checks, publish GUISkinDose, and retain the GitHub fork history. First `guiskindose` version is **`1.0.0`**. Mechanical rename: [plans/archive/GUISKINDOSE_RENAME_PLAN.md](plans/archive/GUISKINDOSE_RENAME_PLAN.md) (**complete**, PR #73). GitHub/Sonar/URLs: [plans/archive/GUISKINDOSE_GITHUB_RENAME_PLAN.md](plans/archive/GUISKINDOSE_GITHUB_RENAME_PLAN.md) (**complete**, 2026-09-04). |
 | [plans/RICH_EXPORT_PLAN.md](plans/RICH_EXPORT_PLAN.md) | **Source of truth** — rich report export scope, payload architecture, writer phases, GUI/browser/native save UX, and CLI rollout. |
 | [plans/TABULAR_RDSR_INPUT_PLAN.md](plans/TABULAR_RDSR_INPUT_PLAN.md) | Staged plan for CSV/TSV/XLSX exported event-table inputs (Radimetrics, DoseTrack, etc.). Phases 1–5 shipped; Phase 5+ vendor stubs documented in-plan. |
+| [plans/PORTABLE_APP_PLAN.md](plans/PORTABLE_APP_PLAN.md) | **Plan only (not started)** — per-OS double-click app via NiceGUI pack / PyInstaller. Light has a small phantom set and no PNG/Chrome; Full has the clinical library and a bundled Chromium for Kaleido. In-app phantom packs are later phases. |
 
 ---
 
@@ -178,6 +179,7 @@ Phased detail derived from diagnostics or master plans.
 | [plans/GRYPE_RELEASE_SCAN_PLAN.md](plans/GRYPE_RELEASE_SCAN_PLAN.md) | Add grype artifact scanning to the release workflow; policy via `.grype.yaml`; artifact upload. |
 | [plans/GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md](plans/GUISKINDOSE_PRIVACY_REPUBLICATION_PLAN.md) | Ordered execution plan for DICOM/tabular sanitization, enforceable privacy scanners, fork-preserving publication, and cautious PyPI publication. First `guiskindose` version is **`1.0.0`**. Mechanical rename: [plans/archive/GUISKINDOSE_RENAME_PLAN.md](plans/archive/GUISKINDOSE_RENAME_PLAN.md) (**complete**, PR #73). GitHub/Sonar/URLs: [plans/archive/GUISKINDOSE_GITHUB_RENAME_PLAN.md](plans/archive/GUISKINDOSE_GITHUB_RENAME_PLAN.md) (**complete**, 2026-09-04). |
 | [plans/HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md](plans/HTML_EXPORT_BACKGROUND_TASK_FIX_PLAN.md) | HTML/PNG export: Phase 0 capture real exception; Phase 1 stop fake cancel errors; Phase 2 evidence-driven render fix; Phase 3 docs/tests. |
+| [plans/PORTABLE_APP_PLAN.md](plans/PORTABLE_APP_PLAN.md) | **Not started** — see **Master plans**. Phase 0 is a one-OS freeze spike before Light/Full release zips. |
 | [plans/PR22_NITPICKS_AND_WORKTREE_HOOKS_PLAN.md](plans/PR22_NITPICKS_AND_WORKTREE_HOOKS_PLAN.md) | PR 22 review nitpicks (code block tags & fixture reuse) + worktree-aware commit message git hook. |
 | [plans/archive/PSD_SEVERITY_COLOR_CODING_PLAN.md](plans/archive/PSD_SEVERITY_COLOR_CODING_PLAN.md) | **Complete 2026-09-30** — colour-coded every PSD readout by dose band (grey pending / green <5000 / yellow 5000 to just under 10000 / red >=10000 mGy) through one shared helper, replaced the misleading `PSD: 0.00 mGy` placeholder with `PSD: —`, added icon + band-name fallbacks for colour-blind readers, and recorded why a continuous gradient was rejected. Also a WCAG AA fix (the old `text-aurora-purple` readouts measured 2.44:1). |
 | [plans/ROTATIONAL_COVERAGE_ENVELOPE_PLAN.md](plans/ROTATIONAL_COVERAGE_ENVELOPE_PLAN.md) | **Source of truth; initial implementation complete** (2026-09-22) — pointwise full-kerma coverage envelope as the rotational default, with separate physical scenarios, explicit contracts, controls, disclosures, and a practical acceptance bar. |

@@ -12,7 +12,7 @@ This page is the map. Detailed how-tos stay in the linked sources of truth.
 | **Python package** (`pip install guiskindose`) | Primary path; **not yet published** to PyPI by this fork | [PUBLISHING.md](../PUBLISHING.md), `.github/workflows/release.yml` |
 | **GitHub Release** (tag + notes + optional assets) | Maintainer-triggered; drives the PyPI workflow when a Release is created | This page § Cutting a release; [FORK_MAINTAINER_GUIDE.md](FORK_MAINTAINER_GUIDE.md) §6 |
 | **Source / editable install** | Default for developers and most users today | [README.md](../README.md), [AGENTS.md](../AGENTS.md) |
-| **Portable GUI executable** (PyInstaller / `nicegui-pack`) | Research / deferred — no freeze pipeline yet | [references/PORTABLE_EXECUTABLE_PACKAGING.md](references/PORTABLE_EXECUTABLE_PACKAGING.md) |
+| **Portable GUI executable** (PyInstaller / `nicegui-pack`) | Planned, not started — no freeze pipeline yet | [plans/PORTABLE_APP_PLAN.md](plans/PORTABLE_APP_PLAN.md) |
 
 **Non-goals:** a single binary for all OSes; committing built executables to git; wrapping the stack for the JVM (call CLI/API from Java instead — see the portable-exec note).
 
@@ -66,10 +66,11 @@ Use a release PR or written checklist. Condensed from [FORK_MAINTAINER_GUIDE.md]
 
 Until the first Trusted Publisher registration, the publish step is expected to fail rather than publish silently.
 
-## Portable executables (deferred)
+## Portable executables (planned, not started)
 
-Frozen desktop apps are an optional future channel for non-Python users. Feasibility, bundle requirements (phantoms, `corrections.db`, help), size, and Java non-goals are documented in
-[references/PORTABLE_EXECUTABLE_PACKAGING.md](references/PORTABLE_EXECUTABLE_PACKAGING.md). Tracked as Deferred in [TO_DO.md](TO_DO.md). Do not start a freeze pipeline until product OS priority and maintainer smoke bandwidth are explicit.
+Frozen desktop apps are an optional channel for non-Python users. The execution plan is
+[plans/PORTABLE_APP_PLAN.md](plans/PORTABLE_APP_PLAN.md): a per-OS onedir zip, a Light build and a Full build, then a user phantom library. Feasibility and the Java non-goal stay in
+[references/PORTABLE_EXECUTABLE_PACKAGING.md](references/PORTABLE_EXECUTABLE_PACKAGING.md). Do not start the freeze until Phase 0 of that plan is explicitly picked up.
 
 ## Related docs
 

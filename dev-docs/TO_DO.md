@@ -227,11 +227,12 @@ be archived.
 - [ ] **Rich export — minor code deferrals** — set explicit `openpyxl` `cell.number_format` on numeric XLSX cells
   (values are pre-formatted strings today); add browser `showSaveFilePicker()` progressive enhancement (must never
   replace the baseline `ui.download()` fallback).
-- [ ] **Portable GUI executable (PyInstaller / `nicegui-pack`)** — research:
-  [references/PORTABLE_EXECUTABLE_PACKAGING.md](references/PORTABLE_EXECUTABLE_PACKAGING.md);
-  release map: [RELEASES_AND_DISTRIBUTION.md](RELEASES_AND_DISTRIBUTION.md). Spike only when a
-  non-Python distribution path is prioritized; expect large per-OS artifacts and bundle package data
-  (phantoms, `corrections.db`, help). Not a Java wrap.
+- [ ] **Portable GUI executable (PyInstaller / `nicegui-pack`)** — plan written, not started:
+  [plans/PORTABLE_APP_PLAN.md](plans/PORTABLE_APP_PLAN.md). Light (small phantom set, no PNG/Chrome)
+  and Full (clinical library plus a bundled Chromium for Kaleido); in-app pack download is a later
+  phase. Research note:
+  [references/PORTABLE_EXECUTABLE_PACKAGING.md](references/PORTABLE_EXECUTABLE_PACKAGING.md).
+  Spike only when a non-Python distribution path is prioritized. Not a Java wrap.
 - [ ] **Fixture-DICOM identifier scrub** — the upstream-inherited serials/lab codes
   in `device_info.csv` are substituted with synthetic tokens (Phase A), but the same
   identifiers persist in 4 hash-pinned approved fixture DICOMs and 2 asserting test
