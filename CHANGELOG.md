@@ -23,7 +23,8 @@ That keeps SemVer and contributor history organized.
 
 - **phi-scan scheduled workflow** (2026-10-17) — Refreshed expired `.phi-scanbaseline`
   entries (90-day review window) so the advisory CSV/TSV scan passes again; the workflow
-  now re-runs without `--quiet` when the scan fails so CI logs show findings.
+  now re-runs without `--quiet` when the scan fails so CI logs show findings, and runs
+  on pull requests that change the baseline or phi-scan config (not all CSV edits).
 
 - **Sonar new-code quality gate** (2026-10-14) — Refactors and test adjustments so local
   SonarQube new-code violations stay at zero after equipment-profile UI work; no user-facing
