@@ -49,6 +49,8 @@ _GENERIC_PHILIPS_ROW = (
     "Philips,Allura Clarity,Fluoroscopy,Single Plane,1198,785,37.8,40.6,294.1,0.01,"
     "Copper or Copper compound,0.6,0.6,-0.1,-1.1,77.0,0.00003,130.0,130.0,163.5,163.5"
 )
+
+
 def _siemens_coordinates() -> dict[str, Any]:
     return {
         "translation_offset": {"x": 5.0, "y": -3.5, "z": 0.0},
@@ -167,6 +169,14 @@ def _snapshot_norm(norm: Any) -> dict[str, Any]:
 
 def _code(excinfo: pytest.ExceptionInfo[CaptureError]) -> str:
     return excinfo.value.code
+
+
+def test_shared_philips_row_matches_generic_header() -> None:
+    """Sibling modules import this row; it must stay a Philips event aligned with the header."""
+    header = _GENERIC_HEADER.split(",")
+    cells = _GENERIC_PHILIPS_ROW.split(",")
+    assert cells[0] == "Philips"
+    assert len(cells) == len(header)
 
 
 # ---------------------------------------------------------------------------

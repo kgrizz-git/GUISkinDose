@@ -183,6 +183,16 @@ def _close_enough(label: str, got: float, want: float, failures: list[str]) -> N
     _check(ok, failures, f"{label} installed={got!r} checkout={want!r}")
 
 
+def _report_result(failures: list[str]) -> int:
+    """Print the final PASS/FAIL banner and return a process exit code."""
+    print("---")
+    if failures:
+        print(f"RESULT: FAIL ({len(failures)} failing check(s))")
+        return 1
+    print("RESULT: PASS — installed wheel reproduces checkout results (packaged + explicit)")
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--skip-build", action="store_true", help="reuse the dist/* wheel (fails unless exactly one)")
@@ -366,12 +376,7 @@ def main() -> int:
     _close_lists("hvl-probe-explicit", explicit["hvl_probe"], checkout_explicit["hvl_probe"], failures)
     _check(explicit["leaks"] == [], failures, f"no path leaks in explicit exports (got {explicit['leaks']})")
 
-    print("---")
-    if failures:
-        print(f"RESULT: FAIL ({len(failures)} failing check(s))")
-        return 1
-    print("RESULT: PASS — installed wheel reproduces checkout results (packaged + explicit)")
-    return 0
+    return _report_result(failures)
 
 
 if __name__ == "__main__":
