@@ -45,7 +45,7 @@ API = "https://api.github.com"
 SHA_RE = re.compile(r"^[0-9a-fA-F]{40}$")
 FULL_SEMVER_RE = re.compile(r"^v\d+\.\d+\.\d+$")
 MAJOR_ONLY_RE = re.compile(r"^v\d+$")
-USES_RE = re.compile(r"""^(?:-\s*)?uses:\s*['"]?(?P<spec>[^'"\s#]+)['"]?(?:\s*#\s*(?P<note>\S+).*)?\s*$""")
+USES_RE = re.compile(r"""^(?:-\s*)?uses:\s*['"]?(?P<spec>[^'"\s#]+)['"]?(?:\s*#\s*(?P<note>\S+)?.*)?\s*$""")
 REMOTE_RE = re.compile(r"^(?P<owner>[A-Za-z0-9_.-]+)/(?P<repo>[A-Za-z0-9_.-]+)(?:/[^@]+)?@(?P<ref>.+)$")
 OK_LINE = "Action pin check OK."
 Fetch = Callable[[str, str], tuple[int, str]]
@@ -274,6 +274,9 @@ def _pin_reason(
         return "not a full commit sha"
     sha = use.ref.lower()
     status = _commit_status(fetch_url, token, use.owner, use.repo, sha, commits)
+    # GitHub returns 422, not 404, when the repo exists and the SHA does not.
+    if status == 422:
+        return "commit not found (github api status 422)"
     if status == 404:
         return "commit not found"
     if status != 200:
@@ -348,7 +351,7 @@ def _peel_tag(fetch_url: Fetch, token: str, owner: str, repo: str, tag: str) -> 
     payload = _json_object(body)
     if payload is None:
         return None, None
-    return _peel(fetch_url, token, owner, repo, payload.get("object"), 0), None
+    return _peel(fetch_url, token, owner, repo, payload.get("object"), 0)
 
 
 def _peel(
@@ -358,23 +361,26 @@ def _peel(
     repo: str,
     obj: object,
     depth: int,
-) -> str | None:
+) -> tuple[str | None, str | None]:
+    """Return ``(commit sha, error)`` while following an annotated tag."""
     if depth > _MAX_PEEL_DEPTH:
-        return None
+        return None, None
     peeled = _object_sha(obj)
     if peeled is None:
-        return None
+        return None, None
     kind, sha = peeled
     if kind == "commit":
-        return sha
+        return sha, None
     if kind != "tag":
-        return None
+        return None, None
     status, body = fetch_url(_api("repos", owner, repo, "git", "tags", sha), token)
+    if status == 404:
+        return None, None
     if status != 200:
-        return None
+        return None, f"github api status {status}"
     payload = _json_object(body)
     if payload is None:
-        return None
+        return None, None
     return _peel(fetch_url, token, owner, repo, payload.get("object"), depth + 1)
 
 

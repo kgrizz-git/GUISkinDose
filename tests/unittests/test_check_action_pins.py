@@ -59,6 +59,51 @@ def test_commit_404_fails(tmp_path: Path) -> None:
     assert "commit not found" in failures[0]
 
 
+def test_commit_422_is_a_missing_commit(tmp_path: Path) -> None:
+    _write(tmp_path, f"steps:\n  - uses: actions/checkout@{PIN}\n")
+
+    def fetch(url: str, token: str) -> tuple[int, str]:
+        assert url.endswith(f"/commits/{PIN}")
+        assert token
+        return 422, "No commit found for SHA"
+
+    failures = check_workflows(tmp_path, fetch, "token")
+    assert len(failures) == 1
+    assert failures[0].endswith("actions/checkout: commit not found (github api status 422)")
+
+
+def test_bare_hash_comment_still_checks_the_pin(tmp_path: Path) -> None:
+    _write(tmp_path, f"steps:\n  - uses: actions/checkout@{PIN}  #\n")
+
+    def fetch(url: str, token: str) -> tuple[int, str]:
+        assert url.endswith(f"/commits/{PIN}")
+        assert token
+        return 404, "missing"
+
+    failures = check_workflows(tmp_path, fetch, "token")
+    assert len(failures) == 1
+    assert failures[0].endswith("actions/checkout: commit not found")
+
+
+def test_annotated_tag_peel_api_error_is_not_a_missing_tag(tmp_path: Path) -> None:
+    _write(tmp_path, f"steps:\n  - uses: actions/checkout@{PIN}  # v1.2.3\n")
+
+    def fetch(url: str, token: str) -> tuple[int, str]:
+        assert token
+        if url.endswith(f"/commits/{PIN}"):
+            return 200, "{}"
+        if url.endswith("/git/ref/tags/v1.2.3"):
+            return 200, json.dumps({"object": {"type": "tag", "sha": TAG_OBJECT}})
+        if url.endswith(f"/git/tags/{TAG_OBJECT}"):
+            return 503, ""
+        raise AssertionError(url)
+
+    failures = check_workflows(tmp_path, fetch, "token")
+    assert len(failures) == 1
+    assert failures[0].endswith("actions/checkout: github api status 503")
+    assert "tag v1.2.3 not found" not in failures[0]
+
+
 def test_semver_comment_matching_peeled_tag_passes(tmp_path: Path) -> None:
     _write(tmp_path, f"steps:\n  - uses: actions/checkout@{PIN}  # v1.2.3\n")
     seen: list[str] = []
