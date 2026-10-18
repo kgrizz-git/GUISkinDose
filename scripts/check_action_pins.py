@@ -45,7 +45,6 @@ API = "https://api.github.com"
 SHA_RE = re.compile(r"^[0-9a-fA-F]{40}$")
 FULL_SEMVER_RE = re.compile(r"^v\d+\.\d+\.\d+$")
 MAJOR_ONLY_RE = re.compile(r"^v\d+$")
-USES_RE = re.compile(r"""^(?:-\s*)?uses:\s*['"]?(?P<spec>[^'"\s#]+)['"]?(?:\s*#\s*(?P<note>\S+)?.*)?\s*$""")
 REMOTE_RE = re.compile(r"^(?P<owner>[A-Za-z0-9_.-]+)/(?P<repo>[A-Za-z0-9_.-]+)(?:/[^@]+)?@(?P<ref>.+)$")
 OK_LINE = "Action pin check OK."
 Fetch = Callable[[str, str], tuple[int, str]]
@@ -119,11 +118,24 @@ def workflow_files(directory: Path) -> list[Path]:
 
 
 def parse_uses(line: str) -> tuple[str, str | None] | None:
-    """Return ``(spec, version note)`` when ``line`` is a single-line ``uses:``."""
-    match = USES_RE.match(line.strip())
-    if match is None:
+    """Return ``(spec, version note)`` when ``line`` is a single-line ``uses:``.
+
+    A bare ``#`` still counts as a uses line. The version note is the first
+    comment token, or None when the comment is empty.
+    """
+    stripped = line.strip()
+    if stripped.startswith("- "):
+        stripped = stripped[2:].lstrip()
+    if not stripped.startswith("uses:"):
         return None
-    return match.group("spec"), match.group("note")
+    rest = stripped[len("uses:") :].strip()
+    spec, separator, comment = rest.partition("#")
+    spec = spec.strip().strip("\"'")
+    if not spec or any(character.isspace() for character in spec):
+        return None
+    if not separator or not comment.strip():
+        return spec, None
+    return spec, comment.split()[0]
 
 
 def semver_comment(note: str | None) -> str | None:
@@ -233,7 +245,7 @@ def _failure_line(path: Path, line: int, target: str, reason: str) -> str:
 
 def _record_use(path: Path, number: int, spec: str, note: str | None) -> ActionUse | str | None:
     """Return an action use, a failure line, or None when the spec is skipped."""
-    if spec.startswith("./") or spec.startswith("docker://"):
+    if spec.startswith(("./", "docker://")):
         return None
     match = REMOTE_RE.fullmatch(spec)
     if match is None:
