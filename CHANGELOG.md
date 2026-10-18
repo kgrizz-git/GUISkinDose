@@ -19,6 +19,12 @@ That keeps SemVer and contributor history organized.
 
 ## [Unreleased]
 
+### Changed
+
+- **Pinned action check** (2026-10-18) — CI verifies each third-party GitHub Action pin is a
+  real commit, including workflows that pull requests do not run. The weekly zizmor job only
+  flags known-vulnerable actions. Package version stays `1.0.0`.
+
 ### Security
 
 - **Dependency updates** (2026-10-17) — NiceGUI 3.18.0 rejects uploads to disabled or hidden

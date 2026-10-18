@@ -8,6 +8,13 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ## [Unreleased]
 
+- **Action pin check** (2026-10-18) — `scripts/check_action_pins.py` runs in the CI
+  `static-analysis` job and fails when a third-party `uses:` pin is not a full 40-hex
+  commit, when that commit is missing, or when a `# vX.Y.Z` comment peels to a different
+  commit. The weekly zizmor job only audits known-vulnerable actions, so a bad SHA in a
+  workflow that pull requests do not run (for example `release.yml`) could otherwise merge
+  unnoticed. A major-only comment such as `# v9` is not compared to the moving major tag.
+
 - **Code scanning alert cleanup** (2026-10-17) — cleared six open CodeQL quality alerts:
   re-exported `prepare_cli_settings` via module assignment (avoids CodeQL unused-import
   while keeping the public `guiskindose.main` API), dropped unused test module constants,
