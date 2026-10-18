@@ -59,9 +59,9 @@ be archived.
 - [ ] **Portable desktop app (PyInstaller / `nicegui-pack`)** — plan written, not started:
   [PORTABLE_APP_PLAN.md](plans/PORTABLE_APP_PLAN.md). Light is a small phantom set with no PNG export
   and no bundled browser. Full is the clinical library plus Chromium for offline Kaleido PNG
-  (not Chrome for Testing). Phase 0 is the freeze spike. Phase 4 puts the Windows
-  WebView2 runtime in Full only; Light stays without that 250 MB. Phase 5 signs.
-  Not a Java wrap. AppLocker bypass is out of scope.
+  (not Chrome for Testing). Phase 0 is a Windows freeze spike. Light checks for
+  WebView2 before the window starts and does not ship that 250 MB runtime. Public Full
+  Windows waits for Phase 4. Linux v1 opens in the browser. Phase 5 signs. AppLocker bypass is out of scope.
 
 ## Product Backlog
 
