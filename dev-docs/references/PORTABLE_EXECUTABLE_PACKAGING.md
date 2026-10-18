@@ -3,7 +3,7 @@
 _Status: research note. Execution plan: [plans/PORTABLE_APP_PLAN.md](../plans/PORTABLE_APP_PLAN.md) (not started)._
 _Created: 2026-07-30. Pointed at the execution plan: 2026-10-17._
 _Parent hub: [RELEASES_AND_DISTRIBUTION.md](../RELEASES_AND_DISTRIBUTION.md)._
-_Related backlog: Deferred item in [TO_DO.md](../TO_DO.md)._
+_Related backlog: Active Work item in [TO_DO.md](../TO_DO.md) (not started)._
 
 ## Summary
 
