@@ -45,12 +45,8 @@ API = "https://api.github.com"
 SHA_RE = re.compile(r"^[0-9a-fA-F]{40}$")
 FULL_SEMVER_RE = re.compile(r"^v\d+\.\d+\.\d+$")
 MAJOR_ONLY_RE = re.compile(r"^v\d+$")
-USES_RE = re.compile(
-    r"""^(?:-\s*)?uses:\s*['"]?(?P<spec>[^'"\s#]+)['"]?(?:\s*#\s*(?P<note>\S+))?\s*$"""
-)
-REMOTE_RE = re.compile(
-    r"^(?P<owner>[A-Za-z0-9_.-]+)/(?P<repo>[A-Za-z0-9_.-]+)(?:/[^@]+)?@(?P<ref>.+)$"
-)
+USES_RE = re.compile(r"""^(?:-\s*)?uses:\s*['"]?(?P<spec>[^'"\s#]+)['"]?(?:\s*#\s*(?P<note>\S+).*)?\s*$""")
+REMOTE_RE = re.compile(r"^(?P<owner>[A-Za-z0-9_.-]+)/(?P<repo>[A-Za-z0-9_.-]+)(?:/[^@]+)?@(?P<ref>.+)$")
 OK_LINE = "Action pin check OK."
 Fetch = Callable[[str, str], tuple[int, str]]
 _MAX_PEEL_DEPTH = 5
@@ -169,8 +165,8 @@ def check_workflows(directory: Path, fetch_url: Fetch, token: str) -> list[str]:
     Commit lookups are deduped by owner, repo, and SHA. Tag lookups are
     deduped by owner, repo, and tag name.
     """
-    commits: dict[tuple[str, str, str], bool] = {}
-    tags: dict[tuple[str, str, str], str | None] = {}
+    commits: dict[tuple[str, str, str], int] = {}
+    tags: dict[tuple[str, str, str], tuple[str | None, str | None]] = {}
     failures: list[str] = []
     for path in workflow_files(directory):
         uses, parse_failures = uses_in_file(path)
@@ -256,8 +252,8 @@ def _pin_failures(
     uses: list[ActionUse],
     fetch_url: Fetch,
     token: str,
-    commits: dict[tuple[str, str, str], bool],
-    tags: dict[tuple[str, str, str], str | None],
+    commits: dict[tuple[str, str, str], int],
+    tags: dict[tuple[str, str, str], tuple[str | None, str | None]],
 ) -> list[str]:
     failures: list[str] = []
     for use in uses:
@@ -271,14 +267,17 @@ def _pin_reason(
     use: ActionUse,
     fetch_url: Fetch,
     token: str,
-    commits: dict[tuple[str, str, str], bool],
-    tags: dict[tuple[str, str, str], str | None],
+    commits: dict[tuple[str, str, str], int],
+    tags: dict[tuple[str, str, str], tuple[str | None, str | None]],
 ) -> str | None:
     if not SHA_RE.fullmatch(use.ref):
         return "not a full commit sha"
     sha = use.ref.lower()
-    if not _commit_exists(fetch_url, token, use.owner, use.repo, sha, commits):
+    status = _commit_status(fetch_url, token, use.owner, use.repo, sha, commits)
+    if status == 404:
         return "commit not found"
+    if status != 200:
+        return f"github api status {status}"
     # A major-only note such as `# v9` names a moving tag. Existence of the
     # pinned commit is enough; do not compare the pin to that tag.
     if use.semver is None:
@@ -291,10 +290,12 @@ def _tag_reason(
     sha: str,
     fetch_url: Fetch,
     token: str,
-    tags: dict[tuple[str, str, str], str | None],
+    tags: dict[tuple[str, str, str], tuple[str | None, str | None]],
 ) -> str | None:
     tag = use.semver or ""
-    pointed = _cached_tag_commit(fetch_url, token, use.owner, use.repo, tag, tags)
+    pointed, error = _cached_tag_commit(fetch_url, token, use.owner, use.repo, tag, tags)
+    if error is not None:
+        return error
     if pointed is None:
         return f"tag {tag} not found"
     if pointed != sha:
@@ -302,18 +303,19 @@ def _tag_reason(
     return None
 
 
-def _commit_exists(
+def _commit_status(
     fetch_url: Fetch,
     token: str,
     owner: str,
     repo: str,
     sha: str,
-    cache: dict[tuple[str, str, str], bool],
-) -> bool:
+    cache: dict[tuple[str, str, str], int],
+) -> int:
+    """Return the GitHub status for this commit, using ``cache`` for repeats."""
     key = (owner, repo, sha)
     if key not in cache:
         status, _body = fetch_url(_api("repos", owner, repo, "commits", sha), token)
-        cache[key] = status == 200
+        cache[key] = status
     return cache[key]
 
 
@@ -323,26 +325,30 @@ def _cached_tag_commit(
     owner: str,
     repo: str,
     tag: str,
-    cache: dict[tuple[str, str, str], str | None],
-) -> str | None:
+    cache: dict[tuple[str, str, str], tuple[str | None, str | None]],
+) -> tuple[str | None, str | None]:
+    """Return ``(commit sha, error)``. A missing tag is ``(None, None)``."""
     key = (owner, repo, tag)
     if key not in cache:
         cache[key] = _peel_tag(fetch_url, token, owner, repo, tag)
     return cache[key]
 
 
-def _peel_tag(fetch_url: Fetch, token: str, owner: str, repo: str, tag: str) -> str | None:
-    """Return the commit a tag points at, or None when the tag is missing.
+def _peel_tag(fetch_url: Fetch, token: str, owner: str, repo: str, tag: str) -> tuple[str | None, str | None]:
+    """Return the commit a tag points at.
 
     Annotated tags are followed to the commit. Lightweight tags already name it.
+    ``(None, None)`` means the tag is missing. A non-404 failure is the error string.
     """
     status, body = fetch_url(_api("repos", owner, repo, "git", "ref", "tags", tag), token)
+    if status == 404:
+        return None, None
     if status != 200:
-        return None
+        return None, f"github api status {status}"
     payload = _json_object(body)
     if payload is None:
-        return None
-    return _peel(fetch_url, token, owner, repo, payload.get("object"), 0)
+        return None, None
+    return _peel(fetch_url, token, owner, repo, payload.get("object"), 0), None
 
 
 def _peel(

@@ -112,6 +112,33 @@ def test_major_only_comment_does_not_request_tag(tmp_path: Path) -> None:
     assert all("/git/ref/tags/v9" not in url for url in seen)
 
 
+def test_semver_comment_with_trailing_words_still_checks_tag(tmp_path: Path) -> None:
+    _write(tmp_path, f"steps:\n  - uses: actions/checkout@{PIN}  # v1.2.3 release pin\n")
+
+    def fetch(url: str, token: str) -> tuple[int, str]:
+        assert token
+        if url.endswith(f"/commits/{PIN}"):
+            return 200, "{}"
+        if url.endswith("/git/ref/tags/v1.2.3"):
+            return 200, json.dumps({"object": {"type": "commit", "sha": PIN}})
+        raise AssertionError(url)
+
+    assert check_workflows(tmp_path, fetch, "token") == []
+
+
+def test_github_api_error_is_not_reported_as_a_missing_commit(tmp_path: Path) -> None:
+    _write(tmp_path, f"steps:\n  - uses: actions/checkout@{PIN}\n")
+
+    def fetch(url: str, token: str) -> tuple[int, str]:
+        assert token
+        assert url.endswith(f"/commits/{PIN}")
+        return 503, ""
+
+    failures = check_workflows(tmp_path, fetch, "token")
+    assert len(failures) == 1
+    assert failures[0].endswith("workflow.yml:2: actions/checkout: github api status 503")
+
+
 def test_missing_token_exits_2(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("GH_TOKEN", raising=False)
     monkeypatch.delenv("GITHUB_TOKEN", raising=False)
