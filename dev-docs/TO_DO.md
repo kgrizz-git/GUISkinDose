@@ -2,7 +2,7 @@
 
 Short active backlog for GUISkinDose. Keep this file focused on actionable work and open questions; use
 `CHANGELOG.md`, archived plans, and `dev-docs/index.md` for historical traceability. Release/distribution
-map (PyPI, GitHub notes vs changelog, deferred portable executables):
+map (PyPI, GitHub notes vs changelog, portable app plan):
 [RELEASES_AND_DISTRIBUTION.md](RELEASES_AND_DISTRIBUTION.md).
 
 House rule: keep each item to a few lines — what, why, acceptance. Design detail, evidence, and
@@ -28,6 +28,8 @@ be archived.
    next: close remaining Phase 2 acceptance and per-slice contracts; later activation/transmission/authoring work remains open.
 - [ ] **Geometry-driven support transmission** — See the correction-data roadmap in
   Active Work / [GEOMETRY_DRIVEN_SUPPORT_TRANSMISSION_PLAN.md](plans/GEOMETRY_DRIVEN_SUPPORT_TRANSMISSION_PLAN.md).
+- [ ] **Portable desktop app** — Light and Full double-click builds. Plan written, not started:
+  [PORTABLE_APP_PLAN.md](plans/PORTABLE_APP_PLAN.md). Detail in Active Work.
 
 ## Active Work
 
@@ -54,6 +56,12 @@ be archived.
   - *Native window* — restore-from-maximize and multi-display OS smokes
     ([MAC_NATIVE_WINDOW_MAXIMIZE_PLAN.md](plans/archive/MAC_NATIVE_WINDOW_MAXIMIZE_PLAN.md),
     [NATIVE_WINDOW_GEOMETRY_PLAN.md](plans/archive/NATIVE_WINDOW_GEOMETRY_PLAN.md)).
+- [ ] **Portable desktop app (PyInstaller / `nicegui-pack`)** — plan written, not started:
+  [PORTABLE_APP_PLAN.md](plans/PORTABLE_APP_PLAN.md). Light is a small phantom set with no PNG export
+  and no bundled browser. Full is the clinical library plus Chromium for offline Kaleido PNG
+  (not Chrome for Testing). Phase 0 is a Windows freeze spike. Light checks for
+  WebView2 before the window starts and does not ship that 250 MB runtime. Public Full
+  Windows waits for Phase 4. Linux v1 opens in the browser. Phase 5 signs. AppLocker bypass is out of scope.
 
 ## Product Backlog
 
@@ -227,11 +235,6 @@ be archived.
 - [ ] **Rich export — minor code deferrals** — set explicit `openpyxl` `cell.number_format` on numeric XLSX cells
   (values are pre-formatted strings today); add browser `showSaveFilePicker()` progressive enhancement (must never
   replace the baseline `ui.download()` fallback).
-- [ ] **Portable GUI executable (PyInstaller / `nicegui-pack`)** — research:
-  [references/PORTABLE_EXECUTABLE_PACKAGING.md](references/PORTABLE_EXECUTABLE_PACKAGING.md);
-  release map: [RELEASES_AND_DISTRIBUTION.md](RELEASES_AND_DISTRIBUTION.md). Spike only when a
-  non-Python distribution path is prioritized; expect large per-OS artifacts and bundle package data
-  (phantoms, `corrections.db`, help). Not a Java wrap.
 - [ ] **Fixture-DICOM identifier scrub** — the upstream-inherited serials/lab codes
   in `device_info.csv` are substituted with synthetic tokens (Phase A), but the same
   identifiers persist in 4 hash-pinned approved fixture DICOMs and 2 asserting test
