@@ -11,10 +11,10 @@ Ship a double-clickable desktop app for people who do not install Python: unzip 
 
 Two downloadable builds, same program:
 
-| Build | Who it is for | Phantom payload | PNG / browser |
-|-------|----------------|-----------------|----------------|
-| **Light** | First download, quick trials, smaller transfer | A small clinical starter set, installed and usable offline | No bundled browser. PNG dose-map export is not offered |
-| **Full** | Clinical library, air-gapped workstations | Every shipped clinical STL, including arms-down twins and the preferred preview | Bundled Chromium so Kaleido PNG export works offline |
+| Build | Who it is for | Phantom payload | PNG / browser | Windows window |
+|-------|----------------|-----------------|----------------|-----------------|
+| **Light** | First download, quick trials, smaller transfer | A small clinical starter set, installed and usable offline | No bundled browser. PNG dose-map export is not offered | Uses the WebView2 runtime already on the PC. Does not ship the 250 MB Fixed Version runtime |
+| **Full** | Clinical library, air-gapped workstations | Every shipped clinical STL, including arms-down twins and the preferred preview | Bundled Chromium so Kaleido PNG export works offline | Ships the Fixed Version WebView2 runtime so the window opens with no admin install |
 
 A later phase lets a Light install add the rest from a phantom pack: download when the network is allowed, or install a pack zip with no network. The pack is data, not a second application.
 
@@ -62,8 +62,8 @@ Those eight are about **250 MB** before their smaller transitive dependencies an
 
 | Build | What dominates | Planning range (compressed zip) |
 |-------|----------------|----------------------------------|
-| **Light** | Scientific libraries. No browser. About 22 MB of meshes. | Low hundreds of MB |
-| **Full** | The same libraries, plus a browser binary that is expected to outweigh the 67 MB mesh tree (often on the order of 150 MB or more before it is zipped with everything else) | Higher than Light by roughly the browser plus ~45 MB of extra meshes |
+| **Light** | Scientific libraries. No Chromium, no WebView2 runtime. About 22 MB of meshes. | Low hundreds of MB |
+| **Full** | The same libraries, plus Chromium (often 150 MB or more) and, on Windows, the Fixed Version WebView2 runtime (Microsoft documents it as over 250 MB) | Higher than Light by those runtimes plus ~45 MB of extra meshes |
 
 A single "low hundreds of MB" figure fits Light. It is the wrong figure for Full.
 
@@ -120,7 +120,7 @@ Plane and cylinder phantoms are generated in code. They are in every build and a
   - Linux: the executable plus a `.desktop` file in the zip.
 - Rebuild on each OS. Artifacts are GitHub Release assets only, after privacy and release gates. No binaries in git.
 - Bundle: Python runtime, runtime dependencies including `pywebview`, `table_data/`, `corrections.db`, packaged GUI help, `settings_example.json`, and the selected phantom payload. Full also bundles the Chromium binary from Phase 0.
-- Omit from the freeze: dev and docs extras, Playwright, Jupyter, Semgrep, example DICOM (users bring their own files; examples stay in the source tree and the wheel). Light also omits the Chromium binary.
+- Omit from the freeze: dev and docs extras, Playwright, Jupyter, Semgrep, example DICOM (users bring their own files; examples stay in the source tree and the wheel). Light also omits the Chromium binary and the WebView2 Fixed Version runtime.
 - Edition is a generated module, `guiskindose/_edition.py`, written at freeze time with `EDITION = "light"` or `EDITION = "full"`. The source tree ships `EDITION = "full"` so `pip install` keeps today's behavior: PNG is offered and Kaleido looks for a browser on the machine. The GUI imports `EDITION` and hides the PNG dose-map card when it is `"light"`. An environment variable does not override it. Rich-report image rendering already treats a failed PNG as "image unavailable"; Light relies on that for PDF and DOCX.
 
 ### Phantom library
@@ -162,12 +162,12 @@ What they do not promise, and later phases take on:
 
 | Block | Why a standard user gets stuck | When it is handled |
 |-------|--------------------------------|--------------------|
-| Missing WebView2 runtime | The native window uses pywebview's Edge backend. Windows 11 usually has the runtime. Some Windows 10 PCs do not. The machine-wide installer needs admin. | Phase 4 bundles Microsoft's Fixed Version runtime beside the `.exe` |
+| Missing WebView2 runtime | The native window uses pywebview's Edge backend. Windows 11 usually has the runtime. Some Windows 10 PCs do not. The machine-wide installer needs admin. | **Full** (Phase 4) ships Microsoft's Fixed Version runtime. **Light** does not. Light uses the runtime already installed, and if none is installed it tells the user to download Full |
 | Unknown publisher (SmartScreen, Gatekeeper) | An unsigned download shows a warning. "Run anyway" is not an admin step, but many people stop there. A brand-new certificate still warns until it gains reputation. | Phase 5 signs and notarizes |
 | Antivirus heuristics | PyInstaller onedir builds, and a bundled browser, are often flagged. A packer makes that worse. | Phase 5 records a Defender scan of the signed zip. No packer, no "disable your antivirus" instruction |
 | Hospital allow-lists (AppLocker, WDAC) | IT can block any publisher, signed or not. This project cannot bypass that. | Out of scope. Release notes say the site admin must allow the signed publisher |
 | Mark of the Web | A browser download marks the zip. The app must not strip that mark. | Signing is the mitigation, not deleting `Zone.Identifier` |
-| Network or UNC launch | Microsoft's Fixed Version runtime does not run from a network path. | Phase 4 release notes say to copy the folder onto the PC first |
+| Network or UNC launch | Microsoft's Fixed Version runtime does not run from a network path. This applies to the Full Windows zip. | Phase 4 release notes say to copy the Full folder onto the PC first |
 
 The frozen Windows manifest must not set `requireAdministrator`. Linux builds must not be setuid. macOS builds must not include a privileged helper.
 
@@ -222,18 +222,18 @@ Each phase is a separate PR. Do not start Phase 1 until Phase 0 has measured siz
 
 **Acceptance:** on a machine with network, Light can grow to the full catalog without a second app download. With network disabled, installed meshes and the local zip path still work.
 
-### Phase 4 — Windows runtime without an admin install
+### Phase 4 — Full Windows runtime without an admin install
 
-Both Windows zips need this, Light and Full. It is separate from the Chromium browser Full uses for PNG.
+Light stays small. It does **not** ship the Fixed Version runtime. On Windows, Light uses the WebView2 runtime already installed (typical on Windows 11). If that runtime is missing, Light shows a short message that names the Full download and does not launch an installer. Full is the no-admin Windows build: it carries the runtime beside the `.exe`. This runtime is separate from the Chromium browser Full uses for PNG.
 
 - [ ] Pin `pywebview` at `>=6.1` (the lock already has 6.2.1). That version reads `webview.settings['WEBVIEW2_RUNTIME_PATH']` and sets WebView2's `BrowserExecutableFolder`.
 - [ ] Download Microsoft's **Fixed Version** WebView2 runtime for the build arch, not the Evergreen machine-wide installer. Record its size (Microsoft documents it as over 250 MB) and the redistribution terms in the progress log.
-- [ ] Place the decompressed runtime inside the onedir and set `WEBVIEW2_RUNTIME_PATH` before `run_gui(native=True)`. If the path is missing, fail with a short message. Do not fall through to a system install.
+- [ ] Place the decompressed runtime inside the **Full** onedir only, and set `WEBVIEW2_RUNTIME_PATH` before `run_gui(native=True)`. Light leaves that setting unset so pywebview uses the system runtime.
 - [ ] On Windows 10, Fixed Version 120 and later needs AppContainer read-execute on that folder (`ALL APPLICATION PACKAGES` and `ALL RESTRICTED APPLICATION PACKAGES`). Do that from code or a user-level step on a folder the user owns. The acceptance run must not show a UAC prompt.
-- [ ] Smoke on a Windows VM that does **not** have WebView2 installed: unzip into the user profile, launch, calculate, export HTML. Repeat from `Program Files` only to confirm we do not tell users to install there. Confirm the folder does not launch from a UNC path, and say that in the release notes.
-- [ ] Add the runtime size to the Light and Full zip estimates. It dominates the phantom-catalog difference on Windows.
+- [ ] Smoke Full on a Windows VM that does **not** have WebView2 installed: unzip into the user profile, launch, calculate, export HTML. Smoke Light on a VM that **does** have it, and on one that does not: the second shows the Full-download message and does not prompt for admin. Confirm Full does not launch from a UNC path, and say that in the release notes.
+- [ ] Add the runtime size to the Full Windows zip estimate only. It dominates the phantom-catalog difference on Windows.
 
-**Acceptance:** a standard user on Windows 10 without WebView2, and on Windows 11, opens the window after unzipping into their profile. No UAC prompt. The runtime is not fetched at launch.
+**Acceptance:** Full opens on Windows 10 without a preinstalled WebView2 and without a UAC prompt. Light's zip does not contain the runtime. The runtime is not fetched at launch.
 
 ### Phase 5 — Signing, and not tripping the usual blocks
 
@@ -250,7 +250,7 @@ Both Windows zips need this, Light and Full. It is separate from the Chromium br
 - **2026-10-17** — Plan written from disk measurements. No freeze has been run, so compressed app size is still an estimate. The Kaleido browser binary has not been downloaded here, so its size is unmeasured.
 - **2026-10-17** — Light omits PNG export and Chrome. Full bundles a Chromium for offline PNG, subject to the Phase 0 license check.
 - **2026-10-17** — Review (`opencode-go/longcat-2.5-preview-free`) folded in: Chromium rather than Chrome for Testing, generated `_edition.py`, freeze path list, `pywebview`, per-OS double-click layout, separate Light/Full size ranges, and the Light mesh trade-off (~22 MB, not the 8.6 MB three-mesh starter).
-- **2026-10-17** — Phases 0–3 are the zip. Phase 4 bundles the WebView2 Fixed Version runtime so Windows needs no admin install. Phase 5 signs. AppLocker bypass, MOTW stripping, and packers are out of scope.
+- **2026-10-17** — Phases 0–3 are the zip. Phase 4 puts the WebView2 Fixed Version runtime in the Full Windows zip only. Light uses the runtime already on the PC. Phase 5 signs. AppLocker bypass, MOTW stripping, and packers are out of scope.
 
 ## Decision log
 
@@ -260,7 +260,7 @@ Both Windows zips need this, Light and Full. It is separate from the Chromium br
 - **2026-10-17** — Full's bundled browser is Chromium. Chrome for Testing, which choreographer downloads from `chrome-for-testing-public`, is not a ship candidate. If Chromium cannot be redistributed, the air-gapped PNG claim is dropped before Phase 1.
 - **2026-10-17** — Edition is `guiskindose/_edition.py`, generated at freeze time. The source default is `full`. Users cannot flip it with an environment variable.
 - **2026-10-17** — No update check and no crash reporting. The user phantom library survives deleting the app folder.
-- **2026-10-17** — A no-admin Windows run is Phase 4 (Fixed Version WebView2 via `WEBVIEW2_RUNTIME_PATH`, pywebview ≥ 6.1) plus Phase 5 (Authenticode). Phases 0–3 do not claim it. AppLocker/WDAC bypass is out of scope.
+- **2026-10-17** — A no-admin Windows run is the Full zip: Phase 4 (Fixed Version WebView2 via `WEBVIEW2_RUNTIME_PATH`, pywebview ≥ 6.1) plus Phase 5 (Authenticode). Light omits that 250 MB runtime and needs WebView2 already installed. Phases 0–3 do not claim either. AppLocker/WDAC bypass is out of scope.
 
 ## Related docs
 
