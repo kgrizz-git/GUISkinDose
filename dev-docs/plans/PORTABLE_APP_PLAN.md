@@ -104,6 +104,8 @@ Plane and cylinder phantoms are generated in code. They are in every build and a
 - An auto-updater, an update check, or crash reporting. Nothing phones home with usage, hostnames, or exam metadata. A new version is a new download. Uninstall is deleting the unzipped app. The user phantom library is outside that folder and stays until the user deletes it.
 - Replacing `pip install` or the CLI. The frozen app is an extra channel.
 - macOS App Store or Microsoft Store distribution.
+- Defeating AppLocker, WDAC, or other site allow-lists. Signing makes the publisher identifiable. It does not force a hospital policy to allow it.
+- Stripping Mark of the Web, packing or obfuscating the executable, or asking the user to turn antivirus off.
 - Trimming scipy/pandas to shrink the download. That is a different project, and it risks the dose path.
 
 ## Design
@@ -152,7 +154,22 @@ Fetching is off until the user asks. There is no background check.
 
 ### Trust and first launch
 
-An unsigned Windows `.exe` and an unsigned macOS `.app` will be warned on by SmartScreen and Gatekeeper. A zip of an onedir is the v1 download. Code signing and Apple notarization are a later phase; without them, "double-click" still needs the OS "open anyway" step. Document that in the release notes rather than calling the unsigned zip a finished installer.
+An unsigned Windows `.exe` and an unsigned macOS `.app` will be warned on by SmartScreen and Gatekeeper. A zip of an onedir is the v1 download. Phases 0–3 produce that zip. They do **not** yet produce a Windows build that a standard user can open on every PC.
+
+What Phases 0–3 do promise: no installer, no copy into `Program Files`, and no request for administrator rights. The user unzips into a folder they can write (their profile or a USB drive) and double-clicks the `.exe`. Phantom packs go in `%LOCALAPPDATA%`. Uninstall is deleting the unzipped folder.
+
+What they do not promise, and later phases take on:
+
+| Block | Why a standard user gets stuck | When it is handled |
+|-------|--------------------------------|--------------------|
+| Missing WebView2 runtime | The native window uses pywebview's Edge backend. Windows 11 usually has the runtime. Some Windows 10 PCs do not. The machine-wide installer needs admin. | Phase 4 bundles Microsoft's Fixed Version runtime beside the `.exe` |
+| Unknown publisher (SmartScreen, Gatekeeper) | An unsigned download shows a warning. "Run anyway" is not an admin step, but many people stop there. A brand-new certificate still warns until it gains reputation. | Phase 5 signs and notarizes |
+| Antivirus heuristics | PyInstaller onedir builds, and a bundled browser, are often flagged. A packer makes that worse. | Phase 5 records a Defender scan of the signed zip. No packer, no "disable your antivirus" instruction |
+| Hospital allow-lists (AppLocker, WDAC) | IT can block any publisher, signed or not. This project cannot bypass that. | Out of scope. Release notes say the site admin must allow the signed publisher |
+| Mark of the Web | A browser download marks the zip. The app must not strip that mark. | Signing is the mitigation, not deleting `Zone.Identifier` |
+| Network or UNC launch | Microsoft's Fixed Version runtime does not run from a network path. | Phase 4 release notes say to copy the folder onto the PC first |
+
+The frozen Windows manifest must not set `requireAdministrator`. Linux builds must not be setuid. macOS builds must not include a privileged helper.
 
 ## Phases
 
@@ -205,20 +222,35 @@ Each phase is a separate PR. Do not start Phase 1 until Phase 0 has measured siz
 
 **Acceptance:** on a machine with network, Light can grow to the full catalog without a second app download. With network disabled, installed meshes and the local zip path still work.
 
-### Phase 4 — Signing (when a real double-click is required)
+### Phase 4 — Windows runtime without an admin install
 
-- [ ] Windows: Authenticode on the executable users open.
-- [ ] macOS: Developer ID sign and notarize the `.app` (or the zip contents Gatekeeper checks).
-- [ ] Document the secret storage. Signing keys never enter the repo or the plan.
-- [ ] Re-smoke the signed artifact. Signing can break PyInstaller if the layout is wrong.
+Both Windows zips need this, Light and Full. It is separate from the Chromium browser Full uses for PNG.
 
-**Acceptance:** a clean machine opens the app without the unsigned-binary warning, on the OS that was signed.
+- [ ] Pin `pywebview` at `>=6.1` (the lock already has 6.2.1). That version reads `webview.settings['WEBVIEW2_RUNTIME_PATH']` and sets WebView2's `BrowserExecutableFolder`.
+- [ ] Download Microsoft's **Fixed Version** WebView2 runtime for the build arch, not the Evergreen machine-wide installer. Record its size (Microsoft documents it as over 250 MB) and the redistribution terms in the progress log.
+- [ ] Place the decompressed runtime inside the onedir and set `WEBVIEW2_RUNTIME_PATH` before `run_gui(native=True)`. If the path is missing, fail with a short message. Do not fall through to a system install.
+- [ ] On Windows 10, Fixed Version 120 and later needs AppContainer read-execute on that folder (`ALL APPLICATION PACKAGES` and `ALL RESTRICTED APPLICATION PACKAGES`). Do that from code or a user-level step on a folder the user owns. The acceptance run must not show a UAC prompt.
+- [ ] Smoke on a Windows VM that does **not** have WebView2 installed: unzip into the user profile, launch, calculate, export HTML. Repeat from `Program Files` only to confirm we do not tell users to install there. Confirm the folder does not launch from a UNC path, and say that in the release notes.
+- [ ] Add the runtime size to the Light and Full zip estimates. It dominates the phantom-catalog difference on Windows.
+
+**Acceptance:** a standard user on Windows 10 without WebView2, and on Windows 11, opens the window after unzipping into their profile. No UAC prompt. The runtime is not fetched at launch.
+
+### Phase 5 — Signing, and not tripping the usual blocks
+
+- [ ] Windows: Authenticode on the executable users open. macOS: Developer ID sign and notarize the `.app`.
+- [ ] Document secret storage. Signing keys never enter the repo or the plan.
+- [ ] Re-smoke the signed artifact. Signing can break a PyInstaller layout.
+- [ ] On a clean Windows VM, scan the signed zip with Microsoft Defender and record the result. If it is blocked, fix the layout or the signature. Do not pack, obfuscate, or advise turning antivirus off.
+- [ ] Release notes say a new certificate can still show SmartScreen until it has reputation, and that AppLocker or WDAC allow-lists are an IT decision. The app does not remove Mark of the Web.
+
+**Acceptance:** a clean machine opens the signed app without the unknown-publisher interstitial, on the OS that was signed. Defender does not quarantine that build. The notes state the AppLocker limit in one sentence.
 
 ## Progress log
 
 - **2026-10-17** — Plan written from disk measurements. No freeze has been run, so compressed app size is still an estimate. The Kaleido browser binary has not been downloaded here, so its size is unmeasured.
 - **2026-10-17** — Light omits PNG export and Chrome. Full bundles a Chromium for offline PNG, subject to the Phase 0 license check.
 - **2026-10-17** — Review (`opencode-go/longcat-2.5-preview-free`) folded in: Chromium rather than Chrome for Testing, generated `_edition.py`, freeze path list, `pywebview`, per-OS double-click layout, separate Light/Full size ranges, and the Light mesh trade-off (~22 MB, not the 8.6 MB three-mesh starter).
+- **2026-10-17** — Phases 0–3 are the zip. Phase 4 bundles the WebView2 Fixed Version runtime so Windows needs no admin install. Phase 5 signs. AppLocker bypass, MOTW stripping, and packers are out of scope.
 
 ## Decision log
 
@@ -228,6 +260,7 @@ Each phase is a separate PR. Do not start Phase 1 until Phase 0 has measured siz
 - **2026-10-17** — Full's bundled browser is Chromium. Chrome for Testing, which choreographer downloads from `chrome-for-testing-public`, is not a ship candidate. If Chromium cannot be redistributed, the air-gapped PNG claim is dropped before Phase 1.
 - **2026-10-17** — Edition is `guiskindose/_edition.py`, generated at freeze time. The source default is `full`. Users cannot flip it with an environment variable.
 - **2026-10-17** — No update check and no crash reporting. The user phantom library survives deleting the app folder.
+- **2026-10-17** — A no-admin Windows run is Phase 4 (Fixed Version WebView2 via `WEBVIEW2_RUNTIME_PATH`, pywebview ≥ 6.1) plus Phase 5 (Authenticode). Phases 0–3 do not claim it. AppLocker/WDAC bypass is out of scope.
 
 ## Related docs
 
