@@ -33,6 +33,11 @@ That keeps SemVer and contributor history organized.
 
 ### Security
 
+- **Dependency updates** (2026-10-19) — aiohttp 3.14.5 closes three advisories in 3.14.3
+  (GHSA-494j-54xm-rwp3, GHSA-5wr8-gcqf-gqf3, GHSA-2g87-pp6c-29x5). yarl moves to 1.25.1
+  with that lock refresh. No dose-calculation or GUI behavior change. Package version
+  stays `1.0.0`.
+
 - **Dependency updates** (2026-10-17) — NiceGUI 3.18.0 rejects uploads to disabled or hidden
   `ui.upload` elements (GHSA-9mxh-cwxr-cxjj). Pandas 3.0.6, tqdm 4.70.1, kaleido 1.5.0,
   and reportlab 5.0.1 move forward with no dose-calculation or GUI behavior change.

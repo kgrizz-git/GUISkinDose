@@ -8,6 +8,10 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ## [Unreleased]
 
+- **aiohttp lock** (2026-10-19) — `uv.lock` moves aiohttp 3.14.3 → 3.14.5 and yarl 1.24.2 → 1.25.1
+  so the pre-push dependency audit passes. The three aiohttp advisories are cookie `Secure`
+  handling, a missing initial request timeout, and unbounded memory or CPU use.
+
 - **Action pin parser** (2026-10-19) — `parse_uses` recognizes a quoted `uses` key and one
   `uses` key in a single-line flow mapping. A `uses` value that is not a single scalar
   (empty, extra tokens, unclosed quotes, or nested) is reported as `unparseable uses value`

@@ -7,7 +7,7 @@ static-analysis environment (`dev` + `gui` extras):
 uv run --extra dev --extra gui --locked python scripts/check_licenses.py --write-notices
 ```
 
-Regenerate with `uv run --extra dev --extra gui --locked python scripts/check_licenses.py --write-notices` (last updated: 2026-10-17).
+Regenerate with `uv run --extra dev --extra gui --locked python scripts/check_licenses.py --write-notices` (last updated: 2026-10-19).
 
 Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIANCE.md`](LICENSE_COMPLIANCE.md).
 
@@ -15,7 +15,7 @@ Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIAN
 | --- | --- | --- | --- |
 | aiofiles | 25.1.0 | Apache-2.0 | Changelog, https://github.com/Tinche/aiofiles#history |
 | aiohappyeyeballs | 2.6.2 | PSF-2.0 | Bug Tracker, https://github.com/aio-libs/aiohappyeyeballs/issues |
-| aiohttp | 3.14.3 | MIT | Homepage, https://github.com/aio-libs/aiohttp |
+| aiohttp | 3.14.5 | Apache-2.0, MIT | Homepage, https://github.com/aio-libs/aiohttp |
 | aiosignal | 1.4.0 | Apache-2.0 | https://github.com/aio-libs/aiosignal |
 | annotated-doc | 0.0.4 | MIT | Homepage, https://github.com/fastapi/annotated-doc |
 | annotated-types | 0.7.0 | MIT | Homepage, https://github.com/annotated-types/annotated-types |
@@ -135,4 +135,4 @@ Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIAN
 | virtualenv | 21.14.1 | MIT | thanks.dev, https://thanks.dev/u/gh/gaborbernat |
 | webencodings | 0.5.1 | BSD-3-Clause | https://github.com/SimonSapin/python-webencodings |
 | wsproto | 1.3.2 | MIT | Homepage, https://github.com/python-hyper/wsproto/ |
-| yarl | 1.24.2 | Apache-2.0 | https://github.com/aio-libs/yarl |
+| yarl | 1.25.1 | Apache-2.0 | https://github.com/aio-libs/yarl |
