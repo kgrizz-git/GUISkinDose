@@ -132,6 +132,10 @@ jobs:
         # Full base history so range checks still work after main advances.
         git fetch --no-tags origin "$BASE_REF"
         python scripts/check_changelog.py
+    - name: Check pinned actions are real commits
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: python scripts/check_action_pins.py
     - name: Check documentation freshness
       run: python scripts/check_doc_freshness.py
     - name: Check canonical getting-started notebook cleanliness

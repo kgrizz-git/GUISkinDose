@@ -8,6 +8,28 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ## [Unreleased]
 
+- **aiohttp lock** (2026-10-19) — `uv.lock` moves aiohttp 3.14.3 → 3.14.5 and yarl 1.24.2 → 1.25.1
+  so the pre-push dependency audit passes. The three aiohttp advisories are cookie `Secure`
+  handling, a missing initial request timeout, and unbounded memory or CPU use.
+
+- **Action pin parser** (2026-10-19) — `parse_uses` recognizes a quoted `uses` key and one
+  `uses` key in a single-line flow mapping. A `uses` value that is not a single scalar
+  (empty, extra tokens, unclosed quotes, or nested) is reported as `unparseable uses value`
+  instead of being skipped. Lines nested under a `|` or `>` block are not scanned, so a
+  `run` script that contains `{uses: ...}` is not reported as an action. The block
+  indent is the key column, so a sibling `uses` after `- if: >` is still checked, and a
+  `# note: |` comment does not start a block. Explicit indent indicators such as
+  `|2` and `>2-` are block headers. A doubled single quote or a backslash-escaped
+  double quote in an earlier flow field does not hide a later `uses` key. Block scalars
+  and other YAML are still out of scope.
+
+- **Action pin check** (2026-10-18) — `scripts/check_action_pins.py` runs in the CI
+  `static-analysis` job and fails when a third-party `uses:` pin is not a full 40-hex
+  commit, when that commit is missing, or when a `# vX.Y.Z` comment peels to a different
+  commit. The weekly zizmor job only audits known-vulnerable actions, so a bad SHA in a
+  workflow that pull requests do not run (for example `release.yml`) could otherwise merge
+  unnoticed. A major-only comment such as `# v9` is not compared to the moving major tag.
+
 - **Export checkout guard** (2026-10-18) — Git subprocesses for the export path check drop
   inherited `GIT_DIR`, `GIT_WORK_TREE`, `GIT_INDEX_FILE`, and `GIT_CEILING_DIRECTORIES`
   (`GIT_CEILING_DIRECTORIES` stops upward discovery and would otherwise skip the check).

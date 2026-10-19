@@ -21,6 +21,23 @@ That keeps SemVer and contributor history organized.
 
 ### Security
 
+- **Pinned action check** (2026-10-19) — CI verifies each third-party GitHub Action pin is a
+  real commit, including workflows that pull requests do not run. The weekly zizmor job only
+  flags known-vulnerable actions. Quoted `uses` keys and single-line `{uses: ...}` mappings
+  are checked too, and a `uses` value that is not one scalar fails the check instead of
+  being ignored. Text inside a `|` or `>` script block is not treated as an action.
+  A sibling `uses` key after a folded step field is still checked. An explicit
+  block indent such as `|2` is still a script block, and an escaped quote in a
+  flow field does not hide the action. A `#` with no space before it is part of the
+  ref, not a comment, and a tag lookup that returns an unreadable body is reported as an
+  API error rather than a missing tag.
+  Package version stays `1.0.0`.
+
+- **Dependency updates** (2026-10-19) — aiohttp 3.14.5 closes three advisories in 3.14.3
+  (GHSA-494j-54xm-rwp3, GHSA-5wr8-gcqf-gqf3, GHSA-2g87-pp6c-29x5). yarl moves to 1.25.1
+  with that lock refresh. No dose-calculation or GUI behavior change. Package version
+  stays `1.0.0`.
+
 - **Dependency updates** (2026-10-17) — NiceGUI 3.18.0 rejects uploads to disabled or hidden
   `ui.upload` elements (GHSA-9mxh-cwxr-cxjj). Pandas 3.0.6, tqdm 4.70.1, kaleido 1.5.0,
   and reportlab 5.0.1 move forward with no dose-calculation or GUI behavior change.
