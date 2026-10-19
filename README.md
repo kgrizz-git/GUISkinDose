@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="src/guiskindose/gui/static/guiskindose_icon.svg" alt="GUISkinDose icon" width="96" height="96">
+  <img src="https://raw.githubusercontent.com/kgrizz-git/GUISkinDose/main/src/guiskindose/gui/static/guiskindose_icon.svg" alt="GUISkinDose icon" width="96" height="96">
 </p>
 
 <h1 align="center">GUISkinDose</h1>
@@ -13,7 +13,7 @@
   <a href="https://github.com/kgrizz-git/GUISkinDose/actions/workflows/dependency-audit.yml"><img src="https://github.com/kgrizz-git/GUISkinDose/actions/workflows/dependency-audit.yml/badge.svg?branch=main" alt="Dependency audit"></a>
   <a href="https://sonarcloud.io/summary/new_code?id=kgrizz-git_GUISkinDose"><img src="https://sonarcloud.io/api/project_badges/measure?project=kgrizz-git_GUISkinDose&amp;metric=alert_status" alt="SonarCloud quality gate"></a>
   <br>
-  <img src="https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13%20%7C%203.14-3776AB?logo=python&amp;logoColor=white" alt="Python 3.11 to 3.14">
+  <img src="https://img.shields.io/python/required-version-toml?tomlFilePath=https%3A%2F%2Fraw.githubusercontent.com%2Fkgrizz-git%2FGUISkinDose%2Fmain%2Fpyproject.toml&amp;logo=python&amp;logoColor=white&amp;color=3776AB" alt="Supported Python versions (from pyproject.toml)">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-0D9488" alt="MIT license"></a>
   <a href="https://nicegui.io"><img src="https://img.shields.io/badge/GUI-NiceGUI-4338CA" alt="NiceGUI"></a>
   <a href="https://github.com/astral-sh/ruff"><img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json" alt="Ruff"></a>

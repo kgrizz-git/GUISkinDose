@@ -9,7 +9,7 @@ and the Windows and Linux taskbar.
 
 | File | Idea |
 |---|---|
-| `f_supine_side.svg` | Side view of the patient, tube under the table. This is the current icon. |
+| `f_supine_side.svg` | Side view of the patient, tube under the table. This is the current icon; the app SVG is a byte-identical copy, so keep the two in sync (or recopy) when either changes. |
 | `e_beam_on_body.svg` | Front silhouette with a beam cone landing on a hotspot. |
 | `a_dose_map.svg` | Front silhouette with a dose hotspot. |
 | `b_beam_cone.svg` | Beam cone onto a curved skin surface. |
