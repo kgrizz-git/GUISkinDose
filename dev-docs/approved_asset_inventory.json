@@ -1996,7 +1996,7 @@
   },
   {
    "path": "src/guiskindose/gui/static/guiskindose_icon.ico",
-   "sha256": "6bc0fa2c9df86f91ad52f0049d50abeb9886708de1a57b6715cb7d28831fa62d",
+   "sha256": "ccdf365e70811c8c8d58baa7956e182fae1ff6861999bce0e3da4d2f5c945ac4",
    "kind": "opaque_binary",
    "purpose": "App icon (multi-size ICO, synthetic artwork) for the native window and Windows taskbar",
    "review": {
@@ -2007,9 +2007,53 @@
   },
   {
    "path": "src/guiskindose/gui/static/guiskindose_icon.svg",
-   "sha256": "c4b5d22d98da9dbd2763b26355fdf0a0f20d9e7d0484d28e3c88a39c75237339",
+   "sha256": "c1f60c94ee95e72ad05441fa693c3a1c00e54fc4b22184ef08a548904fba296d",
    "kind": "image",
    "purpose": "App icon (synthetic vector artwork) for the browser favicon and README header",
+   "review": {
+    "status": "approved",
+    "reviewer": "KG",
+    "reviewed_on": "2026-10-19"
+   }
+  },
+  {
+   "path": "dev-docs/branding/icon_candidates/a_dose_map.svg",
+   "sha256": "c4b5d22d98da9dbd2763b26355fdf0a0f20d9e7d0484d28e3c88a39c75237339",
+   "kind": "image",
+   "purpose": "App icon candidate (synthetic vector artwork): front silhouette with dose hotspot",
+   "review": {
+    "status": "approved",
+    "reviewer": "KG",
+    "reviewed_on": "2026-10-19"
+   }
+  },
+  {
+   "path": "dev-docs/branding/icon_candidates/b_beam_cone.svg",
+   "sha256": "bb8c68275d5d591a2df9b3f88669eeaab87705f59753e3bc8868a62c3bbfc56b",
+   "kind": "image",
+   "purpose": "App icon candidate (synthetic vector artwork): beam cone onto skin surface",
+   "review": {
+    "status": "approved",
+    "reviewer": "KG",
+    "reviewed_on": "2026-10-19"
+   }
+  },
+  {
+   "path": "dev-docs/branding/icon_candidates/e_beam_on_body.svg",
+   "sha256": "d258cfa24699eb3c816ef6ede0905445eac725d0cd357f5b6c9c90661d338065",
+   "kind": "image",
+   "purpose": "App icon candidate (synthetic vector artwork): front silhouette with beam cone",
+   "review": {
+    "status": "approved",
+    "reviewer": "KG",
+    "reviewed_on": "2026-10-19"
+   }
+  },
+  {
+   "path": "dev-docs/branding/icon_candidates/f_supine_side.svg",
+   "sha256": "c1f60c94ee95e72ad05441fa693c3a1c00e54fc4b22184ef08a548904fba296d",
+   "kind": "image",
+   "purpose": "App icon candidate (synthetic vector artwork): supine side view with under-table tube",
    "review": {
     "status": "approved",
     "reviewer": "KG",
