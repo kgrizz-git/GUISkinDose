@@ -26,6 +26,9 @@ That keeps SemVer and contributor history organized.
   flags known-vulnerable actions. Quoted `uses` keys and single-line `{uses: ...}` mappings
   are checked too, and a `uses` value that is not one scalar fails the check instead of
   being ignored. Text inside a `|` or `>` script block is not treated as an action.
+  A sibling `uses` key after a folded step field is still checked. An explicit
+  block indent such as `|2` is still a script block, and an escaped quote in a
+  flow field does not hide the action.
   Package version stays `1.0.0`.
 
 ### Security

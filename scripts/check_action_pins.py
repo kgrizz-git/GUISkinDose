@@ -275,15 +275,40 @@ def _is_block_body(line: str, block_indent: int | None) -> bool:
 
 
 def _block_header_indent(line: str) -> int | None:
-    """Return the indent of a ``key: |`` or ``key: >`` line, else None."""
+    """Return the column of a ``key: |`` or ``key: >`` key, else None.
+
+    The column is the key, not the ``-`` of a sequence item. Sibling keys of
+    ``- key: >`` sit at that column, so they are not part of the scalar.
+    A comment such as ``# note: |`` is not a block header.
+    """
     content = _without_list_marker(line.strip())
+    if content.startswith("#"):
+        return None
     _key, separator, value = content.partition(":")
     if not separator:
         return None
     indicator = value.split("#", 1)[0].strip()
-    if indicator in {"|", "|-", "|+", ">", ">-", ">+"}:
-        return len(line) - len(line.lstrip(" "))
+    if _is_block_indicator(indicator):
+        return len(line.rstrip()) - len(content)
     return None
+
+
+def _is_block_indicator(indicator: str) -> bool:
+    """Return whether ``indicator`` is a literal or folded block header.
+
+    Accepts an explicit indent digit from 1 to 9 and a ``+`` or ``-`` chomp,
+    in either order: ``|2``, ``|-2``, and ``>2-``.
+    """
+    if not indicator or indicator[0] not in "|>":
+        return False
+    rest = indicator[1:]
+    if not rest:
+        return True
+    if rest[0] in "+-" and len(rest) <= 2:
+        return len(rest) == 1 or rest[1] in "123456789"
+    if rest[0] in "123456789" and len(rest) <= 2:
+        return len(rest) == 1 or rest[1] in "+-"
+    return False
 
 
 def _without_list_marker(stripped: str) -> str:
@@ -405,22 +430,22 @@ def _end_of_flow_value(text: str, start: int) -> int | None:
 def _end_of_nest(text: str, start: int) -> int | None:
     """Return the index just after a ``{}`` or ``[]`` group, respecting quotes."""
     depth = 0
-    quote: str | None = None
-    for i in range(start, len(text)):
-        char = text[i]
-        if quote is not None:
-            if char == quote:
-                quote = None
-            continue
+    index = start
+    while index < len(text):
+        char = text[index]
         if char in "\"'":
-            quote = char
+            end = _closing_quote(text, index)
+            if end is None:
+                return None
+            index = end + 1
             continue
         if char in "{[":
             depth += 1
         elif char in "}]":
             depth -= 1
             if depth == 0:
-                return i + 1
+                return index + 1
+        index += 1
     return None
 
 
@@ -478,27 +503,42 @@ def _finish_scalar(body: str, rest: str) -> tuple[str | None, str | None, bool]:
 
 def _comment_note(line: str) -> str | None:
     """Return the first comment token on ``line`` that is outside quotes."""
-    quote: str | None = None
-    for index, char in enumerate(line):
-        if quote is not None:
-            if char == quote:
-                quote = None
-            continue
+    index = 0
+    while index < len(line):
+        char = line[index]
         if char in "\"'":
-            quote = char
+            end = _closing_quote(line, index)
+            if end is None:
+                return None
+            index = end + 1
             continue
         if char == "#":
             comment = line[index + 1 :].strip()
             return comment.split()[0] if comment else None
+        index += 1
     return None
 
 
 def _closing_quote(text: str, start: int) -> int | None:
-    """Return the index of the closing quote that matches ``text[start]``."""
+    """Return the index of the closing quote, honoring YAML escapes.
+
+    A doubled single quote is one escaped quote. A backslash inside double
+    quotes escapes the next character, including a quote.
+    """
     quote = text[start]
-    for index in range(start + 1, len(text)):
+    index = start + 1
+    while index < len(text):
+        if quote == "'" and text.startswith("''", index):
+            index += 2
+            continue
+        if quote == '"' and text[index] == "\\":
+            if index + 1 >= len(text):
+                return None
+            index += 2
+            continue
         if text[index] == quote:
             return index
+        index += 1
     return None
 
 

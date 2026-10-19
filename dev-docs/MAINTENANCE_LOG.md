@@ -12,7 +12,11 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
   `uses` key in a single-line flow mapping. A `uses` value that is not a single scalar
   (empty, extra tokens, unclosed quotes, or nested) is reported as `unparseable uses value`
   instead of being skipped. Lines nested under a `|` or `>` block are not scanned, so a
-  `run` script that contains `{uses: ...}` is not reported as an action. Block scalars
+  `run` script that contains `{uses: ...}` is not reported as an action. The block
+  indent is the key column, so a sibling `uses` after `- if: >` is still checked, and a
+  `# note: |` comment does not start a block. Explicit indent indicators such as
+  `|2` and `>2-` are block headers. A doubled single quote or a backslash-escaped
+  double quote in an earlier flow field does not hide a later `uses` key. Block scalars
   and other YAML are still out of scope.
 
 - **Action pin check** (2026-10-18) — `scripts/check_action_pins.py` runs in the CI

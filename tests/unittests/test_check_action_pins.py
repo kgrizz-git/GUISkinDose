@@ -254,6 +254,46 @@ def test_run_line_that_mentions_uses_is_ignored(tmp_path: Path) -> None:
     assert check_workflows(tmp_path, _forbid_fetch, "token") == []
 
 
+def test_flow_mapping_keeps_uses_after_an_escaped_quote(tmp_path: Path) -> None:
+    """A doubled single quote in an earlier field must not hide the uses key."""
+    _write(tmp_path, "- {name: 'it''s checkout', uses: actions/checkout@v4}\n")
+    failures = check_workflows(tmp_path, _forbid_fetch, "token")
+    assert len(failures) == 1
+    assert "actions/checkout: not a full commit sha" in failures[0]
+
+
+def test_flow_mapping_keeps_uses_after_an_escaped_double_quote(tmp_path: Path) -> None:
+    _write(tmp_path, '- {name: "say \\"hi\\"", uses: actions/checkout@v4}\n')
+    failures = check_workflows(tmp_path, _forbid_fetch, "token")
+    assert len(failures) == 1
+    assert "actions/checkout: not a full commit sha" in failures[0]
+
+
+@pytest.mark.parametrize("header", ["|2", ">2-"])
+def test_explicit_block_indent_is_not_scanned(tmp_path: Path, header: str) -> None:
+    _write(tmp_path, f"steps:\n  - run: {header}\n      uses: actions/checkout@v4\n")
+    assert check_workflows(tmp_path, _forbid_fetch, "token") == []
+
+
+def test_uses_after_folded_first_key_is_checked(tmp_path: Path) -> None:
+    """A sibling uses key is not part of the folded value of the first key."""
+    _write(
+        tmp_path,
+        "steps:\n  - if: >-\n      github.event_name == 'push'\n    uses: actions/checkout@v4\n",
+    )
+    failures = check_workflows(tmp_path, _forbid_fetch, "token")
+    assert len(failures) == 1
+    assert "workflow.yml:4:" in failures[0]
+    assert "not a full commit sha" in failures[0]
+
+
+def test_comment_that_looks_like_a_block_header_is_ignored(tmp_path: Path) -> None:
+    _write(tmp_path, "steps:\n  # note: |\n    uses: actions/checkout@v4\n")
+    failures = check_workflows(tmp_path, _forbid_fetch, "token")
+    assert len(failures) == 1
+    assert "workflow.yml:3:" in failures[0]
+
+
 def test_uses_inside_run_block_is_ignored(tmp_path: Path) -> None:
     """A script body is not an action, and the next step still is."""
     _write(
