@@ -70,6 +70,12 @@ That keeps SemVer and contributor history organized.
 
 ### Added
 
+- **Double-click launchers** (2026-10-19) — `GUISkinDose.command` starts the GUI from Finder on macOS.
+  On first run, `run_gui.sh` / `run_gui.bat` give it the app icon (macOS) or create a git-ignored
+  `GUISkinDose.lnk` (Windows) or `GUISkinDose.desktop` (Linux) with the icon. Set
+  `GUISKINDOSE_NO_LAUNCHER_SETUP=1` to skip. The macOS window pauses on an error so it stays
+  readable. Package version stays `1.0.0`.
+
 - **App icon** (2026-10-19) — The GUI now shows a GUISkinDose icon in the browser tab. Native mode
   uses it for the window and taskbar on Windows and Linux. macOS still shows the Python icon in the
   Dock. The README gains the icon, status badges, and clone-first install steps, and the custom

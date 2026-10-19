@@ -54,6 +54,10 @@ debug_*
 src/guiskindose/example_data/RDSR/clinical*
 
 .DS_Store
+# Generated per machine by scripts/desktop_launchers.py; embed absolute paths.
+/GUISkinDose.lnk
+/GUISkinDose.desktop
+/.GUISkinDose.desktop.tmp
 temp*
 !settings_example.json
 .mypy_cache/

@@ -160,6 +160,8 @@ def _run_launcher(cwd: Path, stdin_text: str | None) -> subprocess.CompletedProc
     # the create-venv prompt disappears and shifts every later stdin answer).
     # Tests must observe the no-venv flow deterministically on any runner.
     env = {k: v for k, v in os.environ.items() if k != "VIRTUAL_ENV"}
+    # The launcher icon step must never write into the checkout during tests.
+    env["GUISKINDOSE_NO_LAUNCHER_SETUP"] = "1"
     return subprocess.run(
         ["cmd", "/d", "/c", str(bat)],
         cwd=cwd,
@@ -241,3 +243,18 @@ def test_bat_exec_skip_install_exit_code(tmp_path: Path) -> None:  # pragma: no 
     result = _run_launcher(tmp_path, "n\n3\n")
     assert result.returncode == 0
     assert "Then rerun run_gui.bat." in result.stdout
+
+
+def test_launchers_call_icon_setup_best_effort() -> None:
+    """Both launchers run the icon step once the interpreter is final, never fatally, with an opt-out."""
+    sh = SH.read_text(encoding="utf-8")
+    call = sh.index("scripts/desktop_launchers.py ensure || true")
+    assert sh.rindex("check_python_version", 0, call) < call < sh.index('if setup_dependencies "$PYTHON"')
+    assert "GUISKINDOSE_NO_LAUNCHER_SETUP:-" in sh
+
+    bat = BAT.read_text(encoding="utf-8")
+    # Relative path: %~dp0 would be mangled by delayed expansion when the checkout path contains "!".
+    bat_call = bat.index("if exist scripts\\desktop_launchers.py %PYTHON_CMD% scripts\\desktop_launchers.py ensure 2>nul")
+    assert bat_call < bat.index('%PYTHON_CMD% -c "import guiskindose"')
+    assert "if not defined GUISKINDOSE_NO_LAUNCHER_SETUP" in bat
+    assert "%~dp0scripts" not in bat

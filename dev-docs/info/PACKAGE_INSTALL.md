@@ -48,7 +48,9 @@ With installation:
 python -m guiskindose --mode gui
 ```
 
-This is how the GUI launcher script (`run_gui.sh`) works — it just calls `python -m guiskindose --mode gui`.
+The launcher scripts (`run_gui.sh`, `run_gui.bat`, and the macOS `GUISkinDose.command`) end in this
+command. Before that they find Python 3.11+, offer to create `.venv` and install the extras, and give
+the double-click launcher the app icon (`scripts/desktop_launchers.py`).
 
 ### 3. Automatic Dependency Resolution
 

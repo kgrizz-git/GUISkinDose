@@ -91,7 +91,24 @@ run_gui.bat
 ```
 
 Both scripts prompt you to run in browser mode (option 1) or native
-window mode (option 2, default). Or launch directly:
+window mode (option 2, default).
+
+**Double-click launchers.** After the first run, each OS has a file you can
+double-click, with the GUISkinDose icon:
+
+| OS | Double-click | Created by |
+|----|--------------|------------|
+| macOS | `GUISkinDose.command` (opens Terminal) | Tracked; its icon is set on first run |
+| Windows | `GUISkinDose.lnk` | The first `run_gui.bat` run |
+| Linux | `GUISkinDose.desktop` (GNOME: allow launching if asked) | The first `./run_gui.sh` run |
+
+The shortcuts stay inside the checkout and are git-ignored (on Linux, GNOME records
+the "allow launching" trust flag in its own metadata store under your home folder). Set
+`GUISKINDOSE_NO_LAUNCHER_SETUP=1` to skip creating them. On macOS, a checkout
+downloaded as a ZIP is quarantined: allow it under System Settings → Privacy &
+Security → Open Anyway. A `git clone` is not quarantined.
+
+Or launch directly:
 
 ```bash
 python -m guiskindose --mode gui              # browser mode

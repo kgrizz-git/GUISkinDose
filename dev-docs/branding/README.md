@@ -14,5 +14,9 @@ and the Windows and Linux taskbar.
 | `a_dose_map.svg` | Front silhouette with a dose hotspot. |
 | `b_beam_cone.svg` | Beam cone onto a curved skin surface. |
 
+The double-click launchers use the same files: `scripts/desktop_launchers.py` sets the ICO as the
+Finder icon of `GUISkinDose.command`, the ICO on the Windows `GUISkinDose.lnk`, and the SVG in the
+Linux `GUISkinDose.desktop`.
+
 All artwork is synthetic and uses the `DESIGN.md` palette. To change the icon, edit the app SVG or copy a
 candidate over it, and regenerate the ICO at 16–256 px. Both files need new approved-inventory hashes.
