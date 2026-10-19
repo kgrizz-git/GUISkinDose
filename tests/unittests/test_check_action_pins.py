@@ -184,6 +184,92 @@ def test_github_api_error_is_not_reported_as_a_missing_commit(tmp_path: Path) ->
     assert failures[0].endswith("workflow.yml:2: actions/checkout: github api status 503")
 
 
+def test_quoted_uses_key_is_checked(tmp_path: Path) -> None:
+    _write(tmp_path, f'steps:\n  - "uses": actions/checkout@{PIN}\n')
+    seen: list[str] = []
+
+    def fetch(url: str, token: str) -> tuple[int, str]:
+        assert token
+        seen.append(url)
+        return 200, "{}"
+
+    assert check_workflows(tmp_path, fetch, "token") == []
+    assert any(url.endswith(f"/commits/{PIN}") for url in seen)
+
+
+def test_single_quoted_uses_key_is_checked(tmp_path: Path) -> None:
+    _write(tmp_path, "steps:\n  - 'uses': actions/checkout@v4\n")
+    failures = check_workflows(tmp_path, _forbid_fetch, "token")
+    assert len(failures) == 1
+    assert failures[0].endswith("workflow.yml:2: actions/checkout: not a full commit sha")
+
+
+def test_flow_mapping_uses_key_is_checked(tmp_path: Path) -> None:
+    _write(tmp_path, f"steps:\n  - {{name: checkout, uses: actions/checkout@{PIN}}}\n")
+    seen: list[str] = []
+
+    def fetch(url: str, token: str) -> tuple[int, str]:
+        assert token
+        seen.append(url)
+        return 200, "{}"
+
+    assert check_workflows(tmp_path, fetch, "token") == []
+    assert any(url.endswith(f"/commits/{PIN}") for url in seen)
+
+
+def test_quoted_uses_key_inside_flow_mapping_is_checked(tmp_path: Path) -> None:
+    _write(tmp_path, 'steps:\n  - { "uses": actions/checkout@v4 }\n')
+    failures = check_workflows(tmp_path, _forbid_fetch, "token")
+    assert len(failures) == 1
+    assert "not a full commit sha" in failures[0]
+
+
+def test_quoted_uses_value_with_spaces_is_reported(tmp_path: Path) -> None:
+    _write(tmp_path, 'uses: "actions/checkout@not a pin"\n')
+    failures = check_workflows(tmp_path, _forbid_fetch, "token")
+    assert len(failures) == 1
+    assert "not a full commit sha" in failures[0]
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        '"uses":\n',
+        "uses:\n",
+        "- uses:\n",
+        "uses: |\n",
+        "- {uses: actions/checkout@v4 extra}\n",
+        '- {"uses": "actions/checkout@v4" trailing}\n',
+    ],
+)
+def test_unparseable_uses_value_is_reported(tmp_path: Path, text: str) -> None:
+    _write(tmp_path, text)
+    failures = check_workflows(tmp_path, _forbid_fetch, "token")
+    assert len(failures) == 1
+    assert "unparseable uses value" in failures[0]
+
+
+def test_run_line_that_mentions_uses_is_ignored(tmp_path: Path) -> None:
+    _write(tmp_path, "steps:\n  - run: echo uses: actions/checkout@v4\n")
+    assert check_workflows(tmp_path, _forbid_fetch, "token") == []
+
+
+def test_uses_inside_run_block_is_ignored(tmp_path: Path) -> None:
+    """A script body is not an action, and the next step still is."""
+    _write(
+        tmp_path,
+        "steps:\n"
+        "  - run: |\n"
+        '      {"uses": "actions/checkout@v4"}\n'
+        "      uses: actions/checkout@v4\n"
+        "  - uses: actions/checkout@v4\n",
+    )
+    failures = check_workflows(tmp_path, _forbid_fetch, "token")
+    assert len(failures) == 1
+    assert "workflow.yml:5:" in failures[0]
+    assert "not a full commit sha" in failures[0]
+
+
 def test_missing_token_exits_2(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("GH_TOKEN", raising=False)
     monkeypatch.delenv("GITHUB_TOKEN", raising=False)

@@ -8,6 +8,13 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ## [Unreleased]
 
+- **Action pin parser** (2026-10-19) — `parse_uses` recognizes a quoted `uses` key and one
+  `uses` key in a single-line flow mapping. A `uses` value that is not a single scalar
+  (empty, extra tokens, unclosed quotes, or nested) is reported as `unparseable uses value`
+  instead of being skipped. Lines nested under a `|` or `>` block are not scanned, so a
+  `run` script that contains `{uses: ...}` is not reported as an action. Block scalars
+  and other YAML are still out of scope.
+
 - **Action pin check** (2026-10-18) — `scripts/check_action_pins.py` runs in the CI
   `static-analysis` job and fails when a third-party `uses:` pin is not a full 40-hex
   commit, when that commit is missing, or when a `# vX.Y.Z` comment peels to a different

@@ -21,9 +21,12 @@ That keeps SemVer and contributor history organized.
 
 ### Changed
 
-- **Pinned action check** (2026-10-18) — CI verifies each third-party GitHub Action pin is a
+- **Pinned action check** (2026-10-19) — CI verifies each third-party GitHub Action pin is a
   real commit, including workflows that pull requests do not run. The weekly zizmor job only
-  flags known-vulnerable actions. Package version stays `1.0.0`.
+  flags known-vulnerable actions. Quoted `uses` keys and single-line `{uses: ...}` mappings
+  are checked too, and a `uses` value that is not one scalar fails the check instead of
+  being ignored. Text inside a `|` or `>` script block is not treated as an action.
+  Package version stays `1.0.0`.
 
 ### Security
 

@@ -9,7 +9,10 @@ What it does:
     subpath is not a separate repo. When the line comment is a full semver
     (``# vX.Y.Z``), that tag is resolved and peeled to a commit, which must
     equal the pin. A major-only comment (``# v9``) is not compared to the
-    moving major tag.
+    moving major tag. Quoted ``uses`` keys and a single-line flow mapping are
+    recognized. A ``uses`` value that is not one scalar is a failure. This is
+    not a YAML parser: block scalars and multi-line values are rejected, and
+    lines inside a ``|`` or ``>`` block are not scanned.
 
 Inputs:
     Workflow directory (default: ``.github/workflows`` in this checkout).
@@ -18,7 +21,9 @@ Inputs:
 
 Outputs:
     Exit 0 and one OK line when every pin passes. Exit 1 with one line per
-    failure (file, line, owner/repo, reason). Exit 2 when no token is set.
+    failure (file, line, target, reason). The target is ``owner/repo`` for a
+    remote action, or ``uses`` when the value cannot be read. Exit 2 when no
+    token is set.
     Expected API failures are reported as pin failures, not tracebacks.
 
 The live check needs a GitHub token in ``GH_TOKEN`` or ``GITHUB_TOKEN``.
@@ -117,25 +122,33 @@ def workflow_files(directory: Path) -> list[Path]:
     return sorted(files)
 
 
-def parse_uses(line: str) -> tuple[str, str | None] | None:
-    """Return ``(spec, version note)`` when ``line`` is a single-line ``uses:``.
+@dataclass(frozen=True)
+class _ParsedUses:
+    """One ``uses`` value.
 
-    A bare ``#`` still counts as a uses line. The version note is the first
-    comment token, or None when the comment is empty.
+    ``spec`` is None when the key was found but the value is not one scalar.
     """
-    stripped = line.strip()
-    if stripped.startswith("- "):
-        stripped = stripped[2:].lstrip()
-    if not stripped.startswith("uses:"):
+
+    spec: str | None
+    note: str | None
+
+
+def parse_uses(line: str) -> _ParsedUses | None:
+    """Return a ``uses`` entry, or None when ``line`` has no ``uses`` key.
+
+    Recognizes a plain ``uses:`` key, a quoted ``uses`` key, and one ``uses``
+    key inside a single-line ``{...}`` flow mapping. A bare ``#`` still counts
+    as a uses line. The version note is the first comment token, or None when
+    the comment is empty. ``spec`` is None when the value cannot be read as one
+    scalar (empty, unclosed quotes, extra tokens, or a nested value).
+    """
+    content = _without_list_marker(line.strip())
+    if content.startswith("{"):
+        return _flow_uses(content, line)
+    found = _mapping_key_value_at(content, 0)
+    if found is None or found[0] != "uses":
         return None
-    rest = stripped[len("uses:") :].strip()
-    spec, separator, comment = rest.partition("#")
-    spec = spec.strip().strip("\"'")
-    if not spec or any(character.isspace() for character in spec):
-        return None
-    if not separator or not comment.strip():
-        return spec, None
-    return spec, comment.split()[0]
+    return _parsed_from_value(content[found[1] :], line)
 
 
 def semver_comment(note: str | None) -> str | None:
@@ -154,16 +167,25 @@ def semver_comment(note: str | None) -> str | None:
 def uses_in_file(path: Path) -> tuple[list[ActionUse], list[str]]:
     """Collect remote action uses from one workflow file.
 
-    Local ``./`` references and ``docker://`` images are ignored. An
-    unparseable remote spec is a failure.
+    Local ``./`` references and ``docker://`` images are ignored. A ``uses``
+    key whose value is not one scalar is a failure, as is an unparseable
+    remote spec. Lines nested under a ``|`` or ``>`` block are ignored so a
+    ``run`` script is not mistaken for an action.
     """
     found: list[ActionUse] = []
     failures: list[str] = []
+    block_indent: int | None = None
     for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+        if _is_block_body(line, block_indent):
+            continue
+        block_indent = _block_header_indent(line)
         parsed = parse_uses(line)
         if parsed is None:
             continue
-        recorded = _record_use(path, number, parsed[0], parsed[1])
+        if parsed.spec is None:
+            failures.append(_failure_line(path, number, "uses", "unparseable uses value"))
+            continue
+        recorded = _record_use(path, number, parsed.spec, parsed.note)
         if isinstance(recorded, ActionUse):
             found.append(recorded)
         elif recorded is not None:
@@ -241,6 +263,249 @@ def _display_path(path: Path) -> str:
 
 def _failure_line(path: Path, line: int, target: str, reason: str) -> str:
     return f"{_display_path(path)}:{line}: {target}: {reason}"
+
+
+def _is_block_body(line: str, block_indent: int | None) -> bool:
+    """Return whether ``line`` is still inside a literal or folded block."""
+    if block_indent is None:
+        return False
+    if not line.strip():
+        return True
+    return len(line) - len(line.lstrip(" ")) > block_indent
+
+
+def _block_header_indent(line: str) -> int | None:
+    """Return the indent of a ``key: |`` or ``key: >`` line, else None."""
+    content = _without_list_marker(line.strip())
+    _key, separator, value = content.partition(":")
+    if not separator:
+        return None
+    indicator = value.split("#", 1)[0].strip()
+    if indicator in {"|", "|-", "|+", ">", ">-", ">+"}:
+        return len(line) - len(line.lstrip(" "))
+    return None
+
+
+def _without_list_marker(stripped: str) -> str:
+    """Drop one leading sequence marker so ``- uses:`` and ``-{uses:}`` both match."""
+    if stripped.startswith("- "):
+        return stripped[2:].lstrip()
+    if stripped.startswith(("-{", '-"', "-'")):
+        return stripped[1:].lstrip()
+    return stripped
+
+
+def _mapping_key_value_at(text: str, index: int) -> tuple[str, int] | None:
+    """Return ``(key, index after colon)`` when a mapping key starts at ``index``."""
+    i = _skip_spaces(text, index)
+    if i >= len(text) or text[i] in ",}#":
+        return None
+    key, i = _read_key(text, i)
+    if key is None:
+        return None
+    i = _skip_spaces(text, i)
+    if i >= len(text) or text[i] != ":":
+        return None
+    return key, i + 1
+
+
+def _read_key(text: str, index: int) -> tuple[str | None, int]:
+    """Return the key text and the index after it, or ``(None, index)``."""
+    if text[index] in "\"'":
+        end = _closing_quote(text, index)
+        if end is None:
+            return None, index
+        return text[index + 1 : end], end + 1
+    end = index
+    while end < len(text) and text[end] not in ": \t,}#":
+        end += 1
+    if end == index:
+        return None, index
+    return text[index:end], end
+
+
+def _flow_uses(text: str, line: str) -> _ParsedUses | None:
+    """Return the ``uses`` entry in one flow mapping, or None when it has none."""
+    value, unparseable = _flow_uses_value(text)
+    if unparseable:
+        return _ParsedUses(None, None)
+    if value is None:
+        return None
+    return _parsed_from_value(value, line)
+
+
+def _flow_uses_value(text: str) -> tuple[str | None, bool]:
+    """Return ``(uses value, unparseable)`` for a ``{...}`` mapping.
+
+    A broken mapping that never names ``uses`` is ignored. A ``uses`` key whose
+    entry does not end at a comma or ``}`` is unparseable.
+    """
+    index = 1
+    found: str | None = None
+    while index < len(text):
+        index = _skip_spaces(text, index)
+        if index < len(text) and text[index] == "}":
+            break
+        step = _next_flow_entry(text, index)
+        if step is None:
+            return _broken_flow(text, index, found)
+        key, value, index = step
+        if key != "uses":
+            continue
+        if found is not None:
+            return None, True
+        found = value
+    if found is None:
+        return None, False
+    return found, False
+
+
+def _broken_flow(text: str, index: int, found: str | None) -> tuple[str | None, bool]:
+    """Report a broken entry only when it is, or follows, a ``uses`` key."""
+    key_here = _mapping_key_value_at(text, index)
+    if found is not None or (key_here is not None and key_here[0] == "uses"):
+        return None, True
+    return None, False
+
+
+def _next_flow_entry(text: str, index: int) -> tuple[str, str, int] | None:
+    """Return ``(key, value text, index after the entry)``, or None when the entry breaks."""
+    found = _mapping_key_value_at(text, index)
+    if found is None:
+        return None
+    key, value_start = found
+    value_end = _end_of_flow_value(text, value_start)
+    if value_end is None:
+        return None
+    nxt = _skip_spaces(text, value_end)
+    if nxt < len(text) and text[nxt] == ",":
+        return key, text[value_start:value_end], nxt + 1
+    if nxt < len(text) and text[nxt] == "}":
+        return key, text[value_start:value_end], nxt
+    return None
+
+
+def _end_of_flow_value(text: str, start: int) -> int | None:
+    """Return the index just after one flow-mapping value."""
+    i = _skip_spaces(text, start)
+    if i >= len(text):
+        return i
+    if text[i] in "\"'":
+        end = _closing_quote(text, i)
+        if end is None:
+            return None
+        return end + 1
+    if text[i] in "{[":
+        return _end_of_nest(text, i)
+    while i < len(text) and text[i] not in ",}#":
+        i += 1
+    return i
+
+
+def _end_of_nest(text: str, start: int) -> int | None:
+    """Return the index just after a ``{}`` or ``[]`` group, respecting quotes."""
+    depth = 0
+    quote: str | None = None
+    for i in range(start, len(text)):
+        char = text[i]
+        if quote is not None:
+            if char == quote:
+                quote = None
+            continue
+        if char in "\"'":
+            quote = char
+            continue
+        if char in "{[":
+            depth += 1
+        elif char in "}]":
+            depth -= 1
+            if depth == 0:
+                return i + 1
+    return None
+
+
+def _parsed_from_value(value_text: str, line: str) -> _ParsedUses:
+    """Read one scalar and an optional ``# vX.Y.Z`` note."""
+    spec, note, ok = _read_scalar(value_text)
+    if not ok or not spec:
+        return _ParsedUses(None, None)
+    if note is None:
+        note = _comment_note(line)
+    return _ParsedUses(spec, note)
+
+
+def _read_scalar(value_text: str) -> tuple[str | None, str | None, bool]:
+    """Return ``(spec, note, ok)``. ``ok`` is false when the value is not one scalar."""
+    text = value_text.strip()
+    if not text or text[0] in "{[|>*!&":
+        return None, None, False
+    if text[0] in "\"'":
+        quoted = _quoted_body(text)
+        if quoted is None:
+            return None, None, False
+        body, rest = quoted
+        if not body or "\\" in body or "''" in body:
+            return None, None, False
+        return _finish_scalar(body, rest)
+    end = 0
+    while end < len(text) and text[end] not in " \t#":
+        end += 1
+    if end == 0:
+        return None, None, False
+    return _finish_scalar(text[:end], text[end:])
+
+
+def _quoted_body(text: str) -> tuple[str, str] | None:
+    """Return ``(body, rest)`` for a matching pair of quotes, without unescaping."""
+    end = _closing_quote(text, 0)
+    if end is None:
+        return None
+    return text[1:end], text[end + 1 :]
+
+
+def _finish_scalar(body: str, rest: str) -> tuple[str | None, str | None, bool]:
+    """Accept ``body`` only when ``rest`` is empty or a ``#`` comment."""
+    remainder = rest.strip()
+    if not remainder:
+        return body, None, True
+    if not remainder.startswith("#"):
+        return None, None, False
+    comment = remainder[1:].strip()
+    if not comment:
+        return body, None, True
+    return body, comment.split()[0], True
+
+
+def _comment_note(line: str) -> str | None:
+    """Return the first comment token on ``line`` that is outside quotes."""
+    quote: str | None = None
+    for index, char in enumerate(line):
+        if quote is not None:
+            if char == quote:
+                quote = None
+            continue
+        if char in "\"'":
+            quote = char
+            continue
+        if char == "#":
+            comment = line[index + 1 :].strip()
+            return comment.split()[0] if comment else None
+    return None
+
+
+def _closing_quote(text: str, start: int) -> int | None:
+    """Return the index of the closing quote that matches ``text[start]``."""
+    quote = text[start]
+    for index in range(start + 1, len(text)):
+        if text[index] == quote:
+            return index
+    return None
+
+
+def _skip_spaces(text: str, index: int) -> int:
+    while index < len(text) and text[index] in " \t":
+        index += 1
+    return index
 
 
 def _record_use(path: Path, number: int, spec: str, note: str | None) -> ActionUse | str | None:
