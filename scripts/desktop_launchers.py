@@ -28,8 +28,10 @@ from __future__ import annotations
 
 import argparse
 import base64
+import contextlib
 import os
 import platform
+import struct
 import subprocess
 import sys
 from collections.abc import Callable, Mapping
@@ -158,12 +160,14 @@ def _ensure_windows(root: Path, env: Mapping[str, str], run: Runner) -> str:
 
 
 def shortcut_names_root(lnk: Path, root: Path) -> bool:
-    """Return whether ``lnk`` stores ``root`` as its working directory.
+    """Return whether ``lnk`` stores exactly ``root`` as its working directory.
 
-    Shell links keep the working directory as UTF-16LE text, so a byte search is
-    enough to tell a current shortcut from one left by a moved checkout.
+    Shell links keep the working directory as a counted string: a little-endian
+    16-bit character count, then UTF-16LE text. Matching the count too keeps
+    ``C:\\work\\GUISkinDose`` from matching a stale ``C:\\work\\GUISkinDose-old``.
     """
-    return str(root).encode("utf-16-le") in lnk.read_bytes()
+    text = str(root).encode("utf-16-le")
+    return struct.pack("<H", len(text) // 2) + text in lnk.read_bytes()
 
 
 def _powershell_argv(env: Mapping[str, str]) -> list[str]:
@@ -196,14 +200,19 @@ def _ensure_linux(root: Path, env: Mapping[str, str], run: Runner) -> str:
         return "Launcher shortcut skipped."
     content = render_desktop_entry(root).encode("utf-8")
     current = target.is_file() and target.read_bytes() == content
-    if current and os.access(target, os.X_OK):
-        return ""
     if not current:
         _atomic_write(target, content)
-    # A lost executable bit (or a first run where gio failed) is repaired here too.
-    target.chmod(0o755)
-    _quiet(run, ["gio", "set", str(target), "metadata::trusted", "true"])
+    if not current or not os.access(target, os.X_OK):
+        target.chmod(0o755)
+    # Trust lives outside the file, so a failed or cleared trust flag is reapplied every run.
+    _set_gnome_trust(target, run)
     return "" if current else "Launcher shortcut created: GUISkinDose.desktop"
+
+
+def _set_gnome_trust(target: Path, run: Runner) -> None:
+    """Mark ``target`` trusted for GNOME; a missing ``gio`` or a failure is not an error."""
+    with contextlib.suppress(OSError, subprocess.SubprocessError):
+        _quiet(run, ["gio", "set", str(target), "metadata::trusted", "true"])
 
 
 def desktop_path_is_safe(root: Path) -> bool:

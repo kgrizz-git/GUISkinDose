@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import os
+import struct
 import subprocess
 from pathlib import Path
 
@@ -94,10 +95,16 @@ def test_macos_script_guards_nil_image() -> None:
 # --- Windows ---------------------------------------------------------------
 
 
+def _counted(text: str) -> bytes:
+    """Encode ``text`` the way a shell link stores its working directory."""
+    data = text.encode("utf-16-le")
+    return b"\x00\x10" + struct.pack("<H", len(data) // 2) + data + b"\x00\x00"
+
+
 def _writes_lnk(argv: list[str], kwargs: dict[str, object]) -> None:
     env = kwargs["env"]
     assert isinstance(env, dict)
-    Path(env["GSD_LNK"]).write_bytes(env["GSD_ROOT"].encode("utf-16-le"))
+    Path(env["GSD_LNK"]).write_bytes(_counted(env["GSD_ROOT"]))
 
 
 def test_windows_argv_is_constant_and_paths_are_env_only(tmp_path: Path) -> None:
@@ -125,7 +132,7 @@ def test_windows_argv_is_constant_and_paths_are_env_only(tmp_path: Path) -> None
 
 def test_windows_current_shortcut_skips_powershell(tmp_path: Path) -> None:
     root = _root(tmp_path)
-    (root / dl.LNK_NAME).write_bytes(b"\x00" + str(root).encode("utf-16-le") + b"\x00")
+    (root / dl.LNK_NAME).write_bytes(_counted(str(root)))
     runner = FakeRunner()
     assert dl.ensure(root, "Windows", {}, runner) == ""
     assert runner.calls == []
@@ -133,16 +140,33 @@ def test_windows_current_shortcut_skips_powershell(tmp_path: Path) -> None:
 
 def test_windows_shortcut_from_moved_checkout_is_rewritten(tmp_path: Path) -> None:
     root = _root(tmp_path)
-    (root / dl.LNK_NAME).write_bytes("C:\\old\\checkout".encode("utf-16-le"))
+    (root / dl.LNK_NAME).write_bytes(_counted("C:\\old\\checkout"))
     runner = FakeRunner(on_call=_writes_lnk)
     assert dl.ensure(root, "Windows", {}, runner) == "Launcher shortcut updated."
     assert len(runner.calls) == 1
     assert dl.shortcut_names_root(root / dl.LNK_NAME, root)
 
 
+def test_windows_shortcut_for_longer_old_path_is_rewritten(tmp_path: Path) -> None:
+    """A renamed checkout whose new path is a prefix of the old one still converges."""
+    root = _root(tmp_path, "GUISkinDose")
+    (root / dl.LNK_NAME).write_bytes(_counted(f"{root}-old"))
+    assert not dl.shortcut_names_root(root / dl.LNK_NAME, root)
+    runner = FakeRunner(on_call=_writes_lnk)
+    assert dl.ensure(root, "Windows", {}, runner) == "Launcher shortcut updated."
+    assert len(runner.calls) == 1
+
+
+def test_windows_right_text_with_wrong_count_is_not_current(tmp_path: Path) -> None:
+    root = _root(tmp_path)
+    text = str(root).encode("utf-16-le")
+    (root / dl.LNK_NAME).write_bytes(struct.pack("<H", len(text) // 2 + 4) + text)
+    assert not dl.shortcut_names_root(root / dl.LNK_NAME, root)
+
+
 def test_windows_blocked_com_with_stale_shortcut_is_not_success(tmp_path: Path) -> None:
     root = _root(tmp_path)
-    stale = "C:\\old\\checkout".encode("utf-16-le")
+    stale = _counted("C:\\old\\checkout")
     (root / dl.LNK_NAME).write_bytes(stale)
     assert dl.ensure(root, "Windows", {}, FakeRunner(returncode=1)) == "Launcher shortcut not created."
     assert (root / dl.LNK_NAME).read_bytes() == stale
@@ -172,12 +196,25 @@ def test_linux_renders_exact_entry_for_space_and_non_ascii(tmp_path: Path) -> No
 
 
 @POSIX_ONLY
-def test_linux_second_run_writes_nothing(tmp_path: Path) -> None:
+def test_linux_second_run_writes_nothing_but_retries_trust(tmp_path: Path) -> None:
     root = _root(tmp_path)
     dl.ensure(root, "Linux", {}, FakeRunner())
+    before = (root / dl.DESKTOP_NAME).stat().st_mtime_ns
     runner = FakeRunner()
     assert dl.ensure(root, "Linux", {}, runner) == ""
-    assert runner.calls == []
+    assert (root / dl.DESKTOP_NAME).stat().st_mtime_ns == before
+    assert [argv[:2] for argv, _ in runner.calls] == [["gio", "set"]]
+
+
+@POSIX_ONLY
+@pytest.mark.parametrize("error", [FileNotFoundError("gio"), subprocess.TimeoutExpired("gio", 10)])
+def test_linux_missing_or_failing_gio_still_reports_created(tmp_path: Path, error: Exception) -> None:
+    def run(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess[bytes]:
+        raise error
+
+    root = _root(tmp_path)
+    assert dl.ensure(root, "Linux", {}, run) == "Launcher shortcut created: GUISkinDose.desktop"
+    assert dl.ensure(root, "Linux", {}, run) == ""
 
 
 @POSIX_ONLY

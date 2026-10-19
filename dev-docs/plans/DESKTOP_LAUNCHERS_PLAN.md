@@ -44,10 +44,14 @@ xattrs; a moved clone invalidates absolute paths) and no extra file holds path-d
 - **macOS:** if `xattr -p com.apple.ResourceFork GUISkinDose.command` succeeds, the icon is present;
   otherwise apply it.
 - **Linux:** render the entry, compare with the bytes on disk, write only on difference. A
-  matching entry that lost its executable bit is re-chmodded and re-trusted quietly.
-- **Windows:** a shell link stores its working directory as UTF-16LE text, so an existing
-  `GUISkinDose.lnk` that contains this checkout's root is left alone and PowerShell never starts.
-  Anything else (a moved clone) is rewritten.
+  matching entry that lost its executable bit is re-chmodded. GNOME trust lives outside the file,
+  so `gio set` is retried quietly every run (bounded by the 10 s timeout); a missing `gio`
+  (non-GNOME desktops) is not an error.
+- **Windows:** a shell link stores its working directory as a counted UTF-16LE string (a 16-bit
+  character count, then the text). An existing `GUISkinDose.lnk` that contains the count plus this
+  checkout's root is left alone and PowerShell never starts. Matching the count as well as the text
+  makes the check exact, so a checkout renamed to a prefix of its old path
+  (`...\GUISkinDose-old` → `...\GUISkinDose`) is rewritten, as is any other moved clone.
 
 Status output is one fixed line, printed only when something was created or failed. No absolute
 paths, user names, exception text (`str(OSError)` carries the path), or subprocess output are
