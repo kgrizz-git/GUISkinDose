@@ -54,6 +54,7 @@ REMOTE_RE = re.compile(r"^(?P<owner>[A-Za-z0-9_.-]+)/(?P<repo>[A-Za-z0-9_.-]+)(?
 OK_LINE = "Action pin check OK."
 Fetch = Callable[[str, str], tuple[int, str]]
 _MAX_PEEL_DEPTH = 5
+UNREADABLE_RESPONSE = "unreadable github api response"
 
 
 class _RefuseRedirects(urllib.request.HTTPRedirectHandler):
@@ -68,6 +69,7 @@ class _RefuseRedirects(urllib.request.HTTPRedirectHandler):
         headers: Message,
         newurl: str,
     ) -> urllib.request.Request | None:
+        """Raise instead of following any redirect."""
         raise urllib.error.HTTPError(req.full_url, code, "redirect refused for credentialed request", headers, fp)
 
 
@@ -138,7 +140,8 @@ def parse_uses(line: str) -> _ParsedUses | None:
 
     Recognizes a plain ``uses:`` key, a quoted ``uses`` key, and one ``uses``
     key inside a single-line ``{...}`` flow mapping. A bare ``#`` still counts
-    as a uses line. The version note is the first comment token, or None when
+    as a uses line. ``#`` opens a comment only after whitespace, so
+    ``a/b@sha#x`` is one value and ``uses: #x`` has no value. The version note is the first comment token, or None when
     the comment is empty. ``spec`` is None when the value cannot be read as one
     scalar (empty, unclosed quotes, extra tokens, or a nested value).
     """
@@ -243,6 +246,7 @@ def _request_headers(token: str) -> dict[str, str]:
 
 
 def _error_body(exc: urllib.error.HTTPError) -> str:
+    """Return the decoded body of an HTTP error, or an empty string when unreadable."""
     try:
         raw = exc.read()
     except OSError:
@@ -251,10 +255,12 @@ def _error_body(exc: urllib.error.HTTPError) -> str:
 
 
 def _default_workflows() -> Path:
+    """Return this checkout's ``.github/workflows`` directory."""
     return Path(__file__).resolve().parents[1] / ".github" / "workflows"
 
 
 def _display_path(path: Path) -> str:
+    """Return ``path`` relative to the working directory when possible, else as given."""
     try:
         return path.resolve().relative_to(Path.cwd().resolve()).as_posix()
     except (OSError, ValueError):
@@ -262,6 +268,7 @@ def _display_path(path: Path) -> str:
 
 
 def _failure_line(path: Path, line: int, target: str, reason: str) -> str:
+    """Format one ``file:line: target: reason`` failure."""
     return f"{_display_path(path)}:{line}: {target}: {reason}"
 
 
@@ -312,12 +319,14 @@ def _is_block_indicator(indicator: str) -> bool:
 
 
 def _without_list_marker(stripped: str) -> str:
-    """Drop one leading sequence marker so ``- uses:`` and ``-{uses:}`` both match."""
-    if stripped.startswith("- "):
-        return stripped[2:].lstrip()
-    if stripped.startswith(("-{", '-"', "-'")):
-        return stripped[1:].lstrip()
-    return stripped
+    """Drop leading sequence markers so ``- uses:``, ``- - uses:``, and ``-{uses:}`` all match."""
+    while True:
+        if stripped.startswith("- "):
+            stripped = stripped[2:].lstrip()
+        elif stripped.startswith(("-{", '-"', "-'")):
+            stripped = stripped[1:].lstrip()
+        else:
+            return stripped
 
 
 def _mapping_key_value_at(text: str, index: int) -> tuple[str, int] | None:
@@ -422,7 +431,7 @@ def _end_of_flow_value(text: str, start: int) -> int | None:
         return end + 1
     if text[i] in "{[":
         return _end_of_nest(text, i)
-    while i < len(text) and text[i] not in ",}#":
+    while i < len(text) and text[i] not in ",}" and not _starts_comment(text, i):
         i += 1
     return i
 
@@ -462,7 +471,7 @@ def _parsed_from_value(value_text: str, line: str) -> _ParsedUses:
 def _read_scalar(value_text: str) -> tuple[str | None, str | None, bool]:
     """Return ``(spec, note, ok)``. ``ok`` is false when the value is not one scalar."""
     text = value_text.strip()
-    if not text or text[0] in "{[|>*!&":
+    if not text or text[0] in "{[|>*!&#":
         return None, None, False
     if text[0] in "\"'":
         quoted = _quoted_body(text)
@@ -473,7 +482,7 @@ def _read_scalar(value_text: str) -> tuple[str | None, str | None, bool]:
             return None, None, False
         return _finish_scalar(body, rest)
     end = 0
-    while end < len(text) and text[end] not in " \t#":
+    while end < len(text) and text[end] not in " \t":
         end += 1
     if end == 0:
         return None, None, False
@@ -493,7 +502,7 @@ def _finish_scalar(body: str, rest: str) -> tuple[str | None, str | None, bool]:
     remainder = rest.strip()
     if not remainder:
         return body, None, True
-    if not remainder.startswith("#"):
+    if not remainder.startswith("#") or rest[:1] not in (" ", "\t"):
         return None, None, False
     comment = remainder[1:].strip()
     if not comment:
@@ -512,7 +521,7 @@ def _comment_note(line: str) -> str | None:
                 return None
             index = end + 1
             continue
-        if char == "#":
+        if _starts_comment(line, index):
             comment = line[index + 1 :].strip()
             return comment.split()[0] if comment else None
         index += 1
@@ -542,7 +551,17 @@ def _closing_quote(text: str, start: int) -> int | None:
     return None
 
 
+def _starts_comment(text: str, index: int) -> bool:
+    """Return whether a YAML comment starts at ``index``.
+
+    ``#`` opens a comment only at the start of the text or after whitespace;
+    ``a@b#c`` is one plain scalar.
+    """
+    return text[index] == "#" and (index == 0 or text[index - 1] in " \t")
+
+
 def _skip_spaces(text: str, index: int) -> int:
+    """Return the first index at or after ``index`` that is not a space or tab."""
     while index < len(text) and text[index] in " \t":
         index += 1
     return index
@@ -572,6 +591,7 @@ def _pin_failures(
     commits: dict[tuple[str, str, str], int],
     tags: dict[tuple[str, str, str], tuple[str | None, str | None]],
 ) -> list[str]:
+    """Return a failure line for each use whose pin does not verify."""
     failures: list[str] = []
     for use in uses:
         reason = _pin_reason(use, fetch_url, token, commits, tags)
@@ -587,6 +607,7 @@ def _pin_reason(
     commits: dict[tuple[str, str, str], int],
     tags: dict[tuple[str, str, str], tuple[str | None, str | None]],
 ) -> str | None:
+    """Return why ``use`` fails, or None when its commit (and semver tag) verify."""
     if not SHA_RE.fullmatch(use.ref):
         return "not a full commit sha"
     sha = use.ref.lower()
@@ -612,6 +633,7 @@ def _tag_reason(
     token: str,
     tags: dict[tuple[str, str, str], tuple[str | None, str | None]],
 ) -> str | None:
+    """Return why the semver comment does not match the pin, or None when it does."""
     tag = use.semver or ""
     pointed, error = _cached_tag_commit(fetch_url, token, use.owner, use.repo, tag, tags)
     if error is not None:
@@ -658,7 +680,8 @@ def _peel_tag(fetch_url: Fetch, token: str, owner: str, repo: str, tag: str) -> 
     """Return the commit a tag points at.
 
     Annotated tags are followed to the commit. Lightweight tags already name it.
-    ``(None, None)`` means the tag is missing. A non-404 failure is the error string.
+    ``(None, None)`` means the tag is missing. A non-404 failure or a 200 body
+    that is not a JSON object is the error string.
     """
     status, body = fetch_url(_api("repos", owner, repo, "git", "ref", "tags", tag), token)
     if status == 404:
@@ -667,7 +690,7 @@ def _peel_tag(fetch_url: Fetch, token: str, owner: str, repo: str, tag: str) -> 
         return None, f"github api status {status}"
     payload = _json_object(body)
     if payload is None:
-        return None, None
+        return None, UNREADABLE_RESPONSE
     return _peel(fetch_url, token, owner, repo, payload.get("object"), 0)
 
 
@@ -697,11 +720,12 @@ def _peel(
         return None, f"github api status {status}"
     payload = _json_object(body)
     if payload is None:
-        return None, None
+        return None, UNREADABLE_RESPONSE
     return _peel(fetch_url, token, owner, repo, payload.get("object"), depth + 1)
 
 
 def _json_object(body: str) -> dict[str, object] | None:
+    """Return ``body`` parsed as a JSON object, or None when it is not one."""
     try:
         payload = json.loads(body)
     except json.JSONDecodeError:
@@ -712,6 +736,7 @@ def _json_object(body: str) -> dict[str, object] | None:
 
 
 def _object_sha(obj: object) -> tuple[str, str] | None:
+    """Return ``(type, sha)`` from a git object reference, or None when malformed."""
     if not isinstance(obj, dict):
         return None
     kind = obj.get("type")
@@ -722,6 +747,7 @@ def _object_sha(obj: object) -> tuple[str, str] | None:
 
 
 def _api(*parts: str) -> str:
+    """Build a GitHub API URL, percent-encoding each path segment."""
     encoded = "/".join(urllib.parse.quote(part, safe="") for part in parts)
     return f"{API}/{encoded}"
 

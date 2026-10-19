@@ -15,10 +15,12 @@ TAG_OBJECT = "c" * 40
 
 
 def _write(directory: Path, text: str) -> None:
+    """Write ``text`` as the only workflow file in ``directory``."""
     (directory / "workflow.yml").write_text(text, encoding="utf-8")
 
 
 def _forbid_fetch(url: str, token: str) -> tuple[int, str]:
+    """Fail the test if the checker reaches the network."""
     raise AssertionError(f"fetch should not be called for {url} with token length {len(token)}")
 
 
@@ -316,3 +318,96 @@ def test_missing_token_exits_2(monkeypatch: pytest.MonkeyPatch) -> None:
     with pytest.raises(SystemExit) as caught:
         resolve_token()
     assert caught.value.code == 2
+
+
+@pytest.mark.parametrize("body", ["not json", "[]"])
+def test_unreadable_tag_response_is_not_a_missing_tag(tmp_path: Path, body: str) -> None:
+    """A 200 tag lookup with a body that is not a JSON object is an API error."""
+    _write(tmp_path, f"steps:\n  - uses: actions/checkout@{PIN}  # v1.2.3\n")
+
+    def fetch(url: str, token: str) -> tuple[int, str]:
+        assert token
+        if url.endswith(f"/commits/{PIN}"):
+            return 200, "{}"
+        if url.endswith("/git/ref/tags/v1.2.3"):
+            return 200, body
+        raise AssertionError(url)
+
+    failures = check_workflows(tmp_path, fetch, "token")
+    assert len(failures) == 1
+    assert failures[0].endswith("actions/checkout: unreadable github api response")
+
+
+def test_unreadable_annotated_tag_response_is_not_a_missing_tag(tmp_path: Path) -> None:
+    _write(tmp_path, f"steps:\n  - uses: actions/checkout@{PIN}  # v1.2.3\n")
+
+    def fetch(url: str, token: str) -> tuple[int, str]:
+        assert token
+        if url.endswith(f"/commits/{PIN}"):
+            return 200, "{}"
+        if url.endswith("/git/ref/tags/v1.2.3"):
+            return 200, json.dumps({"object": {"type": "tag", "sha": TAG_OBJECT}})
+        if url.endswith(f"/git/tags/{TAG_OBJECT}"):
+            return 200, "not json"
+        raise AssertionError(url)
+
+    failures = check_workflows(tmp_path, fetch, "token")
+    assert failures[0].endswith("actions/checkout: unreadable github api response")
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        f"  - uses: actions/checkout@{PIN}#frag\n",
+        f"  - {{uses: actions/checkout@{PIN}#frag}}\n",
+    ],
+)
+def test_hash_without_leading_space_is_part_of_the_ref(tmp_path: Path, line: str) -> None:
+    """YAML opens a comment only after whitespace, so ``@sha#frag`` is not a bare SHA."""
+    _write(tmp_path, "steps:\n" + line)
+    failures = check_workflows(tmp_path, _forbid_fetch, "token")
+    assert len(failures) == 1
+    assert "actions/checkout: not a full commit sha" in failures[0]
+
+
+def test_flow_mapping_comment_after_space_is_still_a_comment(tmp_path: Path) -> None:
+    _write(tmp_path, f"steps:\n  - {{uses: actions/checkout@{PIN} }} # v9\n")
+
+    def fetch(url: str, token: str) -> tuple[int, str]:
+        assert token
+        assert url.endswith(f"/commits/{PIN}"), url
+        return 200, "{}"
+
+    assert check_workflows(tmp_path, fetch, "token") == []
+
+
+def test_uses_after_block_in_nested_sequence_is_checked(tmp_path: Path) -> None:
+    """Every leading ``-`` is stripped, so the block ends at the key column."""
+    _write(tmp_path, "steps:\n  - - if: >-\n        x\n      uses: actions/checkout@v4\n")
+    failures = check_workflows(tmp_path, _forbid_fetch, "token")
+    assert len(failures) == 1
+    assert "workflow.yml:4:" in failures[0]
+
+
+@pytest.mark.parametrize("text", [f"- uses: #actions/checkout@{PIN}\n", f"- uses: 'actions/checkout@{PIN}'#v1.2.3\n"])
+def test_hash_comment_rules_fail_closed(tmp_path: Path, text: str) -> None:
+    """A value that is only a comment, or a quote glued to ``#``, is not one scalar."""
+    _write(tmp_path, text)
+    failures = check_workflows(tmp_path, _forbid_fetch, "token")
+    assert len(failures) == 1
+    assert "unparseable uses value" in failures[0]
+
+
+def test_tab_before_comment_keeps_the_semver_note(tmp_path: Path) -> None:
+    _write(tmp_path, f"steps:\n  - uses: actions/checkout@{PIN}\t# v1.2.3\n")
+    seen: list[str] = []
+
+    def fetch(url: str, token: str) -> tuple[int, str]:
+        assert token
+        seen.append(url)
+        if url.endswith(f"/commits/{PIN}"):
+            return 200, "{}"
+        return 200, json.dumps({"object": {"type": "commit", "sha": PIN}})
+
+    assert check_workflows(tmp_path, fetch, "token") == []
+    assert any(url.endswith("/git/ref/tags/v1.2.3") for url in seen)

@@ -19,7 +19,7 @@ That keeps SemVer and contributor history organized.
 
 ## [Unreleased]
 
-### Changed
+### Security
 
 - **Pinned action check** (2026-10-19) — CI verifies each third-party GitHub Action pin is a
   real commit, including workflows that pull requests do not run. The weekly zizmor job only
@@ -28,10 +28,10 @@ That keeps SemVer and contributor history organized.
   being ignored. Text inside a `|` or `>` script block is not treated as an action.
   A sibling `uses` key after a folded step field is still checked. An explicit
   block indent such as `|2` is still a script block, and an escaped quote in a
-  flow field does not hide the action.
+  flow field does not hide the action. A `#` with no space before it is part of the
+  ref, not a comment, and a tag lookup that returns an unreadable body is reported as an
+  API error rather than a missing tag.
   Package version stays `1.0.0`.
-
-### Security
 
 - **Dependency updates** (2026-10-19) — aiohttp 3.14.5 closes three advisories in 3.14.3
   (GHSA-494j-54xm-rwp3, GHSA-5wr8-gcqf-gqf3, GHSA-2g87-pp6c-29x5). yarl moves to 1.25.1
