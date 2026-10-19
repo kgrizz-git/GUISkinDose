@@ -151,7 +151,8 @@ def _ensure_windows(root: Path, env: Mapping[str, str], run: Runner) -> str:
     if existed and shortcut_names_root(lnk, root):
         return ""
     _quiet(run, _powershell_argv(env), cwd=str(root), env=_shortcut_env(root, env))
-    if lnk.is_file():
+    # A stale shortcut left by a moved clone must not count as success if PowerShell was blocked.
+    if lnk.is_file() and shortcut_names_root(lnk, root):
         return "Launcher shortcut updated." if existed else "Launcher shortcut created: GUISkinDose.lnk"
     return "Launcher shortcut not created."
 

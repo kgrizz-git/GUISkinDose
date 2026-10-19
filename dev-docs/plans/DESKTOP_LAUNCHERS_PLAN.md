@@ -72,7 +72,8 @@ checkout.
 - The icon lives in extended attributes, which git ignores, so `git status` stays clean.
 - Gatekeeper: `git clone` does not quarantine files. A browser-downloaded ZIP does, and on
   macOS 15+ right-click → Open no longer bypasses it: use System Settings → Privacy & Security →
-  Open Anyway, or `xattr -dr com.apple.quarantine` on the folder. The smoke test also checks that
+  Open Anyway (approves just that file; recursively stripping quarantine is not recommended, since it
+  disables Gatekeeper for everything in the download). The smoke test also checks that
   the GitHub ZIP keeps mode 755 on `.command` and `run_gui.sh`.
 
 ### Windows

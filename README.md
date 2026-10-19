@@ -106,8 +106,7 @@ The shortcuts stay inside the checkout and are git-ignored (on Linux, GNOME reco
 the "allow launching" trust flag in its own metadata store under your home folder). Set
 `GUISKINDOSE_NO_LAUNCHER_SETUP=1` to skip creating them. On macOS, a checkout
 downloaded as a ZIP is quarantined: allow it under System Settings → Privacy &
-Security → Open Anyway, or run `xattr -dr com.apple.quarantine` on the folder.
-A `git clone` is not quarantined.
+Security → Open Anyway. A `git clone` is not quarantined.
 
 Or launch directly:
 

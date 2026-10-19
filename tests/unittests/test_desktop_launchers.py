@@ -140,6 +140,14 @@ def test_windows_shortcut_from_moved_checkout_is_rewritten(tmp_path: Path) -> No
     assert dl.shortcut_names_root(root / dl.LNK_NAME, root)
 
 
+def test_windows_blocked_com_with_stale_shortcut_is_not_success(tmp_path: Path) -> None:
+    root = _root(tmp_path)
+    stale = "C:\\old\\checkout".encode("utf-16-le")
+    (root / dl.LNK_NAME).write_bytes(stale)
+    assert dl.ensure(root, "Windows", {}, FakeRunner(returncode=1)) == "Launcher shortcut not created."
+    assert (root / dl.LNK_NAME).read_bytes() == stale
+
+
 def test_windows_blocked_com_reports_not_created(tmp_path: Path) -> None:
     assert dl.ensure(_root(tmp_path), "Windows", {}, FakeRunner(returncode=1)) == "Launcher shortcut not created."
 
