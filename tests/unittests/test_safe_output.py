@@ -10,17 +10,31 @@ from unittest import mock
 
 import pytest
 
-from guiskindose.safe_output import UnsafeOutputPathError, atomic_write_private
-
-_INHERITED_GIT_ENV = ("GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE")
+from guiskindose.safe_output import _GIT_LOCATION_ENV, UnsafeOutputPathError, atomic_write_private
 
 
 def _git(args: list[str]) -> None:
     """Run git for a temporary repository without this process's checkout variables."""
     env = os.environ.copy()
-    for name in _INHERITED_GIT_ENV:
+    for name in _GIT_LOCATION_ENV:
         env.pop(name, None)
     subprocess.run(args, check=True, env=env)
+
+
+def _record_git_env(monkeypatch: pytest.MonkeyPatch) -> list[dict[str, str]]:
+    """Capture the environment of later git spawns, then run the real command."""
+    real_run = subprocess.run
+    seen: list[dict[str, str]] = []
+
+    def spy(*args: object, **kwargs: object) -> subprocess.CompletedProcess[str]:
+        command = args[0] if args else None
+        env = kwargs.get("env")
+        if isinstance(command, list) and command and command[0] == "git" and isinstance(env, dict):
+            seen.append({str(key): str(value) for key, value in env.items()})
+        return real_run(*args, **kwargs)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(subprocess, "run", spy)
+    return seen
 
 
 def test_atomic_write_is_private_and_requires_force_to_overwrite(tmp_path: Path) -> None:
@@ -79,7 +93,25 @@ def test_checkout_guard_ignores_inherited_git_location(tmp_path: Path, monkeypat
     monkeypatch.setenv("GIT_DIR", str(repo_root / ".git"))
     monkeypatch.setenv("GIT_WORK_TREE", str(repo_root))
     monkeypatch.setenv("GIT_INDEX_FILE", str(tmp_path / "not-the-index"))
+    monkeypatch.setenv("GIT_CEILING_DIRECTORIES", str(tmp_path))
+    seen = _record_git_env(monkeypatch)
     target = tmp_path / "report.json"
+
+    with pytest.raises(UnsafeOutputPathError, match="export_checkout_path_forbidden"):
+        atomic_write_private(target, b"{}")
+    assert not target.exists()
+    assert seen
+    for env in seen:
+        assert set(env).isdisjoint(_GIT_LOCATION_ENV)
+
+
+def test_checkout_guard_finds_repo_below_an_inherited_ceiling(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """A ceiling on a parent directory must not hide the destination checkout."""
+    _git(["git", "init", "-q", str(tmp_path)])
+    nested = tmp_path / "nested"
+    nested.mkdir()
+    monkeypatch.setenv("GIT_CEILING_DIRECTORIES", str(tmp_path))
+    target = nested / "report.json"
 
     with pytest.raises(UnsafeOutputPathError, match="export_checkout_path_forbidden"):
         atomic_write_private(target, b"{}")
@@ -93,6 +125,55 @@ def test_rejection_message_never_echoes_sensitive_destination(tmp_path: Path) ->
     with pytest.raises(UnsafeOutputPathError) as caught:
         atomic_write_private(target, b"replacement")
     assert sentinel not in str(caught.value)
+
+
+def _git_argv(args: tuple[object, ...]) -> list[str] | None:
+    command = args[0] if args else None
+    if not isinstance(command, list) or not command or command[0] != "git":
+        return None
+    return [part for part in command if isinstance(part, str)]
+
+
+def test_checkout_guard_allows_write_when_git_disappears_after_root(tmp_path: Path) -> None:
+    """A spawn failure after the root is known fails open instead of blocking the export."""
+    target = tmp_path / "report.json"
+    root = str(tmp_path.resolve())
+
+    def fake_run(*args: object, **kwargs: object) -> subprocess.CompletedProcess[str]:
+        del kwargs
+        argv = _git_argv(args)
+        if argv is None:
+            raise AssertionError("unexpected subprocess")
+        if "rev-parse" in argv:
+            return subprocess.CompletedProcess(argv, 0, root + "\n", "")
+        raise FileNotFoundError("git")
+
+    with mock.patch.object(subprocess, "run", side_effect=fake_run):
+        written = atomic_write_private(target, b"payload")
+    assert written == target
+    assert target.read_bytes() == b"payload"
+
+
+def test_checkout_guard_allows_write_when_ignore_check_cannot_spawn(tmp_path: Path) -> None:
+    """A spawn failure on the ignore check, after an untracked result, still allows the write."""
+    target = tmp_path / "report.json"
+    root = str(tmp_path.resolve())
+
+    def fake_run(*args: object, **kwargs: object) -> subprocess.CompletedProcess[str]:
+        del kwargs
+        argv = _git_argv(args)
+        if argv is None:
+            raise AssertionError("unexpected subprocess")
+        if "rev-parse" in argv:
+            return subprocess.CompletedProcess(argv, 0, root + "\n", "")
+        if "ls-files" in argv:
+            return subprocess.CompletedProcess(argv, 1, "", "")
+        raise FileNotFoundError("git")
+
+    with mock.patch.object(subprocess, "run", side_effect=fake_run):
+        written = atomic_write_private(target, b"payload")
+    assert written == target
+    assert target.read_bytes() == b"payload"
 
 
 def test_atomic_write_succeeds_when_git_is_missing(tmp_path: Path) -> None:

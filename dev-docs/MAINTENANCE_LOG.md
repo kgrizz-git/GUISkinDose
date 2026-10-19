@@ -8,6 +8,14 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ## [Unreleased]
 
+- **Export checkout guard** (2026-10-18) — Git subprocesses for the export path check drop
+  inherited `GIT_DIR`, `GIT_WORK_TREE`, `GIT_INDEX_FILE`, and `GIT_CEILING_DIRECTORIES`
+  (`GIT_CEILING_DIRECTORIES` stops upward discovery and would otherwise skip the check).
+  Tests cover a tracked index path, a non-ignored checkout path, an inherited location
+  environment (including the env actually passed to Git), a ceiling that would hide the
+  destination repository, and a Git failure after the root was already resolved. The guard
+  is documented as best-effort: it allows the write when Git cannot resolve a repository.
+
 - **Code scanning alert cleanup** (2026-10-17) — cleared six open CodeQL quality alerts:
   re-exported `prepare_cli_settings` via module assignment (avoids CodeQL unused-import
   while keeping the public `guiskindose.main` API), dropped unused test module constants,

@@ -13,6 +13,16 @@ class UnsafeOutputPathError(ValueError):
     """Raised when an export destination violates the write policy."""
 
 
+# These override ``git -C``: the first three select another checkout or index,
+# and GIT_CEILING_DIRECTORIES stops the walk that finds the destination repo.
+_GIT_LOCATION_ENV = (
+    "GIT_DIR",
+    "GIT_WORK_TREE",
+    "GIT_INDEX_FILE",
+    "GIT_CEILING_DIRECTORIES",
+)
+
+
 def _run_git(argv: list[str]) -> subprocess.CompletedProcess[str] | None:
     """Run a git command; return None if the git executable cannot be spawned.
 
@@ -21,14 +31,15 @@ def _run_git(argv: list[str]) -> subprocess.CompletedProcess[str] | None:
 
     Returns:
         The completed process, or None on ``OSError`` (for example, Git is not installed).
-        Inherited ``GIT_DIR``, ``GIT_WORK_TREE``, and ``GIT_INDEX_FILE`` are removed so
-        the command uses the ``-C`` directory. On Windows, a non-zero
-        ``CREATE_NO_WINDOW`` flag hides the console flash.
+        Inherited location variables in ``_GIT_LOCATION_ENV`` are removed so the command
+        uses the ``-C`` directory. On Windows, a non-zero ``CREATE_NO_WINDOW`` flag hides
+        the console flash.
+
+    The checkout guard is best-effort. A ``None`` result, or a ``rev-parse`` that does
+    not resolve a repository, skips the check and allows the write.
     """
-    # GIT_DIR, GIT_WORK_TREE, and GIT_INDEX_FILE would point this check at
-    # some other checkout. Drop them so -C selects the destination's repo.
     env = os.environ.copy()
-    for name in ("GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE"):
+    for name in _GIT_LOCATION_ENV:
         env.pop(name, None)
     no_window = int(getattr(subprocess, "CREATE_NO_WINDOW", 0) or 0)
     try:
@@ -54,6 +65,10 @@ def _existing_parent(path: Path) -> Path:
 
 
 def _git_root(parent: Path) -> Path | None:
+    """Return the checkout root, or None when git cannot resolve one.
+
+    None fails open: the caller skips the checkout policy and allows the write.
+    """
     result = _run_git(["git", "-C", str(parent), "rev-parse", "--show-toplevel"])
     if result is None:
         return None
@@ -64,7 +79,11 @@ def _git_root(parent: Path) -> Path | None:
 
 
 def _validate_checkout_destination(target: Path, root: Path, *, allow_ignored_checkout: bool) -> None:
-    """Reject tracked or non-ignored destinations under a Git checkout."""
+    """Reject tracked or non-ignored destinations under a Git checkout.
+
+    Best-effort only. If a later git command cannot be spawned, the check stops
+    and the write is allowed. A path outside ``root`` is also allowed.
+    """
     try:
         relative = target.relative_to(root)
     except ValueError:

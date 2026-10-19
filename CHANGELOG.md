@@ -31,9 +31,10 @@ That keeps SemVer and contributor history organized.
 
 - **Export writes without Git** (2026-10-18) — Clinical and derived exports succeed when Git is not
   installed (the checkout-path guard is skipped instead of aborting the write). Frozen
-  portable builds do not run the Git checkout-path check at all. The checkout check also
-  ignores inherited `GIT_DIR`, `GIT_WORK_TREE`, and `GIT_INDEX_FILE`, so it inspects the
-  destination directory rather than another checkout.
+  portable builds do not run the Git checkout-path check at all. The checkout check ignores
+  inherited `GIT_DIR`, `GIT_WORK_TREE`, `GIT_INDEX_FILE`, and `GIT_CEILING_DIRECTORIES`, so
+  it inspects the destination directory rather than another checkout or a search ceiling.
+  On Windows the check does not open a console window.
 - **phi-scan scheduled workflow** (2026-10-17) — Refreshed expired `.phi-scanbaseline`
   entries (90-day review window) so the advisory CSV/TSV scan passes again; the workflow
   now re-runs without `--quiet` when the scan fails so CI logs show findings, and runs
