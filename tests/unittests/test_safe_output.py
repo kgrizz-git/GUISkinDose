@@ -39,6 +39,29 @@ def test_checkout_writes_require_an_explicit_ignored_root(tmp_path: Path) -> Non
     assert target.read_bytes() == b"{}"
 
 
+def test_tracked_checkout_path_is_forbidden(tmp_path: Path) -> None:
+    """A path still in the index is rejected after the working tree file is removed."""
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
+    tracked = tmp_path / "report.json"
+    tracked.write_text("seed", encoding="utf-8")
+    subprocess.run(["git", "-C", str(tmp_path), "add", "--", "report.json"], check=True)
+    tracked.unlink()
+
+    with pytest.raises(UnsafeOutputPathError, match="export_tracked_path_forbidden"):
+        atomic_write_private(tracked, b"{}")
+    assert not tracked.exists()
+
+
+def test_non_ignored_checkout_path_is_forbidden(tmp_path: Path) -> None:
+    """A new file inside a checkout is rejected when it is not gitignored."""
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
+    target = tmp_path / "report.json"
+
+    with pytest.raises(UnsafeOutputPathError, match="export_checkout_path_forbidden"):
+        atomic_write_private(target, b"{}")
+    assert not target.exists()
+
+
 def test_rejection_message_never_echoes_sensitive_destination(tmp_path: Path) -> None:
     sentinel = "PATIENT-SENTINEL-12345.json"
     target = tmp_path / sentinel
