@@ -1993,6 +1993,28 @@
     "reviewer": "KG",
     "reviewed_on": "2026-09-22"
    }
+  },
+  {
+   "path": "src/guiskindose/gui/static/guiskindose_icon.ico",
+   "sha256": "6bc0fa2c9df86f91ad52f0049d50abeb9886708de1a57b6715cb7d28831fa62d",
+   "kind": "opaque_binary",
+   "purpose": "App icon (multi-size ICO, synthetic artwork) for the native window and Windows taskbar",
+   "review": {
+    "status": "approved",
+    "reviewer": "KG",
+    "reviewed_on": "2026-10-19"
+   }
+  },
+  {
+   "path": "src/guiskindose/gui/static/guiskindose_icon.svg",
+   "sha256": "c4b5d22d98da9dbd2763b26355fdf0a0f20d9e7d0484d28e3c88a39c75237339",
+   "kind": "image",
+   "purpose": "App icon (synthetic vector artwork) for the browser favicon and README header",
+   "review": {
+    "status": "approved",
+    "reviewer": "KG",
+    "reviewed_on": "2026-10-19"
+   }
   }
  ]
 }

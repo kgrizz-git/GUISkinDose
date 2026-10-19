@@ -53,6 +53,11 @@ That keeps SemVer and contributor history organized.
 
 ### Added
 
+- **App icon** (2026-10-19) — The GUI now shows a GUISkinDose icon in the browser tab. Native mode
+  uses it for the window and taskbar on Windows and Linux. macOS still shows the Python icon in the
+  Dock. The README gains the icon, status badges, and clone-first install steps, and the custom
+  equipment-profile reference moves to `docs/source/user/equipment_profiles.md`.
+
 - **Equipment profile review surfaces (Phase 2)** (2026-10-14) — Calculate and
   Results show custom equipment-profile complete/partial match notices from staged
   captures or calculation output; HTML/XLSX/DOCX/PDF rich reports add an optional

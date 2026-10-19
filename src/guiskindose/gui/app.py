@@ -77,6 +77,17 @@ GUI_VERSION = "1.1.0"
 
 _STATIC_DIR = Path(__file__).resolve().parent / "static"
 _STATIC_URL = "/guiskindose-static"
+_ICON_SVG = _STATIC_DIR / "guiskindose_icon.svg"
+_ICON_ICO = _STATIC_DIR / "guiskindose_icon.ico"
+
+
+def app_icon_path(native: bool) -> Path:
+    """Icon for the browser tab (SVG) or the native window and taskbar (ICO).
+
+    NiceGUI hands the native favicon to Windows ``LoadImageW``, which reads only
+    ``.ico``; pywebview's GTK and Qt backends take the same file as ``icon``.
+    """
+    return _ICON_ICO if native else _ICON_SVG
 
 
 def material_symbols_stylesheet_href() -> str:
@@ -507,6 +518,7 @@ def _configure_native_window() -> tuple[int, int]:
         x=prefs.x,
         y=prefs.y,
     )
+    app.native.start_args["icon"] = str(app_icon_path(native=True))
     if prefs.maximized:
         app.native.window_args["maximized"] = True
     elif original_maximized and sys.platform == "darwin":
@@ -686,7 +698,7 @@ def run_gui(native: bool = False, host: str | None = None, port: int | None = No
             reload=False,
             port=bind_port,
             show=show_browser,
-            favicon="🩻",
+            favicon=app_icon_path(native),
             reconnect_timeout=30.0,
         )
     except KeyboardInterrupt:

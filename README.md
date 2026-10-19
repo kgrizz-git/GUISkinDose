@@ -1,4 +1,33 @@
-# GUISkinDose
+<p align="center">
+  <img src="src/guiskindose/gui/static/guiskindose_icon.svg" alt="GUISkinDose icon" width="96" height="96">
+</p>
+
+<h1 align="center">GUISkinDose</h1>
+
+<p align="center">
+  Peak skin dose and 3D skin dose maps for fluoroscopic X-ray procedures.
+</p>
+
+<p align="center">
+  <a href="https://github.com/kgrizz-git/GUISkinDose/actions/workflows/ci.yml"><img src="https://github.com/kgrizz-git/GUISkinDose/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI"></a>
+  <a href="https://github.com/kgrizz-git/GUISkinDose/actions/workflows/dependency-audit.yml"><img src="https://github.com/kgrizz-git/GUISkinDose/actions/workflows/dependency-audit.yml/badge.svg?branch=main" alt="Dependency audit"></a>
+  <a href="https://sonarcloud.io/summary/new_code?id=kgrizz-git_GUISkinDose"><img src="https://sonarcloud.io/api/project_badges/measure?project=kgrizz-git_GUISkinDose&amp;metric=alert_status" alt="SonarCloud quality gate"></a>
+  <br>
+  <img src="https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13%20%7C%203.14-3776AB?logo=python&amp;logoColor=white" alt="Python 3.11 to 3.14">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-0D9488" alt="MIT license"></a>
+  <a href="https://nicegui.io"><img src="https://img.shields.io/badge/GUI-NiceGUI-4338CA" alt="NiceGUI"></a>
+  <a href="https://github.com/astral-sh/ruff"><img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json" alt="Ruff"></a>
+  <a href="#intended-use-and-responsibility"><img src="https://img.shields.io/badge/use-research%20%2F%20QA%20only-831843" alt="Research and QA use only; not FDA-cleared"></a>
+</p>
+
+<p align="center">
+  <a href="#quick-launch-gui">Quick launch</a> ·
+  <a href="#installation">Installation</a> ·
+  <a href="#headless-use">Headless use</a> ·
+  <a href="docs/source/user/user_guide.md">User guide</a> ·
+  <a href="CHANGELOG.md">Changelog</a> ·
+  <a href="https://github.com/kgrizz-git/GUISkinDose/discussions">Discussions</a>
+</p>
 
 **Independently maintained fork** of [PySkinDose](https://github.com/rvbCMTS/PySkinDose).
 Original author: Max Hellström. This fork is **not** an official or endorsed
@@ -173,11 +202,17 @@ Within the intended-use boundary above, GUISkinDose is meant to be used in a few
 
 ## Installation
 
-For local development, install the project in editable mode:
+GUISkinDose is not yet published on PyPI. Clone the repository and install it
+in editable mode:
 
 ```bash
+git clone https://github.com/kgrizz-git/GUISkinDose.git
+cd GUISkinDose
 pip install -e .
 ```
+
+With [uv](https://docs.astral.sh/uv/), `uv sync --extra gui` creates the
+environment from the pinned `uv.lock` instead.
 
 To include the GUI dependencies:
 
@@ -245,75 +280,13 @@ print(f"Estimated PSD: {output['psd']:.1f} mGy")
 
 When `settings.output_format` is set to `dict` or `json`, the result can be used programmatically. The exported result includes items such as patient/table/pad data, event geometry, correction factors, dose map data, and peak skin dose. If you already have normalized RDSR data in a pandas `DataFrame`, use `analyze_normalized_data_with_custom_settings_object()` instead.
 
-### Custom equipment profiles (Python API, experimental)
+### Custom equipment profiles (experimental)
 
-Validated manufacturer/model coordinate profiles can be assembled into a frozen session and bound
-on settings before loading **raw** input (DICOM or raw-shaped tabular). Matching exams apply all
-15 effective coordinate fields before geometry calculation; dict/JSON results report the per-exam
-match, inheritance notice, and session hashes under `equipment_profile_match`:
-
-```python
-from guiskindose import PyskindoseSettings, load_settings_example_json
-from guiskindose.equipment_profiles import assemble_session
-from guiskindose.main import analyze_input_file
-
-session = assemble_session(documents=[{"schema_version": 1, "profiles": [...]}])
-settings = PyskindoseSettings(settings=load_settings_example_json(), equipment_profile_session=session)
-settings.mode = "calculate_dose"
-output = analyze_input_file("study.dcm", settings=settings)
-print(output["equipment_profile_match"]["notice"]["text"])
-```
-
-A settings dict (or JSON text) may carry its own sources instead under an
-`equipment_profiles` block (`files` with `path`/`format`/`sheet`, `store`
-with `path`/`ids`), assembled during construction — no silent ignore:
-
-```python
-config = load_settings_example_json()
-config["equipment_profiles"] = {"files": [{"path": "my_profile.json"}]}
-settings = PyskindoseSettings(settings=config)  # base defaults to the working directory
-```
-
-Pass `settings_base_dir` for settings files living elsewhere, and never pass
-both a block and `equipment_profile_session` (refused closed). Request paths
-never appear in exports or `to_settings_dict`.
-
-Pre-transformed inputs (`normalized` tables, preparsed `.json`, bare DataFrames) refuse a
-nonempty session instead of silently skipping it. In-app equipment-profile store
-authoring and rich-report integration are not part of this slice (GUI session binding
-and run-configuration capture replay ship separately on the equipment run-state branch).
-
-```bash
-guiskindose --file-path study.dcm --equipment-profile my_profile.json
-```
-
-Repeat `--equipment-profile` for several files (JSON, CSV, TSV, XLSX; relative paths
-resolve against the working directory); `--equipment-profile-sheet` selects the XLSX
-sheet by name or 0-based index. An explicit existing store database composes via
-`--equipment-profile-store` (read-only, never created) with optional repeatable
-`--equipment-profile-id` (current revisions regardless of the enable flag; without IDs,
-all enabled current records apply). Assembly failures exit non-zero with a value-free error
-before any exam input is read. Coordinate-only profiles apply; transmission content,
-wildcards without promotion, and alias maps are rejected by the initial gate.
-
-A settings file may carry its own sources under an `equipment_profiles` block
-(`files` with `path`/`format`/`sheet`, `store` with `path`/`ids`); relative paths
-resolve against the settings file's directory (working directory for inline
-JSON/dict configs). CLI flags and the settings block compose into one candidate
-assembled once and bound last — duplicate claims across sides fail closed.
-
-A validated capture (`CapturedCoordinates`, produced from a prior run) replays one raw input
-file offline through `analyze_input_file(..., equipment_capture_context=...)`
-(raw DICOM or tabular) or `main(..., equipment_capture_context=...)` (DICOM only): no live session is needed or accepted, and the
-returned frame calculates with the stored match mapping. The capture verifies recipe,
-geometry, identity, and count — not authenticity or full raw/dose content hashes. Dose also depends on the input dose and filtration data, phantom, physics, and correction
-settings. Matching captured geometry alone does not guarantee the original dose result.
-Several raw files replay together through
-`analyze_multiple_input_files(..., equipment_capture_contexts=[...])` with one capture
-or `None` per explicit file path (positional, no guessing or globs; at most 64 files
-and 10_000 aggregate retained events): every authority is validated before any file is
-read, splits refuse so one file stays one exam, `None` entries normalize through the
-standard baseline path, and calculation runs only after all files load.
+Validated manufacturer/model coordinate profiles can override vendor coordinate
+handling for raw inputs, from Python (`assemble_session()`), a settings-file
+`equipment_profiles` block, or `--equipment-profile`. See
+[Custom equipment profiles](docs/source/user/equipment_profiles.md) for the API,
+CLI flags, and capture replay.
 
 **New to GUISkinDose?** Prefer the GUI or the interactive getting-started notebook
 ([docs/source/getting_started/getting_started.ipynb](docs/source/getting_started/getting_started.ipynb);
