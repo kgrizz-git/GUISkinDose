@@ -12,6 +12,16 @@ import pytest
 
 from guiskindose.safe_output import UnsafeOutputPathError, atomic_write_private
 
+_INHERITED_GIT_ENV = ("GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE")
+
+
+def _git(args: list[str]) -> None:
+    """Run git for a temporary repository without this process's checkout variables."""
+    env = os.environ.copy()
+    for name in _INHERITED_GIT_ENV:
+        env.pop(name, None)
+    subprocess.run(args, check=True, env=env)
+
 
 def test_atomic_write_is_private_and_requires_force_to_overwrite(tmp_path: Path) -> None:
     target = tmp_path / "report.bin"
@@ -27,7 +37,7 @@ def test_atomic_write_is_private_and_requires_force_to_overwrite(tmp_path: Path)
 
 
 def test_checkout_writes_require_an_explicit_ignored_root(tmp_path: Path) -> None:
-    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
+    _git(["git", "init", "-q", str(tmp_path)])
     (tmp_path / ".gitignore").write_text("private-output/\n", encoding="utf-8")
     ignored = tmp_path / "private-output"
     ignored.mkdir()
@@ -41,10 +51,10 @@ def test_checkout_writes_require_an_explicit_ignored_root(tmp_path: Path) -> Non
 
 def test_tracked_checkout_path_is_forbidden(tmp_path: Path) -> None:
     """A path still in the index is rejected after the working tree file is removed."""
-    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
+    _git(["git", "init", "-q", str(tmp_path)])
     tracked = tmp_path / "report.json"
     tracked.write_text("seed", encoding="utf-8")
-    subprocess.run(["git", "-C", str(tmp_path), "add", "--", "report.json"], check=True)
+    _git(["git", "-C", str(tmp_path), "add", "--", "report.json"])
     tracked.unlink()
 
     with pytest.raises(UnsafeOutputPathError, match="export_tracked_path_forbidden"):
@@ -54,7 +64,21 @@ def test_tracked_checkout_path_is_forbidden(tmp_path: Path) -> None:
 
 def test_non_ignored_checkout_path_is_forbidden(tmp_path: Path) -> None:
     """A new file inside a checkout is rejected when it is not gitignored."""
-    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
+    _git(["git", "init", "-q", str(tmp_path)])
+    target = tmp_path / "report.json"
+
+    with pytest.raises(UnsafeOutputPathError, match="export_checkout_path_forbidden"):
+        atomic_write_private(target, b"{}")
+    assert not target.exists()
+
+
+def test_checkout_guard_ignores_inherited_git_location(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Validation uses the destination checkout, not GIT_DIR from the parent process."""
+    _git(["git", "init", "-q", str(tmp_path)])
+    repo_root = Path(__file__).resolve().parents[2]
+    monkeypatch.setenv("GIT_DIR", str(repo_root / ".git"))
+    monkeypatch.setenv("GIT_WORK_TREE", str(repo_root))
+    monkeypatch.setenv("GIT_INDEX_FILE", str(tmp_path / "not-the-index"))
     target = tmp_path / "report.json"
 
     with pytest.raises(UnsafeOutputPathError, match="export_checkout_path_forbidden"):
@@ -88,7 +112,7 @@ def test_atomic_write_succeeds_when_git_is_missing(tmp_path: Path) -> None:
 
 
 def test_frozen_build_skips_git_checkout_guard(tmp_path: Path) -> None:
-    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
+    _git(["git", "init", "-q", str(tmp_path)])
     target = tmp_path / "inside-repo.bin"
     git_calls: list[list[str]] = []
 

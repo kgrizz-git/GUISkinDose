@@ -21,8 +21,15 @@ def _run_git(argv: list[str]) -> subprocess.CompletedProcess[str] | None:
 
     Returns:
         The completed process, or None on ``OSError`` (for example, Git is not installed).
-        On Windows, a non-zero ``CREATE_NO_WINDOW`` flag hides the console flash.
+        Inherited ``GIT_DIR``, ``GIT_WORK_TREE``, and ``GIT_INDEX_FILE`` are removed so
+        the command uses the ``-C`` directory. On Windows, a non-zero
+        ``CREATE_NO_WINDOW`` flag hides the console flash.
     """
+    # GIT_DIR, GIT_WORK_TREE, and GIT_INDEX_FILE would point this check at
+    # some other checkout. Drop them so -C selects the destination's repo.
+    env = os.environ.copy()
+    for name in ("GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE"):
+        env.pop(name, None)
     no_window = int(getattr(subprocess, "CREATE_NO_WINDOW", 0) or 0)
     try:
         if no_window:
@@ -32,8 +39,9 @@ def _run_git(argv: list[str]) -> subprocess.CompletedProcess[str] | None:
                 capture_output=True,
                 text=True,
                 creationflags=no_window,
+                env=env,
             )
-        return subprocess.run(argv, check=False, capture_output=True, text=True)
+        return subprocess.run(argv, check=False, capture_output=True, text=True, env=env)
     except OSError:
         return None
 
