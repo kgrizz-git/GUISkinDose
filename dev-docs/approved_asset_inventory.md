@@ -14,7 +14,7 @@ The admission gate verifies each full SHA-256 value in the JSON. The table shows
 human review practical. `⏳` is not approval; `✅` means the recorded reviewer manually cleared that exact
 file revision.
 
-**Assets tracked:** 184
+**Assets tracked:** 183
 
 | Asset | Type | Purpose | Manual review | Review checklist | SHA-256 prefix |
 | --- | --- | --- | --- | --- | --- |
@@ -201,4 +201,3 @@ file revision.
 | [`dev-docs/branding/icon_candidates/a_dose_map.svg`](../dev-docs/branding/icon_candidates/a_dose_map.svg) | Image | App icon candidate (synthetic vector artwork): front silhouette with dose hotspot | ✅ Approved — KG (2026-10-19) | — | `c4b5d22d98da` |
 | [`dev-docs/branding/icon_candidates/b_beam_cone.svg`](../dev-docs/branding/icon_candidates/b_beam_cone.svg) | Image | App icon candidate (synthetic vector artwork): beam cone onto skin surface | ✅ Approved — KG (2026-10-19) | — | `bb8c68275d5d` |
 | [`dev-docs/branding/icon_candidates/e_beam_on_body.svg`](../dev-docs/branding/icon_candidates/e_beam_on_body.svg) | Image | App icon candidate (synthetic vector artwork): front silhouette with beam cone | ✅ Approved — KG (2026-10-19) | — | `d258cfa24699` |
-| [`dev-docs/branding/icon_candidates/f_supine_side.svg`](../dev-docs/branding/icon_candidates/f_supine_side.svg) | Image | App icon candidate (synthetic vector artwork): supine side view with under-table tube | ✅ Approved — KG (2026-10-19) | — | `c1f60c94ee95` |

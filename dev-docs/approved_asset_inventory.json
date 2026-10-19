@@ -2048,17 +2048,6 @@
     "reviewer": "KG",
     "reviewed_on": "2026-10-19"
    }
-  },
-  {
-   "path": "dev-docs/branding/icon_candidates/f_supine_side.svg",
-   "sha256": "c1f60c94ee95e72ad05441fa693c3a1c00e54fc4b22184ef08a548904fba296d",
-   "kind": "image",
-   "purpose": "App icon candidate (synthetic vector artwork): supine side view with under-table tube",
-   "review": {
-    "status": "approved",
-    "reviewer": "KG",
-    "reviewed_on": "2026-10-19"
-   }
   }
  ]
 }
