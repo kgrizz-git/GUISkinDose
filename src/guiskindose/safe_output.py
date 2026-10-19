@@ -4,12 +4,57 @@ from __future__ import annotations
 
 import os
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 
 
 class UnsafeOutputPathError(ValueError):
     """Raised when an export destination violates the write policy."""
+
+
+# These override ``git -C``: the first three select another checkout or index,
+# and GIT_CEILING_DIRECTORIES stops the walk that finds the destination repo.
+_GIT_LOCATION_ENV = (
+    "GIT_DIR",
+    "GIT_WORK_TREE",
+    "GIT_INDEX_FILE",
+    "GIT_CEILING_DIRECTORIES",
+)
+
+
+def _run_git(argv: list[str]) -> subprocess.CompletedProcess[str] | None:
+    """Run a git command; return None if the git executable cannot be spawned.
+
+    Args:
+        argv: Full argument vector starting with ``git``.
+
+    Returns:
+        The completed process, or None on ``OSError`` (for example, Git is not installed).
+        Inherited location variables in ``_GIT_LOCATION_ENV`` are removed so the command
+        uses the ``-C`` directory. On Windows, a non-zero ``CREATE_NO_WINDOW`` flag hides
+        the console flash.
+
+    The checkout guard is best-effort. A ``None`` result, or a ``rev-parse`` that does
+    not resolve a repository, skips the check and allows the write.
+    """
+    env = os.environ.copy()
+    for name in _GIT_LOCATION_ENV:
+        env.pop(name, None)
+    no_window = int(getattr(subprocess, "CREATE_NO_WINDOW", 0) or 0)
+    try:
+        if no_window:
+            return subprocess.run(
+                argv,
+                check=False,
+                capture_output=True,
+                text=True,
+                creationflags=no_window,
+                env=env,
+            )
+        return subprocess.run(argv, check=False, capture_output=True, text=True, env=env)
+    except OSError:
+        return None
 
 
 def _existing_parent(path: Path) -> Path:
@@ -20,12 +65,13 @@ def _existing_parent(path: Path) -> Path:
 
 
 def _git_root(parent: Path) -> Path | None:
-    result = subprocess.run(
-        ["git", "-C", str(parent), "rev-parse", "--show-toplevel"],
-        check=False,
-        capture_output=True,
-        text=True,
-    )
+    """Return the checkout root, or None when git cannot resolve one.
+
+    None fails open: the caller skips the checkout policy and allows the write.
+    """
+    result = _run_git(["git", "-C", str(parent), "rev-parse", "--show-toplevel"])
+    if result is None:
+        return None
     if result.returncode != 0:
         return None
     value = result.stdout.strip()
@@ -33,24 +79,31 @@ def _git_root(parent: Path) -> Path | None:
 
 
 def _validate_checkout_destination(target: Path, root: Path, *, allow_ignored_checkout: bool) -> None:
-    """Reject tracked or non-ignored destinations under a Git checkout."""
+    """Reject tracked or non-ignored destinations under a Git checkout.
+
+    Best-effort only. If a later git command cannot be spawned, the check stops
+    and the write is allowed. A path outside ``root`` is also allowed.
+    """
     try:
         relative = target.relative_to(root)
     except ValueError:
         return
     rel = relative.as_posix()
-    tracked = subprocess.run(
+    tracked_result = _run_git(
         ["git", "-C", str(root), "ls-files", "--error-unmatch", "--", rel],
-        check=False,
-        capture_output=True,
-    ).returncode == 0
+    )
+    if tracked_result is None:
+        # Git unavailable: do not block exports on machines without git (e.g. portable builds).
+        return
+    tracked = tracked_result.returncode == 0
     if tracked:
         raise UnsafeOutputPathError("export_tracked_path_forbidden")
-    ignored = subprocess.run(
+    ignored_result = _run_git(
         ["git", "-C", str(root), "check-ignore", "-q", "--", rel],
-        check=False,
-        capture_output=True,
-    ).returncode == 0
+    )
+    if ignored_result is None:
+        return
+    ignored = ignored_result.returncode == 0
     if not (allow_ignored_checkout and ignored):
         raise UnsafeOutputPathError("export_checkout_path_forbidden")
 
@@ -72,9 +125,11 @@ def validate_output_path(
     if target.exists() and not force:
         raise UnsafeOutputPathError("export_destination_exists")
 
-    root = _git_root(parent)
-    if root is not None:
-        _validate_checkout_destination(target, root, allow_ignored_checkout=allow_ignored_checkout)
+    # A frozen app has no checkout to protect and must not spawn git.
+    if not getattr(sys, "frozen", False):
+        root = _git_root(parent)
+        if root is not None:
+            _validate_checkout_destination(target, root, allow_ignored_checkout=allow_ignored_checkout)
     return target
 
 
