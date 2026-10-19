@@ -178,7 +178,7 @@ Each phase is a separate PR. Do not start Phase 1 until Phase 0 has measured siz
 
 ### Phase 0 — Spike on Windows
 
-The failures that matter for a no-admin PC are Windows-only. Do this spike on Windows. A macOS spike can follow. It does not replace the Windows one.
+The failures that matter for a no-admin PC are Windows-only. Do this spike on Windows. Phase 0b is a macOS spike that runs alongside it. It does not replace the Windows one.
 
 - [ ] Freeze `run_gui(native=True)` with the **full** phantom payload, `table_data/`, `corrections.db`, `pywebview`, GUI help, `gui/static/`, `gui/ui_copy.json`, `normalization_settings.json`, and `example_data/kerma_meter/`.
 - [ ] Call `multiprocessing.freeze_support()` before argument parsing in the frozen entry.
@@ -191,6 +191,20 @@ The failures that matter for a no-admin PC are Windows-only. Do this spike on Wi
 - [ ] Document the hidden imports and data files that actually worked.
 
 **Acceptance:** a Windows zip runs calculate and HTML export with the network off and with `git` absent. Chromium's size, license, and (for Linux) library needs are written down. No release workflow yet. The Light PNG gate is Phase 1, because the edition file is not in this spike.
+
+### Phase 0b — macOS spike: sign, notarize, and compare Briefcase
+
+Run this alongside Phase 0. The maintainer now has an Apple Developer account, so the macOS signing risk can be tested early instead of waiting for Phase 5. Signing and notarization often break a frozen layout, and that is cheaper to learn now.
+
+- [ ] Create a **Developer ID Application** certificate and an App Store Connect API key for `notarytool`. Keep both out of the repository. CI later reads them from GitHub secrets.
+- [ ] Freeze a Light-shape `GUISkinDose.app` with PyInstaller. Use the same payload and `freeze_support()` entry as Phase 0, with the app icon converted to `.icns`.
+- [ ] Sign every nested Mach-O file (dylibs, `.so` extensions, the Python framework) inside-out with the hardened runtime and a timestamp. Do not use `codesign --deep`. Record the entitlements that were actually needed, such as `allow-unsigned-executable-memory` or `disable-library-validation`, and keep the list minimal.
+- [ ] Notarize with `xcrun notarytool submit --wait`, then `xcrun stapler staple`. Record any rejected files from the notary log.
+- [ ] On a second Mac or a clean user account, download the zip through a browser so it gets the quarantine flag. Confirm Gatekeeper opens it with no warning. Then load a local RDSR, calculate, and export HTML with the network off.
+- [ ] Build the same Light app with **Briefcase** (`briefcase create`, `build`, `package macOS -p zip --identity ...`). Briefcase ships a standalone Python and installs the dependency wheels instead of freezing, and it signs and notarizes as part of `package`. Record build time, bundle size, cold-start time, and every workaround each tool needed.
+- [ ] Check Briefcase against the plan constraints: a zip with no installer and no admin rights on Windows, pywebview's native child process, package data resolving through `importlib.resources`, and a Linux path that stays browser mode.
+
+**Acceptance:** a notarized, stapled Light `.app` opens with no Gatekeeper prompt on a clean Mac, then calculates and exports HTML offline. The progress log records the entitlements, sizes, and a PyInstaller-versus-Briefcase recommendation. The Freeze design above switches tools only through a decision-log entry.
 
 ### Phase 1 — Light and Full payloads
 
@@ -256,6 +270,7 @@ Light's missing-runtime message is Phase 1. This phase only adds the runtime to 
 - **2026-10-17** — Review (`opencode-go/longcat-2.5-preview-free`) folded in: Chromium rather than Chrome for Testing, generated `_edition.py`, freeze path list, `pywebview`, per-OS double-click layout, separate Light/Full size ranges, and the Light mesh trade-off (~22 MB, not the 8.6 MB three-mesh starter).
 - **2026-10-17** — Phases 0–3 are the zip. Phase 4 puts the WebView2 Fixed Version runtime in the Full Windows zip only. Light uses the runtime already on the PC. Phase 5 signs. AppLocker bypass, MOTW stripping, and packers are out of scope.
 - **2026-10-18** — Review (Claude Opus 5.5 medium) folded in. Phase 0 is a Windows spike: missing `git` must not break export, `freeze_support` comes first, and the freeze proves data files open. Light checks for WebView2 before `ui.run` because pywebview otherwise falls back to MSHTML. Public Full Windows waits for Phase 4. Linux v1 is browser mode. PNG is gated in the render functions. Signing does not promise a SmartScreen-free first launch.
+- **2026-10-19** — Added Phase 0b, a macOS spike that signs and notarizes a Light build early and compares Briefcase with PyInstaller.
 
 ## Decision log
 
