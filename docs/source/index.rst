@@ -20,6 +20,7 @@ Welcome to GUISkinDose's documentation!
    user/user_guide.md
    gui_help/input_formats.md
    user/correction_data.md
+   user/equipment_profiles.md
    gui_help/positioning_offsets.md
    gui_help/geometry_workflow.md
    gui_help/below_floor_kvp.md

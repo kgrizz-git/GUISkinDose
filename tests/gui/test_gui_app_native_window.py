@@ -70,8 +70,10 @@ def test_run_gui_native_persists_normalized_macos_startup(monkeypatch) -> None:
         lambda prefs, screens: NativeWindowPrefs(maximized=False, width=1512, height=945, x=20, y=38),
     )
     monkeypatch.setattr(gui_app, "register_native_geometry_tracking", lambda screens, prefs: None)
-    monkeypatch.setattr(gui_app.ui, "run", lambda **kwargs: None)
+    run_kwargs: dict[str, object] = {}
+    monkeypatch.setattr(gui_app.ui, "run", lambda **kwargs: run_kwargs.update(kwargs))
     monkeypatch.setattr(gui_app.app.native, "window_args", {}, raising=False)
+    monkeypatch.setattr(gui_app.app.native, "start_args", {}, raising=False)
 
     saved: list[NativeWindowPrefs] = []
     monkeypatch.setattr(gui_app, "save_native_window_prefs", saved.append)
@@ -84,3 +86,31 @@ def test_run_gui_native_persists_normalized_macos_startup(monkeypatch) -> None:
     assert gui_app.app.native.window_args["x"] == 20
     assert gui_app.app.native.window_args["y"] == 38
     assert "maximized" not in gui_app.app.native.window_args
+    assert run_kwargs["favicon"] == gui_app.app_icon_path(native=True)
+    assert gui_app.app.native.start_args["icon"] == str(gui_app.app_icon_path(native=True))
+
+
+@pytest.mark.parametrize(("native", "suffix"), [(False, ".svg"), (True, ".ico")])
+def test_app_icon_path_ships_format_for_each_mode(native: bool, suffix: str) -> None:
+    icon = gui_app.app_icon_path(native)
+
+    assert icon.suffix == suffix
+    assert icon.is_file()
+
+
+def test_run_gui_browser_uses_svg_favicon(monkeypatch) -> None:
+    monkeypatch.setattr(gui_app, "configure_logging", lambda **kwargs: None)
+    monkeypatch.setattr(gui_app, "_register_browser_shutdown_handler", lambda tasks: None)
+    monkeypatch.setattr(gui_app, "register_gui_static_files", lambda: None)
+    monkeypatch.setattr(gui_app, "generate_launch_token", lambda port: ("token", object()))
+    monkeypatch.setattr(gui_app, "configure_loopback_security", lambda config: None)
+    monkeypatch.setattr(gui_app.app, "add_middleware", lambda *args, **kwargs: None)
+    monkeypatch.setattr(gui_app, "_open_browser_when_ready", lambda url, port: None)
+    run_kwargs: dict[str, object] = {}
+    monkeypatch.setattr(gui_app.ui, "run", lambda **kwargs: run_kwargs.update(kwargs))
+    monkeypatch.setattr(gui_app.app.native, "start_args", {}, raising=False)
+
+    gui_app.run_gui(native=False, port=8765)
+
+    assert run_kwargs["favicon"] == gui_app.app_icon_path(native=False)
+    assert "icon" not in gui_app.app.native.start_args

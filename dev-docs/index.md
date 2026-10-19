@@ -106,6 +106,7 @@ Long-lived topic source-of-truth plans. Convention: [HARNESS_ENGINEERING.md](HAR
 | [plans/GUI_PLAN.md](plans/GUI_PLAN.md) | See **Master plans** above. |
 | [UI_values.md](UI_values.md) | Auto-generated GUI design tokens from `MODERN_CSS` in `src/guiskindose/gui/styles.py` (`scripts/generate_ui_values.py`). |
 | [../DESIGN.md](../DESIGN.md) | Root GUI aesthetic spec (brutalist/modern design intent). |
+| [branding/README.md](branding/README.md) | App icon, its ICO copy, and the kept icon candidates. |
 
 ---
 
