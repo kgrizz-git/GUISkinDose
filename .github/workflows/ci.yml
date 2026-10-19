@@ -171,7 +171,7 @@ jobs:
     - name: Bandit (Python SAST, medium+ severity)
       run: bandit -c pyproject.toml -r src/guiskindose scripts --severity-level medium
     - name: ShellCheck (shell script lint)
-      run: shellcheck run_gui.sh scripts/type_baseline.sh scripts/setup-dev.sh
+      run: shellcheck run_gui.sh GUISkinDose.command scripts/type_baseline.sh scripts/setup-dev.sh
 
   owasp-semgrep:
     needs: [schedule-gate, privacy-gates]

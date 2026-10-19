@@ -58,6 +58,8 @@
   ],
   "never_track_names": [
     ".DS_Store",
+    "GUISkinDose.desktop",
+    "GUISkinDose.lnk",
     "sonar-project.properties.local"
   ],
   "never_track_patterns": [

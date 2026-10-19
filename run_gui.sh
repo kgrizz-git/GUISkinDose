@@ -242,6 +242,11 @@ check_python_version
 
 echo -e "${GREEN}✓${NC} Selected interpreter: $PYTHON (Python $PYTHON_VERSION)"
 
+# Give the double-click launcher the app icon (stdlib only; never blocks launch).
+if [ -z "${GUISKINDOSE_NO_LAUNCHER_SETUP:-}" ] && [ -f scripts/desktop_launchers.py ]; then
+    "$PYTHON" scripts/desktop_launchers.py ensure || true
+fi
+
 # Check/install dependencies (skip-install exits 0 with a rerun hint, matching
 # run_gui.bat; install failure exits 1; set -e safe via explicit handling).
 if setup_dependencies "$PYTHON"; then
