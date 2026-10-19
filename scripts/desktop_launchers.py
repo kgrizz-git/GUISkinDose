@@ -6,8 +6,10 @@ What it does:
     checks the real artifact each run and writes only what is missing:
 
     - macOS: sets the app icon on ``GUISkinDose.command`` (Finder custom icon).
-    - Windows: writes ``GUISkinDose.lnk`` (target ``run_gui.bat``, app icon).
-    - Linux: writes ``GUISkinDose.desktop`` and marks it trusted for GNOME.
+    - Windows: writes ``GUISkinDose.lnk`` (target ``run_gui.bat``, app icon)
+      unless the existing shortcut already names this checkout.
+    - Linux: writes ``GUISkinDose.desktop``, keeps it executable, and marks it
+      trusted for GNOME (``gio`` metadata lives outside the checkout).
 
     There is no state file. Git cannot carry a file icon, so ``run_gui.sh`` and
     ``run_gui.bat`` call this on every launch; repeat runs are quiet.
@@ -134,17 +136,33 @@ def _ensure_macos(root: Path, env: Mapping[str, str], run: Runner) -> str:
     )
     if result.returncode == 0 and result.stdout.strip() == b"ok":
         return "Launcher icon set."
+    # Expected symptom if NSImage cannot read the ICO, or when there is no GUI session (ssh).
     return "Launcher icon not applied."
 
 
 def _ensure_windows(root: Path, env: Mapping[str, str], run: Runner) -> str:
-    """Write ``GUISkinDose.lnk`` pointing at ``run_gui.bat`` with the app icon."""
+    """Write ``GUISkinDose.lnk`` pointing at ``run_gui.bat`` with the app icon.
+
+    Skips PowerShell when the shortcut already names this checkout, so a normal
+    launch pays nothing; a moved clone gets a fresh shortcut.
+    """
     lnk = root / LNK_NAME
     existed = lnk.is_file()
+    if existed and shortcut_names_root(lnk, root):
+        return ""
     _quiet(run, _powershell_argv(env), cwd=str(root), env=_shortcut_env(root, env))
     if lnk.is_file():
-        return "" if existed else "Launcher shortcut created: GUISkinDose.lnk"
+        return "Launcher shortcut updated." if existed else "Launcher shortcut created: GUISkinDose.lnk"
     return "Launcher shortcut not created."
+
+
+def shortcut_names_root(lnk: Path, root: Path) -> bool:
+    """Return whether ``lnk`` stores ``root`` as its working directory.
+
+    Shell links keep the working directory as UTF-16LE text, so a byte search is
+    enough to tell a current shortcut from one left by a moved checkout.
+    """
+    return str(root).encode("utf-16-le") in lnk.read_bytes()
 
 
 def _powershell_argv(env: Mapping[str, str]) -> list[str]:
@@ -176,12 +194,15 @@ def _ensure_linux(root: Path, env: Mapping[str, str], run: Runner) -> str:
     if target.is_symlink():
         return "Launcher shortcut skipped."
     content = render_desktop_entry(root).encode("utf-8")
-    if target.is_file() and target.read_bytes() == content:
+    current = target.is_file() and target.read_bytes() == content
+    if current and os.access(target, os.X_OK):
         return ""
-    _atomic_write(target, content)
+    if not current:
+        _atomic_write(target, content)
+    # A lost executable bit (or a first run where gio failed) is repaired here too.
     target.chmod(0o755)
     _quiet(run, ["gio", "set", str(target), "metadata::trusted", "true"])
-    return "Launcher shortcut created: GUISkinDose.desktop"
+    return "" if current else "Launcher shortcut created: GUISkinDose.desktop"
 
 
 def desktop_path_is_safe(root: Path) -> bool:
@@ -208,8 +229,11 @@ def _atomic_write(target: Path, content: bytes) -> None:
     """Write ``content`` to a sibling temp file, then replace ``target``."""
     temp = target.with_name(f".{target.name}.tmp")
     temp.unlink(missing_ok=True)
-    temp.write_bytes(content)
-    temp.replace(target)
+    try:
+        temp.write_bytes(content)
+        temp.replace(target)
+    finally:
+        temp.unlink(missing_ok=True)
 
 
 if __name__ == "__main__":

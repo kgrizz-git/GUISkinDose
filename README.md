@@ -102,7 +102,8 @@ double-click, with the GUISkinDose icon:
 | Windows | `GUISkinDose.lnk` | The first `run_gui.bat` run |
 | Linux | `GUISkinDose.desktop` (GNOME: allow launching if asked) | The first `./run_gui.sh` run |
 
-The shortcuts stay inside the checkout and are git-ignored. Set
+The shortcuts stay inside the checkout and are git-ignored (on Linux, GNOME records
+the "allow launching" trust flag in its own metadata store under your home folder). Set
 `GUISKINDOSE_NO_LAUNCHER_SETUP=1` to skip creating them. On macOS, a checkout
 downloaded as a ZIP is quarantined: allow it under System Settings → Privacy &
 Security → Open Anyway, or run `xattr -dr com.apple.quarantine` on the folder.

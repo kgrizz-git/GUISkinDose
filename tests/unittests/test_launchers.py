@@ -136,16 +136,16 @@ def test_launcher_parity() -> None:
     # parsed command text (quote/& injection); compare the literal value.
     assert 'if "%install_choice%"=="" set install_choice=2' not in bat
     assert 'if "!install_choice!"=="" set "install_choice=2"' in bat
-    assert bat.count("!install_choice!") == 5
+    assert bat.count('!install_choice!') == 5
     # Same tainted-input class for the mode choice and env-var echoes: delayed
     # form everywhere a value meets parsed command text inside a block.
-    assert "%choice%" not in bat
-    assert bat.count("!choice!") == 3
-    assert "%VIRTUAL_ENV%" not in bat
+    assert '%choice%' not in bat
+    assert bat.count('!choice!') == 3
+    assert '%VIRTUAL_ENV%' not in bat
     # Same class for version echoes: every in-block Got:/Found: message shows
     # the delayed-expansion literal, never the parse-time value.
-    assert "Got: %PYTHON_VERSION%" not in bat
-    assert "Found: %PYTHON_VERSION%" not in bat
+    assert 'Got: %PYTHON_VERSION%' not in bat
+    assert 'Found: %PYTHON_VERSION%' not in bat
 
 
 WINDOWS_ONLY = pytest.mark.skipif(os.name != "nt", reason="requires cmd.exe")
@@ -253,6 +253,8 @@ def test_launchers_call_icon_setup_best_effort() -> None:
     assert "GUISKINDOSE_NO_LAUNCHER_SETUP:-" in sh
 
     bat = BAT.read_text(encoding="utf-8")
-    bat_call = bat.index('"%~dp0scripts\\desktop_launchers.py" ensure 2>nul')
+    # Relative path: %~dp0 would be mangled by delayed expansion when the checkout path contains "!".
+    bat_call = bat.index("if exist scripts\\desktop_launchers.py %PYTHON_CMD% scripts\\desktop_launchers.py ensure 2>nul")
     assert bat_call < bat.index('%PYTHON_CMD% -c "import guiskindose"')
     assert "if not defined GUISKINDOSE_NO_LAUNCHER_SETUP" in bat
+    assert "%~dp0scripts" not in bat

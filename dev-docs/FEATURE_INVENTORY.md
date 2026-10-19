@@ -513,6 +513,16 @@ Falls back to `DEVELOPMENT_PARAMETERS` from `dev_data.py` if no settings given.
 
 ---
 
+### 10.2 Source-checkout launchers
+
+- `run_gui.sh` (macOS/Linux) and `run_gui.bat` (Windows): find Python ≥3.11, offer to create `.venv`,
+  install the `gui` / `gui-native` extras, then prompt for browser or native mode.
+- `GUISkinDose.command`: macOS double-click entry that runs `run_gui.sh` in Terminal.
+- `scripts/desktop_launchers.py ensure` (called by both launchers): gives the double-click launcher the
+  app icon — Finder icon on `GUISkinDose.command`, a git-ignored `GUISkinDose.lnk` on Windows, a
+  git-ignored `GUISkinDose.desktop` on Linux. Best effort, no paths printed;
+  `GUISKINDOSE_NO_LAUNCHER_SETUP=1` skips it. Plan: `plans/DESKTOP_LAUNCHERS_PLAN.md`.
+
 ## 11. Public Python API (`__init__.py`)
 
 ```python

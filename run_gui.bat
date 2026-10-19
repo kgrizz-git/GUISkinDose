@@ -199,7 +199,9 @@ if !PYTHON_MAJOR! EQU 3 (
 echo [OK] Selected interpreter: %PYTHON_CMD% ^(Python !PYTHON_VERSION!^)
 
 :: Give the double-click launcher the app icon: stdlib only, never blocks launch.
-if not defined GUISKINDOSE_NO_LAUNCHER_SETUP if exist "%~dp0scripts\desktop_launchers.py" %PYTHON_CMD% "%~dp0scripts\desktop_launchers.py" ensure 2>nul
+:: Relative path on purpose: like .venv below, it assumes cwd is the checkout, which the
+:: double-click and the generated GUISkinDose.lnk both provide.
+if not defined GUISKINDOSE_NO_LAUNCHER_SETUP if exist scripts\desktop_launchers.py %PYTHON_CMD% scripts\desktop_launchers.py ensure 2>nul
 
 :: Check if package is installed
 %PYTHON_CMD% -c "import guiskindose" >nul 2>&1

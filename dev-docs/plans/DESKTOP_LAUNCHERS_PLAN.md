@@ -25,7 +25,7 @@ launcher applies it locally when it runs.
 
 | Path | Tracked | Role |
 |------|---------|------|
-| `GUISkinDose.command` | yes, mode 100755 | macOS double-click entry: `cd "$(dirname "$0")" \|\| exit 1`, then `exec ./run_gui.sh "$@"`. |
+| `GUISkinDose.command` | yes, mode 100755 | macOS double-click entry: `cd "$(dirname "$0")" \|\| exit 1`, run `./run_gui.sh "$@"`, and pause on a non-zero exit so Terminal does not close over the error. |
 | `run_gui.sh` / `run_gui.bat` | yes (edited) | Call the setup step once the interpreter is validated (placement below). |
 | `scripts/desktop_launchers.py` | yes | Stdlib-only, repo-only (not in the wheel). `ensure` converges the current OS's launcher. |
 | `GUISkinDose.lnk` | **no** | Windows shortcut written by `ensure`: target `run_gui.bat`, icon `guiskindose_icon.ico`. |
@@ -43,9 +43,11 @@ xattrs; a moved clone invalidates absolute paths) and no extra file holds path-d
 
 - **macOS:** if `xattr -p com.apple.ResourceFork GUISkinDose.command` succeeds, the icon is present;
   otherwise apply it.
-- **Linux:** render the entry, compare with the bytes on disk, write only on difference.
-- **Windows:** `.lnk` contents are only readable via COM, so the shortcut is (re)written every run.
-  It is cheap, and a moved clone heals itself.
+- **Linux:** render the entry, compare with the bytes on disk, write only on difference. A
+  matching entry that lost its executable bit is re-chmodded and re-trusted quietly.
+- **Windows:** a shell link stores its working directory as UTF-16LE text, so an existing
+  `GUISkinDose.lnk` that contains this checkout's root is left alone and PowerShell never starts.
+  Anything else (a moved clone) is rewritten.
 
 Status output is one fixed line, printed only when something was created or failed. No absolute
 paths, user names, exception text (`str(OSError)` carries the path), or subprocess output are
@@ -95,7 +97,8 @@ checkout.
   every character of the root path is a letter, digit, or one of `` _./+@~-`` (space included).
   Those need no escaping inside a quoted `Exec` argument or in string values. Any other path skips
   with one status line.
-- Atomic write (temp file + `Path.replace()`); an existing symlink at the target is never followed.
+- Atomic write (temp file + `Path.replace()`, temp removed on failure and git-ignored); an existing
+  symlink at the target is never followed.
   `chmod 755`, then best-effort `gio set … metadata::trusted true`.
 - Not offered under WSL (`WSL_DISTRO_NAME` set).
 
@@ -107,8 +110,9 @@ checkout.
   `if [ -z "${GUISKINDOSE_NO_LAUNCHER_SETUP:-}" ] && [ -f scripts/desktop_launchers.py ]; then "$PYTHON" scripts/desktop_launchers.py ensure || true; fi`
   (`|| true` is required under `set -e`).
 - `run_gui.bat`: just before `%PYTHON_CMD% -c "import guiskindose"`, which resets `ERRORLEVEL` for the
-  checks that follow. The bat never `cd`s, so the script path is `"%~dp0scripts\desktop_launchers.py"`,
-  guarded by `if exist` and `if not defined GUISKINDOSE_NO_LAUNCHER_SETUP`; stderr to `nul`, no pipe.
+  checks that follow. The path is relative (`scripts\desktop_launchers.py`), like the bat's `.venv`
+  handling: `%~dp0` would be mangled by delayed expansion when the checkout path contains `!`.
+  Guarded by `if exist` and `if not defined GUISKINDOSE_NO_LAUNCHER_SETUP`; stderr to `nul`, no pipe.
   No new `!choice!` / `!install_choice!` tokens (counted by `test_launcher_parity`).
 - Opt-out: `GUISKINDOSE_NO_LAUNCHER_SETUP=1`.
 
@@ -127,8 +131,10 @@ Writes go to the repo root (`GUISkinDose.lnk`, `GUISkinDose.desktop`, xattrs on
   osascript failure / "nil image" → "not applied" line, exit 0.
 - Windows: PowerShell argv is constant across roots; paths only in `GSD_*`; parent env (`SystemRoot`)
   kept; no `-ExecutionPolicy`; failure → "not created".
-- Linux: exact rendering for a root with a space and a non-ASCII letter; unsafe roots (`%`, `"`, `$`,
-  backslash, newline) skip; second run writes nothing; symlink target skipped; mode is 755.
+- Windows: a shortcut naming this root skips PowerShell; a stale one is rewritten ("updated").
+- Linux (POSIX-only tests; Windows CI runners skip them): exact rendering for a root with a space and a non-ASCII letter; unsafe roots (`%`, `"`, `$`,
+  backslash, newline) skip; second run writes nothing; a lost executable bit is repaired; symlink
+  target skipped; mode is 755; no temp file left. Test directory names stay valid on Windows.
 - Output never contains the root path; exceptions (including `UnicodeEncodeError`) → exit 0.
 - `GUISkinDose.command` is 100755 in the git index.
 - Launcher static checks: the call sits between the final interpreter check and

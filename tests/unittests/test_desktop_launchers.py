@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+import os
 import subprocess
 from pathlib import Path
 
@@ -93,16 +94,24 @@ def test_macos_script_guards_nil_image() -> None:
 # --- Windows ---------------------------------------------------------------
 
 
+def _writes_lnk(argv: list[str], kwargs: dict[str, object]) -> None:
+    env = kwargs["env"]
+    assert isinstance(env, dict)
+    Path(env["GSD_LNK"]).write_bytes(env["GSD_ROOT"].encode("utf-16-le"))
+
+
 def test_windows_argv_is_constant_and_paths_are_env_only(tmp_path: Path) -> None:
-    roots = [_root(tmp_path, "a"), _root(tmp_path, "b c$`'\"")]
+    # Quotes are not valid in Windows file names; $, ' and spaces are.
+    roots = [_root(tmp_path, "a"), _root(tmp_path, "b c$'")]
     argvs = []
     for root in roots:
-        runner = FakeRunner(on_call=lambda argv, kw: Path(kw["env"]["GSD_LNK"]).write_bytes(b"lnk"))
+        runner = FakeRunner(on_call=_writes_lnk)
         status = dl.ensure(root, "Windows", {"SystemRoot": r"C:\Windows", "PATH": "x"}, runner)
         assert status == "Launcher shortcut created: GUISkinDose.lnk"
         argv, kwargs = runner.calls[0]
         argvs.append(argv)
         env = kwargs["env"]
+        assert isinstance(env, dict)
         assert env["SystemRoot"] == r"C:\Windows"
         assert env["GSD_TARGET"] == str(root / "run_gui.bat")
         assert env["GSD_ICON"] == str(dl.icon_path(root, ".ico"))
@@ -114,21 +123,33 @@ def test_windows_argv_is_constant_and_paths_are_env_only(tmp_path: Path) -> None
     assert "$env:GSD_LNK" in script
 
 
-def test_windows_rewrite_is_quiet_when_shortcut_exists(tmp_path: Path) -> None:
+def test_windows_current_shortcut_skips_powershell(tmp_path: Path) -> None:
     root = _root(tmp_path)
-    (root / dl.LNK_NAME).write_bytes(b"lnk")
+    (root / dl.LNK_NAME).write_bytes(b"\x00" + str(root).encode("utf-16-le") + b"\x00")
     runner = FakeRunner()
     assert dl.ensure(root, "Windows", {}, runner) == ""
+    assert runner.calls == []
+
+
+def test_windows_shortcut_from_moved_checkout_is_rewritten(tmp_path: Path) -> None:
+    root = _root(tmp_path)
+    (root / dl.LNK_NAME).write_bytes("C:\\old\\checkout".encode("utf-16-le"))
+    runner = FakeRunner(on_call=_writes_lnk)
+    assert dl.ensure(root, "Windows", {}, runner) == "Launcher shortcut updated."
     assert len(runner.calls) == 1
+    assert dl.shortcut_names_root(root / dl.LNK_NAME, root)
 
 
 def test_windows_blocked_com_reports_not_created(tmp_path: Path) -> None:
     assert dl.ensure(_root(tmp_path), "Windows", {}, FakeRunner(returncode=1)) == "Launcher shortcut not created."
 
 
-# --- Linux -----------------------------------------------------------------
+# --- Linux (POSIX paths, modes, and symlinks) --------------------------------
+
+POSIX_ONLY = pytest.mark.skipif(os.name == "nt", reason="Linux .desktop entries use POSIX paths and modes")
 
 
+@POSIX_ONLY
 def test_linux_renders_exact_entry_for_space_and_non_ascii(tmp_path: Path) -> None:
     root = _root(tmp_path, "My Dose Ångström")
     runner = FakeRunner()
@@ -139,8 +160,10 @@ def test_linux_renders_exact_entry_for_space_and_non_ascii(tmp_path: Path) -> No
     assert f"Icon={root}/src/guiskindose/gui/static/guiskindose_icon.svg\n" in text
     assert (root / dl.DESKTOP_NAME).stat().st_mode & 0o777 == 0o755
     assert runner.calls[0][0][:2] == ["gio", "set"]
+    assert not (root / f".{dl.DESKTOP_NAME}.tmp").exists()
 
 
+@POSIX_ONLY
 def test_linux_second_run_writes_nothing(tmp_path: Path) -> None:
     root = _root(tmp_path)
     dl.ensure(root, "Linux", {}, FakeRunner())
@@ -149,6 +172,18 @@ def test_linux_second_run_writes_nothing(tmp_path: Path) -> None:
     assert runner.calls == []
 
 
+@POSIX_ONLY
+def test_linux_lost_executable_bit_is_repaired_quietly(tmp_path: Path) -> None:
+    root = _root(tmp_path)
+    dl.ensure(root, "Linux", {}, FakeRunner())
+    (root / dl.DESKTOP_NAME).chmod(0o644)
+    runner = FakeRunner()
+    assert dl.ensure(root, "Linux", {}, runner) == ""
+    assert (root / dl.DESKTOP_NAME).stat().st_mode & 0o777 == 0o755
+    assert runner.calls[0][0][:2] == ["gio", "set"]
+
+
+@POSIX_ONLY
 def test_linux_moved_checkout_rewrites_entry(tmp_path: Path) -> None:
     root = _root(tmp_path)
     (root / dl.DESKTOP_NAME).write_text("[Desktop Entry]\nExec=/old/run_gui.sh\n", encoding="utf-8")
@@ -156,15 +191,22 @@ def test_linux_moved_checkout_rewrites_entry(tmp_path: Path) -> None:
     assert str(root) in (root / dl.DESKTOP_NAME).read_text(encoding="utf-8")
 
 
+@POSIX_ONLY
 @pytest.mark.parametrize("name", ["a%b", 'a"b', "a$b", "a\\b", "a`b", "a\nb", "a;b"])
-def test_linux_unsafe_root_is_skipped(tmp_path: Path, name: str) -> None:
-    root = _root(tmp_path, name)
+def test_linux_unsafe_root_is_rejected(name: str) -> None:
+    assert not dl.desktop_path_is_safe(Path("/srv") / name)
+
+
+@POSIX_ONLY
+def test_linux_unsafe_root_is_skipped_without_writing(tmp_path: Path) -> None:
+    root = _root(tmp_path, "a%b")
     status = dl.ensure(root, "Linux", {}, FakeRunner())
     assert status.startswith("Launcher shortcut skipped")
     assert str(root) not in status
     assert not (root / dl.DESKTOP_NAME).exists()
 
 
+@POSIX_ONLY
 def test_linux_symlink_target_is_not_followed(tmp_path: Path) -> None:
     root = _root(tmp_path)
     elsewhere = tmp_path / "elsewhere.txt"
@@ -185,7 +227,11 @@ def test_linux_wsl_is_skipped(tmp_path: Path) -> None:
 
 @pytest.mark.parametrize(
     "error",
-    [OSError("/home/someone/x"), UnicodeEncodeError("utf-8", "x", 0, 1, "bad"), subprocess.TimeoutExpired("x", 10)],
+    [
+        OSError("synthetic error text"),
+        UnicodeEncodeError("utf-8", "x", 0, 1, "bad"),
+        subprocess.TimeoutExpired("x", 10),
+    ],
 )
 def test_errors_never_raise_or_leak_paths(tmp_path: Path, error: Exception) -> None:
     def run(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess[bytes]:

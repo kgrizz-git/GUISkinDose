@@ -245,6 +245,11 @@ Run the GUI locally:
 python -m guiskindose --mode gui
 ```
 
+From a checkout, `run_gui.sh` / `run_gui.bat` (or double-click `GUISkinDose.command` on macOS) wrap
+this with interpreter and dependency setup; on each run `scripts/desktop_launchers.py` converges a
+double-click launcher with the app icon (generated `GUISkinDose.lnk` / `GUISkinDose.desktop` are
+git-ignored and never-track; `GUISKINDOSE_NO_LAUNCHER_SETUP=1` skips it).
+
 ## Conventions
 
 - Python 3.11+
