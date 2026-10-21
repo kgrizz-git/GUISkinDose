@@ -21,6 +21,11 @@ That keeps SemVer and contributor history organized.
 
 ### Security
 
+- **Dependency updates** (2026-10-20) — Pillow 13.0.0 fixes nine advisories in image decoding
+  (GIF, TIFF, JPEG, EPS, and PDF parsing), including GHSA-65qm-jvmh-6pqg. certifi 2026.10.19 drops
+  the emSign root CAs with compromised intermediate keys (GHSA-6q48-6c7w-9gw2). GUISkinDose only
+  opens PNG files it rendered itself, so dose calculation and exports are unchanged.
+
 - **Pinned action check** (2026-10-19) — CI verifies each third-party GitHub Action pin is a
   real commit, including workflows that pull requests do not run. The weekly zizmor job only
   flags known-vulnerable actions. Quoted `uses` keys and single-line `{uses: ...}` mappings
