@@ -21,6 +21,11 @@ That keeps SemVer and contributor history organized.
 
 ### Security
 
+- **pypdf 6.21.2** (2026-10-21) — closes four pypdf advisories published today
+  (GHSA-39mj-jf6j-2qj3, GHSA-7mh2-4gg2-979f, GHSA-9mx8-4j7g-633p, GHSA-qfv9-64jg-mh7p): infinite
+  loops and large memory use on crafted PDFs. Only the maintainer privacy-admission scripts parse PDFs;
+  dose calculation and the GUI do not. The core floor rises to `pypdf>=6.20.1`. Package version stays `1.0.0`.
+
 - **Dependency updates** (2026-10-20) — Pillow 13.0.0 fixes nine advisories in image handling,
   including GHSA-65qm-jvmh-6pqg. Most are in GIF, TIFF, JPEG, EPS, and PDF decoding; one is in the
   TIFF encoder and one in `ImageMorph`. certifi 2026.10.19 drops the emSign root CAs with
@@ -52,6 +57,14 @@ That keeps SemVer and contributor history organized.
   `1.0.0` until the next release (patch-level when cut).
 
 ### Fixed
+
+- **Dependency floors** (2026-10-21) — `pip install guiskindose` could pick versions the code
+  does not run on. pydicom 2.0–2.2 failed when reading an RDSR, NiceGUI before 3.9 could not
+  start the GUI, and `tqdm`, `psutil`, `rich`, `openpyxl`, and `kaleido` had no lower bound
+  at all. The floors are now pydicom 2.3, NiceGUI 3.18 (the GUI needs 3.9; 3.18 also brings
+  the upload fix for GHSA-9mxh-cwxr-cxjj to `pip install` users), tqdm 4.66, psutil 5.9,
+  rich 13.0, openpyxl 3.1, and kaleido 0.2.1, and a weekly CI job runs the test suite at them. Installs
+  from `uv.lock` are unchanged. Package version stays `1.0.0`.
 
 - **Export writes without Git** (2026-10-18) — Clinical and derived exports succeed when Git is not
   installed (the checkout-path guard is skipped instead of aborting the write). Frozen

@@ -17,8 +17,10 @@ Standard library only: it also runs when the unpinned install itself failed.
 from __future__ import annotations
 
 import argparse
+import os
 import re
 import sys
+import tempfile
 import tomllib
 from pathlib import Path
 
@@ -113,7 +115,7 @@ def probe_excerpt(probe: str, log_text: str, workspace: str = "") -> tuple[int |
         exit_code = int(match.group(1))
         lines = lines[:-1]
     lines = [line for line in lines if line.strip()]
-    if probe == "pytest":
+    if probe in ("pytest", "floors_pytest"):
         failures = [line for line in lines if _PYTEST_RESULT.match(line)]
         if failures:
             shown = failures[:MAX_EXCERPT_LINES]
@@ -192,23 +194,39 @@ def build_report(
     return "\n".join(_excerpt_section(failed, log_dir, workspace) + _drift_section(freeze, lock, pyproject))
 
 
+def _trusted_log_dir(log_dir: Path) -> Path:
+    """Confine the log directory to the runner temp dir or the repo (Sonar S8707).
+
+    The path is rebuilt from the matched root plus its relative parts, so the report
+    is written under a trusted root rather than wherever a command-line value points.
+    """
+    roots = [Path(os.environ.get("RUNNER_TEMP") or tempfile.gettempdir()).resolve(), _REPO_ROOT]
+    resolved = log_dir.resolve()
+    for root in roots:
+        if resolved.is_relative_to(root):
+            return root.joinpath(*resolved.relative_to(root).parts)
+    raise ValueError("--log-dir must be inside the runner temp directory or the repository")
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Write the failure section of the ci-latest tracking issue.")
     parser.add_argument("--log-dir", type=Path, required=True)
-    parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--failed", default="", help="comma-separated failed probe names")
     parser.add_argument("--workspace", default="", help="path prefix to strip from log lines")
     args = parser.parse_args(argv)
     failed = [name for name in args.failed.split(",") if name]
+    log_dir = _trusted_log_dir(args.log_dir)
     report = build_report(
         failed,
-        args.log_dir,
-        args.log_dir / "freeze.txt",
+        log_dir,
+        log_dir / "freeze.txt",
         _REPO_ROOT / "uv.lock",
         _REPO_ROOT / "pyproject.toml",
         args.workspace,
     )
-    args.out.write_text(report, encoding="utf-8")
+    # Fixed name inside the confined directory; the issue step reads it from there.
+    with open(log_dir / "report.md", "w", encoding="utf-8") as handle:
+        handle.write(report)
     return 0
 
 

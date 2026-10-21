@@ -52,6 +52,12 @@ _TOOL_MANIFEST: Final = "pyproject.toml"
 # snapshot in tests/conftest.py prunes directories named `.venv` at any depth, but not
 # `tmp/`, and tests/unittests/test_privacy_semgrep_rules.py runs the scanner.
 _TOOL_ENV_DIRNAME: Final = ".venv"
+# Semgrep's settings file, beside the venv rather than in it. The uvx and PATH fallbacks
+# run without creating the venv, and Semgrep writes this file on first run; inside `.venv`
+# that left a directory with no interpreter, which every later `uv run --project
+# tools/semgrep` refused ("not a valid Python environment"). Gitignored, and pruned by
+# the write-containment snapshot in tests/conftest.py like `.venv`.
+_TOOL_STATE_DIRNAME: Final = ".semgrep-state"
 
 # Set by the weekly `ci-latest` probe to run the newest Semgrep instead of the pin.
 # Dependabot refreshes isolated transitive lock versions but ignores the Semgrep pin.
@@ -206,10 +212,9 @@ def tool_environment(environ: dict[str, str] | None = None, *, root: Path | None
     source.update(_FORCED_TOOL_VARS)
     # Not a constant: it depends on where the tool project lives. Redirecting the settings
     # file is what closes get_token()'s second channel, the token a past `semgrep login`
-    # saved. It lives inside the tool venv because that path is gitignored AND pruned by the
-    # write-containment snapshot in tests/conftest.py, which prunes `.venv` at any depth but
-    # not `tmp/`.
-    source["SEMGREP_SETTINGS_FILE"] = str(tool_env / "semgrep-settings.yaml")
+    # saved. See _TOOL_STATE_DIRNAME for where it lives and why not inside the venv.
+    state_dir = base / TOOL_PROJECT / _TOOL_STATE_DIRNAME
+    source["SEMGREP_SETTINGS_FILE"] = str(state_dir / "semgrep-settings.yaml")
     return source
 
 

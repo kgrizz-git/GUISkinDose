@@ -145,6 +145,22 @@ def test_missing_freeze_and_oversized_logs_stay_bounded(tmp_path: Path) -> None:
     assert "... (cut; see the run log)" in text
 
 
+def test_main_writes_the_report_inside_the_log_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("RUNNER_TEMP", str(tmp_path))
+    log_dir = tmp_path / "ci-latest"
+    log_dir.mkdir()
+    (log_dir / "pytest.log").write_text("FAILED tests/t.py::test_a - boom\n[exit code 1]\n", encoding="utf-8")
+    assert report.main(["--log-dir", str(log_dir), "--failed", "pytest"]) == 0
+    assert "FAILED tests/t.py::test_a" in (log_dir / "report.md").read_text(encoding="utf-8")
+
+
+def test_main_refuses_a_log_dir_outside_trusted_roots(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("RUNNER_TEMP", str(tmp_path / "runner"))
+    outside = Path(report.__file__).resolve().parents[2]
+    with pytest.raises(ValueError, match="--log-dir"):
+        report.main(["--log-dir", str(outside)])
+
+
 def _run_issue_step(report_path: Path | None, issues: list[dict]) -> list[dict]:
     workflow = yaml.safe_load((ROOT / ".github/workflows/ci-latest.yml").read_text(encoding="utf-8"))
     steps = {step.get("name"): step for step in workflow["jobs"]["latest-deps"]["steps"]}
@@ -205,3 +221,28 @@ def test_issue_embeds_the_report_and_comments_on_an_existing_issue(tmp_path: Pat
 def test_issue_is_still_filed_when_the_report_is_missing() -> None:
     calls = _run_issue_step(None, [])
     assert "failure summary was not generated" in calls[0]["body"]
+
+
+def test_every_probe_can_open_and_close_the_issue() -> None:
+    """A probe missing from one condition either never reports or closes the issue while red."""
+    workflow = yaml.safe_load((ROOT / ".github/workflows/ci-latest.yml").read_text(encoding="utf-8"))
+    steps = workflow["jobs"]["latest-deps"]["steps"]
+    probes = [step["id"] for step in steps if step.get("continue-on-error") and step.get("id") != "report"]
+    assert {"pytest", "floors_install", "floors_pytest"} <= set(probes)
+    by_name = {step.get("name"): step for step in steps}
+    report = next(step for step in steps if step.get("id") == "report")
+    opener = by_name["Open issue and notify on failure"]
+    closer = by_name["Close ci-latest tracking issues on success"]
+    for probe in probes:
+        assert f"steps.{probe}.outcome == 'failure'" in report["if"]
+        assert f"steps.{probe}.outcome == 'failure'" in opener["if"]
+        assert f"steps.{probe}.outcome == 'success'" in closer["if"]
+        assert f"{probe}=${{{{ steps.{probe}.outcome }}}}" in report["env"]["OUTCOMES"]
+        assert f"['{probe}', process.env." in opener["with"]["script"]
+        assert f"{probe}: {{" in opener["with"]["script"]
+
+
+def test_floors_pytest_keeps_core_failures_before_gui_output() -> None:
+    log = "FAILED tests/unittests/test_a.py::test_x - boom\n1 failed\n" + "gui line\n" * 60 + "[exit code 1]\n"
+    _, excerpt = report.probe_excerpt("floors_pytest", log)
+    assert excerpt[0] == "FAILED tests/unittests/test_a.py::test_x - boom"
