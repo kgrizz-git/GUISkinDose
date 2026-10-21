@@ -115,7 +115,7 @@ def probe_excerpt(probe: str, log_text: str, workspace: str = "") -> tuple[int |
         exit_code = int(match.group(1))
         lines = lines[:-1]
     lines = [line for line in lines if line.strip()]
-    if probe == "pytest":
+    if probe in ("pytest", "floors_pytest"):
         failures = [line for line in lines if _PYTEST_RESULT.match(line)]
         if failures:
             shown = failures[:MAX_EXCERPT_LINES]

@@ -240,3 +240,9 @@ def test_every_probe_can_open_and_close_the_issue() -> None:
         assert f"{probe}=${{{{ steps.{probe}.outcome }}}}" in report["env"]["OUTCOMES"]
         assert f"['{probe}', process.env." in opener["with"]["script"]
         assert f"{probe}: {{" in opener["with"]["script"]
+
+
+def test_floors_pytest_keeps_core_failures_before_gui_output() -> None:
+    log = "FAILED tests/unittests/test_a.py::test_x - boom\n1 failed\n" + "gui line\n" * 60 + "[exit code 1]\n"
+    _, excerpt = report.probe_excerpt("floors_pytest", log)
+    assert excerpt[0] == "FAILED tests/unittests/test_a.py::test_x - boom"
