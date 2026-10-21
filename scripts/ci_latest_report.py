@@ -31,6 +31,9 @@ MAX_SECTION_CHARS = 40_000
 MAX_DIRECT_ROWS = 40
 
 _ANSI = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
+# Directory part of an absolute path (runner tool cache, temp dirs, home). Matched only
+# after whitespace, a quote or a bracket so `a/b` inside a test id is left alone.
+_ABSOLUTE_DIRS = re.compile(r"(?<![\w.~/-])/(?:[^\s/'\"(),:\[\]]+/)+")
 _EXIT_MARKER = re.compile(r"^\[exit code (\d+)\]$")
 _REQUIREMENT_NAME = re.compile(r"^\s*([A-Za-z0-9][A-Za-z0-9._-]*)")
 
@@ -93,6 +96,8 @@ def _clean(line: str, workspace: str) -> str:
     line = _ANSI.sub("", line.rstrip())
     if workspace:
         line = line.replace(workspace.rstrip("/") + "/", "")
+    # The issue is public: keep repo-relative test ids, drop where anything else lives.
+    line = _ABSOLUTE_DIRS.sub(".../", line)
     return line if len(line) <= MAX_LINE_CHARS else line[: MAX_LINE_CHARS - 3] + "..."
 
 
@@ -155,9 +160,15 @@ def _drift_section(freeze: Path, lock: Path, pyproject: Path) -> list[str]:
         if len(direct_rows) > MAX_DIRECT_ROWS:
             out.append(f"| ... {len(direct_rows) - MAX_DIRECT_ROWS} more | | |")
         out.append("")
+    elif other_rows:
+        out += [
+            "No direct dependency differs from `uv.lock`, but the transitive packages below do;",
+            "check those before suspecting how this workflow sets up its environment.",
+            "",
+        ]
     else:
         out += [
-            "No direct dependency differs from `uv.lock`, so an upstream release is an unlikely cause.",
+            "Nothing differs from `uv.lock`, so an upstream release is an unlikely cause.",
             "Check whether the failure is in how this workflow sets up its environment.",
             "",
         ]

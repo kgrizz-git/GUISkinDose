@@ -59,7 +59,7 @@ def test_basedpyright_configuration_failure_is_not_reported_as_type_errors(tmp_p
     assert "exit code 3: configuration error" in text
     assert "venv .venv subdirectory not found" in text
     assert "[exit code 3]" not in text
-    assert "No direct dependency differs from `uv.lock`" in text
+    assert "Nothing differs from `uv.lock`" in text
 
 
 def test_pytest_excerpt_lists_failures_and_the_summary_line(tmp_path: Path) -> None:
@@ -75,6 +75,28 @@ def test_pytest_excerpt_lists_failures_and_the_summary_line(tmp_path: Path) -> N
     assert "... 5 more" in text
     assert "45 failed, 10 passed" in text
     assert "\x1b[" not in text
+
+
+def test_transitive_only_drift_is_not_dismissed_as_environment(tmp_path: Path) -> None:
+    log_dir, lock, pyproject = _fixture(tmp_path, "numpy==2.4.6\ntyping_extensions==4.16.0\n", {})
+    text = report.build_report([], log_dir, log_dir / "freeze.txt", lock, pyproject)
+    assert "but the transitive packages below do" in text
+    assert "unlikely cause" not in text
+
+
+def test_absolute_paths_are_collapsed_but_test_ids_kept(tmp_path: Path) -> None:
+    log = (
+        "FAILED tests/unittests/test_a.py::test_x - CalledProcessError: Command '['/opt/tool/1.0/bin/uv', 'run']'\n"
+        "E   OSError: /tmp/pytest-of-runner/pytest-0/x/out.json not found\n"
+        "[exit code 1]\n"
+    )
+    log_dir, lock, pyproject = _fixture(tmp_path, "", {"pytest": log})
+    _, excerpt = report.probe_excerpt("pytest", log)
+    assert excerpt[0].startswith("FAILED tests/unittests/test_a.py::test_x")
+    assert "'.../uv'" in excerpt[0]
+    assert "/opt/tool" not in excerpt[0]
+    text = report.build_report(["pytest"], log_dir, log_dir / "freeze.txt", lock, pyproject)
+    assert "/opt/tool" not in text
 
 
 def test_drift_puts_direct_dependencies_in_a_table(tmp_path: Path) -> None:
