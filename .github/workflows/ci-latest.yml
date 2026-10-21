@@ -164,25 +164,59 @@ jobs:
       uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
       with:
         python-version: '3.14'
+    # Every probe below tees its output into $RUNNER_TEMP/ci-latest/<step id>.log and ends
+    # the log with "[exit code N]" on a line of its own (the leading \n covers output that
+    # stopped mid-line), so the issue step can quote what actually failed rather than only
+    # which step did (scripts/ci_latest_report.py builds that section).
+    #
+    # The install goes into ./.venv on purpose: pyproject.toml pins basedpyright to
+    # `venv = ".venv"`, and against a bare runner Python it exits 3 ("venv .venv
+    # subdirectory not found") with "0 errors" — a configuration failure that looked like
+    # type-stub drift in every tracking issue. $GITHUB_PATH puts .venv/bin first for every
+    # later step. Tests reach uv only through `uv run --no-sync` or the isolated
+    # tools/semgrep project, so nothing re-syncs this environment back to uv.lock.
     - name: Install latest dependencies (unpinned — NOT from uv.lock)
       id: install
       continue-on-error: true
+      shell: bash
       run: |
-        python -m pip install --upgrade pip
-        pip install -e ".[dev,gui]"
+        set +e
+        log_dir="$RUNNER_TEMP/ci-latest"
+        mkdir -p "$log_dir"
+        echo "$GITHUB_WORKSPACE/.venv/bin" >> "$GITHUB_PATH"
+        {
+          python -m venv .venv &&
+          .venv/bin/python -m pip install --upgrade pip &&
+          .venv/bin/python -m pip install -e ".[dev,gui]"
+        } 2>&1 | tee "$log_dir/install.log"
+        rc=${PIPESTATUS[0]}
+        printf '\n[exit code %s]\n' "$rc" >> "$log_dir/install.log"
+        exit "$rc"
     - name: Show resolved versions
       if: steps.install.outcome == 'success'
-      run: pip freeze
+      run: pip freeze | tee "$RUNNER_TEMP/ci-latest/freeze.txt"
     - name: Basedpyright (strict — catches type-stub drift)
       id: basedpyright
       if: steps.install.outcome == 'success'
       continue-on-error: true
-      run: basedpyright
+      shell: bash
+      run: |
+        set +e
+        basedpyright 2>&1 | tee "$RUNNER_TEMP/ci-latest/basedpyright.log"
+        rc=${PIPESTATUS[0]}
+        printf '\n[exit code %s]\n' "$rc" >> "$RUNNER_TEMP/ci-latest/basedpyright.log"
+        exit "$rc"
     - name: GUI test placement (core suite collects with nicegui blocked)
       id: gui_placement
       if: steps.install.outcome == 'success'
       continue-on-error: true
-      run: python scripts/check_gui_test_placement.py
+      shell: bash
+      run: |
+        set +e
+        python scripts/check_gui_test_placement.py 2>&1 | tee "$RUNNER_TEMP/ci-latest/gui_placement.log"
+        rc=${PIPESTATUS[0]}
+        printf '\n[exit code %s]\n' "$rc" >> "$RUNNER_TEMP/ci-latest/gui_placement.log"
+        exit "$rc"
     # Semgrep is pinned in dev-docs/privacy_tool_inventory.json and deliberately kept out
     # of uv.lock, so Dependabot cannot bump it. These two probes are the only thing that
     # catches a pin drifting behind upstream or a new release breaking a gate. ci.yml runs
@@ -194,7 +228,13 @@ jobs:
       continue-on-error: true
       env:
         GUISKINDOSE_SEMGREP_UNPINNED: "1"
-      run: python scripts/run_semgrep_owasp.py
+      shell: bash
+      run: |
+        set +e
+        python scripts/run_semgrep_owasp.py 2>&1 | tee "$RUNNER_TEMP/ci-latest/semgrep_owasp.log"
+        rc=${PIPESTATUS[0]}
+        printf '\n[exit code %s]\n' "$rc" >> "$RUNNER_TEMP/ci-latest/semgrep_owasp.log"
+        exit "$rc"
 
     # The privacy ruleset is project-local (.semgrep/), so it is *more* exposed to a
     # semgrep parser or behaviour change than the upstream OWASP pack, not less.
@@ -204,13 +244,56 @@ jobs:
       continue-on-error: true
       env:
         GUISKINDOSE_SEMGREP_UNPINNED: "1"
-      run: python scripts/run_semgrep_privacy.py
+      shell: bash
+      run: |
+        set +e
+        python scripts/run_semgrep_privacy.py 2>&1 | tee "$RUNNER_TEMP/ci-latest/semgrep_privacy.log"
+        rc=${PIPESTATUS[0]}
+        printf '\n[exit code %s]\n' "$rc" >> "$RUNNER_TEMP/ci-latest/semgrep_privacy.log"
+        exit "$rc"
 
     - name: Full test suite (core + gui) against latest deps
       id: pytest
       if: steps.install.outcome == 'success'
       continue-on-error: true
-      run: python -m pytest -q
+      shell: bash
+      run: |
+        set +e
+        python -m pytest -q 2>&1 | tee "$RUNNER_TEMP/ci-latest/pytest.log"
+        rc=${PIPESTATUS[0]}
+        printf '\n[exit code %s]\n' "$rc" >> "$RUNNER_TEMP/ci-latest/pytest.log"
+        exit "$rc"
+    # Standard-library script run by setup-python's interpreter, so it still works when the
+    # unpinned install (and with it .venv) failed. continue-on-error: a broken report must
+    # never stop the issue from being filed; the issue step falls back to step names only.
+    - name: Summarize probe failures for the tracking issue
+      id: report
+      if: >
+        always() &&
+        (steps.install.outcome == 'failure' ||
+         steps.basedpyright.outcome == 'failure' ||
+         steps.gui_placement.outcome == 'failure' ||
+         steps.semgrep_owasp.outcome == 'failure' ||
+         steps.semgrep_privacy.outcome == 'failure' ||
+         steps.pytest.outcome == 'failure')
+      continue-on-error: true
+      env:
+        OUTCOMES: >-
+          install=${{ steps.install.outcome }}
+          basedpyright=${{ steps.basedpyright.outcome }}
+          gui_placement=${{ steps.gui_placement.outcome }}
+          semgrep_owasp=${{ steps.semgrep_owasp.outcome }}
+          semgrep_privacy=${{ steps.semgrep_privacy.outcome }}
+          pytest=${{ steps.pytest.outcome }}
+      shell: bash
+      run: |
+        failed=""
+        for pair in $OUTCOMES; do
+          if [[ "${pair#*=}" == failure ]]; then failed+="${pair%%=*},"; fi
+        done
+        "$pythonLocation/bin/python" scripts/ci_latest_report.py \
+          --log-dir "$RUNNER_TEMP/ci-latest" --failed "$failed" \
+          --workspace "$GITHUB_WORKSPACE" --out "$RUNNER_TEMP/ci-latest/report.md"
     - name: Open issue and notify on failure
       if: >
         always() &&
@@ -228,8 +311,10 @@ jobs:
         SEMGREP_OWASP_OUTCOME: ${{ steps.semgrep_owasp.outcome }}
         SEMGREP_PRIVACY_OUTCOME: ${{ steps.semgrep_privacy.outcome }}
         PYTEST_OUTCOME: ${{ steps.pytest.outcome }}
+        REPORT_PATH: ${{ runner.temp }}/ci-latest/report.md
       with:
         script: |
+          const fs = require('fs');
           const marker = '<!-- ci-latest-failure -->';
           const owner = context.repo.owner;
           const repo = context.repo.repo;
@@ -250,8 +335,8 @@ jobs:
               action: 're-run **ci-latest** Monday; if still red, pin the offending dep in `pyproject.toml`',
             },
             basedpyright: {
-              summary: 'upstream tightened type annotations under unpinned deps',
-              action: 'reproduce locally with `pip install -e ".[dev,gui]" && basedpyright`; fix or `# pyright: ignore`',
+              summary: 'basedpyright reported type errors, or could not run at all (the exit code below says which)',
+              action: 'exit code 1: fix the reported errors; any other code: fix the environment or config. Reproduce in a fresh venv with `pip install -e ".[dev,gui]" && basedpyright`',
             },
             gui_placement: {
               summary: 'GUI test placement check failed under unpinned deps',
@@ -266,8 +351,8 @@ jobs:
               action: 'reproduce with `GUISKINDOSE_SEMGREP_UNPINNED=1 python scripts/run_semgrep_privacy.py`; fix the rules or hold the pin',
             },
             pytest: {
-              summary: 'unpinned pytest failed',
-              action: 'reproduce locally with `pip install -e ".[dev,gui]" && python -m pytest -q`; fix or wait for upstream',
+              summary: 'tests failed against the newest dependencies',
+              action: 'reproduce in a fresh venv with `pip install -e ".[dev,gui]" && python -m pytest -q` (serial, like this job); compare with the locked `uv run pytest`',
             },
           };
 
@@ -275,6 +360,14 @@ jobs:
             const g = stepGuidance[name];
             return g ? `- **${name}** — ${g.summary}\n  → ${g.action}` : `- **${name}** — unknown step (see run log)`;
           }).join('\n');
+
+          // Written by scripts/ci_latest_report.py; absent if that step failed.
+          let report = '';
+          try {
+            report = fs.readFileSync(process.env.REPORT_PATH, 'utf8');
+          } catch (error) {
+            report = '_The failure summary was not generated; see the run log._';
+          }
 
           const summary = [
             marker,
@@ -288,7 +381,10 @@ jobs:
             '',
             guidanceLines,
             '',
-            '**Default:** do nothing — most issues self-correct when upstream ships a fix by next Monday.',
+            report,
+            '',
+            '**Default:** a one-off failure often clears when upstream ships a fix by next Monday.',
+            'If the same step fails two Mondays running, it will not clear on its own: fix it, or pin the dependency.',
             '',
             '**Triage commands:**',
             '```',

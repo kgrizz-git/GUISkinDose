@@ -56,7 +56,7 @@ Agents working in this repository should be able to answer three questions quick
 | Release history and semver notes | `CHANGELOG.md` |
 | CI | `.github/workflows/ci.yml` (`static-analysis` runs `scripts/check_action_pins.py`, which requires every third-party `uses:` pin to be a commit that exists; the weekly zizmor job only flags known-vulnerable actions) |
 | Weekly dependency audit (scheduled, ungated) | `.github/workflows/dependency-audit.yml` (runs `scripts/audit_dependencies.py` on `uv.lock` even when HEAD is unchanged; a second job runs zizmor's `known-vulnerable-actions` audit, since Dependabot never alerts on SHA-pinned actions) |
-| Latest-deps canary (scheduled) | `.github/workflows/ci-latest.yml` (unpinned install; soft-fails with issue notify so `main` stays green) |
+| Latest-deps canary (scheduled) | `.github/workflows/ci-latest.yml` (unpinned install into `.venv`; soft-fails with issue notify so `main` stays green; `scripts/ci_latest_report.py` adds each failed probe's log excerpt and the versions that differ from `uv.lock` to the issue) |
 | Local git hooks | `.pre-commit-config.yaml` |
 | Changelog enforcement (CI on PRs + pre-push) | `scripts/check_changelog.py` |
 | Stale-brand allowlist (GUISkinDose rename) | `scripts/check_stale_brand.py` (live-tree gate is active; dual-read config/env and historical identity phrases are allowlisted; `CHANGELOG.md` Unreleased is scanned, then the gate stops at the first `## [25.` historical header) |

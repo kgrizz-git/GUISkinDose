@@ -8,6 +8,15 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ## [Unreleased]
 
+- **ci-latest failure reports** (2026-10-21) — The `ci-latest` tracking issue now says why a
+  probe failed. Each probe tees its output and exit code into the runner's temp directory, and
+  `scripts/ci_latest_report.py` adds a log excerpt per failed step (pytest's FAILED lines, else
+  the tail) plus the installed versions that differ from `uv.lock`, direct dependencies first.
+  The basedpyright probe had failed every week since 2026-10-05 with exit code 3 and
+  "0 errors": `pyproject.toml` pins it to `.venv`, and the unpinned install went into the bare
+  runner Python. The install now goes into `.venv`. The issue also stops recommending "do
+  nothing" for a step that fails two Mondays running.
+
 - **aiohttp lock** (2026-10-19) — `uv.lock` moves aiohttp 3.14.3 → 3.14.5 and yarl 1.24.2 → 1.25.1
   so the pre-push dependency audit passes. The three aiohttp advisories are cookie `Secure`
   handling, a missing initial request timeout, and unbounded memory or CPU use.
