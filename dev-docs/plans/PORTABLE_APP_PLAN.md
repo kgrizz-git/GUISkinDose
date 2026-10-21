@@ -231,7 +231,7 @@ Run this alongside Phase 0. The maintainer now has an Apple Developer account, s
 - [ ] `_reduced_1000t` is absent from both app payloads. Previews still resolve to `_reduced_3000t`.
 - [ ] macOS release zips are signed, notarized, and stapled with the Phase 0b recipe. Signing secrets are GitHub secrets read only by the release job.
 - [ ] CI builds Windows, macOS, and Linux onedir zips. Artifacts expire. They are not committed. Fetched binaries are checked against the pinned sha256. Linux jobs launch browser mode, not native. The Linux job records which system libraries the bundled Chromium needs. If Full PNG on Linux needs packages only root can install, drop the air-gapped PNG claim for Linux.
-- [ ] Public Full Windows waits for Phase 4. A Phase 1 Full Windows zip may be kept as a size artifact and is labeled "needs WebView2 already installed." It is not the no-admin download.
+- [ ] Public Full Windows waits for Phase 5 signing. A Phase 1 Full Windows zip may be kept as a size artifact and is labeled "needs WebView2 already installed." It is not the no-admin download.
 - [ ] Update [references/PORTABLE_EXECUTABLE_PACKAGING.md](../references/PORTABLE_EXECUTABLE_PACKAGING.md), which still says to freeze the CLI entry, ship `corrections.db`, and smoke PNG on every OS.
 - [ ] Smoke tests use a zip that was downloaded through a browser, so Mark of the Web and macOS quarantine are actually present. Release notes name the downloads, say Light has no PNG dose map, say Linux opens in the browser, and state that the app is not FDA-cleared.
 
@@ -264,6 +264,7 @@ Light's missing-runtime message is Phase 1. This phase only adds the runtime to 
 - [ ] Download Microsoft's **Fixed Version** WebView2 runtime for the build arch, not the Evergreen machine-wide installer. Pin the version and sha256. Record its size (Microsoft documents it as over 250 MB) and the redistribution terms in the progress log.
 - [ ] Expand the Fixed Version `.cab` with `expand <package> -F:* <dest>`, as Microsoft documents. Do not extract it with Explorer. Place the expanded runtime inside the **Full** onedir only. Pass that absolute path through `app.native.settings['WEBVIEW2_RUNTIME_PATH']`. Light leaves it unset. `webview.settings` rejects unknown keys, and NiceGUI applies these settings in the window child, so a misspelled key kills the window.
 - [ ] On Windows 10, Fixed Version 120 and later needs AppContainer read-execute on that folder (`ALL APPLICATION PACKAGES` and `ALL RESTRICTED APPLICATION PACKAGES`). A zip stores no NTFS ACLs, so the app grants them after extraction, on the runtime folder only. The grant is idempotent, runs without a console flash, and fails loudly with a message. The acceptance run must not show a UAC prompt. A FAT or exFAT USB stick is not a supported Full location.
+- [ ] Keep the Full Windows zip internal. It goes public in Phase 5, once it carries an Authenticode signature.
 - [ ] Smoke Full on a Windows VM that does **not** have WebView2 installed: unzip into the user profile on NTFS, launch, calculate, export HTML. Confirm Full does not launch from a UNC path, and say that in the release notes.
 - [ ] Add the runtime size to the Full Windows zip estimate only. It dominates the phantom-catalog difference on Windows.
 - [ ] A later release rebuilds when that pinned runtime or the pinned Chromium has a security fix. There is no auto-updater.
@@ -304,6 +305,7 @@ Light's missing-runtime message is Phase 1. This phase only adds the runtime to 
 - **2026-10-17** — No update check and no crash reporting. The user phantom library survives deleting the app folder.
 - **2026-10-19** — macOS signing and notarization move into Phase 1, because an unsigned quarantined `.app` is blocked, not just warned. Phase 5 is Windows Authenticode plus re-verification.
 - **2026-10-19** — The WebView2 pre-check runs in every edition, not only Light.
+- **2026-10-20** — Public Full Windows waits for Phase 5 signing. It is the clinical download, and its unsigned PyInstaller layout plus bundled browser is the build most likely to be flagged by SmartScreen and Defender. Light Windows stays public, unsigned, from Phase 1.
 - **2026-10-18** — A no-admin Windows run is the Full zip after Phase 4 (Fixed Version WebView2 via `app.native.settings`, pywebview ≥ 6.1) and Phase 5 (Authenticode). Light omits that 250 MB runtime. Phase 1 already tells the user when WebView2 is missing, before the window starts. AppLocker/WDAC bypass is out of scope.
 
 ## Related docs
