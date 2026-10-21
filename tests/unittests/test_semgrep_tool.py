@@ -335,9 +335,19 @@ class TestToolEnvironment:
         assert "SEMGREP_APP_TOKEN" not in environment
         settings = Path(environment["SEMGREP_SETTINGS_FILE"])
         assert settings.is_relative_to(ROOT / TOOL_PROJECT)
-        # Inside `.venv` on purpose: gitignored, and pruned by the write-containment
-        # snapshot in tests/conftest.py, which prunes `.venv` at any depth but not `tmp/`.
-        assert ".venv" in settings.parts
+        # Gitignored and pruned by the write-containment snapshot in tests/conftest.py.
+        assert ".semgrep-state" in settings.parts
+
+    def test_settings_file_never_creates_the_tool_venv(self) -> None:
+        """The uvx/PATH fallbacks never create the venv, but Semgrep writes its settings file.
+
+        With that file inside `.venv`, the weekly unpinned probe left `tools/semgrep/.venv`
+        holding a settings file and no interpreter, and every later `uv run --project
+        tools/semgrep` in the test suite failed with "not a valid Python environment".
+        """
+        environment = semgrep_tool.tool_environment(root=ROOT)
+        venv = Path(environment["UV_PROJECT_ENVIRONMENT"])
+        assert not Path(environment["SEMGREP_SETTINGS_FILE"]).is_relative_to(venv)
 
     def test_metrics_are_off_for_every_gate_not_just_one(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """This lived in the OWASP runner only, while the docs claimed both gates had it.

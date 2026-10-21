@@ -6,6 +6,10 @@
 # unnoticed until someone bumps the lock. This workflow closes that gap: it runs on a
 # weekly schedule (and on demand) with an unpinned install.
 #
+# The same job also probes the other end of the range: the floors in pyproject.toml,
+# which is what `pip install guiskindose` promises to work with and which nothing else
+# ever installs (uv.lock and the unpinned probe both sit at the newest end).
+#
 # Failures are advisory for branch status: probe steps use continue-on-error so a broken
 # upstream release does not paint `main` red. Instead the workflow opens (or updates) a
 # GitHub issue that @-mentions the repository owner so maintainers are notified, then you
@@ -263,6 +267,59 @@ jobs:
         rc=${PIPESTATUS[0]}
         printf '\n[exit code %s]\n' "$rc" >> "$RUNNER_TEMP/ci-latest/pytest.log"
         exit "$rc"
+    # Floors probe. `--resolution lowest-direct` installs every direct runtime/GUI
+    # dependency at its pyproject.toml floor (transitives stay newest) on the oldest
+    # supported Python, because old floors such as numpy 2.2 ship no wheels for 3.14.
+    # Only the test runners from the dev extra are added afterwards, constrained to what
+    # the floors resolved: installing the whole dev extra would let a tool's own floor
+    # (pip-audit needs rich>=12.4) quietly lift a runtime floor and hide a wrong one.
+    - name: Install dependency floors (lowest-direct, Python 3.11)
+      id: floors_install
+      if: always()
+      continue-on-error: true
+      shell: bash
+      run: |
+        set +e
+        log_dir="$RUNNER_TEMP/ci-latest"
+        mkdir -p "$log_dir"
+        export VIRTUAL_ENV="$RUNNER_TEMP/floors-venv"
+        {
+          "$pythonLocation/bin/python" - > "$RUNNER_TEMP/floors-test-tools.txt" <<'EOF' &&
+        import re
+        import tomllib
+        with open("pyproject.toml", "rb") as handle:
+            dev = tomllib.load(handle)["project"]["optional-dependencies"]["dev"]
+        runners = {"pyyaml", "defusedxml", "pytest", "pytest-xdist", "ruff"}
+        print("\n".join(r for r in dev if re.split(r"[\s<>=!~\[;]", r, maxsplit=1)[0].lower() in runners))
+        EOF
+          uv venv --python 3.11 "$VIRTUAL_ENV" &&
+          uv pip install --resolution lowest-direct -e ".[gui]" &&
+          uv pip freeze --exclude-editable > "$RUNNER_TEMP/floors-constraints.txt" &&
+          uv pip install -c "$RUNNER_TEMP/floors-constraints.txt" -r "$RUNNER_TEMP/floors-test-tools.txt" &&
+          uv pip freeze
+        } 2>&1 | tee "$log_dir/floors_install.log"
+        rc=${PIPESTATUS[0]}
+        printf '\n[exit code %s]\n' "$rc" >> "$log_dir/floors_install.log"
+        exit "$rc"
+    # Split like ci.yml (core, then GUI). The latest-deps pytest above runs everything in
+    # one process on purpose, which is what exposed cross-suite import pollution.
+    - name: Test suite at the dependency floors
+      id: floors_pytest
+      if: always() && steps.floors_install.outcome == 'success'
+      continue-on-error: true
+      shell: bash
+      run: |
+        set +e
+        export VIRTUAL_ENV="$RUNNER_TEMP/floors-venv"
+        export PATH="$VIRTUAL_ENV/bin:$PATH"
+        log="$RUNNER_TEMP/ci-latest/floors_pytest.log"
+        python -m pytest -q -n auto --ignore=tests/gui 2>&1 | tee "$log"
+        core=${PIPESTATUS[0]}
+        python -m pytest -q -n auto tests/gui 2>&1 | tee -a "$log"
+        gui=${PIPESTATUS[0]}
+        rc=$(( core > gui ? core : gui ))
+        printf '\n[exit code %s]\n' "$rc" >> "$log"
+        exit "$rc"
     # Standard-library script run by setup-python's interpreter, so it still works when the
     # unpinned install (and with it .venv) failed. continue-on-error: a broken report must
     # never stop the issue from being filed; the issue step falls back to step names only.
@@ -275,7 +332,9 @@ jobs:
          steps.gui_placement.outcome == 'failure' ||
          steps.semgrep_owasp.outcome == 'failure' ||
          steps.semgrep_privacy.outcome == 'failure' ||
-         steps.pytest.outcome == 'failure')
+         steps.pytest.outcome == 'failure' ||
+         steps.floors_install.outcome == 'failure' ||
+         steps.floors_pytest.outcome == 'failure')
       continue-on-error: true
       env:
         OUTCOMES: >-
@@ -285,6 +344,8 @@ jobs:
           semgrep_owasp=${{ steps.semgrep_owasp.outcome }}
           semgrep_privacy=${{ steps.semgrep_privacy.outcome }}
           pytest=${{ steps.pytest.outcome }}
+          floors_install=${{ steps.floors_install.outcome }}
+          floors_pytest=${{ steps.floors_pytest.outcome }}
       shell: bash
       run: |
         failed=""
@@ -302,7 +363,9 @@ jobs:
          steps.gui_placement.outcome == 'failure' ||
          steps.semgrep_owasp.outcome == 'failure' ||
          steps.semgrep_privacy.outcome == 'failure' ||
-         steps.pytest.outcome == 'failure')
+         steps.pytest.outcome == 'failure' ||
+         steps.floors_install.outcome == 'failure' ||
+         steps.floors_pytest.outcome == 'failure')
       uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3  # v9
       env:
         INSTALL_OUTCOME: ${{ steps.install.outcome }}
@@ -311,6 +374,8 @@ jobs:
         SEMGREP_OWASP_OUTCOME: ${{ steps.semgrep_owasp.outcome }}
         SEMGREP_PRIVACY_OUTCOME: ${{ steps.semgrep_privacy.outcome }}
         PYTEST_OUTCOME: ${{ steps.pytest.outcome }}
+        FLOORS_INSTALL_OUTCOME: ${{ steps.floors_install.outcome }}
+        FLOORS_PYTEST_OUTCOME: ${{ steps.floors_pytest.outcome }}
         REPORT_PATH: ${{ runner.temp }}/ci-latest/report.md
       with:
         script: |
@@ -327,6 +392,8 @@ jobs:
             ['semgrep_owasp', process.env.SEMGREP_OWASP_OUTCOME],
             ['semgrep_privacy', process.env.SEMGREP_PRIVACY_OUTCOME],
             ['pytest', process.env.PYTEST_OUTCOME],
+            ['floors_install', process.env.FLOORS_INSTALL_OUTCOME],
+            ['floors_pytest', process.env.FLOORS_PYTEST_OUTCOME],
           ].filter(([, outcome]) => outcome === 'failure').map(([name]) => name);
 
           const stepGuidance = {
@@ -353,6 +420,14 @@ jobs:
             pytest: {
               summary: 'tests failed against the newest dependencies',
               action: 'reproduce in a fresh venv with `pip install -e ".[dev,gui]" && python -m pytest -q` (serial, like this job); compare with the locked `uv run pytest`',
+            },
+            floors_install: {
+              summary: 'the lowest versions `pyproject.toml` allows could not be installed together on Python 3.11',
+              action: 'raise the floor named in the resolver error; reproduce with `uv venv --python 3.11 && uv pip install --resolution lowest-direct -e ".[gui]"`',
+            },
+            floors_pytest: {
+              summary: 'tests failed at the lowest versions `pyproject.toml` allows, so a floor is too low for the code',
+              action: 'raise the floor of the package in the traceback to the release that added what the code uses (or make the code work on the floor); same setup as `floors_install`, then `python -m pytest`',
             },
           };
 
@@ -439,7 +514,9 @@ jobs:
         steps.gui_placement.outcome == 'success' &&
         steps.semgrep_owasp.outcome == 'success' &&
         steps.semgrep_privacy.outcome == 'success' &&
-        steps.pytest.outcome == 'success'
+        steps.pytest.outcome == 'success' &&
+        steps.floors_install.outcome == 'success' &&
+        steps.floors_pytest.outcome == 'success'
       uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3  # v9
       with:
         script: |

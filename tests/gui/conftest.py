@@ -10,7 +10,9 @@ nested conftest. This file just skips the GUI tests when NiceGUI is absent.
 
 from __future__ import annotations
 
+import sys
 from contextlib import suppress
+from types import ModuleType
 
 import pytest
 
@@ -49,6 +51,30 @@ def _reset_state_singleton() -> None:
 
     state.__dict__.clear()
     state.__dict__.update(AppState().__dict__)
+
+
+def _guiskindose_modules() -> dict[str, ModuleType]:
+    return {name: module for name, module in sys.modules.items() if name.partition(".")[0] == "guiskindose"}
+
+
+@pytest.fixture(autouse=True)
+def _restore_popped_package_modules():
+    """Put back the ``guiskindose`` packages NiceGUI's ``user`` fixture evicts.
+
+    On teardown, NiceGUI pops each page-route module *and all its parents* from
+    ``sys.modules`` (``guiskindose.gui.app``, ``guiskindose.gui``, ``guiskindose``)
+    but leaves their other submodules behind. The next import then builds fresh
+    parent packages that lack those submodules as attributes, so a later test's
+    ``monkeypatch.setattr("guiskindose.gui.run_state_equipment.x", ...)`` fails with
+    ``module 'guiskindose.gui' has no attribute ...``. Main CI never saw it because
+    it runs ``tests/gui`` in its own process; a single ``pytest`` run of the whole
+    suite (as ci-latest does) did. Autouse, so it is set up before ``user`` and its
+    teardown runs after NiceGUI's.
+    """
+    before = _guiskindose_modules()
+    yield
+    for name, module in before.items():
+        sys.modules.setdefault(name, module)
 
 
 @pytest.fixture(autouse=True)

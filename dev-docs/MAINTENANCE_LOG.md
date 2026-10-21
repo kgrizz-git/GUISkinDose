@@ -8,6 +8,18 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ## [Unreleased]
 
+- **ci-latest floors probe and test isolation** (2026-10-21) — After the failure reports
+  landed, the next run showed only pytest failing, with two causes in the tests rather than in
+  upstream releases. NiceGUI's `user` fixture pops each page module and all its parent packages
+  from `sys.modules` on teardown, so in a single-process run (ci-latest; ci.yml runs `tests/gui`
+  separately) later `monkeypatch.setattr("guiskindose.gui...")` calls failed;
+  `tests/gui/conftest.py` now restores the popped packages. Semgrep's settings file lived in
+  `tools/semgrep/.venv`, so the unpinned probe (uvx, which never builds that venv) left a venv
+  directory with no interpreter that every later `uv run --project tools/semgrep` refused; it
+  now lives in the gitignored `tools/semgrep/.semgrep-state/`. The same job gains a floors
+  probe: `uv pip install --resolution lowest-direct -e ".[gui]"` on Python 3.11, then the
+  suite. Its first local run failed at once, so the floors moved (see CHANGELOG).
+
 - **ci-latest failure reports** (2026-10-21) — The `ci-latest` tracking issue now says why a
   probe failed. Each probe tees its output and exit code into the runner's temp directory, and
   `scripts/ci_latest_report.py` adds a log excerpt per failed step (pytest's FAILED lines, else

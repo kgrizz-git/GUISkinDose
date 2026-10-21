@@ -32,6 +32,7 @@ _REPO_ROOT = Path(__file__).resolve().parents[1]
 _EXCLUDED_DIRS = {
     ".git",
     ".venv",
+    ".semgrep-state",
     "venv",
     "__pycache__",
     ".pytest_cache",

@@ -7,7 +7,7 @@ static-analysis environment (`dev` + `gui` extras):
 uv run --extra dev --extra gui --locked python scripts/check_licenses.py --write-notices
 ```
 
-Regenerate with `uv run --extra dev --extra gui --locked python scripts/check_licenses.py --write-notices` (last updated: 2026-10-20).
+Regenerate with `uv run --extra dev --extra gui --locked python scripts/check_licenses.py --write-notices` (last updated: 2026-10-21).
 
 Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIANCE.md`](LICENSE_COMPLIANCE.md).
 
@@ -36,7 +36,7 @@ Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIAN
 | cyclonedx-python-lib | 11.8.0 | Apache-2.0 | Bug Tracker, https://github.com/CycloneDX/cyclonedx-python-lib/issues |
 | defusedxml | 0.7.1 | PSF-2.0 | https://github.com/tiran/defusedxml |
 | diff_cover | 10.6.0 | Apache-2.0 | Homepage, https://github.com/Bachmann1234/diff-cover |
-| distlib | 0.4.1 | PSF-2.0 | https://github.com/pypa/distlib |
+| distlib | 0.4.4 | PSF-2.0 | https://github.com/pypa/distlib |
 | docutils | 0.22.4 | BSD-3-Clause, GPL-2.0-or-later | Changelog, https://docutils.sourceforge.io/HISTORY.html |
 | et_xmlfile | 2.0.0 | MIT | https://foss.heptapod.net/openpyxl/et_xmlfile |
 | execnet | 2.1.2 | MIT | Homepage, https://execnet.readthedocs.io/en/latest/ |
@@ -72,7 +72,7 @@ Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIAN
 | openpyxl | 3.1.5 | MIT | https://openpyxl.readthedocs.io |
 | orjson | 3.11.9 | Apache-2.0, MIT | changelog, https://github.com/ijl/orjson/blob/master/CHANGELOG.md |
 | packageurl-python | 0.17.6 | MIT | https://github.com/package-url/packageurl-python |
-| packaging | 26.2 | Apache-2.0, BSD-2-Clause | Documentation, https://packaging.pypa.io/ |
+| packaging | 26.3 | Apache-2.0, BSD-2-Clause | Documentation, https://packaging.pypa.io/ |
 | pandas | 3.0.6 | BSD-3-Clause | homepage, https://pandas.pydata.org |
 | pandas-stubs | 3.0.5.260914 | BSD-3-Clause | Bug Tracker, https://github.com/pandas-dev/pandas-stubs/issues |
 | pillow | 13.0.0 | MIT-CMU | Release notes, https://pillow.readthedocs.io/en/stable/releasenotes/index.html |
@@ -132,7 +132,7 @@ Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIAN
 | typing_extensions | 4.15.0 | PSF-2.0 | Bug Tracker, https://github.com/python/typing_extensions/issues |
 | urllib3 | 2.8.0 | MIT | Changelog, https://github.com/urllib3/urllib3/blob/main/CHANGES.rst |
 | uvicorn | 0.49.0 | BSD-3-Clause | Changelog, https://uvicorn.dev/release-notes |
-| virtualenv | 21.14.1 | MIT | thanks.dev, https://thanks.dev/u/gh/gaborbernat |
+| virtualenv | 21.14.12 | MIT | thanks.dev, https://thanks.dev/u/gh/gaborbernat |
 | webencodings | 0.5.1 | BSD-3-Clause | https://github.com/SimonSapin/python-webencodings |
 | wsproto | 1.3.2 | MIT | Homepage, https://github.com/python-hyper/wsproto/ |
 | yarl | 1.25.1 | Apache-2.0 | https://github.com/aio-libs/yarl |

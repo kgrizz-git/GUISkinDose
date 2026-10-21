@@ -205,3 +205,22 @@ def test_issue_embeds_the_report_and_comments_on_an_existing_issue(tmp_path: Pat
 def test_issue_is_still_filed_when_the_report_is_missing() -> None:
     calls = _run_issue_step(None, [])
     assert "failure summary was not generated" in calls[0]["body"]
+
+
+def test_every_probe_can_open_and_close_the_issue() -> None:
+    """A probe missing from one condition either never reports or closes the issue while red."""
+    workflow = yaml.safe_load((ROOT / ".github/workflows/ci-latest.yml").read_text(encoding="utf-8"))
+    steps = workflow["jobs"]["latest-deps"]["steps"]
+    probes = [step["id"] for step in steps if step.get("continue-on-error") and step.get("id") != "report"]
+    assert {"pytest", "floors_install", "floors_pytest"} <= set(probes)
+    by_name = {step.get("name"): step for step in steps}
+    report = next(step for step in steps if step.get("id") == "report")
+    opener = by_name["Open issue and notify on failure"]
+    closer = by_name["Close ci-latest tracking issues on success"]
+    for probe in probes:
+        assert f"steps.{probe}.outcome == 'failure'" in report["if"]
+        assert f"steps.{probe}.outcome == 'failure'" in opener["if"]
+        assert f"steps.{probe}.outcome == 'success'" in closer["if"]
+        assert f"{probe}=${{{{ steps.{probe}.outcome }}}}" in report["env"]["OUTCOMES"]
+        assert f"['{probe}', process.env." in opener["with"]["script"]
+        assert f"{probe}: {{" in opener["with"]["script"]

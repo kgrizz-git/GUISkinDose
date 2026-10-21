@@ -53,6 +53,13 @@ That keeps SemVer and contributor history organized.
 
 ### Fixed
 
+- **Dependency floors** (2026-10-21) — `pip install guiskindose` could pick versions the code
+  does not run on. pydicom 2.0–2.2 failed when reading an RDSR, NiceGUI before 3.9 could not
+  start the GUI, and `tqdm`, `psutil`, `rich`, `openpyxl`, and `kaleido` had no lower bound
+  at all. The floors are now pydicom 2.3, NiceGUI 3.9, tqdm 4.66, psutil 5.9, rich 13.0,
+  openpyxl 3.1, and kaleido 0.2.1, and a weekly CI job runs the test suite at them. Installs
+  from `uv.lock` are unchanged. Package version stays `1.0.0`.
+
 - **Export writes without Git** (2026-10-18) — Clinical and derived exports succeed when Git is not
   installed (the checkout-path guard is skipped instead of aborting the write). Frozen
   portable builds do not run the Git checkout-path check at all. The checkout check ignores

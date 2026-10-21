@@ -42,6 +42,8 @@ __pycache__/
 .ipynb_checkpoints
 **/.ipynb_checkpoints/
 .venv/
+# Semgrep's settings file for the isolated scanner (scripts/semgrep_tool.py).
+tools/semgrep/.semgrep-state/
 
 scratch*
 scripts/scratch_*

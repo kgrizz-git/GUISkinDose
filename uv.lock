@@ -1013,11 +1013,11 @@ wheels = [
 
 [[package]]
 name = "distlib"
-version = "0.4.1"
+version = "0.4.4"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/86/b2/d6fc3f2347f43dada79e5ff118493e8109c98400a0e29a1d5264a3aa479b/distlib-0.4.1.tar.gz", hash = "sha256:c3804d0d2d4b5fcd44036eb860cb6660485fcdf5c2aba53dc324d805837ea65b", size = 610526, upload-time = "2026-06-02T11:17:40.691Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/68/bc/d36966de7304047a1001a7559fbf266c464bb5d8cc85464536ef8c9bcc32/distlib-0.4.4.tar.gz", hash = "sha256:ca4175b4ac7f71223cc30ed7248c45d2b38c2439d8ee6e498ab67ed63cf3508d", size = 621304, upload-time = "2026-10-16T13:56:34.203Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/25/18/3497c4fa83a76dcb154923fd2075522e8dd6995ecee4093c00ae18160046/distlib-0.4.1-py2.py3-none-any.whl", hash = "sha256:9c2c552c68cbadc619f2d0ed3a69e27c351a3f4c9baa9ffb7df9e9cdc3d19a97", size = 469216, upload-time = "2026-06-02T11:17:38.779Z" },
+    { url = "https://files.pythonhosted.org/packages/c1/2b/238f02a4927fa2e27aa995371d240a468b52e42eae44a678434aff736b38/distlib-0.4.4-py2.py3-none-any.whl", hash = "sha256:cf09d55b1e85a89576b036aeb71550bfd68320f3f21761ca329eadadad918638", size = 472099, upload-time = "2026-10-16T13:56:32.053Z" },
 ]
 
 [[package]]
@@ -1425,15 +1425,15 @@ requires-dist = [
     { name = "itsdangerous", marker = "extra == 'gui'", specifier = ">=2.1.2,<3" },
     { name = "itsdangerous", marker = "extra == 'gui-native'", specifier = ">=2.1.2,<3" },
     { name = "jupyterlab", marker = "extra == 'notebooks'", specifier = ">=4.6.2" },
-    { name = "kaleido" },
+    { name = "kaleido", specifier = ">=0.2.1" },
     { name = "myst-parser", marker = "extra == 'docs'" },
     { name = "nbsphinx", marker = "extra == 'docs'" },
     { name = "networkx", marker = "extra == 'phantom-gen'", specifier = ">=3" },
-    { name = "nicegui", marker = "extra == 'gui'", specifier = ">=2.0.0" },
-    { name = "nicegui", marker = "extra == 'gui-native'", specifier = ">=2.0.0" },
+    { name = "nicegui", marker = "extra == 'gui'", specifier = ">=3.9.0" },
+    { name = "nicegui", marker = "extra == 'gui-native'", specifier = ">=3.9.0" },
     { name = "numpy", specifier = ">=2.2.4" },
     { name = "numpy-stl", specifier = ">=3.2.0" },
-    { name = "openpyxl" },
+    { name = "openpyxl", specifier = ">=3.1" },
     { name = "pandas", specifier = ">=2.2.3" },
     { name = "pandas-stubs", marker = "extra == 'dev'", specifier = ">=2.2" },
     { name = "pandoc", marker = "extra == 'docs'" },
@@ -1443,9 +1443,9 @@ requires-dist = [
     { name = "plotly", specifier = ">=4.13.3" },
     { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=4.0" },
     { name = "presidio-analyzer", marker = "extra == 'privacy-scan'", specifier = ">=2.2.360,<3" },
-    { name = "psutil" },
+    { name = "psutil", specifier = ">=5.9" },
     { name = "pydata-sphinx-theme", marker = "extra == 'docs'" },
-    { name = "pydicom", specifier = ">=2.0" },
+    { name = "pydicom", specifier = ">=2.3" },
     { name = "pypdf", specifier = ">=6.16.1" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0,<9.1" },
     { name = "pytest-asyncio", marker = "extra == 'gui'", specifier = ">=0.24" },
@@ -1459,7 +1459,7 @@ requires-dist = [
     { name = "pyyaml", marker = "extra == 'dev'", specifier = ">=6" },
     { name = "reportlab", specifier = ">=4.0" },
     { name = "reportlab", marker = "extra == 'export'", specifier = ">=4.0" },
-    { name = "rich" },
+    { name = "rich", specifier = ">=13.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.15,<0.18" },
     { name = "scikit-image", marker = "extra == 'phantom-gen'", specifier = ">=0.22" },
     { name = "scipy", specifier = ">=1.15.2" },
@@ -1469,7 +1469,7 @@ requires-dist = [
     { name = "sphinx-rtd-theme", marker = "extra == 'docs'" },
     { name = "tornado", marker = "extra == 'docs'", specifier = ">=6.5.8" },
     { name = "tornado", marker = "extra == 'notebooks'", specifier = ">=6.5.8" },
-    { name = "tqdm" },
+    { name = "tqdm", specifier = ">=4.66" },
     { name = "trimesh", marker = "extra == 'phantom-gen'", specifier = ">=4" },
     { name = "types-pillow", marker = "extra == 'dev'" },
 ]
@@ -2922,11 +2922,11 @@ wheels = [
 
 [[package]]
 name = "packaging"
-version = "26.2"
+version = "26.3"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/d7/f1/e7a6dd94a8d4a5626c03e4e99c87f241ba9e350cd9e6d75123f992427270/packaging-26.2.tar.gz", hash = "sha256:ff452ff5a3e828ce110190feff1178bb1f2ea2281fa2075aadb987c2fb221661", size = 228134, upload-time = "2026-04-24T20:15:23.917Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/7d/fa/3944b40b07da9ce895c0e6303a5ab7d53da063554f534556b134a54d6093/packaging-26.3.tar.gz", hash = "sha256:94edc256424af38762eb31306eed28beb9f0efc50a8837492c9d6fd6004aed79", size = 313412, upload-time = "2026-08-04T18:15:28.737Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/df/b2/87e62e8c3e2f4b32e5fe99e0b86d576da1312593b39f47d8ceef365e95ed/packaging-26.2-py3-none-any.whl", hash = "sha256:5fc45236b9446107ff2415ce77c807cee2862cb6fac22b8a73826d0693b0980e", size = 100195, upload-time = "2026-04-24T20:15:22.081Z" },
+    { url = "https://files.pythonhosted.org/packages/63/34/ba1c580383c9eada3711951fef0795c80b829a078d72188184bcab9dd527/packaging-26.3-py3-none-any.whl", hash = "sha256:d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c", size = 129956, upload-time = "2026-08-04T18:15:27.159Z" },
 ]
 
 [[package]]
@@ -5627,7 +5627,7 @@ wheels = [
 
 [[package]]
 name = "virtualenv"
-version = "21.14.1"
+version = "21.14.12"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "distlib" },
@@ -5636,9 +5636,9 @@ dependencies = [
     { name = "platformdirs" },
     { name = "python-discovery" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/50/67/b5d37693e5e666b68100db8fe34f00db28279330db55f739a3c799ff2449/virtualenv-21.14.1.tar.gz", hash = "sha256:719b189804e66678017d9f63bbfc590c44f6b96ab4829513806394f9b375929c", size = 5462838, upload-time = "2026-09-29T23:33:33.991Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/c9/2c/1a69b3346931e9a7db9cc00cc0fa847c843a85fa7cf52a598f57261c68df/virtualenv-21.14.12.tar.gz", hash = "sha256:bbcfb78e36c22ad70c6917c4aecb5e63477d3c138e9f88c946f320e31859c76a", size = 5562800, upload-time = "2026-10-21T01:58:51.724Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/85/a8/22be2d14ef0d7b1e9e7dc1d839a85073fc20917be1747d6f1347d1cfc8c3/virtualenv-21.14.1-py3-none-any.whl", hash = "sha256:6fd04089fc0dc33549e7abdff70fc3b63d4e15799f2dbf3281f80d13b9fce522", size = 5486534, upload-time = "2026-09-29T23:33:32.333Z" },
+    { url = "https://files.pythonhosted.org/packages/a0/92/f3b8af2d36ddec4dc61dc25655dc010e419ff456cb4ca0e720c8112f1047/virtualenv-21.14.12-py3-none-any.whl", hash = "sha256:7820aeaef23f1f59a96458edfc7f9d3deac937155718de15f1c9a64471e15551", size = 5556824, upload-time = "2026-10-21T01:58:48.505Z" },
 ]
 
 [[package]]
