@@ -7,7 +7,7 @@ static-analysis environment (`dev` + `gui` extras):
 uv run --extra dev --extra gui --locked python scripts/check_licenses.py --write-notices
 ```
 
-Regenerate with `uv run --extra dev --extra gui --locked python scripts/check_licenses.py --write-notices` (last updated: 2026-10-19).
+Regenerate with `uv run --extra dev --extra gui --locked python scripts/check_licenses.py --write-notices` (last updated: 2026-10-20).
 
 Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIANCE.md`](LICENSE_COMPLIANCE.md).
 
@@ -26,7 +26,7 @@ Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIAN
 | bidict | 0.23.1 | MPL-2.0 | Changelog, https://bidict.readthedocs.io/changelog.html |
 | boolean.py | 5.0 | BSD-2-Clause | https://github.com/bastikr/boolean.py |
 | CacheControl | 0.14.4 | Apache-2.0 | Homepage, https://pypi.org/project/CacheControl/ |
-| certifi | 2026.5.20 | MPL-2.0 | https://github.com/certifi/python-certifi |
+| certifi | 2026.10.19 | MPL-2.0 | https://github.com/certifi/python-certifi |
 | cfgv | 3.5.0 | MIT | https://github.com/asottile/cfgv |
 | chardet | 7.4.3 | 0BSD | Homepage, https://github.com/chardet/chardet |
 | charset-normalizer | 3.4.7 | MIT | Changelog, https://github.com/jawah/charset_normalizer/blob/master/CHANGELOG.md |
@@ -75,7 +75,7 @@ Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIAN
 | packaging | 26.2 | Apache-2.0, BSD-2-Clause | Documentation, https://packaging.pypa.io/ |
 | pandas | 3.0.6 | BSD-3-Clause | homepage, https://pandas.pydata.org |
 | pandas-stubs | 3.0.5.260914 | BSD-3-Clause | Bug Tracker, https://github.com/pandas-dev/pandas-stubs/issues |
-| pillow | 12.3.0 | MIT-CMU | Release notes, https://pillow.readthedocs.io/en/stable/releasenotes/index.html |
+| pillow | 13.0.0 | MIT-CMU | Release notes, https://pillow.readthedocs.io/en/stable/releasenotes/index.html |
 | pip-api | 0.0.34 | Apache-2.0 | http://github.com/di/pip-api |
 | pip-requirements-parser | 32.0.1 | MIT | https://github.com/nexB/pip-requirements-parser |
 | pip_audit | 2.10.1 | Apache-2.0 | Homepage, https://pypi.org/project/pip-audit/ |
