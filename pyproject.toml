@@ -29,15 +29,15 @@ dependencies = [
     "kaleido >= 0.2.1",
     "rich >= 13.0",
     "openpyxl >= 3.1",
-    "pypdf>=6.16.1",
+    "pypdf>=6.20.1",
     "reportlab>=4.0",
     "python-docx>=1.1",
 ]
 
 [project.optional-dependencies]
 # certifi is transitive via nicegui -> httpx; the floor drops the compromised emSign roots (GHSA-6q48-6c7w-9gw2).
-gui = ["nicegui>=3.9.0", "itsdangerous>=2.1.2,<3", "pytest-asyncio>=0.24", "certifi>=2026.10.19"]
-gui-native = ["nicegui>=3.9.0", "itsdangerous>=2.1.2,<3", "pywebview", "pytest-asyncio>=0.24", "certifi>=2026.10.19"]
+gui = ["nicegui>=3.18.0", "itsdangerous>=2.1.2,<3", "pytest-asyncio>=0.24", "certifi>=2026.10.19"]
+gui-native = ["nicegui>=3.18.0", "itsdangerous>=2.1.2,<3", "pywebview", "pytest-asyncio>=0.24", "certifi>=2026.10.19"]
 # Rich report export backends (PDF via reportlab, DOCX via python-docx) are now
 # core dependencies so exports work out of the box. This extra is retained as a
 # no-op alias so existing `pip install guiskindose[export]` commands still work.

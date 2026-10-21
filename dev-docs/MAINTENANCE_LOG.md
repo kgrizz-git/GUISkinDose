@@ -19,6 +19,9 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
   now lives in the gitignored `tools/semgrep/.semgrep-state/`. The same job gains a floors
   probe: `uv pip install --resolution lowest-direct -e ".[gui]"` on Python 3.11, then the
   suite. Its first local run failed at once, so the floors moved (see CHANGELOG).
+  `scripts/ci_latest_report.py` drops `--out` and writes `report.md` into `--log-dir`, which
+  must sit under `RUNNER_TEMP` (or the system temp dir) or the repository; the CLI-supplied
+  output path was SonarCloud's pythonsecurity:S8707 finding that failed the main quality gate.
 
 - **ci-latest failure reports** (2026-10-21) — The `ci-latest` tracking issue now says why a
   probe failed. Each probe tees its output and exit code into the runner's temp directory, and

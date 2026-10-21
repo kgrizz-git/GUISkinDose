@@ -93,7 +93,7 @@ Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIAN
 | pyee | 13.0.1 | MIT | Repository, https://github.com/jfhbrook/pyee |
 | Pygments | 2.20.0 | BSD-2-Clause | Homepage, https://pygments.org |
 | pyparsing | 3.3.2 | MIT | Documentation, https://pyparsing-docs.readthedocs.io/en/latest/ |
-| pypdf | 6.19.0 | BSD-3-Clause | Bug Reports, https://github.com/py-pdf/pypdf/issues |
+| pypdf | 6.21.2 | BSD-3-Clause | Bug Reports, https://github.com/py-pdf/pypdf/issues |
 | pytest | 9.0.3 | MIT | Changelog, https://docs.pytest.org/en/stable/changelog.html |
 | pytest-asyncio | 1.4.0 | Apache-2.0 | Bug Tracker, https://github.com/pytest-dev/pytest-asyncio/issues |
 | pytest-base-url | 2.1.0 | MPL-2.0 | Homepage, https://github.com/pytest-dev/pytest-base-url |

@@ -145,6 +145,22 @@ def test_missing_freeze_and_oversized_logs_stay_bounded(tmp_path: Path) -> None:
     assert "... (cut; see the run log)" in text
 
 
+def test_main_writes_the_report_inside_the_log_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("RUNNER_TEMP", str(tmp_path))
+    log_dir = tmp_path / "ci-latest"
+    log_dir.mkdir()
+    (log_dir / "pytest.log").write_text("FAILED tests/t.py::test_a - boom\n[exit code 1]\n", encoding="utf-8")
+    assert report.main(["--log-dir", str(log_dir), "--failed", "pytest"]) == 0
+    assert "FAILED tests/t.py::test_a" in (log_dir / "report.md").read_text(encoding="utf-8")
+
+
+def test_main_refuses_a_log_dir_outside_trusted_roots(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("RUNNER_TEMP", str(tmp_path / "runner"))
+    outside = Path(report.__file__).resolve().parents[2]
+    with pytest.raises(ValueError, match="--log-dir"):
+        report.main(["--log-dir", str(outside)])
+
+
 def _run_issue_step(report_path: Path | None, issues: list[dict]) -> list[dict]:
     workflow = yaml.safe_load((ROOT / ".github/workflows/ci-latest.yml").read_text(encoding="utf-8"))
     steps = {step.get("name"): step for step in workflow["jobs"]["latest-deps"]["steps"]}

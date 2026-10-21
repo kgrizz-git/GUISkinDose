@@ -354,7 +354,7 @@ jobs:
         done
         "$pythonLocation/bin/python" scripts/ci_latest_report.py \
           --log-dir "$RUNNER_TEMP/ci-latest" --failed "$failed" \
-          --workspace "$GITHUB_WORKSPACE" --out "$RUNNER_TEMP/ci-latest/report.md"
+          --workspace "$GITHUB_WORKSPACE"
     - name: Open issue and notify on failure
       if: >
         always() &&
