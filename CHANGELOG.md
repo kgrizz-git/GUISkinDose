@@ -21,6 +21,9 @@ That keeps SemVer and contributor history organized.
 
 ### Security
 
+- **certifi 2026.10.19 in the Semgrep tool lock** (2026-10-21) — `tools/semgrep/uv.lock` still pinned
+  certifi 2026.7.22, which a critical Dependabot alert flagged; the main lock already had 2026.10.19.
+  Only the isolated Semgrep scanner used the old CA bundle.
 - **pypdf 6.21.2** (2026-10-21) — closes four pypdf advisories published today
   (GHSA-39mj-jf6j-2qj3, GHSA-7mh2-4gg2-979f, GHSA-9mx8-4j7g-633p, GHSA-qfv9-64jg-mh7p): infinite
   loops and large memory use on crafted PDFs. Only the maintainer privacy-admission scripts parse PDFs;
