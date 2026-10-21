@@ -282,6 +282,8 @@ That keeps SemVer and contributor history organized.
 
 ### Changed
 
+- **Dependabot runs monthly** (2026-10-21) — version-update PRs now open on the 21st at 4pm US Eastern
+  instead of every Monday. Security updates are unaffected and still open as advisories land.
 - **Run-config export with many exams** — saving a run configuration with more than 64 loaded exams
   and no equipment captures no longer fails the equipment emission path; the equipment section stays
   ``null`` until at least one exam carries a capture.

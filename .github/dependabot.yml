@@ -1,7 +1,7 @@
 # Dependabot: keep Python dependencies and GitHub Actions up to date.
 # https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
 #
-# Weekly checks open grouped PRs for routine minor/patch bumps so review stays
+# Monthly checks (the 21st, 4pm US Eastern) open grouped PRs for routine minor/patch bumps so review stays
 # focused. Gate tools and major version bumps stay ungrouped for individual review.
 # A 7-day cooldown leaves time for a hijacked or broken release to be caught and
 # yanked upstream before Dependabot proposes it; security updates are not delayed.
@@ -13,8 +13,9 @@ updates:
     directory: /
     versioning-strategy: increase-if-necessary
     schedule:
-      interval: weekly
-      day: monday
+      interval: cron
+      cronjob: "0 16 21 * *"
+      timezone: America/New_York
     open-pull-requests-limit: 5
     cooldown:
       default-days: 7
@@ -38,8 +39,9 @@ updates:
     directory: /tools/semgrep
     versioning-strategy: lockfile-only
     schedule:
-      interval: weekly
-      day: monday
+      interval: cron
+      cronjob: "0 16 21 * *"
+      timezone: America/New_York
     open-pull-requests-limit: 3
     cooldown:
       default-days: 7
@@ -58,8 +60,9 @@ updates:
   - package-ecosystem: github-actions
     directory: /
     schedule:
-      interval: weekly
-      day: monday
+      interval: cron
+      cronjob: "0 16 21 * *"
+      timezone: America/New_York
     open-pull-requests-limit: 5
     cooldown:
       default-days: 7
