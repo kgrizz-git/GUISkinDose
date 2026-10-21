@@ -1378,11 +1378,13 @@ export = [
     { name = "reportlab" },
 ]
 gui = [
+    { name = "certifi" },
     { name = "itsdangerous" },
     { name = "nicegui" },
     { name = "pytest-asyncio" },
 ]
 gui-native = [
+    { name = "certifi" },
     { name = "itsdangerous" },
     { name = "nicegui" },
     { name = "pytest-asyncio" },
@@ -1410,6 +1412,8 @@ privacy-scan = [
 requires-dist = [
     { name = "bandit", marker = "extra == 'dev'", specifier = ">=1.8" },
     { name = "basedpyright", marker = "extra == 'dev'", specifier = ">=1.23" },
+    { name = "certifi", marker = "extra == 'gui'", specifier = ">=2026.10.19" },
+    { name = "certifi", marker = "extra == 'gui-native'", specifier = ">=2026.10.19" },
     { name = "defusedxml", marker = "extra == 'dev'", specifier = ">=0.7.1" },
     { name = "diff-cover", marker = "extra == 'dev'", specifier = ">=10.0" },
     { name = "en-core-web-sm", marker = "extra == 'privacy-scan'", url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl" },
@@ -1433,7 +1437,7 @@ requires-dist = [
     { name = "pandas", specifier = ">=2.2.3" },
     { name = "pandas-stubs", marker = "extra == 'dev'", specifier = ">=2.2" },
     { name = "pandoc", marker = "extra == 'docs'" },
-    { name = "pillow", specifier = ">=10.0.1" },
+    { name = "pillow", specifier = ">=13.0.0" },
     { name = "pip-audit", marker = "extra == 'dev'", specifier = ">=2.7" },
     { name = "playwright", marker = "extra == 'dev'", specifier = ">=1.40" },
     { name = "plotly", specifier = ">=4.13.3" },

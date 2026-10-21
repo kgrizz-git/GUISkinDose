@@ -25,7 +25,8 @@ That keeps SemVer and contributor history organized.
   including GHSA-65qm-jvmh-6pqg. Most are in GIF, TIFF, JPEG, EPS, and PDF decoding; one is in the
   TIFF encoder and one in `ImageMorph`. certifi 2026.10.19 drops the emSign root CAs with
   compromised intermediate keys (GHSA-6q48-6c7w-9gw2). The GUI and CLI only decode PNG files the
-  pipeline rendered, so dose calculation and exports are unchanged.
+  pipeline rendered, so dose calculation and exports are unchanged. `pyproject.toml` raises the Pillow floor to 13.0.0
+  and the GUI extras' certifi floor to 2026.10.19, so `pip install` gets the fixes too, not only `uv sync`.
 
 - **Pinned action check** (2026-10-19) — CI verifies each third-party GitHub Action pin is a
   real commit, including workflows that pull requests do not run. The weekly zizmor job only
