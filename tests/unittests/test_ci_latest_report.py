@@ -99,6 +99,30 @@ def test_absolute_paths_are_collapsed_but_test_ids_kept(tmp_path: Path) -> None:
     assert "/opt/tool" not in text
 
 
+def test_marker_after_unterminated_output_is_still_read() -> None:
+    # The workflow writes printf '\n[exit code %s]\n', so a last line without "\n" stays apart.
+    exit_code, excerpt = report.probe_excerpt("basedpyright", "partial line\n[exit code 3]\n")
+    assert exit_code == 3
+    assert excerpt == ["partial line"]
+
+
+def test_pytest_captured_log_errors_are_not_listed_as_failures() -> None:
+    log = "ERROR    guiskindose.io:io.py:12 could not read\nFAILED tests/t.py::test_a - boom\n1 failed\n"
+    _, excerpt = report.probe_excerpt("pytest", log)
+    assert excerpt == ["FAILED tests/t.py::test_a - boom", "1 failed"]
+
+
+def test_every_probe_and_the_drift_section_survive_large_logs(tmp_path: Path) -> None:
+    probes = ["install", "basedpyright", "gui_placement", "semgrep_owasp", "semgrep_privacy", "pytest"]
+    big = "\n".join(f"FAILED tests/t.py::test_{i} - " + "x" * 400 for i in range(60)) + "\n[exit code 1]\n"
+    log_dir, lock, pyproject = _fixture(tmp_path, "numpy==2.5.0\n", dict.fromkeys(probes, big))
+    text = report.build_report(probes, log_dir, log_dir / "freeze.txt", lock, pyproject)
+    assert all(f"<b>{probe}</b>" in text for probe in probes)
+    assert "| numpy | 2.4.6 | 2.5.0 |" in text
+    assert text.count("```text") * 2 == text.count("```")
+    assert len(text) < 50_000
+
+
 def test_drift_puts_direct_dependencies_in_a_table(tmp_path: Path) -> None:
     freeze = "numpy==2.5.0\ntyping_extensions==4.16.0\nbasedpyright==1.40.2\nnew-pkg==1.0\n"
     log_dir, lock, pyproject = _fixture(tmp_path, freeze, {})
@@ -117,7 +141,8 @@ def test_missing_freeze_and_oversized_logs_stay_bounded(tmp_path: Path) -> None:
     (log_dir / "freeze.txt").unlink()
     text = report.build_report(["semgrep_owasp"], log_dir, log_dir / "freeze.txt", lock, pyproject)
     assert "not available (the install did not finish)" in text
-    assert len(text) <= report.MAX_SECTION_CHARS + 100
+    assert len(text) <= report.MAX_PROBE_CHARS + 1_000
+    assert "... (cut; see the run log)" in text
 
 
 def _run_issue_step(report_path: Path | None, issues: list[dict]) -> list[dict]:

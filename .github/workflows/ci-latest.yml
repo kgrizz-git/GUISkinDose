@@ -165,8 +165,9 @@ jobs:
       with:
         python-version: '3.14'
     # Every probe below tees its output into $RUNNER_TEMP/ci-latest/<step id>.log and ends
-    # the log with "[exit code N]", so the issue step can quote what actually failed rather
-    # than only which step did (scripts/ci_latest_report.py builds that section).
+    # the log with "[exit code N]" on a line of its own (the leading \n covers output that
+    # stopped mid-line), so the issue step can quote what actually failed rather than only
+    # which step did (scripts/ci_latest_report.py builds that section).
     #
     # The install goes into ./.venv on purpose: pyproject.toml pins basedpyright to
     # `venv = ".venv"`, and against a bare runner Python it exits 3 ("venv .venv
@@ -189,7 +190,7 @@ jobs:
           .venv/bin/python -m pip install -e ".[dev,gui]"
         } 2>&1 | tee "$log_dir/install.log"
         rc=${PIPESTATUS[0]}
-        echo "[exit code $rc]" >> "$log_dir/install.log"
+        printf '\n[exit code %s]\n' "$rc" >> "$log_dir/install.log"
         exit "$rc"
     - name: Show resolved versions
       if: steps.install.outcome == 'success'
@@ -203,7 +204,7 @@ jobs:
         set +e
         basedpyright 2>&1 | tee "$RUNNER_TEMP/ci-latest/basedpyright.log"
         rc=${PIPESTATUS[0]}
-        echo "[exit code $rc]" >> "$RUNNER_TEMP/ci-latest/basedpyright.log"
+        printf '\n[exit code %s]\n' "$rc" >> "$RUNNER_TEMP/ci-latest/basedpyright.log"
         exit "$rc"
     - name: GUI test placement (core suite collects with nicegui blocked)
       id: gui_placement
@@ -214,7 +215,7 @@ jobs:
         set +e
         python scripts/check_gui_test_placement.py 2>&1 | tee "$RUNNER_TEMP/ci-latest/gui_placement.log"
         rc=${PIPESTATUS[0]}
-        echo "[exit code $rc]" >> "$RUNNER_TEMP/ci-latest/gui_placement.log"
+        printf '\n[exit code %s]\n' "$rc" >> "$RUNNER_TEMP/ci-latest/gui_placement.log"
         exit "$rc"
     # Semgrep is pinned in dev-docs/privacy_tool_inventory.json and deliberately kept out
     # of uv.lock, so Dependabot cannot bump it. These two probes are the only thing that
@@ -232,7 +233,7 @@ jobs:
         set +e
         python scripts/run_semgrep_owasp.py 2>&1 | tee "$RUNNER_TEMP/ci-latest/semgrep_owasp.log"
         rc=${PIPESTATUS[0]}
-        echo "[exit code $rc]" >> "$RUNNER_TEMP/ci-latest/semgrep_owasp.log"
+        printf '\n[exit code %s]\n' "$rc" >> "$RUNNER_TEMP/ci-latest/semgrep_owasp.log"
         exit "$rc"
 
     # The privacy ruleset is project-local (.semgrep/), so it is *more* exposed to a
@@ -248,7 +249,7 @@ jobs:
         set +e
         python scripts/run_semgrep_privacy.py 2>&1 | tee "$RUNNER_TEMP/ci-latest/semgrep_privacy.log"
         rc=${PIPESTATUS[0]}
-        echo "[exit code $rc]" >> "$RUNNER_TEMP/ci-latest/semgrep_privacy.log"
+        printf '\n[exit code %s]\n' "$rc" >> "$RUNNER_TEMP/ci-latest/semgrep_privacy.log"
         exit "$rc"
 
     - name: Full test suite (core + gui) against latest deps
@@ -260,7 +261,7 @@ jobs:
         set +e
         python -m pytest -q 2>&1 | tee "$RUNNER_TEMP/ci-latest/pytest.log"
         rc=${PIPESTATUS[0]}
-        echo "[exit code $rc]" >> "$RUNNER_TEMP/ci-latest/pytest.log"
+        printf '\n[exit code %s]\n' "$rc" >> "$RUNNER_TEMP/ci-latest/pytest.log"
         exit "$rc"
     # Standard-library script run by setup-python's interpreter, so it still works when the
     # unpinned install (and with it .venv) failed. continue-on-error: a broken report must

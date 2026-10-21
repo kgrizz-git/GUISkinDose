@@ -24,17 +24,21 @@ from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 
-# Per-probe and whole-section caps keep the issue body far below GitHub's 65,536 limit.
+# Each block is capped on its own, so every failed probe and the drift section survive and
+# no cut lands inside a fence: 6 probes x 5k + drift stays far below GitHub's 65,536 limit.
 MAX_EXCERPT_LINES = 40
 MAX_LINE_CHARS = 300
-MAX_SECTION_CHARS = 40_000
+MAX_PROBE_CHARS = 5_000
 MAX_DIRECT_ROWS = 40
+MAX_TRANSITIVE_CHARS = 3_000
 
 _ANSI = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
 # Directory part of an absolute path (runner tool cache, temp dirs, home). Matched only
 # after whitespace, a quote or a bracket so `a/b` inside a test id is left alone.
 _ABSOLUTE_DIRS = re.compile(r"(?<![\w.~/-])/(?:[^\s/'\"(),:\[\]]+/)+")
 _EXIT_MARKER = re.compile(r"^\[exit code (\d+)\]$")
+# pytest's short summary: "FAILED tests/x.py::t - ..."; captured logs print "ERROR    logger".
+_PYTEST_RESULT = re.compile(r"^(?:FAILED|ERROR) \S")
 _REQUIREMENT_NAME = re.compile(r"^\s*([A-Za-z0-9][A-Za-z0-9._-]*)")
 
 # basedpyright/pyright exit codes: only 1 means the type check itself found problems.
@@ -110,7 +114,7 @@ def probe_excerpt(probe: str, log_text: str, workspace: str = "") -> tuple[int |
         lines = lines[:-1]
     lines = [line for line in lines if line.strip()]
     if probe == "pytest":
-        failures = [line for line in lines if line.startswith(("FAILED ", "ERROR "))]
+        failures = [line for line in lines if _PYTEST_RESULT.match(line)]
         if failures:
             shown = failures[:MAX_EXCERPT_LINES]
             if len(failures) > len(shown):
@@ -135,6 +139,8 @@ def _excerpt_section(failed: list[str], log_dir: Path, workspace: str) -> list[s
             continue
         exit_code, excerpt = probe_excerpt(probe, log.read_text(encoding="utf-8", errors="replace"), workspace)
         body = "\n".join(excerpt).replace("```", "'''") or "(no output)"
+        if len(body) > MAX_PROBE_CHARS:
+            body = body[:MAX_PROBE_CHARS] + "\n... (cut; see the run log)"
         out += [
             f"<details><summary><b>{probe}</b> ({_exit_label(probe, exit_code)})</summary>",
             "",
@@ -174,6 +180,8 @@ def _drift_section(freeze: Path, lock: Path, pyproject: Path) -> list[str]:
         ]
     if other_rows:
         rows = ", ".join(f"{name} {pinned} → {version}" for name, pinned, version in other_rows)
+        if len(rows) > MAX_TRANSITIVE_CHARS:
+            rows = rows[:MAX_TRANSITIVE_CHARS] + " ... (see `Show resolved versions` in the run log)"
         out += ["<details><summary>Transitive packages that differ</summary>", "", rows, "</details>", ""]
     return out
 
@@ -181,10 +189,7 @@ def _drift_section(freeze: Path, lock: Path, pyproject: Path) -> list[str]:
 def build_report(
     failed: list[str], log_dir: Path, freeze: Path, lock: Path, pyproject: Path, workspace: str = ""
 ) -> str:
-    text = "\n".join(_excerpt_section(failed, log_dir, workspace) + _drift_section(freeze, lock, pyproject))
-    if len(text) > MAX_SECTION_CHARS:
-        text = text[:MAX_SECTION_CHARS] + "\n\n(report truncated; see the run log)\n"
-    return text
+    return "\n".join(_excerpt_section(failed, log_dir, workspace) + _drift_section(freeze, lock, pyproject))
 
 
 def main(argv: list[str] | None = None) -> int:
