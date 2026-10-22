@@ -7,7 +7,7 @@ static-analysis environment (`dev` + `gui` extras):
 uv run --extra dev --extra gui --locked python scripts/check_licenses.py --write-notices
 ```
 
-Regenerate with `uv run --extra dev --extra gui --locked python scripts/check_licenses.py --write-notices` (last updated: 2026-10-21).
+Regenerate with `uv run --extra dev --extra gui --locked python scripts/check_licenses.py --write-notices` (last updated: 2026-10-22).
 
 Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIANCE.md`](LICENSE_COMPLIANCE.md).
 
@@ -83,7 +83,7 @@ Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIAN
 | playwright | 1.63.0 | Apache-2.0 | homepage, https://github.com/Microsoft/playwright-python |
 | plotly | 6.8.0 | MIT | Homepage, https://plotly.com/python/ |
 | pluggy | 1.6.0 | MIT | MIT |
-| pre_commit | 4.6.2 | MIT | https://github.com/pre-commit/pre-commit |
+| pre_commit | 4.7.0 | MIT | https://github.com/pre-commit/pre-commit |
 | propcache | 0.5.2 | Apache-2.0 | https://github.com/aio-libs/propcache |
 | psutil | 7.2.2 | BSD-3-Clause | https://github.com/giampaolo/psutil |
 | py-serializable | 2.1.0 | Apache-2.0 | Bug Tracker, https://github.com/madpah/serializable/issues |
