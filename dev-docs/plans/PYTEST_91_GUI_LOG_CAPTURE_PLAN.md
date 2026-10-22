@@ -62,7 +62,7 @@ An autouse fixture that does not depend on `user` is torn down after `user`, whi
 - Consumes: locked environment on pytest 9.0.3
 - Produces: a `tmp/pytest91-gui-report.txt` whose `ERROR` lines are `logger<TAB>code_or_FREE_TEXT`, plus either `HUNG <nodeid>` or `FAIL <nodeid>` or `PASS`
 
-- [ ] **Step 1: Install pytest 9.1.1 beside the lock**
+- [x] **Step 1: Install pytest 9.1.1 beside the lock**
 
 Run from the repository root. This throwaway environment must not replace `.venv`.
 
@@ -77,7 +77,7 @@ UV_PROJECT_ENVIRONMENT="$PWD/tmp/venv-pytest91" \
 
 Expected: `9.1.1`
 
-- [ ] **Step 2: Run the probe with a hard stop**
+- [x] **Step 2: Run the probe with a hard stop**
 
 Write `tmp/pytest91_gui_probe.py` (gitignored) with the script below, then run it. This probe prints one `ERROR_RECORD` line per call-phase `ERROR` when a test tears down, because NiceGUI's failure text does not include the record. Run it on Linux. GNU `timeout` is not the Windows reproduction; the confirming run is the Ubuntu `gui-smoke` job after Task 5.
 
@@ -140,7 +140,7 @@ echo "timeout_or_pytest_exit=${PIPESTATUS[0]}"
 
 Expected: exit 1 with one or more `ERROR_RECORD` lines, or exit 124 with a faulthandler stack and the last `tests/gui/...::test_...` line. Exit 0 means pytest 9.1.1 did not fail this suite. Stop. Do not continue to Task 4, and do not treat Task 2's synthetic code as the production inventory. Do not rerun without the 180-second limit. Do not wait for the PR 181 `gui-smoke` job.
 
-- [ ] **Step 3: Confirm 9.0.3 still passes the same file that failed or hung**
+- [x] **Step 3: Confirm 9.0.3 still passes the same file that failed or hung**
 
 ```bash
 uv run --extra dev --extra gui --locked python -m pytest \
@@ -149,7 +149,7 @@ uv run --extra dev --extra gui --locked python -m pytest \
 
 Expected: pass. If this fails on 9.0.3, stop. The failure is not the 9.1 capture change.
 
-- [ ] **Step 4: Keep the report**
+- [x] **Step 4: Keep the report**
 
 `tmp/pytest91-gui-report.txt` already contains the `ERROR_RECORD` lines from the probe. Do not edit a committed test to print them. Commit nothing from this task. The report and the probe stay in `tmp/`.
 
@@ -172,7 +172,7 @@ If the probe exited 0, this task is not done.
   - `drop_allowed_gui_errors(records: list[logging.LogRecord]) -> list[logging.LogRecord]`
     Mutates `records` in place, removes `ERROR` records whose logger name equals an entry and whose message contains that entry's `code`, and returns the removed records.
 
-- [ ] **Step 1: Write the failing unit test**
+- [x] **Step 1: Write the failing unit test**
 
 `tests/` is not a package. Load the module by file path. Do not add `tests/__init__.py` or `tests/gui/__init__.py`.
 
@@ -228,7 +228,7 @@ def test_allowlist_codes_match_the_privacy_code_pattern() -> None:
         assert "\\" not in entry.code
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 ```bash
 uv run --extra dev --extra gui --locked python -m pytest \
@@ -237,7 +237,7 @@ uv run --extra dev --extra gui --locked python -m pytest \
 
 Expected: collection error or `ModuleNotFoundError` / `ImportError` because `tests/gui/expected_gui_errors.py` does not exist yet.
 
-- [ ] **Step 3: Write the filter**
+- [x] **Step 3: Write the filter**
 
 Create `tests/gui/expected_gui_errors.py`:
 
@@ -302,7 +302,7 @@ def drop_allowed_gui_errors(records: list[logging.LogRecord]) -> list[logging.Lo
 
 `record not in removed` is identity comparison for the list objects created above; that is what we want. Do not compare by message text.
 
-- [ ] **Step 4: Run the unit test to verify it passes**
+- [x] **Step 4: Run the unit test to verify it passes**
 
 ```bash
 uv run --extra dev --extra gui --locked python -m pytest \
@@ -311,7 +311,7 @@ uv run --extra dev --extra gui --locked python -m pytest \
 
 Expected: `2 passed`.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add tests/gui/expected_gui_errors.py tests/unittests/test_expected_gui_errors.py
@@ -331,7 +331,7 @@ git commit -m "Add a GUI ERROR allowlist that edits the call-phase record list"
 - Consumes: `drop_allowed_gui_errors` from Task 2
 - Produces: a `user` fixture in `tests/gui/conftest.py` that shadows `nicegui.testing.user_plugin.user` for tests under `tests/gui/` only
 
-- [ ] **Step 1: Write the one GUI test that fails on today's fixture**
+- [x] **Step 1: Write the one GUI test that fails on today's fixture**
 
 Create `tests/gui/test_user_fixture_expected_errors.py` with this body and no other variant. The autouse fixture runs during setup, so the helper logger is already non-propagating when the call phase attaches handlers, on both pytest 9.0.3 and 9.1.1. Setting `propagate = False` inside the test body is too late: `catching_logs` does not see loggers that flip during the call. On the stock NiceGUI fixture this test fails. On the override it passes.
 
@@ -365,7 +365,7 @@ async def test_allowlisted_error_does_not_fail_the_user_fixture(user) -> None:
     logging.getLogger("guiskindose.gui.helpers").error("gui_test_expected_error")
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 ```bash
 uv run --extra dev --extra gui --locked python -m pytest \
@@ -374,7 +374,7 @@ uv run --extra dev --extra gui --locked python -m pytest \
 
 Expected: `FAILED` with `There were unexpected ERROR logs.`
 
-- [ ] **Step 3: Override `user` in `tests/gui/conftest.py`**
+- [x] **Step 3: Override `user` in `tests/gui/conftest.py`**
 
 Add these imports immediately after `pytest.importorskip("nicegui")` in `tests/gui/conftest.py`. Putting them above that line would break collection when the GUI extra is absent. `pytest` is already imported. Pytest puts the repository root on `sys.path`, not `tests/gui/`, so load the helper by file path. Do not add `tests/gui/__init__.py`.
 
@@ -418,7 +418,7 @@ async def user(caplog: pytest.LogCaptureFixture, request: pytest.FixtureRequest)
 
 Leave the existing autouse fixtures in this file unchanged. They do not request `user`.
 
-- [ ] **Step 4: Run the test to verify it passes, and that an unlisted code still fails**
+- [x] **Step 4: Run the test to verify it passes, and that an unlisted code still fails**
 
 ```bash
 uv run --extra dev --extra gui --locked python -m pytest \
@@ -429,7 +429,7 @@ Expected: pass.
 
 Then temporarily change the test's message from `gui_test_expected_error` to `gui_test_unexpected_error`, rerun the same command, and confirm `There were unexpected ERROR logs.` Put the message back. Do not leave the unexpected string in the file.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add tests/gui/conftest.py tests/gui/test_user_fixture_expected_errors.py
@@ -449,7 +449,7 @@ git commit -m "Drop allowlisted GUI errors before NiceGUI checks the user fixtur
 - Consumes: `tmp/pytest91-gui-report.txt` from Task 1, and `drop_allowed_gui_errors` from Task 2
 - Produces: an allowlist of operation codes the 9.1.1 run actually emitted, and a GUI suite that finishes within 180 seconds on pytest 9.1.1
 
-- [ ] **Step 1: Split the report into three buckets**
+- [x] **Step 1: Split the report into three buckets**
 
 From `ERROR_RECORD` lines in `tmp/pytest91-gui-report.txt`, make three lists in the PR description (not a new tracked file):
 
@@ -461,11 +461,11 @@ If bucket 3 is `tests/gui/test_run_state_roundtrip.py` and the stack is inside `
 
 A `nicegui` `ERROR` emitted while `user_simulation` exits is a teardown-phase record. NiceGUI's check reads the call phase only, so those lines do not fail the fixture. Do not allowlist the `nicegui` logger. If an `ERROR_RECORD` line names logger `nicegui`, it was emitted during the test body: find the project call that provoked it and fix that call. Do not edit NiceGUI.
 
-- [ ] **Step 2: Allowlist only bucket `code`**
+- [x] **Step 2: Allowlist only bucket `code`**
 
 For each `code` line, append `ExpectedGuiError(logger, code)` using the logger and the operation code from that line. The relative `at ...` location stays in the log message and stays out of the allowlist. Do not weaken `test_allowlist_codes_match_the_privacy_code_pattern`.
 
-- [ ] **Step 3: Fix `FREE_TEXT` without rewriting `safe_error_event`**
+- [x] **Step 3: Fix `FREE_TEXT` without rewriting `safe_error_event`**
 
 `safe_error_event` messages are bucket `code`, not `FREE_TEXT`. Their shape is `{CODE} failed (error_type={Class} at {relative_path}:{lineno} in {func})`. Leave `src/guiskindose/privacy.py` unchanged.
 
@@ -475,7 +475,7 @@ For a `FREE_TEXT` record whose logger is `nicegui` or a third-party logger, chan
 
 Do not wrap the `user` fixture in `pytest.raises` and do not clear the whole call list.
 
-- [ ] **Step 4: Fix a hang from the stack, or stop**
+- [x] **Step 4: Fix a hang from the stack, or stop**
 
 If bucket `HUNG` is empty, skip this step.
 
@@ -483,7 +483,7 @@ If the top project frame is a `guiskindose` or `tests` function, change that fun
 
 If the faulthandler stack has no frame in `guiskindose` or `tests`, stop and add the stack (paths redacted) to this plan under a new "Blocked" note. Do not guess a patch.
 
-- [ ] **Step 5: Rerun pytest 9.1.1 and the locked suite**
+- [x] **Step 5: Rerun pytest 9.1.1 and the locked suite**
 
 ```bash
 PYTHONFAULTHANDLER=1 timeout --foreground --signal=TERM 180 \
@@ -494,7 +494,7 @@ uv run --extra dev --extra gui --locked python -m pytest --ignore=tests/gui -n a
 
 Expected: the 9.1.1 command exits 0 in under 180 seconds. The two locked commands pass. `timeout` exit 124 means this task is not done.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add tests/gui/expected_gui_errors.py
@@ -518,7 +518,7 @@ git commit -m "Accept known GUI error codes and fix the pytest 9.1 hang"
 - Consumes: a green Task 4 run
 - Produces: locked pytest 9.1.1 and the requirement `pytest>=7.0,<10`
 
-- [ ] **Step 1: Search for the three pytest 10 removals**
+- [x] **Step 1: Search for the three pytest 10 removals**
 
 ```bash
 rg -n "getfixturevalue\\(" tests src
@@ -528,7 +528,7 @@ rg -n "pytest.mark.parametrize|metafunc.parametrize" tests src
 
 For each `getfixturevalue` hit, confirm it is not called from a fixture teardown. For each class-scoped fixture written as an instance method, convert it to `@classmethod` or to a function fixture in this task. For parametrize values, confirm each `argvalues` argument is a list or tuple, not a generator. If a hit needs a behavior change beyond that, stop and add it to this plan. Do not ignore the warning.
 
-- [ ] **Step 2: Update the requirement**
+- [x] **Step 2: Update the requirement**
 
 In `pyproject.toml`, replace the comment and the pin:
 
@@ -540,7 +540,7 @@ In `pyproject.toml`, replace the comment and the pin:
     "pytest>=7.0,<10",
 ```
 
-- [ ] **Step 3: Lock pytest 9.1.1**
+- [x] **Step 3: Lock pytest 9.1.1**
 
 ```bash
 uv lock
@@ -549,7 +549,7 @@ uv run --extra dev --extra gui --locked python -c "import pytest; print(pytest._
 
 Expected: `9.1.1`. The `uv.lock` diff for pytest is the version, the sdist, and the wheel. If `uv lock` also upgrades unrelated packages, revert those hunks and run `uv lock` again only after confirming the pytest requirement is the sole `pyproject.toml` change. Do not upgrade Playwright in this lock update.
 
-- [ ] **Step 4: Run the suites on the lock**
+- [x] **Step 4: Run the suites on the lock**
 
 ```bash
 uv run --extra dev --extra gui --locked python -m pytest tests/gui -p no:xdist -q --tb=line
@@ -558,11 +558,11 @@ uv run --extra dev --extra gui --locked python -m pytest --ignore=tests/gui -n a
 
 Expected: both exit 0. `tests/gui` must finish well under 180 seconds. If `tests/gui` hangs, return to Task 4. Do not raise the timeout to hide it.
 
-- [ ] **Step 5: Docs**
+- [x] **Step 5: Docs**
 
 Delete the Pytest 9.1 bullet from `dev-docs/TO_DO.md`. Add an Unreleased bullet to `dev-docs/MAINTENANCE_LOG.md` stating that pytest is locked at 9.1.1, the GUI `user` fixture drops allowlisted non-propagating `ERROR` codes, and `pytest>=7.0,<10` replaces `pytest>=7.0,<9.1`. Check off the boxes in this plan for the tasks that landed.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add pyproject.toml uv.lock dev-docs/TO_DO.md dev-docs/MAINTENANCE_LOG.md \

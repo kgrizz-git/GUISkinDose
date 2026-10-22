@@ -128,10 +128,6 @@ be archived.
 
 ### Harness / Repo Hygiene
 
-- [ ] **Pytest 9.1 GUI log capture** — execution plan:
-  [PYTEST_91_GUI_LOG_CAPTURE_PLAN.md](plans/PYTEST_91_GUI_LOG_CAPTURE_PLAN.md).
-  Acceptance is that plan: GUI suite green on pytest 9.1.1, allowlisted error codes only,
-  and `pytest>=7.0,<9.1` replaced by `pytest>=7.0,<10`. Do not merge PR 181 as-is.
 - [ ] **SonarCloud issues API filter** — `scripts/check_sonarcloud_gate.py` still uses `types=BUG` for the
   new-code sample; migrate to `impactSoftwareQualities` when SonarCloud documents stable query parameters
   (see SonarCloud API deprecation notices).
