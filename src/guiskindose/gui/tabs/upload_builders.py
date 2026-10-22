@@ -330,6 +330,8 @@ class UploadTabController:
         """Reparse schema."""
         if state.file_path is None or state.input_source_type in ("", "dicom"):
             return
+        if not state.file_path.is_file():
+            return
         with operation_guard("changing the input schema") as proceed:
             if not proceed:
                 return

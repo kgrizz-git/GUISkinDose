@@ -15,6 +15,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from pathlib import Path
 
 from nicegui import run, ui
 
@@ -133,6 +134,8 @@ class ImportPreviewController:
     async def on_sheet_change(self) -> None:
         """Handle sheet change."""
         if state.file_path is None:
+            return
+        if not Path(state.file_path).is_file():
             return
         with operation_guard("switching sheets") as proceed:
             if not proceed:

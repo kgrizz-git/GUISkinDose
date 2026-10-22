@@ -142,6 +142,12 @@ async def user(caplog: pytest.LogCaptureFixture, request: pytest.FixtureRequest)
     """
     async with user_simulation(main_file=get_path_to_main_file(request)) as simulated:
         yield simulated
+        # Stop tab refresh timers before NiceGUI tears the client down. Autouse
+        # ``_isolate_gui_state`` cancels them only after this fixture finishes;
+        # on pytest 9.1 that ordering leaves repeating timers (e.g. results
+        # dose-map refresh) runnable while ``user_simulation`` waits on asyncio
+        # shutdown and the session hangs.
+        _cancel_leaked_timers()
         call_records = caplog.get_records("call")
         drop_allowed_gui_errors(call_records)
         errors = [record for record in call_records if record.levelname == "ERROR"]

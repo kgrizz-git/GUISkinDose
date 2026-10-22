@@ -33,6 +33,10 @@ class ExpectedGuiError:
 # Task 4 appends codes from tmp/pytest91-gui-report.txt. Do not put FREE_TEXT here.
 ALLOWED_GUI_ERRORS: tuple[ExpectedGuiError, ...] = (
     ExpectedGuiError("guiskindose.gui.helpers", "gui_test_expected_error"),
+    # Run-config import rollback paths exercised in test_run_state_roundtrip.py.
+    ExpectedGuiError("guiskindose.gui.tabs._run_config", "run_config_apply"),
+    ExpectedGuiError("guiskindose.gui.tabs._run_config", "run_config_apply_unexpected"),
+    ExpectedGuiError("guiskindose.gui.tabs._run_config", "run_config_reapply"),
 )
 
 
