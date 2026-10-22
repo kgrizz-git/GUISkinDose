@@ -9,7 +9,7 @@ _Feasibility note: [references/PORTABLE_EXECUTABLE_PACKAGING.md](../references/P
 
 Ship a double-clickable desktop app for people who do not install Python: unzip (or open) a per-OS build, get the existing NiceGUI window, load an RDSR, calculate, and export. Processing stays on the machine. No exam data leaves the computer.
 
-Two downloadable builds, same program:
+Two builds, same program. Full Windows becomes a public download only in Phase 5, once it is signed:
 
 | Build | Who it is for | Phantom payload | PNG / browser | Windows window |
 |-------|----------------|-----------------|----------------|-----------------|
@@ -226,7 +226,7 @@ Run this alongside Phase 0. The maintainer now has an Apple Developer account, s
 - [ ] Pin `pywebview>=6.1` in `pyproject.toml`. One include list for Light and one for Full.
 - [ ] The freeze staging copy gets `EDITION = "light"` or `"full"`. The committed file stays `"full"`. Light ships no Chromium and no WebView2 runtime. Full bundles Chromium only if Phase 0 cleared its license. The bundled browser path is passed to Kaleido explicitly inside the process that renders.
 - [ ] PNG render functions return no image when the edition is `light`, before any browser lookup. A test on a machine that has Edge proves a Light rich report does not start a browser. The GUI hides the PNG card as well.
-- [ ] Before `ui.run` on Windows, every edition checks for a usable WebView2 runtime. With no bundled runtime, it reads the same registry locations as pywebview's `_is_chromium()`, in both HKLM and HKCU, and checks for .NET Framework 4.6.2 or later. With a bundled runtime, it checks that the folder exists itself and stops if it does not. pywebview's `_is_chromium()` returns true as soon as the setting is non-empty, and the window then quietly falls back to a system runtime, so it cannot be used for this check. If no runtime is usable, show a message. Until Phase 4 publishes Full Windows, it points at Microsoft's Evergreen bootstrapper, which installs per-user without admin rights when run non-elevated; after that, it names the Full download. Do not fall back to MSHTML. Do not launch an installer. Acceptance is a VM without WebView2: a message, no broken window, no UAC prompt.
+- [ ] Before `ui.run` on Windows, every edition checks for a usable WebView2 runtime. With no bundled runtime, it reads the same registry locations as pywebview's `_is_chromium()`, in both HKLM and HKCU, and checks for .NET Framework 4.6.2 or later. With a bundled runtime, it checks that the folder exists itself and stops if it does not. pywebview's `_is_chromium()` returns true as soon as the setting is non-empty, and the window then quietly falls back to a system runtime, so it cannot be used for this check. If no runtime is usable, show a message. Until Phase 5 publishes Full Windows, it points at Microsoft's Evergreen bootstrapper, which installs per-user without admin rights when run non-elevated; after that, it names the Full download. Do not fall back to MSHTML. Do not launch an installer. Acceptance is a VM without WebView2: a message, no broken window, no UAC prompt.
 - [ ] Both builds run the same tests that do not need a missing mesh. A Light build test proves a starter mesh loads and a non-starter stem is reported missing. A Full test proves PNG bytes come back and proves which binary launched, for example from the browser child's command line, on a machine that also has a downloaded Chrome for Testing.
 - [ ] `_reduced_1000t` is absent from both app payloads. Previews still resolve to `_reduced_3000t`.
 - [ ] macOS release zips are signed, notarized, and stapled with the Phase 0b recipe. Signing secrets are GitHub secrets read only by the release job.
@@ -278,6 +278,7 @@ Light's missing-runtime message is Phase 1. This phase only adds the runtime to 
 - [ ] Re-smoke the signed artifact. Signing can break a PyInstaller layout.
 - [ ] On a clean Windows VM, scan the signed zip with Microsoft Defender and record the result. If it is blocked, fix the layout or the signature. Do not pack, obfuscate, or advise turning antivirus off.
 - [ ] Release notes say a new certificate can still show SmartScreen until it has reputation, and that AppLocker or WDAC allow-lists are an IT decision. The app does not remove Mark of the Web.
+- [ ] Publish the signed Full Windows zip. Change the Light missing-runtime message from Microsoft's Evergreen bootstrapper to the Full download.
 
 **Acceptance:** the Windows binary has a valid Authenticode signature that shows the publisher. The macOS app is still notarized and opens without a Gatekeeper block. A new certificate can still show SmartScreen until it has reputation. Defender does not quarantine that build. The notes state the AppLocker limit in one sentence.
 
@@ -305,8 +306,8 @@ Light's missing-runtime message is Phase 1. This phase only adds the runtime to 
 - **2026-10-17** — No update check and no crash reporting. The user phantom library survives deleting the app folder.
 - **2026-10-19** — macOS signing and notarization move into Phase 1, because an unsigned quarantined `.app` is blocked, not just warned. Phase 5 is Windows Authenticode plus re-verification.
 - **2026-10-19** — The WebView2 pre-check runs in every edition, not only Light.
-- **2026-10-20** — Public Full Windows waits for Phase 5 signing. It is the clinical download, and its unsigned PyInstaller layout plus bundled browser is the build most likely to be flagged by SmartScreen and Defender. Light Windows stays public, unsigned, from Phase 1.
 - **2026-10-18** — A no-admin Windows run is the Full zip after Phase 4 (Fixed Version WebView2 via `app.native.settings`, pywebview ≥ 6.1) and Phase 5 (Authenticode). Light omits that 250 MB runtime. Phase 1 already tells the user when WebView2 is missing, before the window starts. AppLocker/WDAC bypass is out of scope.
+- **2026-10-20** — Public Full Windows waits for Phase 5 signing. It is the clinical download, and its unsigned PyInstaller layout plus bundled browser is the build most likely to be flagged by SmartScreen and Defender. Light Windows stays public, unsigned, from Phase 1. This supersedes the Phase 4 publish date in earlier entries.
 
 ## Related docs
 
