@@ -53,7 +53,8 @@ def read_commit_messages(commit_range: str) -> list[tuple[str, str]]:
         ["git", "log", "-z", "--format=%h%x00%B", commit_range],
         check=True,
         capture_output=True,
-        text=True,
+        encoding="utf-8",
+        errors="surrogateescape",
     ).stdout
     # Git forbids NUL in commit messages, so NUL is the only safe separator:
     # `-z` ends each commit with NUL and the format puts NUL between SHA and body.
@@ -94,7 +95,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.commit_range:
         try:
             findings.extend(scan_commit_messages(read_commit_messages(args.commit_range)))
-        except (OSError, subprocess.CalledProcessError) as exc:
+        except subprocess.CalledProcessError as exc:
+            # git's message names the bad revision, not a path; keep the first line only.
+            detail = (exc.stderr or "").strip().splitlines()[:1]
+            print(f"ERROR: CI metadata scan did not run (git log failed: {' '.join(detail)}).", file=sys.stderr)
+            return 2
+        except OSError as exc:
             print(f"ERROR: CI metadata scan did not run ({type(exc).__name__}).", file=sys.stderr)
             return 2
     for finding in findings:

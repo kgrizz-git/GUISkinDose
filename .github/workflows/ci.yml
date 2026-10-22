@@ -468,11 +468,13 @@ jobs:
       with:
         category: "/language:python"
 
-  # ── Tracking-issue notification (scheduled/dispatch only, never PRs) ──
+  # ── Tracking-issue notification (schedule, dispatch, and push to main; never PRs) ──
   # Mirrors the ci-latest pattern with a distinct marker so the two issue
   # streams stay separate. Never embed raw logs — only job names, failed step
   # names, job links, SHA, run URL, and privacy-gates' value-free error codes
-  # (strict `ERROR: <source>:<line>: <RULE>` lines, which carry no matched value).
+  # (strict `ERROR: <source>:<line>: <RULE>` / `ERROR path_token=<hash>:<loc>: <RULE>`
+  # lines, which carry no matched value; tests/unittests/test_check_ci_metadata.py
+  # checks this pattern).
   ci-issue-notify:
     name: Open / update tracking issue on failure
     needs: [schedule-gate, privacy-gates, static-analysis, owasp-semgrep,
@@ -545,27 +547,34 @@ jobs:
           // Per failed job: a direct link and the failed step names. Raw logs
           // are never copied; privacy-gates contributes only lines that match
           // its value-free `ERROR: <source>:<line>: <RULE>` format.
-          const valueFreeError = /^ERROR: [A-Za-z0-9_.-]+:\d+: [A-Z_]+$/;
+          const valueFreeError = /^(?:ERROR: [A-Za-z0-9_.-]+:\d+: [A-Z_]+|ERROR path_token=[0-9a-f]{12}(?::[0-9]+)?: [A-Z_]+|ERROR: forbidden tracked path path_token=[0-9a-f]{12}\.)$/;
+          const maxCodes = 20;
           const details = [];
           try {
             const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRun, {
               owner, repo, run_id: context.runId, per_page: 100,
             });
-            for (const job of jobs.filter((j) => j.conclusion === 'failure')) {
+            for (const job of jobs.filter((j) => ['failure', 'timed_out'].includes(j.conclusion))) {
               const steps = (job.steps || []).filter((s) => s.conclusion === 'failure').map((s) => s.name);
               details.push(`- [${job.name}](${job.html_url})${steps.length ? ` — failed step: ${steps.join(', ')}` : ''}`);
-              if (!job.name.startsWith('privacy-gates')) {
+              if (!job.name.includes('privacy-gates')) {
                 continue;
               }
               try {
                 const log = await github.rest.actions.downloadJobLogsForWorkflowRun({ owner, repo, job_id: job.id });
-                const codes = String(log.data)
+                if (typeof log.data !== 'string') {
+                  core.warning('privacy-gates log was not text; decoding it as UTF-8.');
+                }
+                const text = typeof log.data === 'string' ? log.data : Buffer.from(log.data).toString('utf8');
+                const codes = text
                   .split('\n')
                   .map((line) => line.replace(/^\S+Z /, '').trim())
-                  .filter((line) => valueFreeError.test(line))
-                  .slice(0, 20);
-                for (const code of codes) {
+                  .filter((line) => valueFreeError.test(line));
+                for (const code of codes.slice(0, maxCodes)) {
                   details.push(`  - \`${code}\``);
+                }
+                if (codes.length > maxCodes) {
+                  details.push(`  - …and ${codes.length - maxCodes} more`);
                 }
               } catch (error) {
                 core.warning(`Could not read privacy-gates log: ${error.message}`);

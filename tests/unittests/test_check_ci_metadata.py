@@ -177,3 +177,47 @@ def test_pr_commit_scan_survives_record_separator_in_message(tmp_path, monkeypat
     findings = check_ci_metadata.scan_commit_messages(commits)
     assert [f.rule for f in findings] == ["EMAIL_ADDRESS"]
     assert value not in repr(findings)
+
+
+def test_main_returns_2_when_commit_range_is_invalid(tmp_path, monkeypatch, capsys) -> None:
+    import subprocess
+
+    from scripts import check_ci_metadata
+
+    env = {"GIT_CONFIG_GLOBAL": "/dev/null", "GIT_CONFIG_NOSYSTEM": "1", "HOME": str(tmp_path)}
+    subprocess.run(["git", "-C", str(tmp_path), "init", "-q"], check=True, env=env)
+    event = tmp_path / "event.json"
+    event.write_text("{}", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+
+    assert check_ci_metadata.main([str(event), "--commit-range", "deadbeef..cafebabe"]) == 2
+    assert "git log failed" in capsys.readouterr().err
+
+
+def test_issue_detail_filter_admits_only_value_free_error_lines() -> None:
+    """The ci.yml JS filter decides what reaches a public issue; keep it value-free."""
+    import re
+    from pathlib import Path
+
+    workflow = Path(__file__).resolve().parents[2] / ".github" / "workflows" / "ci.yml"
+    source = re.search(r"const valueFreeError = /(.+)/;", workflow.read_text(encoding="utf-8"))
+    assert source is not None
+    pattern = re.compile(source.group(1))
+
+    token = "a" * 12
+    for line in (
+        "ERROR: push_commit_1:7: EMAIL_ADDRESS",
+        "ERROR: pr_commit_2ae155e1:7: EMAIL_ADDRESS",
+        f"ERROR path_token={token}:12: EMAIL_ADDRESS",
+        f"ERROR path_token={token}: ASSET_NOT_IN_APPROVED_INVENTORY",
+        f"ERROR: forbidden tracked path path_token={token}.",
+    ):
+        assert pattern.fullmatch(line), line
+    leaked = "person" + "@hospital.test"
+    for line in (
+        f"ERROR: push_commit_1:7: {leaked}",
+        f"ERROR src/{leaked}.txt:1: EMAIL_ADDRESS",
+        "ERROR: privacy admission did not complete (OSError: " + "/" + "home" + "/runner/x).",
+        "##[error]Process completed with exit code 1.",
+    ):
+        assert not pattern.fullmatch(line), line
