@@ -13,6 +13,11 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
   describes overriding the GUI `user` fixture so allowlisted ERROR codes are removed from
   `caplog.get_records("call")` before NiceGUI fails the test. PR 181 stays unmerged.
 
+- **nbconvert 7.17.2** (2026-10-22) — GHSA-pjvx-prjx-h659 (path traversal in cell output filenames when
+  exporting to md, latex, rst, or asciidoc) blocked every push through the pre-push `pip-audit` hook. nbconvert
+  is only in the `docs` and `notebooks` extras, which never ship in the app. The lock moves to 7.17.2, and both
+  extras gain a `nbconvert>=7.17.2` floor so `pip install` gets the fix too.
+
 - **reportlab floor for the ci-latest floors probe** (2026-10-22) — Issue #135's latest `floors_install` failure is reportlab 4.0.0 pulling `rlPyCairo`/`pycairo`. The core and `export` floors are `reportlab>=4.0.4`. `uv.lock` still resolves 5.0.1.
 
 - **ci-latest floors probe and test isolation** (2026-10-21) — After the failure reports
