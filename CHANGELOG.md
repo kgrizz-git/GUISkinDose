@@ -61,6 +61,8 @@ That keeps SemVer and contributor history organized.
 
 ### Fixed
 
+- **reportlab floor** (2026-10-22) — `reportlab` 4.0.0 hard-depends on `rlPyCairo`, which needs a system Cairo library to build `pycairo`. A lowest-direct install of `reportlab>=4.0` failed before PDF export could be imported. The floor is now 4.0.4, the first release that moves Cairo into an optional extra this package does not use. Locked installs stay on reportlab 5.0.1. Package version stays `1.0.0`.
+
 - **Dependency floors** (2026-10-21) — `pip install guiskindose` could pick versions the code
   does not run on. pydicom 2.0–2.2 failed when reading an RDSR, NiceGUI before 3.9 could not
   start the GUI, and `tqdm`, `psutil`, `rich`, `openpyxl`, and `kaleido` had no lower bound
