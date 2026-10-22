@@ -8,6 +8,11 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ## [Unreleased]
 
+- **Pytest 9.1 GUI log-capture plan** (2026-10-22) — Plan only, no pin change.
+  [dev-docs/plans/PYTEST_91_GUI_LOG_CAPTURE_PLAN.md](plans/PYTEST_91_GUI_LOG_CAPTURE_PLAN.md)
+  describes overriding the GUI `user` fixture so allowlisted ERROR codes are removed from
+  `caplog.get_records("call")` before NiceGUI fails the test. PR 181 stays unmerged.
+
 - **reportlab floor for the ci-latest floors probe** (2026-10-22) — Issue #135's latest `floors_install` failure is reportlab 4.0.0 pulling `rlPyCairo`/`pycairo`. The core and `export` floors are `reportlab>=4.0.4`. `uv.lock` still resolves 5.0.1.
 
 - **ci-latest floors probe and test isolation** (2026-10-21) — After the failure reports
