@@ -42,7 +42,17 @@ jobs:
           python scripts/privacy_admission.py route --mode all
         fi
     - name: Check PR and push metadata for sensitive content
-      run: python scripts/check_ci_metadata.py "$GITHUB_EVENT_PATH"
+      env:
+        PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      run: |
+        # A pull request event carries no commit messages, so scan the PR's own
+        # commits here; otherwise a bad trailer only fails on the push to main.
+        if [ -n "$PR_BASE_SHA" ] && [ -n "$PR_HEAD_SHA" ]; then
+          python scripts/check_ci_metadata.py "$GITHUB_EVENT_PATH" --commit-range "$PR_BASE_SHA..$PR_HEAD_SHA"
+        else
+          python scripts/check_ci_metadata.py "$GITHUB_EVENT_PATH"
+        fi
     - name: Check ignored and untracked risky artifacts
       run: python scripts/check_ignored_asset_files.py --strict
     - name: Check approved asset inventory Markdown

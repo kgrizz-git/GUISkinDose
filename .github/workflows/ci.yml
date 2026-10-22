@@ -470,7 +470,9 @@ jobs:
 
   # ── Tracking-issue notification (scheduled/dispatch only, never PRs) ──
   # Mirrors the ci-latest pattern with a distinct marker so the two issue
-  # streams stay separate. Never embed raw logs — only job names, SHA, run URL.
+  # streams stay separate. Never embed raw logs — only job names, failed step
+  # names, job links, SHA, run URL, and privacy-gates' value-free error codes
+  # (strict `ERROR: <source>:<line>: <RULE>` lines, which carry no matched value).
   ci-issue-notify:
     name: Open / update tracking issue on failure
     needs: [schedule-gate, privacy-gates, static-analysis, owasp-semgrep,
@@ -482,6 +484,7 @@ jobs:
       github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     permissions:
+      actions: read
       contents: read
       issues: write
     steps:
@@ -539,6 +542,39 @@ jobs:
           const sha = context.sha;
           const failedJobs = process.env.FAILED_JOBS;
 
+          // Per failed job: a direct link and the failed step names. Raw logs
+          // are never copied; privacy-gates contributes only lines that match
+          // its value-free `ERROR: <source>:<line>: <RULE>` format.
+          const valueFreeError = /^ERROR: [A-Za-z0-9_.-]+:\d+: [A-Z_]+$/;
+          const details = [];
+          try {
+            const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRun, {
+              owner, repo, run_id: context.runId, per_page: 100,
+            });
+            for (const job of jobs.filter((j) => j.conclusion === 'failure')) {
+              const steps = (job.steps || []).filter((s) => s.conclusion === 'failure').map((s) => s.name);
+              details.push(`- [${job.name}](${job.html_url})${steps.length ? ` — failed step: ${steps.join(', ')}` : ''}`);
+              if (!job.name.startsWith('privacy-gates')) {
+                continue;
+              }
+              try {
+                const log = await github.rest.actions.downloadJobLogsForWorkflowRun({ owner, repo, job_id: job.id });
+                const codes = String(log.data)
+                  .split('\n')
+                  .map((line) => line.replace(/^\S+Z /, '').trim())
+                  .filter((line) => valueFreeError.test(line))
+                  .slice(0, 20);
+                for (const code of codes) {
+                  details.push(`  - \`${code}\``);
+                }
+              } catch (error) {
+                core.warning(`Could not read privacy-gates log: ${error.message}`);
+              }
+            }
+          } catch (error) {
+            core.warning(`Could not list jobs: ${error.message}`);
+          }
+
           const summary = [
             marker,
             '',
@@ -548,6 +584,7 @@ jobs:
             '',
             `**Failed jobs:** ${failedJobs}`,
             '',
+            ...(details.length ? ['**Details:**', ...details, ''] : []),
             '**Triage commands:**',
             '```',
             `gh run view ${context.runId}`,
