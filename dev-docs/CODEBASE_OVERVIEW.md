@@ -532,7 +532,7 @@ from guiskindose import (
 | `pillow` | Image handling |
 | `psutil` | System resource monitoring |
 | `pypdf` | PDF parsing for privacy admission (sensitive-content scan) |
-| `reportlab>=4.0` | PDF rich audit report export |
+| `reportlab>=4.0.4` | PDF rich audit report export |
 | `python-docx>=1.1` | DOCX rich audit report export |
 
 ### Optional extras
