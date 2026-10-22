@@ -11,7 +11,7 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 - **Pytest 9.1.1 lock and GUI log capture** (2026-10-22) — Locked pytest at 9.1.1 with
   `pytest>=7.0,<10` replacing `pytest>=7.0,<9.1`. The GUI `user` fixture in
   `tests/gui/conftest.py` drops allowlisted non-propagating `ERROR` codes before NiceGUI reads
-  `caplog`. See [dev-docs/plans/PYTEST_91_GUI_LOG_CAPTURE_PLAN.md](plans/PYTEST_91_GUI_LOG_CAPTURE_PLAN.md).
+  `caplog`. See [dev-docs/plans/archive/PYTEST_91_GUI_LOG_CAPTURE_PLAN.md](plans/archive/PYTEST_91_GUI_LOG_CAPTURE_PLAN.md).
 
 - **nbconvert 7.17.2** (2026-10-22) — GHSA-pjvx-prjx-h659 (path traversal in cell output filenames when
   exporting to md, latex, rst, or asciidoc) blocked every push through the pre-push `pip-audit` hook. nbconvert

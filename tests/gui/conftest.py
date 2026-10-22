@@ -10,13 +10,11 @@ nested conftest. This file just skips the GUI tests when NiceGUI is absent.
 
 from __future__ import annotations
 
+import importlib.util
 import sys
 from contextlib import suppress
-from types import ModuleType
-
-import importlib.util
-import logging
 from pathlib import Path
+from types import ModuleType
 
 import pytest
 
