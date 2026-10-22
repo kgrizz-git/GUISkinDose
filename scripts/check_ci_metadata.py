@@ -50,17 +50,15 @@ def scan_commit_messages(commits: Sequence[tuple[str, str]]) -> list[MetadataFin
 def read_commit_messages(commit_range: str) -> list[tuple[str, str]]:
     """Return ``(short_sha, message)`` for each commit in a ``base..head`` range."""
     output = subprocess.run(
-        ["git", "log", "--format=%h%x00%B%x1e", commit_range],
+        ["git", "log", "-z", "--format=%h%x00%B", commit_range],
         check=True,
         capture_output=True,
         text=True,
     ).stdout
-    commits: list[tuple[str, str]] = []
-    for record in output.split("\x1e"):
-        sha, sep, message = record.lstrip("\n").partition("\x00")
-        if sep:
-            commits.append((sha, message))
-    return commits
+    # Git forbids NUL in commit messages, so NUL is the only safe separator:
+    # `-z` ends each commit with NUL and the format puts NUL between SHA and body.
+    fields = output.split("\x00")
+    return [(sha, message) for sha, message in zip(fields[0::2], fields[1::2], strict=False) if sha]
 
 
 def _scan_sources(sources: Sequence[tuple[str, str]]) -> list[MetadataFinding]:

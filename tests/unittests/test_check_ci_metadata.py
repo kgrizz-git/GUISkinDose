@@ -138,12 +138,12 @@ def test_ci_metadata_scans_pr_commit_messages_without_values() -> None:
     assert value not in repr(findings)
 
 
-def test_read_commit_messages_parses_git_log(tmp_path, monkeypatch) -> None:
+def test_read_commit_messages_parses_git_log(monkeypatch) -> None:
     import subprocess
 
     from scripts import check_ci_metadata
 
-    fake = "aaa1111\x00subject one\n\nbody\n\x1e\nbbb2222\x00subject two\n\x1e\n"
+    fake = "aaa1111\x00subject one\n\nbody\n\x00bbb2222\x00subject two\n"
     monkeypatch.setattr(
         check_ci_metadata.subprocess,
         "run",
@@ -154,3 +154,26 @@ def test_read_commit_messages_parses_git_log(tmp_path, monkeypatch) -> None:
         ("aaa1111", "subject one\n\nbody\n"),
         ("bbb2222", "subject two\n"),
     ]
+
+
+def test_pr_commit_scan_survives_record_separator_in_message(tmp_path, monkeypatch) -> None:
+    """A message containing the old 0x1E separator must not split, so the address after it is still found."""
+    import subprocess
+
+    from scripts import check_ci_metadata
+
+    value = "person" + "@hospital.test"
+    env = {"GIT_CONFIG_GLOBAL": "/dev/null", "GIT_CONFIG_NOSYSTEM": "1", "HOME": str(tmp_path)}
+    git = ["git", "-C", str(tmp_path), "-c", "user.name=t", "-c", "user.email=t@" + "users.noreply.github.com"]
+    subprocess.run([*git, "init", "-q"], check=True, env=env)
+    subprocess.run([*git, "commit", "-q", "--allow-empty", "-m", "base"], check=True, env=env)
+    message = f"fix: example\n\nsplit here \x1e then\nCo-authored-by: person <{value}>\n"
+    subprocess.run([*git, "commit", "-q", "--allow-empty", "-m", message], check=True, env=env)
+
+    monkeypatch.chdir(tmp_path)
+    commits = check_ci_metadata.read_commit_messages("HEAD~1..HEAD")
+
+    assert len(commits) == 1
+    findings = check_ci_metadata.scan_commit_messages(commits)
+    assert [f.rule for f in findings] == ["EMAIL_ADDRESS"]
+    assert value not in repr(findings)
