@@ -14,9 +14,24 @@ import sys
 from contextlib import suppress
 from types import ModuleType
 
+import importlib.util
+import logging
+from pathlib import Path
+
 import pytest
 
 pytest.importorskip("nicegui")
+
+from nicegui.testing.general_fixtures import get_path_to_main_file
+from nicegui.testing.user_simulation import user_simulation
+
+_ERRORS_PATH = Path(__file__).with_name("expected_gui_errors.py")
+_ERRORS_SPEC = importlib.util.spec_from_file_location("expected_gui_errors", _ERRORS_PATH)
+assert _ERRORS_SPEC is not None and _ERRORS_SPEC.loader is not None
+_ERRORS = importlib.util.module_from_spec(_ERRORS_SPEC)
+sys.modules[_ERRORS_SPEC.name] = _ERRORS
+_ERRORS_SPEC.loader.exec_module(_ERRORS)
+drop_allowed_gui_errors = _ERRORS.drop_allowed_gui_errors
 
 
 def _cancel_leaked_timers() -> None:
@@ -113,3 +128,22 @@ def _isolate_loopback_security(monkeypatch):
     configure_loopback_security(None)
     yield
     configure_loopback_security(None)
+
+
+@pytest.fixture
+async def user(caplog: pytest.LogCaptureFixture, request: pytest.FixtureRequest):
+    """Same simulation as NiceGUI's fixture, after dropping allowlisted call-phase ERRORs.
+
+    Shadows ``nicegui.testing.user_plugin.user`` for tests under ``tests/gui`` only.
+    NiceGUI 3.18 checks ``caplog.get_records('call')`` inside the ``async with``,
+    after ``yield`` and before ``user_simulation`` exits. The filter has to run
+    in that same place. Logs emitted while the context exits are teardown-phase
+    records and are not part of this check.
+    """
+    async with user_simulation(main_file=get_path_to_main_file(request)) as simulated:
+        yield simulated
+        call_records = caplog.get_records("call")
+        drop_allowed_gui_errors(call_records)
+        errors = [record for record in call_records if record.levelname == "ERROR"]
+        if errors:
+            pytest.fail("There were unexpected ERROR logs.", pytrace=False)
