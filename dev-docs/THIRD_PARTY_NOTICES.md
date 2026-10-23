@@ -7,7 +7,7 @@ static-analysis environment (`dev` + `gui` extras):
 uv run --extra dev --extra gui --locked python scripts/check_licenses.py --write-notices
 ```
 
-Regenerate with `uv run --extra dev --extra gui --locked python scripts/check_licenses.py --write-notices` (last updated: 2026-10-22).
+Regenerate with `uv run --extra dev --extra gui --locked python scripts/check_licenses.py --write-notices` (last updated: 2026-10-23).
 
 Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIANCE.md`](LICENSE_COMPLIANCE.md).
 
@@ -132,7 +132,7 @@ Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIAN
 | typing_extensions | 4.15.0 | PSF-2.0 | Bug Tracker, https://github.com/python/typing_extensions/issues |
 | urllib3 | 2.8.0 | MIT | Changelog, https://github.com/urllib3/urllib3/blob/main/CHANGES.rst |
 | uvicorn | 0.49.0 | BSD-3-Clause | Changelog, https://uvicorn.dev/release-notes |
-| virtualenv | 21.14.12 | MIT | thanks.dev, https://thanks.dev/u/gh/gaborbernat |
+| virtualenv | 21.14.13 | MIT | thanks.dev, https://thanks.dev/u/gh/gaborbernat |
 | webencodings | 0.5.1 | BSD-3-Clause | https://github.com/SimonSapin/python-webencodings |
 | wsproto | 1.3.2 | MIT | Homepage, https://github.com/python-hyper/wsproto/ |
 | yarl | 1.25.1 | Apache-2.0 | https://github.com/aio-libs/yarl |

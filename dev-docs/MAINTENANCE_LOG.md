@@ -16,6 +16,7 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
   holes. It read `SONAR_FRESHNESS_GATE` from the checkout's own gitignored `.env`, so in a linked worktree it
   silently switched off; the gate, local scan, and issue dump now also read the main checkout's `.env`
   (`scripts/dotenv_paths.py`). Its push stage checked `HEAD`; it now checks pre-commit's `PRE_COMMIT_TO_REF`.
+  virtualenv 21.14.13 (dev extra, via pre-commit) fixes GHSA-cx6f-vjhg-g3cc, which blocked pushes via `pip-audit`.
 
 - **PR commit-message scan and richer CI failure issues** (2026-10-22) — Issue #185: `main` CI failed
   privacy-gates on a Cursor cloud agent's `Co-authored-by` trailer carrying a personal address. Pull request

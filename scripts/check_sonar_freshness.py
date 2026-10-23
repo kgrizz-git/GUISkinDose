@@ -133,6 +133,18 @@ def pushed_sha() -> str | None:
     return value if COMMIT_SHA_RE.fullmatch(value) else None
 
 
+def checked_sha(stage: str) -> str | None:
+    """Return the commit the gate judges: the pushed commit on push, else HEAD; ``None`` after an error."""
+    pushed = pushed_sha() if stage == "push" else None
+    if pushed:
+        return pushed
+    try:
+        return git_head_sha()
+    except subprocess.CalledProcessError as exc:
+        print(f"Sonar freshness gate: failed to resolve HEAD ({exc}).", file=sys.stderr)
+        return None
+
+
 def git_head_sha() -> str:
     return subprocess.check_output(
         ["git", "rev-parse", "HEAD"],
@@ -258,11 +270,8 @@ def run_gate(state_path: Path, max_commits: int, stage: str) -> int:
     issues_label = "unknown" if issues_count is None else issues_count
     issues_summary = state.get("issues_summary_path", "tmp/sonar-latest-issues.md")
 
-    try:
-        head_sha = pushed_sha() if stage == "push" else None
-        head_sha = head_sha or git_head_sha()
-    except subprocess.CalledProcessError as exc:
-        print(f"Sonar freshness gate: failed to resolve HEAD ({exc}).", file=sys.stderr)
+    head_sha = checked_sha(stage)
+    if head_sha is None:
         return 1
 
     if not is_ancestor(last_scan_commit, head_sha):
