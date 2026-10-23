@@ -106,8 +106,12 @@ is a known GitHub automation or vendor agent noreply identity (Dependabot's GitH
 [`git_identity_trailers.py`](../scripts/git_identity_trailers.py) for common AI coding agents such as Anthropic,
 Cursor, OpenAI Codex, Qwen Coder, and Kilo Cloud Gastown agent addresses). Those trailers are ignored for
 `EMAIL_ADDRESS` in both the local
-commit-msg hook and the CI `check_ci_metadata.py` push-commit scan so Dependabot and GitHub noreply co-authors do not
-fail `main` privacy gates. Institutional or personal addresses in the same trailers still fail. This hook cannot change
+commit-msg hook and the CI `check_ci_metadata.py` commit scans so Dependabot and GitHub noreply co-authors do not
+fail privacy gates. Institutional or personal addresses in the same trailers still fail. On a pull request, CI scans
+the PR's own commit messages (`--commit-range base..head`), so a cloud agent's personal-address trailer fails the PR
+rather than the later push to `main`; cloud agents do not run the local commit-msg hook. One gap remains: CI does not rerun
+when only a PR's title or body is edited, and the merge commit carries the title, so an address added to the title
+after the last push still fails only on `main`. This hook cannot change
 existing public history; use the [privacy incident response and history-audit runbook](PRIVACY_INCIDENT_RESPONSE.md)
 for that work.
 Run `bash scripts/setup-dev.sh` or `scripts\setup-dev.bat` after updating the checkout; those setup scripts install

@@ -8,6 +8,13 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ## [Unreleased]
 
+- **PR commit-message scan and richer CI failure issues** (2026-10-22) — Issue #185: `main` CI failed
+  privacy-gates on a Cursor cloud agent's `Co-authored-by` trailer carrying a personal address. Pull request
+  events carry no commit messages, so `check_ci_metadata.py` only saw them on the push to `main`. It now takes
+  `--commit-range`, and privacy-gates passes the PR's `base.sha..head.sha`, so the same commit fails on the PR
+  as `pr_commit_<sha>:<line>: <RULE>`. The ci tracking issue now lists each failed job's link and failed step
+  names, plus privacy-gates' value-free `ERROR: <source>:<line>: <RULE>` lines. It still copies no raw logs.
+
 - **nbconvert 7.17.2** (2026-10-22) — GHSA-pjvx-prjx-h659 (path traversal in cell output filenames when
   exporting to md, latex, rst, or asciidoc) blocked every push through the pre-push `pip-audit` hook. nbconvert
   is only in the `docs` and `notebooks` extras, which never ship in the app. The lock moves to 7.17.2, and both
