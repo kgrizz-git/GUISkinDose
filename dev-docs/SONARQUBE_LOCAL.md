@@ -96,11 +96,15 @@ optional `sonar-project.properties.local` are protected ignored paths and may no
 The commit hook blocks once pending commits since the last successful local scan reach `SONAR_GATE_MAX_COMMITS`
 (default 10, counting the in-flight commit); the push hook blocks on any commit since the last scan. Both are
 enforced by `scripts/check_sonar_freshness.py` (via `scripts/run_sonar_freshness_check.sh`) and stay silent
-unless `SONAR_FRESHNESS_GATE=1` is set in the repo-local `.env` (see `.env.example`). The gate keys off
+unless `SONAR_FRESHNESS_GATE=1` is set in the repo-local `.env` (see `.env.example`). `.env` is gitignored, so a
+linked git worktree has none of its own: there the gate, the local scan, and the issue dump also read the main
+checkout's `.env` for any key the worktree does not set (`scripts/dotenv_paths.py`). The gate keys off
 `tmp/sonar-state.json`, which `scripts/run_sonarqube_local.py` rewrites after each successful analysis (failures
 leave the prior state so the budget is not reset by a red scan). After history rewrites (rebase/amend) the gate
-blocks until a fresh scan re-anchors the state. Note: the push stage evaluates the checked-out HEAD, not the
-pushed refspecs — pushing another branch from this checkout is judged against HEAD's freshness.
+blocks until a fresh scan re-anchors the state. The push stage checks the commit being pushed
+(`PRE_COMMIT_TO_REF`), not the checked-out HEAD, so pushing another branch is judged on that branch. pre-commit
+names only the first pushed ref with changes, so push one branch at a time. Each worktree keeps its own
+`tmp/sonar-state.json` and needs its own scan.
 
 ### Freshness vs quality gate vs triage (do not conflate)
 

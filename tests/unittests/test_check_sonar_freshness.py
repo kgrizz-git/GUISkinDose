@@ -50,6 +50,7 @@ def fixture_repo(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setattr(gate, "repo_root", lambda: root)
     monkeypatch.delenv("SONAR_FRESHNESS_GATE", raising=False)
     monkeypatch.delenv("SONAR_GATE_MAX_COMMITS", raising=False)
+    monkeypatch.delenv("PRE_COMMIT_TO_REF", raising=False)
     return root
 
 
@@ -308,3 +309,52 @@ def test_contained_path_resolves_relative_under_root(fixture_repo: Path) -> None
     assert resolved == Path(os.path.realpath(fixture_repo)) / "tmp" / "sonar-state.json"
     with pytest.raises(ValueError, match="outside the repository root"):
         gate.contained_path(str(fixture_repo), fixture_repo)
+
+
+def test_push_stage_checks_the_pushed_commit_not_head(fixture_repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """``git push origin other`` from a scanned HEAD must still gate ``other``."""
+    scan_sha = _commit(fixture_repo, "a")
+    _git(["checkout", "-q", "-b", "other"], fixture_repo)
+    other_sha = _commit(fixture_repo, "c")
+    _git(["checkout", "-q", "-"], fixture_repo)
+    state_path = fixture_repo / "tmp" / "sonar-state.json"
+    _write_state(state_path, scan_sha)
+    monkeypatch.setenv("SONAR_FRESHNESS_GATE", "1")
+
+    assert gate.main(["--state", str(state_path), "--stage", "push"]) == 0
+    monkeypatch.setenv("PRE_COMMIT_TO_REF", other_sha)
+    assert gate.main(["--state", str(state_path), "--stage", "push"]) == 1
+    monkeypatch.setenv("PRE_COMMIT_TO_REF", scan_sha)
+    assert gate.main(["--state", str(state_path), "--stage", "push"]) == 0
+
+
+def test_pushed_sha_ignores_non_sha_values(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("PRE_COMMIT_TO_REF", "--upload-pack=evil")
+    assert gate.pushed_sha() is None
+    monkeypatch.setenv("PRE_COMMIT_TO_REF", "a" * 40)
+    assert gate.pushed_sha() == "a" * 40
+
+
+def test_worktree_reads_main_checkout_dotenv(fixture_repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """``.env`` is gitignored, so a linked worktree has none; the gate must not silently switch off."""
+    worktree = fixture_repo.parent / "wt"
+    _git(["worktree", "add", "-q", "-b", "wt", str(worktree)], fixture_repo)
+    scan_sha = _git(["rev-parse", "HEAD"], worktree, capture=True)
+    _commit(worktree, "w")
+    state_path = worktree / "tmp" / "sonar-state.json"
+    _write_state(state_path, scan_sha)
+    (fixture_repo / ".env").write_text("SONAR_FRESHNESS_GATE=1\n", encoding="utf-8")
+    monkeypatch.setattr(gate, "repo_root", lambda: worktree)
+
+    assert gate.main(["--state", str(state_path), "--stage", "push"]) == 1
+
+
+def test_dotenv_candidates_add_main_checkout_only_for_worktrees(fixture_repo: Path) -> None:
+    from scripts.dotenv_paths import dotenv_candidates
+
+    worktree = fixture_repo.parent / "wt2"
+    _git(["worktree", "add", "-q", "-b", "wt2", str(worktree)], fixture_repo)
+
+    assert dotenv_candidates(fixture_repo) == [fixture_repo / ".env"]
+    resolved = [path.resolve() for path in dotenv_candidates(worktree)]
+    assert resolved == [(worktree / ".env").resolve(), (fixture_repo / ".env").resolve()]

@@ -8,6 +8,15 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ## [Unreleased]
 
+- **SonarCloud S8705 and freshness-gate holes** (2026-10-23) — `main`'s SonarCloud quality gate failed on
+  new-code security rating after #187: `check_ci_metadata.read_commit_messages()` passed `--commit-range`
+  straight to `git log` (`pythonsecurity:S8705`). The range must now be `<hex sha>..<hex sha>`; it is rebuilt from
+  the matched SHAs after `--end-of-options`, and anything else exits 2 with `invalid_commit_range`. Local
+  SonarQube Community lacks the `pythonsecurity` rules, so only SonarCloud saw it. The freshness gate had two
+  holes. It read `SONAR_FRESHNESS_GATE` from the checkout's own gitignored `.env`, so in a linked worktree it
+  silently switched off; the gate, local scan, and issue dump now also read the main checkout's `.env`
+  (`scripts/dotenv_paths.py`). Its push stage checked `HEAD`; it now checks pre-commit's `PRE_COMMIT_TO_REF`.
+
 - **PR commit-message scan and richer CI failure issues** (2026-10-22) — Issue #185: `main` CI failed
   privacy-gates on a Cursor cloud agent's `Co-authored-by` trailer carrying a personal address. Pull request
   events carry no commit messages, so `check_ci_metadata.py` only saw them on the push to `main`. It now takes

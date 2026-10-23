@@ -38,6 +38,11 @@ import subprocess
 import sys
 from pathlib import Path
 
+try:
+    from dotenv_paths import dotenv_candidates
+except ModuleNotFoundError:  # Imported as scripts.check_sonar_freshness in tests.
+    from scripts.dotenv_paths import dotenv_candidates
+
 DEFAULT_STATE_PATH = "tmp/sonar-state.json"
 DEFAULT_MAX_COMMITS = 10
 WARN_FRACTION = 0.8
@@ -117,6 +122,17 @@ def clean_env_value(raw: str) -> str:
     return value
 
 
+def pushed_sha() -> str | None:
+    """Return the commit being pushed, when pre-commit's pre-push stage names one.
+
+    ``git push origin other-branch`` from a checkout of a different branch pushes
+    a commit that is not ``HEAD``; checking ``HEAD`` would gate the wrong commit.
+    pre-commit sets ``PRE_COMMIT_TO_REF`` to the first pushed ref with changes.
+    """
+    value = os.environ.get("PRE_COMMIT_TO_REF", "").strip().lower()
+    return value if COMMIT_SHA_RE.fullmatch(value) else None
+
+
 def git_head_sha() -> str:
     return subprocess.check_output(
         ["git", "rev-parse", "HEAD"],
@@ -138,9 +154,9 @@ def is_ancestor(ancestor: str, descendant: str) -> bool:
     return True
 
 
-def commits_since(ancestor: str) -> int:
+def commits_since(ancestor: str, target: str = "HEAD") -> int:
     count = subprocess.check_output(
-        ["git", "rev-list", "--count", f"{ancestor}..HEAD"],
+        ["git", "rev-list", "--count", f"{ancestor}..{target}"],
         cwd=repo_root(),
         text=True,
         env=_git_cwd_env(),
@@ -243,7 +259,8 @@ def run_gate(state_path: Path, max_commits: int, stage: str) -> int:
     issues_summary = state.get("issues_summary_path", "tmp/sonar-latest-issues.md")
 
     try:
-        head_sha = git_head_sha()
+        head_sha = pushed_sha() if stage == "push" else None
+        head_sha = head_sha or git_head_sha()
     except subprocess.CalledProcessError as exc:
         print(f"Sonar freshness gate: failed to resolve HEAD ({exc}).", file=sys.stderr)
         return 1
@@ -251,14 +268,15 @@ def run_gate(state_path: Path, max_commits: int, stage: str) -> int:
     if not is_ancestor(last_scan_commit, head_sha):
         print(
             f"Sonar freshness gate: last scan commit {last_scan_commit[:12]} is not an "
-            f"ancestor of HEAD ({head_sha[:12]}) — history was rewritten since the last scan.\n"
+            f"ancestor of the checked commit ({head_sha[:12]}) — history was rewritten or another\n"
+            "branch is being pushed.\n"
             f"{_refresh_hint(last_scan_commit, last_time, issues_count, issues_summary)}",
             file=sys.stderr,
         )
         return 1
 
     try:
-        commits_count = commits_since(last_scan_commit)
+        commits_count = commits_since(last_scan_commit, head_sha)
     except subprocess.CalledProcessError as exc:
         print(
             f"Sonar freshness gate: failed to count commits since last scan ({exc}).",
@@ -321,7 +339,8 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
-    load_env_file(repo_root() / ".env")
+    for env_file in dotenv_candidates(repo_root()):
+        load_env_file(env_file)
 
     if not env_is_on("SONAR_FRESHNESS_GATE"):
         return 0

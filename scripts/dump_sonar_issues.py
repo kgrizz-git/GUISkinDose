@@ -36,6 +36,11 @@ from urllib.error import HTTPError
 from urllib.parse import urlencode, urlparse
 from urllib.request import HTTPRedirectHandler, OpenerDirector, ProxyHandler, Request, build_opener
 
+try:
+    from dotenv_paths import dotenv_candidates
+except ModuleNotFoundError:  # Imported as scripts.dump_sonar_issues in tests.
+    from scripts.dotenv_paths import dotenv_candidates
+
 
 ALLOWED_LOCAL_HOSTS = {"localhost", "127.0.0.1", "::1"}
 ISSUES_DIRNAME = Path("tmp/sonar-issues")
@@ -82,15 +87,14 @@ def repo_root() -> Path:
     return Path(__file__).resolve().parents[1]
 
 
-def load_token_from_dotenv(root: Path) -> str | None:
-    """Parse Sonar tokens out of the repo-local .env without sourcing it."""
-    env_file = root / ".env"
+def _sonar_tokens_from_file(env_file: Path) -> dict[str, str]:
+    """Return non-empty SONAR_TOKEN / SONAR_CLOUD_TOKEN values from one .env file."""
     if not env_file.is_file():
-        return None
+        return {}
     try:
         text = env_file.read_text(encoding="utf-8")
     except (OSError, UnicodeDecodeError):
-        return None
+        return {}
     # Later assignments win for duplicate keys (same as typical shell sourcing).
     found: dict[str, str] = {}
     for raw_line in text.splitlines():
@@ -103,30 +107,27 @@ def load_token_from_dotenv(root: Path) -> str | None:
             cleaned = clean_env_value(value)
             if cleaned:
                 found[name] = cleaned
-    return found.get("SONAR_TOKEN") or found.get("SONAR_CLOUD_TOKEN")
+    return found
+
+
+def _first_token(root: Path, order: tuple[str, str]) -> str | None:
+    # The checkout's own .env wins; a linked worktree falls back to the main checkout's.
+    for env_file in dotenv_candidates(root):
+        found = _sonar_tokens_from_file(env_file)
+        token = found.get(order[0]) or found.get(order[1])
+        if token:
+            return token
+    return None
+
+
+def load_token_from_dotenv(root: Path) -> str | None:
+    """Parse Sonar tokens out of the repo-local .env without sourcing it."""
+    return _first_token(root, ("SONAR_TOKEN", "SONAR_CLOUD_TOKEN"))
 
 
 def load_cloud_token_from_dotenv(root: Path) -> str | None:
     """Parse SONAR_CLOUD_TOKEN, else SONAR_TOKEN, from repo-local ``.env``."""
-    env_file = root / ".env"
-    if not env_file.is_file():
-        return None
-    try:
-        text = env_file.read_text(encoding="utf-8")
-    except (OSError, UnicodeDecodeError):
-        return None
-    found: dict[str, str] = {}
-    for raw_line in text.splitlines():
-        line = raw_line.strip()
-        if not line or line.startswith("#") or "=" not in line:
-            continue
-        key, value = line.split("=", 1)
-        name = key.strip()
-        if name in {"SONAR_CLOUD_TOKEN", "SONAR_TOKEN"}:
-            cleaned = clean_env_value(value)
-            if cleaned:
-                found[name] = cleaned
-    return found.get("SONAR_CLOUD_TOKEN") or found.get("SONAR_TOKEN")
+    return _first_token(root, ("SONAR_CLOUD_TOKEN", "SONAR_TOKEN"))
 
 
 def resolve_cloud_token(root: Path) -> str | None:
