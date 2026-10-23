@@ -56,10 +56,11 @@ That keeps SemVer and contributor history organized.
 - **Dependency updates** (2026-10-17) — NiceGUI 3.18.0 rejects uploads to disabled or hidden
   `ui.upload` elements (GHSA-9mxh-cwxr-cxjj). Pandas 3.0.6, tqdm 4.70.1, kaleido 1.5.0,
   and reportlab 5.0.1 move forward with no dose-calculation or GUI behavior change.
-  Pytest stays below 9.1 so the existing GUI suite keeps passing. Package version stays
-  `1.0.0` until the next release (patch-level when cut).
+  Package version stays `1.0.0` until the next release (patch-level when cut).
 
 ### Fixed
+
+- **Schema and sheet changes with no file** (2026-10-22) — Changing the input schema or workbook sheet when the selected file is not on disk returns without starting a tabular load. Dose calculation is unchanged. The dev extra now allows pytest 9.1 (`pytest>=7.0,<10`, locked at 9.1.1). Package version stays `1.0.0`.
 
 - **reportlab floor** (2026-10-22) — `reportlab` 4.0.0 hard-depends on `rlPyCairo`, which needs a system Cairo library to build `pycairo`. A lowest-direct install of `reportlab>=4.0` failed before PDF export could be imported. The floor is now 4.0.4, the first release that moves Cairo into an optional extra this package does not use. Locked installs stay on reportlab 5.0.1. Package version stays `1.0.0`.
 
