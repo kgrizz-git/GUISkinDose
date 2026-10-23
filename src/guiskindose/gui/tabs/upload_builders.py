@@ -18,7 +18,7 @@ from guiskindose.privacy import opaque_exam_label
 
 from ..components import HelpButton
 from ..concurrency import operation_guard, require_io_result, upload_lock
-from ..constants import EXAMPLE_FILES, EXAMPLE_OPTIONS, TABULAR_EXAMPLE_FILES
+from ..constants import EXAMPLE_FILES, EXAMPLE_OPTIONS, MISSING_FILE_NOTICE, TABULAR_EXAMPLE_FILES
 from ..dose_severity import reset_psd_label
 from ..helpers import (
     adjust_active_exam_index_after_remove,
@@ -330,12 +330,14 @@ class UploadTabController:
         """Reparse schema."""
         if state.file_path is None or state.input_source_type in ("", "dicom"):
             return
-        if not state.file_path.is_file():
-            return
         with operation_guard("changing the input schema") as proceed:
             if not proceed:
                 return
             state.input_schema = self.refs.schema_select.value or "auto"
+            if not state.file_path.is_file():
+                # Keep the selection in state, but do not start a load that can only fail.
+                ui.notify(MISSING_FILE_NOTICE, type="warning", timeout=8000)
+                return
             self.refs.upload_status.set_text("RE-PARSING...")
             ok, msg = require_io_result(await run.io_bound(load_tabular, state.file_path, state, True))
             if ok:

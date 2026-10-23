@@ -22,6 +22,7 @@ from nicegui import run, ui
 from guiskindose.settings.normalization_settings import normalize_manufacturer_key
 
 from ..concurrency import operation_guard, require_io_result
+from ..constants import MISSING_FILE_NOTICE
 from ..helpers import apply_exam_transforms, load_tabular
 from ..page_context import PageContext
 from ..schema_detection_notice import schema_detection_notice_lines
@@ -135,12 +136,14 @@ class ImportPreviewController:
         """Handle sheet change."""
         if state.file_path is None:
             return
-        if not Path(state.file_path).is_file():
-            return
         with operation_guard("switching sheets") as proceed:
             if not proceed:
                 return
             state.input_sheet_name = self.sheet_select.value or 0
+            if not Path(state.file_path).is_file():
+                # Keep the selection in state, but do not start a load that can only fail.
+                ui.notify(MISSING_FILE_NOTICE, type="warning", timeout=8000)
+                return
             ok, msg = require_io_result(await run.io_bound(load_tabular, state.file_path, state, True))
             if ok:
                 self.upload_status.set_text(f"SUCCESS: {msg.upper()}")

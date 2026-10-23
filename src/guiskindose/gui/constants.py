@@ -41,3 +41,6 @@ TABLE_ORIGIN_SLIDER_MIN = -250
 TABLE_ORIGIN_SLIDER_MAX = 250
 GEOMETRY_DEBOUNCE_SEC = 0.25
 MAX_INLINE_MAPS = 5
+
+# Shown when a schema or sheet change targets an uploaded file that is no longer on disk.
+MISSING_FILE_NOTICE = "The selected file is no longer available. Upload it again to apply this change."

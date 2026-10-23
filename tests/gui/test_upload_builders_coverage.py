@@ -225,6 +225,29 @@ async def test_reparse_schema_on_tabular_fixture(monkeypatch: pytest.MonkeyPatch
 
 
 @pytest.mark.asyncio
+async def test_reparse_schema_with_missing_file_keeps_selection_and_skips_load(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    ctrl = _upload_controller()
+    state.file_path = tmp_path / "gone.csv"
+    state.input_source_type = "csv"
+    state.input_schema = "auto"
+    ctrl.refs.schema_select.value = "dosetrack"
+    notices: list[str] = []
+    monkeypatch.setattr(ub.ui, "notify", lambda message, **kwargs: notices.append(message))
+
+    async def _must_not_load(*args, **kwargs):
+        raise AssertionError("load_tabular must not run for a missing file")
+
+    monkeypatch.setattr(ub.run, "io_bound", _must_not_load)
+
+    await ctrl.reparse_schema()
+
+    assert state.input_schema == "dosetrack"
+    assert notices == [ub.MISSING_FILE_NOTICE]
+
+
+@pytest.mark.asyncio
 async def test_upload_tabular_shows_import_preview(user: User) -> None:
     """Tabular load surfaces the import-preview card (non-DICOM path)."""
     await user.open("/")
