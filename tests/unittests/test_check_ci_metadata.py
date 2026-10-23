@@ -191,7 +191,9 @@ def test_main_returns_2_when_commit_range_is_invalid(tmp_path, monkeypatch, caps
     monkeypatch.chdir(tmp_path)
 
     assert check_ci_metadata.main([str(event), "--commit-range", "deadbeef..cafebabe"]) == 2
-    assert "git log failed" in capsys.readouterr().err
+    err = capsys.readouterr().err
+    assert "git_log_failed" in err
+    assert "deadbeef" not in err
 
 
 def test_issue_detail_filter_admits_only_value_free_error_lines() -> None:

@@ -95,10 +95,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.commit_range:
         try:
             findings.extend(scan_commit_messages(read_commit_messages(args.commit_range)))
-        except subprocess.CalledProcessError as exc:
-            # git's message names the bad revision, not a path; keep the first line only.
-            detail = (exc.stderr or "").strip().splitlines()[:1]
-            print(f"ERROR: CI metadata scan did not run (git log failed: {' '.join(detail)}).", file=sys.stderr)
+        except subprocess.CalledProcessError:
+            # Fixed text only: git's stderr can echo the supplied range or refs.
+            print("ERROR: CI metadata scan did not run (git_log_failed).", file=sys.stderr)
             return 2
         except OSError as exc:
             print(f"ERROR: CI metadata scan did not run ({type(exc).__name__}).", file=sys.stderr)
