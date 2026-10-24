@@ -44,6 +44,7 @@ if TYPE_CHECKING:
     from ..page_context import PageContext
 
 MAX_UPLOAD_BYTES = 64 * 1024 * 1024
+_EXCEL_SUFFIXES = (".xlsx", ".xlsm")
 
 _LOAD_FAILURE_STATUS = "Could not load — see message"
 _NO_FILE_LOADED_STATUS = "No file loaded"
@@ -103,6 +104,33 @@ _PARSING_STATUS = "PARSING..."
 def upload_exceeds_limit(num_bytes: int) -> bool:
     """Upload exceeds limit."""
     return num_bytes > MAX_UPLOAD_BYTES
+
+
+def sheet_kept_for_replacement(previous: str | int, sheets: list[str]) -> str | int:
+    """Choose the sheet a replacement workbook should parse.
+
+    A prior sheet name is kept when the new workbook contains it, so a re-upload
+    after the previous file disappeared still loads that sheet. Any other previous
+    value (including the default index ``0``) uses the first sheet. An empty sheet
+    list also yields ``0``.
+
+    Parameters
+    ----------
+    previous:
+        ``state.input_sheet_name`` from before this upload.
+    sheets:
+        Sheet names in the workbook being uploaded, in workbook order.
+
+    Returns
+    -------
+    str | int
+        The sheet name to load, or ``0`` when the workbook has no listed sheets.
+    """
+    if isinstance(previous, str) and previous in sheets:
+        return previous
+    if sheets:
+        return sheets[0]
+    return 0
 
 
 def _snapshot_load_state() -> dict[str, Any]:
@@ -184,18 +212,17 @@ class UploadTabController:
             try:
                 tmp_path = create_temp_upload(data, suffix=suffix)
                 self.refs.upload_status.set_text(_PARSING_STATUS)
+                workbook_sheets: list[str] | None = None
                 if suffix in _TABULAR_SUFFIXES:
                     state.input_source_type = suffix.lstrip(".")
+                    workbook_sheets = await self._retain_workbook_sheet(tmp_path, suffix)
                     ok, msg = require_io_result(await run.io_bound(load_tabular, tmp_path, state))
                 else:
                     state.input_source_type = "dicom"
                     ok, msg = require_io_result(await run.io_bound(load_rdsr, tmp_path, state))
                 if ok:
-                    # Commit sheet defaults only after a successful parse.
-                    state.input_sheet_name = 0
-                    state.available_sheets = []
-                    self.refs.import_preview.sheet_row.set_visibility(False)
-                    await self._on_load_success(file_name, suffix, tmp_path, msg)
+                    self._clear_sheet_picker(suffix)
+                    await self._on_load_success(file_name, suffix, tmp_path, msg, workbook_sheets)
                 else:
                     _restore_load_state(snap)
                     remove_temp_upload(tmp_path)
@@ -210,7 +237,53 @@ class UploadTabController:
             finally:
                 self.refs.uploader["el"].reset()
 
-    async def _on_load_success(self, file_name: str, suffix: str, tmp_path: Path, msg: str) -> None:
+    def _clear_sheet_picker(self, suffix: str) -> None:
+        """Hide the sheet menu until the success path rebuilds it.
+
+        Excel keeps the sheet name chosen before parsing. Other uploads have
+        no workbook sheet, so the name returns to the default index.
+        """
+        if suffix not in _EXCEL_SUFFIXES:
+            state.input_sheet_name = 0
+        state.available_sheets = []
+        self.refs.import_preview.sheet_row.set_visibility(False)
+
+    async def _retain_workbook_sheet(self, tmp_path: Path, suffix: str) -> list[str] | None:
+        """Point ``state.input_sheet_name`` at a sheet this workbook actually has.
+
+        CSV and TSV uploads return ``None`` and leave the current sheet name
+        alone; the success path clears it. Excel uploads return the sheet list
+        so the success path can show the same sheet that was parsed.
+        """
+        if suffix not in _EXCEL_SUFFIXES:
+            return None
+        sheets = require_io_result(await run.io_bound(get_excel_sheets, tmp_path))
+        state.input_sheet_name = sheet_kept_for_replacement(state.input_sheet_name, sheets)
+        return sheets
+
+    def _apply_workbook_sheets(self, sheets: list[str]) -> None:
+        """Show the sheet menu on the sheet that was just parsed.
+
+        A one-sheet workbook stays on the hidden default path. When several
+        sheets exist, the menu value and ``state.input_sheet_name`` are the
+        same name.
+        """
+        if len(sheets) <= 1:
+            return
+        state.available_sheets = list(sheets)
+        selected = state.input_sheet_name if state.input_sheet_name in sheets else sheets[0]
+        state.input_sheet_name = selected
+        self.refs.import_preview.sheet_select.set_options({s: s for s in sheets}, value=selected)
+        self.refs.import_preview.sheet_row.set_visibility(True)
+
+    async def _on_load_success(
+        self,
+        file_name: str,
+        suffix: str,
+        tmp_path: Path,
+        msg: str,
+        workbook_sheets: list[str] | None = None,
+    ) -> None:
         # Keep the original name in state for optional export provenance only;
         # never render it in the drawer or status surfaces.
         state.file_name = file_name
@@ -233,12 +306,15 @@ class UploadTabController:
         if state.input_source_type != "dicom":
             self.refs.import_preview.refresh()
             self.refs.import_preview.set_transform_defaults()
-        if suffix in (".xlsx", ".xlsm"):
+        if suffix in _EXCEL_SUFFIXES:
+            await self._finish_workbook_sheets(tmp_path, workbook_sheets)
+
+    async def _finish_workbook_sheets(self, tmp_path: Path, workbook_sheets: list[str] | None) -> None:
+        """Apply the sheet list, reading the workbook only when it was not already read."""
+        sheets = workbook_sheets
+        if sheets is None:
             sheets = require_io_result(await run.io_bound(get_excel_sheets, tmp_path))
-            if len(sheets) > 1:
-                state.available_sheets = sheets
-                self.refs.import_preview.sheet_select.set_options({s: s for s in sheets}, value=sheets[0])
-                self.refs.import_preview.sheet_row.set_visibility(True)
+        self._apply_workbook_sheets(sheets)
 
     async def load_example(self) -> None:
         """Load example."""

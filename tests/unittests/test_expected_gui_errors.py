@@ -9,7 +9,8 @@ from pathlib import Path
 
 _PATH = Path(__file__).resolve().parents[1] / "gui" / "expected_gui_errors.py"
 _SPEC = importlib.util.spec_from_file_location("expected_gui_errors", _PATH)
-assert _SPEC is not None and _SPEC.loader is not None
+assert _SPEC is not None
+assert _SPEC.loader is not None
 _MODULE = importlib.util.module_from_spec(_SPEC)
 sys.modules[_SPEC.name] = _MODULE
 _SPEC.loader.exec_module(_MODULE)
