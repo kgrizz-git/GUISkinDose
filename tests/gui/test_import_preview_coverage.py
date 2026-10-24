@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from types import SimpleNamespace
 from typing import cast
 from unittest.mock import MagicMock
@@ -158,6 +159,28 @@ async def test_on_sheet_change_reparses_file(monkeypatch: pytest.MonkeyPatch) ->
 
     assert refreshed["n"] == 1
     cast(MagicMock, ctrl.upload_status.set_text).assert_called()
+
+
+@pytest.mark.asyncio
+async def test_on_sheet_change_with_missing_file_keeps_selection_and_skips_load(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    ctrl = _controller()
+    state.file_path = tmp_path / "gone.xlsx"
+    state.input_sheet_name = 0
+    ctrl.sheet_select.value = "Events"
+    notices: list[str] = []
+    monkeypatch.setattr(ip.ui, "notify", lambda message, **kwargs: notices.append(message))
+
+    async def _must_not_load(*args, **kwargs):
+        raise AssertionError("load_tabular must not run for a missing file")
+
+    monkeypatch.setattr(ip.run, "io_bound", _must_not_load)
+
+    await ctrl.on_sheet_change()
+
+    assert state.input_sheet_name == "Events"
+    assert notices == [ip.MISSING_FILE_NOTICE]
 
 
 def test_set_transform_defaults_noop_without_provenance() -> None:

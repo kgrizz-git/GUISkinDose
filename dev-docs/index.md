@@ -195,6 +195,7 @@ Phased detail derived from diagnostics or master plans.
 
 | File | Purpose |
 |---|---|
+| [plans/archive/PYTEST_91_GUI_LOG_CAPTURE_PLAN.md](plans/archive/PYTEST_91_GUI_LOG_CAPTURE_PLAN.md) | **Complete** (2026-10-22) — GUI tests pass on pytest 9.1.1; the GUI user fixture drops allowlisted non-propagating ERROR codes; Results-tab timers are cancelled before user_simulation teardown; pytest>=7.0,<10 replaces pytest>=7.0,<9.1. |
 | [plans/archive/SCHEMA_DETECTION_CONFIRMATION_PLAN.md](plans/archive/SCHEMA_DETECTION_CONFIRMATION_PLAN.md) | **Complete** (2026-10-09) — `StationName` and `DeviceSerialNumber` no longer elect a raw RDSR-like table; import preview says when a schema was read from the file and asks for confirmation on a two-column match. |
 | [plans/archive/TABULAR_IMPORT_OPTIONS_CLI_PLAN.md](plans/archive/TABULAR_IMPORT_OPTIONS_CLI_PLAN.md) | **Complete** (2026-10-08) — CLI/API `TabularImportOptions` parity with GUI expert post-normalization `Tx ↔ Tz` / `Ap1×−1` / `Ap2×−1`; non-tabular rejection. |
 | [plans/archive/NATIVE_WINDOW_GEOMETRY_PLAN.md](plans/archive/NATIVE_WINDOW_GEOMETRY_PLAN.md) | **Complete** (archived 2026-10-08) — native window size/position/maximized persistence on `--native` launch; first run maximized. |
