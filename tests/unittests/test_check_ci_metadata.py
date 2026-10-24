@@ -150,7 +150,7 @@ def test_read_commit_messages_parses_git_log(monkeypatch) -> None:
         lambda *a, **k: subprocess.CompletedProcess(a, 0, stdout=fake, stderr=""),
     )
 
-    assert check_ci_metadata.read_commit_messages("base..head") == [
+    assert check_ci_metadata.read_commit_messages("abc1234..def5678") == [
         ("aaa1111", "subject one\n\nbody\n"),
         ("bbb2222", "subject two\n"),
     ]
@@ -171,7 +171,10 @@ def test_pr_commit_scan_survives_record_separator_in_message(tmp_path, monkeypat
     subprocess.run([*git, "commit", "-q", "--allow-empty", "-m", message], check=True, env=env)
 
     monkeypatch.chdir(tmp_path)
-    commits = check_ci_metadata.read_commit_messages("HEAD~1..HEAD")
+    head = subprocess.run(
+        ["git", "-C", str(tmp_path), "rev-parse", "HEAD", "HEAD~1"], check=True, capture_output=True, text=True, env=env
+    ).stdout.split()
+    commits = check_ci_metadata.read_commit_messages(f"{head[1]}..{head[0]}")
 
     assert len(commits) == 1
     findings = check_ci_metadata.scan_commit_messages(commits)
@@ -223,3 +226,11 @@ def test_issue_detail_filter_admits_only_value_free_error_lines() -> None:
         "##[error]Process completed with exit code 1.",
     ):
         assert not pattern.fullmatch(line), line
+
+
+@pytest.mark.parametrize("bad", ["--output=x", "HEAD~1..HEAD", "abc1234..--all", "abc1234...def5678", ""])
+def test_read_commit_messages_refuses_non_sha_ranges(bad: str) -> None:
+    from scripts import check_ci_metadata
+
+    with pytest.raises(ValueError, match="invalid_commit_range"):
+        check_ci_metadata.read_commit_messages(bad)

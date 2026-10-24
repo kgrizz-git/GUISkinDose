@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import subprocess
 import sys
 from collections.abc import Sequence
@@ -47,10 +48,22 @@ def scan_commit_messages(commits: Sequence[tuple[str, str]]) -> list[MetadataFin
     return _scan_sources([(f"pr_commit_{sha}", message) for sha, message in commits])
 
 
+_COMMIT_RANGE_RE = re.compile(r"([0-9a-f]{7,64})\.\.([0-9a-f]{7,64})")
+
+
 def read_commit_messages(commit_range: str) -> list[tuple[str, str]]:
-    """Return ``(short_sha, message)`` for each commit in a ``base..head`` range."""
+    """Return ``(short_sha, message)`` for each commit in a ``base..head`` range.
+
+    Only ``<hex sha>..<hex sha>`` is accepted. The range passed to git is rebuilt
+    from the matched SHAs, after ``--end-of-options``, so the argument can never
+    be read as a git option (Sonar S8705).
+    """
+    match = _COMMIT_RANGE_RE.fullmatch(commit_range.strip().lower())
+    if match is None:
+        raise ValueError("invalid_commit_range")
+    safe_range = f"{match.group(1)}..{match.group(2)}"
     output = subprocess.run(
-        ["git", "log", "-z", "--format=%h%x00%B", commit_range],
+        ["git", "log", "-z", "--format=%h%x00%B", "--end-of-options", safe_range],
         check=True,
         capture_output=True,
         encoding="utf-8",
@@ -95,6 +108,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.commit_range:
         try:
             findings.extend(scan_commit_messages(read_commit_messages(args.commit_range)))
+        except ValueError:
+            print("ERROR: CI metadata scan did not run (invalid_commit_range).", file=sys.stderr)
+            return 2
         except subprocess.CalledProcessError:
             # Fixed text only: git's stderr can echo the supplied range or refs.
             print("ERROR: CI metadata scan did not run (git_log_failed).", file=sys.stderr)

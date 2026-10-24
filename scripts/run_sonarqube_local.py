@@ -23,8 +23,10 @@ from defusedxml import ElementTree as DefusedET
 from defusedxml.common import DefusedXmlException
 
 try:
+    from dotenv_paths import dotenv_candidates
     from sonar_update_check import run_update_check
 except ModuleNotFoundError:  # Imported as scripts.run_sonarqube_local in tests.
+    from scripts.dotenv_paths import dotenv_candidates
     from scripts.sonar_update_check import run_update_check
 
 SETTINGS_PATH = Path("sonar-project.properties")
@@ -305,15 +307,23 @@ def write_freshness_state(root: Path, payload: dict[str, object]) -> None:
 def load_env_defaults(root: Path) -> None:
     """Fill SONAR_TOKEN/SONAR_HOST_URL from repo .env when not exported.
 
-    Same setdefault idiom as the gate and dump helpers: an exported value
-    always wins, the file is parsed (never sourced), and values tolerate
+    In a linked worktree the main checkout's ``.env`` fills keys the worktree lacks.
+
+    A non-empty exported value always wins; an empty one, or an empty value in an
+    earlier file, is filled from the next candidate. The file is parsed (never
+    sourced), and values tolerate
     quotes and trailing ` #` comments. Lets `python
     scripts/run_sonarqube_local.py` work in a plain shell on any OS.
     """
-    if os.environ.get("SONAR_TOKEN") and os.environ.get("SONAR_HOST_URL"):
-        return
+    for env_file in dotenv_candidates(root):
+        if os.environ.get("SONAR_TOKEN") and os.environ.get("SONAR_HOST_URL"):
+            return
+        _load_sonar_env_file(env_file)
+
+
+def _load_sonar_env_file(env_file: Path) -> None:
     try:
-        text = (root / ".env").read_text(encoding="utf-8")
+        text = env_file.read_text(encoding="utf-8")
     except (OSError, UnicodeDecodeError):
         return
     for raw_line in text.splitlines():
@@ -327,7 +337,10 @@ def load_env_defaults(root: Path) -> None:
         cleaned = value.strip().split(" #", 1)[0].strip()
         if len(cleaned) >= 2 and cleaned[0] == cleaned[-1] and cleaned[0] in {"'", '"'}:
             cleaned = cleaned[1:-1]
-        os.environ.setdefault(key, cleaned)
+        # An empty value must not mask a later .env candidate or an empty
+        # inherited variable; a non-empty existing setting always wins.
+        if cleaned and not os.environ.get(key):
+            os.environ[key] = cleaned
 
 
 def classify_failure(log_path: Path) -> str:

@@ -168,6 +168,29 @@ def test_load_env_defaults_exported_wins(tmp_path: Path, monkeypatch: pytest.Mon
         assert os.environ["SONAR_TOKEN"] == "exported"
 
 
+def test_load_env_defaults_fills_empty_exported_value(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("SONAR_TOKEN", "")
+    monkeypatch.delenv("SONAR_HOST_URL", raising=False)
+    (tmp_path / ".env").write_text("SONAR_TOKEN=file-token\n", encoding="utf-8")
+    with _isolated_env():
+        load_env_defaults(tmp_path)
+        assert os.environ["SONAR_TOKEN"] == "file-token"
+
+
+def test_empty_dotenv_value_does_not_mask_a_later_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from scripts.run_sonarqube_local import _load_sonar_env_file
+
+    monkeypatch.delenv("SONAR_TOKEN", raising=False)
+    first, second = tmp_path / "first.env", tmp_path / "second.env"
+    first.write_text('SONAR_TOKEN=""\n', encoding="utf-8")
+    second.write_text("SONAR_TOKEN=main-token\n", encoding="utf-8")
+    with _isolated_env():
+        _load_sonar_env_file(first)
+        assert "SONAR_TOKEN" not in os.environ
+        _load_sonar_env_file(second)
+        assert os.environ["SONAR_TOKEN"] == "main-token"
+
+
 def test_load_env_defaults_ignores_non_utf8_dotenv(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("SONAR_TOKEN", raising=False)
     monkeypatch.delenv("SONAR_HOST_URL", raising=False)
