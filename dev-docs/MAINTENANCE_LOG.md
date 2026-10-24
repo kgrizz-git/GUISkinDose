@@ -8,6 +8,13 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ## [Unreleased]
 
+- **PR commit-message scan and richer CI failure issues** (2026-10-22) — Issue #185: `main` CI failed
+  privacy-gates on a Cursor cloud agent's `Co-authored-by` trailer carrying a personal address. Pull request
+  events carry no commit messages, so `check_ci_metadata.py` only saw them on the push to `main`. It now takes
+  `--commit-range`, and privacy-gates passes the PR's `base.sha..head.sha`, so the same commit fails on the PR
+  as `pr_commit_<sha>:<line>: <RULE>`. The ci tracking issue now lists each failed job's link and failed step
+  names, plus privacy-gates' value-free `ERROR: <source>:<line>: <RULE>` lines. It still copies no raw logs.
+
 - **Pytest 9.1.1 lock and GUI log capture** (2026-10-22) — Locked pytest at 9.1.1 with
   `pytest>=7.0,<10` replacing `pytest>=7.0,<9.1`. The GUI `user` fixture in
   `tests/gui/conftest.py` drops allowlisted non-propagating `ERROR` codes before NiceGUI reads
