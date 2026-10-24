@@ -21,6 +21,11 @@ That keeps SemVer and contributor history organized.
 
 ### Security
 
+- **Dev-tool advisories** (2026-10-23) — filelock 4.2.4, virtualenv 21.14.13, and setuptools
+  84.2.1 close five advisories in packages used by development and the privacy scan
+  (GHSA-v4x8-3wr5-3wq8, GHSA-9vhv-jxww-xfm5, GHSA-567q-5qvw-pf92, GHSA-cx6f-vjhg-g3cc,
+  GHSA-xmj3-9gf7-h52w). Dose calculation and the GUI are unchanged. Package version stays `1.0.0`.
+
 - **certifi 2026.10.19 in the Semgrep tool lock** (2026-10-21) — `tools/semgrep/uv.lock` still pinned
   certifi 2026.7.22, which a critical Dependabot alert flagged; the main lock already had 2026.10.19.
   Only the isolated Semgrep scanner used the old CA bundle.

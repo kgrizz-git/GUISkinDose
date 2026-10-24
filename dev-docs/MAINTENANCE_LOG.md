@@ -8,6 +8,13 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ## [Unreleased]
 
+- **filelock, virtualenv, and setuptools advisories** (2026-10-23) — The pre-push audit
+  failed on filelock 3.29.1 (GHSA-v4x8-3wr5-3wq8, GHSA-9vhv-jxww-xfm5, GHSA-567q-5qvw-pf92),
+  virtualenv 21.14.12 (GHSA-cx6f-vjhg-g3cc), and setuptools 83.0.0 (GHSA-xmj3-9gf7-h52w).
+  The lock now has filelock 4.2.4, virtualenv 21.14.13, and setuptools 84.2.1. Floors live
+  on the `dev` extra (`virtualenv`, `filelock`) and the `privacy-scan` extra (`setuptools`).
+  Dose calculation and the GUI are unchanged.
+
 - **PR commit-message scan and richer CI failure issues** (2026-10-22) — Issue #185: `main` CI failed
   privacy-gates on a Cursor cloud agent's `Co-authored-by` trailer carrying a personal address. Pull request
   events carry no commit messages, so `check_ci_metadata.py` only saw them on the push to `main`. It now takes

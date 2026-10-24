@@ -73,6 +73,8 @@ privacy-scan = [
     "en-core-web-sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl",
     "presidio-analyzer>=2.2.360,<3",
     "spacy>=3.8,<4",
+    # setuptools is transitive via spacy/thinc. 84.1.0 closes GHSA-xmj3-9gf7-h52w.
+    "setuptools>=84.1.0",
 ]
 # Headless phantom library tooling (reduced Mesh3d previews need real quadric
 # decimation — triangle subsample looks like scatter fragments in Settings).
@@ -95,6 +97,10 @@ dev = [
     "bandit>=1.8",
     "shellcheck-py>=0.11",
     "pre-commit>=4.0",
+    # virtualenv is transitive via pre-commit. 21.14.13 closes GHSA-cx6f-vjhg-g3cc.
+    # filelock 4.2.1 closes GHSA-v4x8-3wr5-3wq8, GHSA-9vhv-jxww-xfm5, and GHSA-567q-5qvw-pf92.
+    "virtualenv>=21.14.13",
+    "filelock>=4.2.1",
     # pytest 9.1 captures logs from loggers with propagate=False
     # (pytest-dev/pytest#3697). tests/gui/conftest.py drops allowlisted
     # ERROR codes before NiceGUI's user fixture reads caplog. The upper
