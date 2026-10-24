@@ -180,18 +180,20 @@ async def test_import_restores_state_invokes_refresh_and_clears_results(user: Us
 @pytest.mark.asyncio
 async def test_import_updates_rendered_widget_values(user: User) -> None:
     """Bound settings widgets reflect imported values on the live page."""
-    await user.open("/")
-    user.find("3 · Settings").click()
-    await user.should_see("Run configuration")
-    lon = _number_by_label(user, "Longitudinal")
-    assert lon.value == 0
     _seed_single_exam()
     # Align schema/sheet with the document so no re-parse runs: the seeded
     # file does not exist, so a re-parse fails and rolls d_lon back to 0.
     # Without this, the poll below only passed by catching the widget's
     # transient 1.0 before the rollback — which parallel load can miss.
+    # Set before ``open`` so the upload schema select does not schedule a
+    # re-parse when these values are applied later.
     state.input_schema = "dosetrack"
     state.input_sheet_name = "Events"
+    await user.open("/")
+    user.find("3 · Settings").click()
+    await user.should_see("Run configuration")
+    lon = _number_by_label(user, "Longitudinal")
+    assert lon.value == 0
     calls: list[str] = []
     with _client(user):
         status = ui.label("")
@@ -216,6 +218,10 @@ async def test_import_mismatch_warning_surfaces_live_untouched(user: User) -> No
     """
     await user.open("/")
     _seed_single_exam()
+    # Match document schema/sheet so apply does not fire the upload tab's
+    # schema-select handler (re-parse of the non-existent seeded path).
+    state.input_schema = "dosetrack"
+    state.input_sheet_name = "Events"
     state.kerma_meter_file = "/other/place/custom.xlsx"
     with _client(user):
         status = ui.label("")

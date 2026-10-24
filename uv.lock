@@ -1122,11 +1122,11 @@ wheels = [
 
 [[package]]
 name = "filelock"
-version = "3.29.1"
+version = "4.2.4"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/1f/f9/f38573ed5844586db374d085911740a501ccfa373b455fc9413f09f85237/filelock-3.29.1.tar.gz", hash = "sha256:d97e6b1b9757569626c58caa07dc4beb1613f4a2938b1e8cc81afca398906c9e", size = 59335, upload-time = "2026-06-03T15:19:04.053Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/d8/28/3893324bcadf8f89b1616637468d766af3f625008c0735bf704fdfa86617/filelock-4.2.4.tar.gz", hash = "sha256:c6d8663535e1650ee430507b4ffbac7b464dd64b7647ea0112a9f406499d163d", size = 652444, upload-time = "2026-10-19T01:57:51.001Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/4c/a0/614c5fe402fd88951df45f4dda2fa3b4e17a99ecd92340771929169b3b95/filelock-3.29.1-py3-none-any.whl", hash = "sha256:85199dfd706869641b72b2e8955d5416a4b2b7dc4b0e8e6d97b4cc1299a6983b", size = 40750, upload-time = "2026-06-03T15:19:02.959Z" },
+    { url = "https://files.pythonhosted.org/packages/e0/1b/5e74289a1878e666bb4b65fe5805a04cafcac2aa5f519ef1ead67ef91c56/filelock-4.2.4-py3-none-any.whl", hash = "sha256:301241438c57936ef93f4243a94f2559022268bfcf9b375a9a72eb0f8db8358e", size = 162475, upload-time = "2026-10-19T01:57:49.419Z" },
 ]
 
 [[package]]
@@ -1348,6 +1348,7 @@ dev = [
     { name = "basedpyright" },
     { name = "defusedxml" },
     { name = "diff-cover" },
+    { name = "filelock" },
     { name = "pandas-stubs" },
     { name = "pip-audit" },
     { name = "playwright" },
@@ -1360,6 +1361,7 @@ dev = [
     { name = "ruff" },
     { name = "shellcheck-py" },
     { name = "types-pillow" },
+    { name = "virtualenv" },
 ]
 docs = [
     { name = "ipykernel" },
@@ -1407,6 +1409,7 @@ phantom-gen = [
 privacy-scan = [
     { name = "en-core-web-sm" },
     { name = "presidio-analyzer" },
+    { name = "setuptools" },
     { name = "spacy" },
 ]
 
@@ -1420,6 +1423,7 @@ requires-dist = [
     { name = "diff-cover", marker = "extra == 'dev'", specifier = ">=10.0" },
     { name = "en-core-web-sm", marker = "extra == 'privacy-scan'", url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl" },
     { name = "fast-simplification", marker = "extra == 'phantom-gen'" },
+    { name = "filelock", marker = "extra == 'dev'", specifier = ">=4.2.1" },
     { name = "ipykernel", marker = "extra == 'docs'" },
     { name = "ipykernel", marker = "extra == 'notebooks'" },
     { name = "ipywidgets", marker = "extra == 'docs'" },
@@ -1451,7 +1455,7 @@ requires-dist = [
     { name = "pydata-sphinx-theme", marker = "extra == 'docs'" },
     { name = "pydicom", specifier = ">=2.3" },
     { name = "pypdf", specifier = ">=6.20.1" },
-    { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0,<9.1" },
+    { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0,<10" },
     { name = "pytest-asyncio", marker = "extra == 'gui'", specifier = ">=0.24" },
     { name = "pytest-asyncio", marker = "extra == 'gui-native'", specifier = ">=0.24" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=5.0" },
@@ -1467,6 +1471,7 @@ requires-dist = [
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.15,<0.18" },
     { name = "scikit-image", marker = "extra == 'phantom-gen'", specifier = ">=0.22" },
     { name = "scipy", specifier = ">=1.15.2" },
+    { name = "setuptools", marker = "extra == 'privacy-scan'", specifier = ">=84.1.0" },
     { name = "shellcheck-py", marker = "extra == 'dev'", specifier = ">=0.11" },
     { name = "spacy", marker = "extra == 'privacy-scan'", specifier = ">=3.8,<4" },
     { name = "sphinx", marker = "extra == 'docs'" },
@@ -1476,6 +1481,7 @@ requires-dist = [
     { name = "tqdm", specifier = ">=4.66" },
     { name = "trimesh", marker = "extra == 'phantom-gen'", specifier = ">=4" },
     { name = "types-pillow", marker = "extra == 'dev'" },
+    { name = "virtualenv", marker = "extra == 'dev'", specifier = ">=21.14.13" },
 ]
 provides-extras = ["gui", "gui-native", "export", "docs", "notebooks", "privacy-scan", "phantom-gen", "dev"]
 
@@ -3867,7 +3873,7 @@ wheels = [
 
 [[package]]
 name = "pytest"
-version = "9.0.3"
+version = "9.1.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "colorama", marker = "sys_platform == 'win32'" },
@@ -3876,9 +3882,9 @@ dependencies = [
     { name = "pluggy" },
     { name = "pygments" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/7d/0d/549bd94f1a0a402dc8cf64563a117c0f3765662e2e668477624baeec44d5/pytest-9.0.3.tar.gz", hash = "sha256:b86ada508af81d19edeb213c681b1d48246c1a91d304c6c81a427674c17eb91c", size = 1572165, upload-time = "2026-04-07T17:16:18.027Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/e4/47/b9efed96c114afcfa3c9d3fe98a76a1d14c74a9e266d397cf6eb64be5e01/pytest-9.1.1.tar.gz", hash = "sha256:1088fbde8f2b49d95a549a195707afa7a76a3ce9bcadc26b6d71f0ffda5fe313", size = 1636369, upload-time = "2026-06-19T10:58:32.857Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/d4/24/a372aaf5c9b7208e7112038812994107bc65a84cd00e0354a88c2c77a617/pytest-9.0.3-py3-none-any.whl", hash = "sha256:2c5efc453d45394fdd706ade797c0a81091eccd1d6e4bccfcd476e2b8e0ab5d9", size = 375249, upload-time = "2026-04-07T17:16:16.13Z" },
+    { url = "https://files.pythonhosted.org/packages/24/25/1de2678b631f5a49215c6c96fff41ba892b0a34df68d6d80292b1b48aa7f/pytest-9.1.1-py3-none-any.whl", hash = "sha256:37a86b45efb9a47a61a36449063e8e18d0cab3161329fc099eb21783169c4f0c", size = 386536, upload-time = "2026-06-19T10:58:31.347Z" },
 ]
 
 [[package]]
@@ -4771,11 +4777,11 @@ wheels = [
 
 [[package]]
 name = "setuptools"
-version = "83.0.0"
+version = "84.2.1"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/34/26/f5d29e25ffdb535afef2d35cdb55b325298f96debd670da4c325e08d70f4/setuptools-83.0.0.tar.gz", hash = "sha256:025bccbbf0fa05b6192bc64ae1e7b16e001fd6d6d4d5de03c97b1c1ade523bef", size = 1154254, upload-time = "2026-07-04T15:31:22.699Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/70/b3/c19426f783614d625699a4b247faf628ea9ab1db228674491767b417f9e1/setuptools-84.2.1.tar.gz", hash = "sha256:3ff8b3b5492a0aa66960f4419365a86b84e013070d4313e4d4a6894f5d64d6bc", size = 1230289, upload-time = "2026-10-20T19:01:37.742Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/5d/40/e1e72872c6354b306daef1703549e8e83b4d43cfea356311bf722a043752/setuptools-83.0.0-py3-none-any.whl", hash = "sha256:29b23c360f22f414dc7336bb39178cc7bcbf6021ed2733cde173f09dba19abb3", size = 1008090, upload-time = "2026-07-04T15:31:20.885Z" },
+    { url = "https://files.pythonhosted.org/packages/ef/55/6dc6d6bb953bdfc52519a0059592c52b6e3b8ad51cf8256dffceb55b0610/setuptools-84.2.1-py3-none-any.whl", hash = "sha256:ca140b45d5325a9478f880e351484f62fef15f336462e449ca0c03c873d589c2", size = 876263, upload-time = "2026-10-20T19:01:35.678Z" },
 ]
 
 [[package]]

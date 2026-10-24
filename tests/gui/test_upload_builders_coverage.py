@@ -67,6 +67,83 @@ def test_upload_exceeds_limit_boundary() -> None:
     assert ub.upload_exceeds_limit(MAX_UPLOAD_BYTES + 1) is True
 
 
+def test_sheet_kept_for_replacement() -> None:
+    assert ub.sheet_kept_for_replacement("Events", ["Summary", "Events"]) == "Events"
+    assert ub.sheet_kept_for_replacement("Events", ["Summary", "Other"]) == "Summary"
+    assert ub.sheet_kept_for_replacement(0, ["Summary", "Events"]) == "Summary"
+    assert ub.sheet_kept_for_replacement("Events", []) == 0
+
+
+def _patch_tabular_upload(
+    monkeypatch: pytest.MonkeyPatch, sheets: list[str], load_result: tuple[bool, str]
+) -> dict[str, object]:
+    parsed: dict[str, object] = {}
+
+    def _sheets(_path: Path) -> list[str]:
+        return sheets
+
+    def _load(_path: Path, app_state, *_args, **_kwargs):
+        parsed["sheet"] = app_state.input_sheet_name
+        return load_result
+
+    async def _io(fn, *args, **kwargs):
+        return fn(*args, **kwargs)
+
+    monkeypatch.setattr(ub, "get_excel_sheets", _sheets)
+    monkeypatch.setattr(ub, "load_tabular", _load)
+    monkeypatch.setattr(ub, "create_temp_upload", lambda payload, suffix=".bin": Path("replacement.xlsx"))
+    monkeypatch.setattr(ub.run, "io_bound", _io)
+    return parsed
+
+
+@pytest.mark.asyncio
+async def test_replacement_upload_keeps_named_sheet(monkeypatch: pytest.MonkeyPatch) -> None:
+    ctrl = _upload_controller()
+    state.input_sheet_name = "Events"
+    parsed = _patch_tabular_upload(monkeypatch, ["Summary", "Events"], (True, "loaded"))
+    event = SimpleNamespace(file=SimpleNamespace(name="case.xlsx", read=AsyncMock(return_value=b"xlsx")))
+
+    await ctrl.handle_upload(event)
+
+    assert parsed["sheet"] == "Events"
+    assert state.input_sheet_name == "Events"
+    cast(MagicMock, ctrl.refs.import_preview.sheet_select.set_options).assert_called_with(
+        {"Summary": "Summary", "Events": "Events"},
+        value="Events",
+    )
+
+
+@pytest.mark.asyncio
+async def test_replacement_upload_uses_first_sheet_when_name_is_absent(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    ctrl = _upload_controller()
+    state.input_sheet_name = "Events"
+    parsed = _patch_tabular_upload(monkeypatch, ["Summary", "Other"], (True, "loaded"))
+    event = SimpleNamespace(file=SimpleNamespace(name="case.xlsx", read=AsyncMock(return_value=b"xlsx")))
+
+    await ctrl.handle_upload(event)
+
+    assert parsed["sheet"] == "Summary"
+    assert state.input_sheet_name == "Summary"
+    cast(MagicMock, ctrl.refs.import_preview.sheet_select.set_options).assert_called_with(
+        {"Summary": "Summary", "Other": "Other"},
+        value="Summary",
+    )
+
+
+@pytest.mark.asyncio
+async def test_failed_replacement_upload_restores_previous_sheet(monkeypatch: pytest.MonkeyPatch) -> None:
+    ctrl = _upload_controller()
+    state.input_sheet_name = "Events"
+    _patch_tabular_upload(monkeypatch, ["Summary", "Other"], (False, "unreadable"))
+    event = SimpleNamespace(file=SimpleNamespace(name="case.xlsx", read=AsyncMock(return_value=b"xlsx")))
+
+    await ctrl.handle_upload(event)
+
+    assert state.input_sheet_name == "Events"
+
+
 def test_drawer_file_label_states() -> None:
     state.loaded_exams = []
     assert ub._drawer_file_label() == "No file loaded"
@@ -222,6 +299,29 @@ async def test_reparse_schema_on_tabular_fixture(monkeypatch: pytest.MonkeyPatch
 
     cast(MagicMock, ctrl.refs.upload_status.set_text).assert_called()
     assert "OK:" in str(cast(MagicMock, ctrl.refs.upload_status.set_text).call_args)
+
+
+@pytest.mark.asyncio
+async def test_reparse_schema_with_missing_file_keeps_selection_and_skips_load(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    ctrl = _upload_controller()
+    state.file_path = tmp_path / "gone.csv"
+    state.input_source_type = "csv"
+    state.input_schema = "auto"
+    ctrl.refs.schema_select.value = "dosetrack"
+    notices: list[str] = []
+    monkeypatch.setattr(ub.ui, "notify", lambda message, **kwargs: notices.append(message))
+
+    async def _must_not_load(*args, **kwargs):
+        raise AssertionError("load_tabular must not run for a missing file")
+
+    monkeypatch.setattr(ub.run, "io_bound", _must_not_load)
+
+    await ctrl.reparse_schema()
+
+    assert state.input_schema == "dosetrack"
+    assert notices == [ub.MISSING_FILE_NOTICE]
 
 
 @pytest.mark.asyncio

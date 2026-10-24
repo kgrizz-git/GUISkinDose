@@ -21,6 +21,11 @@ That keeps SemVer and contributor history organized.
 
 ### Security
 
+- **Dev-tool advisories** (2026-10-23) — filelock 4.2.4, virtualenv 21.14.13, and setuptools
+  84.2.1 close five advisories in packages used by development and the privacy scan
+  (GHSA-v4x8-3wr5-3wq8, GHSA-9vhv-jxww-xfm5, GHSA-567q-5qvw-pf92, GHSA-cx6f-vjhg-g3cc,
+  GHSA-xmj3-9gf7-h52w). Dose calculation and the GUI are unchanged. Package version stays `1.0.0`.
+
 - **certifi 2026.10.19 in the Semgrep tool lock** (2026-10-21) — `tools/semgrep/uv.lock` still pinned
   certifi 2026.7.22, which a critical Dependabot alert flagged; the main lock already had 2026.10.19.
   Only the isolated Semgrep scanner used the old CA bundle.
@@ -56,10 +61,13 @@ That keeps SemVer and contributor history organized.
 - **Dependency updates** (2026-10-17) — NiceGUI 3.18.0 rejects uploads to disabled or hidden
   `ui.upload` elements (GHSA-9mxh-cwxr-cxjj). Pandas 3.0.6, tqdm 4.70.1, kaleido 1.5.0,
   and reportlab 5.0.1 move forward with no dose-calculation or GUI behavior change.
-  Pytest stays below 9.1 so the existing GUI suite keeps passing. Package version stays
-  `1.0.0` until the next release (patch-level when cut).
+  Package version stays `1.0.0` until the next release (patch-level when cut).
 
 ### Fixed
+
+- **Replacement workbook sheet** (2026-10-23) — Uploading another Excel file keeps the previously selected sheet when the new workbook contains that name, and uses the first sheet only when it does not. The sheet menu shows the sheet that was loaded. Dose calculation is unchanged. Package version stays `1.0.0`.
+
+- **Schema and sheet changes with no file** (2026-10-22) — Changing the input schema or workbook sheet when the selected file is no longer on disk keeps the new selection, skips the tabular load, and shows a notice to upload the file again. Dose calculation is unchanged. The dev extra now allows pytest 9.1 (`pytest>=7.0,<10`, locked at 9.1.1). Package version stays `1.0.0`.
 
 - **reportlab floor** (2026-10-22) — `reportlab` 4.0.0 hard-depends on `rlPyCairo`, which needs a system Cairo library to build `pycairo`. A lowest-direct install of `reportlab>=4.0` failed before PDF export could be imported. The floor is now 4.0.4, the first release that moves Cairo into an optional extra this package does not use. Locked installs stay on reportlab 5.0.1. Package version stays `1.0.0`.
 
