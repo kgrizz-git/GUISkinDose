@@ -21,6 +21,11 @@ That keeps SemVer and contributor history organized.
 
 ### Security
 
+- **msgpack 1.2.3** (2026-10-28) — closes GHSA-j586-36cw-2gc2 (memory leak in the C extension on
+  `strict_map_key` failure). msgpack reaches the lock only through `pip-audit` → `cachecontrol` in the `dev`
+  extra, which now carries a `msgpack>=1.2.3` floor. Dose calculation and the GUI are unchanged. Package
+  version stays `1.0.0`.
+
 - **Dev-tool advisories** (2026-10-23) — filelock 4.2.4, virtualenv 21.14.13, and setuptools
   84.2.1 close five advisories in packages used by development and the privacy scan
   (GHSA-v4x8-3wr5-3wq8, GHSA-9vhv-jxww-xfm5, GHSA-567q-5qvw-pf92, GHSA-cx6f-vjhg-g3cc,

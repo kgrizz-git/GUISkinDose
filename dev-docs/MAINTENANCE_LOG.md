@@ -8,6 +8,11 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ## [Unreleased]
 
+- **msgpack advisory** (2026-10-28) — The weekly dependency-audit run failed on msgpack 1.2.1
+  (GHSA-j586-36cw-2gc2, fixed in 1.2.3). Dependabot's security update reported it could not resolve the fix;
+  msgpack is transitive only (`pip-audit` → `cachecontrol`). The lock now has msgpack 1.2.3, with
+  a `msgpack>=1.2.3` floor on the `dev` extra. 1.2.4 was skipped because it was inside the 7-day cooldown.
+
 - **SonarCloud S8705 and freshness-gate holes** (2026-10-23) — `main`'s SonarCloud quality gate failed on
   new-code security rating after #187: `check_ci_metadata.read_commit_messages()` passed `--commit-range`
   straight to `git log` (`pythonsecurity:S8705`). The range must now be `<hex sha>..<hex sha>`; it is rebuilt from
