@@ -49,6 +49,30 @@ digest for a tag is shown on Docker Hub, or by `docker buildx imagetools inspect
 The server migrates its database on start. Open `http://localhost:9000/setup` if it asks for a manual upgrade step.
 Rules ship inside the server's analyzers, so upgrading the server updates the rules.
 
+## eMudhra trust store (applied 2026-10-24)
+
+Community Build through 26.10.0.133078 still trusts compromised eMudhra roots.
+There was no fixed image, so the running stack keeps the pinned
+`sonarqube:26.9.0.129388-community` digest and mounts a cleaned Java trust
+store. `scripts/prepare_sonarqube_truststore.sh` writes
+`sonarqube-truststore/cacerts` (gitignored) from that digest. The compose
+service sets `SONAR_WEB_JAVAADDITIONALOPTS` and `SONAR_CE_JAVAADDITIONALOPTS`
+to use it. `changeit` in those variables is the Java trust-store password,
+not the Sonar admin password.
+
+Recreating the container this way keeps `postgresql_data`. It does not rotate
+tokens. Do not `docker pull sonarqube:26.9.0.129388-community` without the
+digest: that tag moved and a pull can fill the Colima disk. After an image
+bump, rerun the script and recreate the service. Remove the mount and the two
+variables once a Community Build image no longer includes those roots.
+
+The Homebrew `sonar-scanner` Java runtime had the same roots removed, and
+`sonar.scanner.skipJreProvisioning=true` is set in that install's
+`sonar-scanner.properties`. `brew upgrade openjdk` or `brew upgrade sonar-scanner`
+can put the old trust back. The `sonarsource/sonar-scanner-cli` image was not
+changed. Cursor's SonarQube for IDE extension was updated to 6.2.0. The
+`sonar` CLI and a self-hosted MCP server are not installed.
+
 ## Coverage for Sonar (two-pass: non-GUI + GUI)
 
 SonarCloud CI uploads a combined `coverage.xml` that includes NiceGUI tests so GUI modules count toward
