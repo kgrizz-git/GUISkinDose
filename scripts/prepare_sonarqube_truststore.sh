@@ -33,7 +33,7 @@ docker run --rm -i --user "$(id -u):$(id -g)" --entrypoint bash \
 set -eu
 # Build and verify in a temporary file, then rename it into place, so a
 # failure or interruption leaves the existing trust store untouched.
-TMP=/out/cacerts.tmp.$$
+TMP=$(mktemp /out/cacerts.tmp.XXXXXX)
 trap 'rm -f "$TMP"' EXIT
 cp "$JAVA_HOME/lib/security/cacerts" "$TMP"
 chmod u+w "$TMP"
