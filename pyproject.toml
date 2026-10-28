@@ -101,6 +101,8 @@ dev = [
     # filelock 4.2.1 closes GHSA-v4x8-3wr5-3wq8, GHSA-9vhv-jxww-xfm5, and GHSA-567q-5qvw-pf92.
     "virtualenv>=21.14.13",
     "filelock>=4.2.1",
+    # msgpack is transitive via pip-audit -> cachecontrol. 1.2.3 closes GHSA-j586-36cw-2gc2.
+    "msgpack>=1.2.3",
     # pytest 9.1 captures logs from loggers with propagate=False
     # (pytest-dev/pytest#3697). tests/gui/conftest.py drops allowlisted
     # ERROR codes before NiceGUI's user fixture reads caplog. The upper
