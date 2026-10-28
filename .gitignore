@@ -96,6 +96,8 @@ test_data_gitignored/
 .scannerwork/
 .sonar/
 .sonarlint/
+# Regenerated from the pinned image by scripts/prepare_sonarqube_truststore.sh.
+sonarqube-truststore/
 sonar-project.properties.local
 
 # Local environment variables (never commit real tokens; see .env.example)

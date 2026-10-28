@@ -13,6 +13,14 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
   msgpack is transitive only (`pip-audit` → `cachecontrol`). The lock now has msgpack 1.2.3, with
   a `msgpack>=1.2.3` floor on the `dev` extra. 1.2.4 was skipped because it was inside the 7-day cooldown.
 
+- **Local SonarQube eMudhra trust store** (2026-10-24) — The Colima Community Build
+  container now mounts a cleaned Java trust store and sets the web and Compute Engine
+  JVM trust-store options. The Postgres volume was not replaced: project, user, and
+  token counts were unchanged and the server id stayed the same. Package version stays
+  `1.0.0` (local developer infrastructure only). Regenerate the store with
+  `scripts/prepare_sonarqube_truststore.sh` after an image bump. Details:
+  [SONARQUBE_LOCAL.md](SONARQUBE_LOCAL.md).
+
 - **SonarCloud S8705 and freshness-gate holes** (2026-10-23) — `main`'s SonarCloud quality gate failed on
   new-code security rating after #187: `check_ci_metadata.read_commit_messages()` passed `--commit-range`
   straight to `git log` (`pythonsecurity:S8705`). The range must now be `<hex sha>..<hex sha>`; it is rebuilt from
