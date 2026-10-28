@@ -35,7 +35,14 @@ services:
       - sonarqube_data:/opt/sonarqube/data
       - sonarqube_extensions:/opt/sonarqube/extensions
       - sonarqube_logs:/opt/sonarqube/logs
-      - ./sonarqube-truststore:/opt/sonarqube/truststore:ro
+      # File bind with create_host_path off: a missing cacerts fails startup
+      # instead of Docker creating an empty directory that Java ignores.
+      - type: bind
+        source: ./sonarqube-truststore/cacerts
+        target: /opt/sonarqube/truststore/cacerts
+        read_only: true
+        bind:
+          create_host_path: false
     restart: unless-stopped
 
   db:
