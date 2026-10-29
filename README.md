@@ -34,7 +34,7 @@ Original author: Max Hellström. This fork is **not** an official or endorsed
 PySkinDose release unless upstream maintainers say otherwise.
 
 Current maintainer: [@kgrizz-git](https://github.com/kgrizz-git) — see
-[SUPPORT.md](SUPPORT.md) and [GOVERNANCE.md](GOVERNANCE.md).
+[SUPPORT.md](https://github.com/kgrizz-git/GUISkinDose/blob/main/SUPPORT.md) and [GOVERNANCE.md](https://github.com/kgrizz-git/GUISkinDose/blob/main/GOVERNANCE.md).
 
 GUISkinDose estimates **peak skin dose (PSD)** and **3D skin dose maps** for
 fluoroscopic X-ray procedures. Load a DICOM RDSR (or a tabular event-table
@@ -45,9 +45,9 @@ The distribution and import package name is `guiskindose` (distinct from upstrea
 
 | Upload | Geometry |
 |---|---|
-| ![Upload tab: load a DICOM RDSR or tabular event table](docs/source/user/figures/readme/upload.png) | ![Geometry preview: beam, phantom, and event selector](docs/source/user/figures/readme/geometry.png) |
+| ![Upload tab: load a DICOM RDSR or tabular event table](https://raw.githubusercontent.com/kgrizz-git/GUISkinDose/main/docs/source/user/figures/readme/upload.png) | ![Geometry preview: beam, phantom, and event selector](https://raw.githubusercontent.com/kgrizz-git/GUISkinDose/main/docs/source/user/figures/readme/geometry.png) |
 | Results | Export |
-| ![Results tab: peak skin dose cards and 3D dose map](docs/source/user/figures/readme/results.png) | ![Export tab: JSON, HTML, PNG, and rich-report downloads](docs/source/user/figures/readme/export.png) |
+| ![Results tab: peak skin dose cards and 3D dose map](https://raw.githubusercontent.com/kgrizz-git/GUISkinDose/main/docs/source/user/figures/readme/results.png) | ![Export tab: JSON, HTML, PNG, and rich-report downloads](https://raw.githubusercontent.com/kgrizz-git/GUISkinDose/main/docs/source/user/figures/readme/export.png) |
 
 *Captured with the bundled example data; no patient data.*
 
@@ -65,8 +65,8 @@ substitute for professional judgment, institutional policy, or regulatory
 clearance.
 
 Never commit or attach real patient data to issues, pull requests, or the
-repository — see [CONTRIBUTING.md](CONTRIBUTING.md) and
-[dev-docs/PRIVACY_AND_SENSITIVE_ASSETS.md](dev-docs/PRIVACY_AND_SENSITIVE_ASSETS.md).
+repository — see [CONTRIBUTING.md](https://github.com/kgrizz-git/GUISkinDose/blob/main/CONTRIBUTING.md) and
+[dev-docs/PRIVACY_AND_SENSITIVE_ASSETS.md](https://github.com/kgrizz-git/GUISkinDose/blob/main/dev-docs/PRIVACY_AND_SENSITIVE_ASSETS.md).
 
 ## Quick launch (GUI)
 
@@ -76,6 +76,15 @@ The typical way to use GUISkinDose is the NiceGUI-based graphical interface:
 transmission, kerma-meter factors) → **Geometry** preview →
 **Calculate** → **Results** (PSD, dose map) → **Export** (JSON, dose-map
 HTML/PNG, rich XLSX/PDF/DOCX report).
+
+After installing `guiskindose[gui]` (see [Installation](#installation)), start the GUI:
+
+```bash
+guiskindose --mode gui            # opens in your browser
+guiskindose --mode gui --native   # own window; needs guiskindose[gui-native]
+```
+
+From a source checkout, the launcher scripts below also set up the environment.
 
 **macOS / Linux:**
 
@@ -126,8 +135,8 @@ Feature highlights: multi-exam aggregation with per-exam offsets, tabular
 DoseTrack/Radimetrics imports with schema auto-detection, kerma-meter
 correction keyed by equipment × tube, rich audit reports, and a human phantom
 library with habitus scaling. Details in
-[dev-docs/FEATURE_INVENTORY.md](dev-docs/FEATURE_INVENTORY.md) and the
-[User guide](docs/source/user/user_guide.md).
+[dev-docs/FEATURE_INVENTORY.md](https://github.com/kgrizz-git/GUISkinDose/blob/main/dev-docs/FEATURE_INVENTORY.md) and the
+[User guide](https://github.com/kgrizz-git/GUISkinDose/blob/main/docs/source/user/user_guide.md).
 
 ### Privacy / network
 
@@ -224,10 +233,11 @@ Install GUISkinDose from PyPI:
 ```bash
 pip install "guiskindose[gui]"          # library, CLI, and browser GUI
 pip install "guiskindose[gui-native]"   # adds the native window (pywebview)
-pip install guiskindose                 # library and CLI only
+pip install guiskindose                 # library and CLI only; no GUI
 ```
 
-Then run `guiskindose --mode gui` to start the GUI.
+With `[gui]`, run `guiskindose --mode gui` to open the GUI in your browser.
+With `[gui-native]`, run `guiskindose --mode gui --native` to open it in its own window.
 
 To work on the code, clone the repository and install it in editable mode:
 
@@ -264,7 +274,7 @@ pip install -e ".[docs]"
 ## Requirements
 
 - Python 3.11 or above
-- A settings configuration, typically based on [src/guiskindose/settings_example.json](src/guiskindose/settings_example.json)
+- A settings configuration, typically based on [src/guiskindose/settings_example.json](https://github.com/kgrizz-git/GUISkinDose/blob/main/src/guiskindose/settings_example.json)
 - A DICOM RDSR file (`.dcm`), a pre-parsed JSON export, or a supported tabular event-table export (`.csv`, `.tsv`, `.xlsx`)
 
 ## Headless use
@@ -311,11 +321,11 @@ When `settings.output_format` is set to `dict` or `json`, the result can be used
 Validated manufacturer/model coordinate profiles can override vendor coordinate
 handling for raw inputs, from Python (`assemble_session()`), a settings-file
 `equipment_profiles` block, or `--equipment-profile`. See
-[Custom equipment profiles](docs/source/user/equipment_profiles.md) for the API,
+[Custom equipment profiles](https://github.com/kgrizz-git/GUISkinDose/blob/main/docs/source/user/equipment_profiles.md) for the API,
 CLI flags, and capture replay.
 
 **New to GUISkinDose?** Prefer the GUI or the interactive getting-started notebook
-([docs/source/getting_started/getting_started.ipynb](docs/source/getting_started/getting_started.ipynb);
+([docs/source/getting_started/getting_started.ipynb](https://github.com/kgrizz-git/GUISkinDose/blob/main/docs/source/getting_started/getting_started.ipynb);
 run it via `pip install -e ".[notebooks]"` + `python scripts/open_getting_started_notebook.py`, which
 opens an ignored local copy so experiments never dirty the tracked source).
 
@@ -330,7 +340,7 @@ The package includes helper functions that make exploration easier:
 
 ## Settings and modes
 
-Important settings live in [src/guiskindose/settings_example.json](src/guiskindose/settings_example.json) and the settings classes under [src/guiskindose/settings](src/guiskindose/settings).
+Important settings live in [src/guiskindose/settings_example.json](https://github.com/kgrizz-git/GUISkinDose/blob/main/src/guiskindose/settings_example.json) and the settings classes under [src/guiskindose/settings](https://github.com/kgrizz-git/GUISkinDose/blob/main/src/guiskindose/settings).
 
 | Mode | What it does |
 |---|---|
@@ -343,7 +353,7 @@ Common phantom models: `plane`, `cylinder`, `human`.
 
 ## Documentation
 
-Documentation sources live under [docs/source](docs/source), including the getting-started notebook and user guide material.
+Documentation sources live under [docs/source](https://github.com/kgrizz-git/GUISkinDose/blob/main/docs/source), including the getting-started notebook and user guide material.
 
 To build the HTML documentation locally from this repository (use the `docs`
 optional extra — there are no `requirements*.txt` files):
@@ -360,8 +370,8 @@ Then open the built site locally (path exists only after the Sphinx step above):
 ## Notes for this fork
 
 - Independently maintained fork of [PySkinDose](https://github.com/rvbCMTS/PySkinDose); MIT license and upstream copyright preserved.
-- Package identity: `guiskindose` (see [dev-docs/GUISKINDOSE_MIGRATION_STATUS.md](dev-docs/GUISKINDOSE_MIGRATION_STATUS.md)).
-- How we maintain the fork: [dev-docs/FORK_MAINTAINER_GUIDE.md](dev-docs/FORK_MAINTAINER_GUIDE.md).
-- Bugs and features: [GitHub Issues](https://github.com/kgrizz-git/GUISkinDose/issues) (templates require a no-PHI/PII confirmation; see [dev-docs/PRIVACY_AND_SENSITIVE_ASSETS.md](dev-docs/PRIVACY_AND_SENSITIVE_ASSETS.md)).
-- Questions and contribution ideas: [GitHub Discussions](https://github.com/kgrizz-git/GUISkinDose/discussions). Ideas welcome — prefer Issues/Discussions over cold PRs ([CONTRIBUTING.md](CONTRIBUTING.md)).
-- Security: [SECURITY.md](SECURITY.md). Support channels: [SUPPORT.md](SUPPORT.md).
+- Package identity: `guiskindose` (see [dev-docs/GUISKINDOSE_MIGRATION_STATUS.md](https://github.com/kgrizz-git/GUISkinDose/blob/main/dev-docs/GUISKINDOSE_MIGRATION_STATUS.md)).
+- How we maintain the fork: [dev-docs/FORK_MAINTAINER_GUIDE.md](https://github.com/kgrizz-git/GUISkinDose/blob/main/dev-docs/FORK_MAINTAINER_GUIDE.md).
+- Bugs and features: [GitHub Issues](https://github.com/kgrizz-git/GUISkinDose/issues) (templates require a no-PHI/PII confirmation; see [dev-docs/PRIVACY_AND_SENSITIVE_ASSETS.md](https://github.com/kgrizz-git/GUISkinDose/blob/main/dev-docs/PRIVACY_AND_SENSITIVE_ASSETS.md)).
+- Questions and contribution ideas: [GitHub Discussions](https://github.com/kgrizz-git/GUISkinDose/discussions). Ideas welcome — prefer Issues/Discussions over cold PRs ([CONTRIBUTING.md](https://github.com/kgrizz-git/GUISkinDose/blob/main/CONTRIBUTING.md)).
+- Security: [SECURITY.md](https://github.com/kgrizz-git/GUISkinDose/blob/main/SECURITY.md). Support channels: [SUPPORT.md](https://github.com/kgrizz-git/GUISkinDose/blob/main/SUPPORT.md).

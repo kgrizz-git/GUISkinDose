@@ -12,7 +12,9 @@ Install from PyPI, preferably in a virtual environment:
 pip install "guiskindose[gui]"
 ```
 
-Use `guiskindose[gui-native]` for the native window, or plain `guiskindose` for the library and CLI only.
+Then run `guiskindose --mode gui` to open the GUI in your browser.
+For a native window, install `guiskindose[gui-native]` and run `guiskindose --mode gui --native`.
+Plain `guiskindose` installs the library and CLI only, without GUI mode.
 
 For local development:
 
