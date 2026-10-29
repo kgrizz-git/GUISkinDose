@@ -10,7 +10,7 @@ though your local environment has the GUI deps installed — the exact blind spo
 GUI-import and gui-only-dep failures reach CI unseen. It then runs the GUI suite normally.
 
 This does not reproduce dependency-version drift: locked CI installs from ``uv.lock`` while your
-environment may differ. Run ``uv sync --all-extras`` to match the pinned lockfile, and let the
+environment may differ. Run ``uv sync --all-extras --group privacy-scan`` to match the pinned lockfile, and let the
 scheduled ``ci-latest`` workflow surface upstream breakage via a tracking issue (it soft-fails
 so ``main`` stays green).
 
