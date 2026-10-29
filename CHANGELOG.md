@@ -5,12 +5,12 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-**Version source of truth:** the package version in `pyproject.toml` (currently `1.0.0`).
+**Version source of truth:** the package version in `pyproject.toml` (currently `1.1.0`).
 **First GUISkinDose version is `1.0.0`** — a new distribution identity, formerly
 MyPySkinDose `25.2.0` / a fork of PySkinDose. Historical sections through `[25.2.0]`
 remain MyPySkinDose history. Bump `pyproject.toml` when releasing.
 
-This file records **notable** user-facing changes (features, fixes, UI updates). 
+This file records **notable** user-facing changes (features, fixes, UI updates).
 For maintainer-facing changes (CI/harness, refactors, privacy gates, tests), see [dev-docs/MAINTENANCE_LOG.md](dev-docs/MAINTENANCE_LOG.md).
 That keeps SemVer and contributor history organized.
 
@@ -19,7 +19,16 @@ That keeps SemVer and contributor history organized.
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-10-29
+
+First GUISkinDose release prepared for PyPI publication. Version `1.0.0` was the in-repo rename point
+(formerly MyPySkinDose `25.2.0` / a fork of PySkinDose) and was never published.
+
 ### Security
+
+- **tornado 6.6** (2026-10-29) — closes GHSA-pw9p-v7r6-gx4p, GHSA-r4j5-9xpp-3985, and
+  GHSA-pcg2-g6cj-q92c. Tornado reaches the lock only through Jupyter in the `docs` and `notebooks`
+  extras, which now carry a `tornado>=6.6` floor. Dose calculation and the GUI are unchanged.
 
 - **msgpack 1.2.3** (2026-10-28) — closes GHSA-j586-36cw-2gc2 (memory leak in the C extension on
   `strict_map_key` failure). msgpack reaches the lock only through `pip-audit` → `cachecontrol` in the `dev`
@@ -29,7 +38,7 @@ That keeps SemVer and contributor history organized.
 - **Dev-tool advisories** (2026-10-23) — filelock 4.2.4, virtualenv 21.14.13, and setuptools
   84.2.1 close five advisories in packages used by development and the privacy scan
   (GHSA-v4x8-3wr5-3wq8, GHSA-9vhv-jxww-xfm5, GHSA-567q-5qvw-pf92, GHSA-cx6f-vjhg-g3cc,
-  GHSA-xmj3-9gf7-h52w). Dose calculation and the GUI are unchanged. Package version stays `1.0.0`.
+  GHSA-xmj3-9gf7-h52w). Dose calculation and the GUI are unchanged.
 
 - **certifi 2026.10.19 in the Semgrep tool lock** (2026-10-21) — `tools/semgrep/uv.lock` still pinned
   certifi 2026.7.22, which a critical Dependabot alert flagged; the main lock already had 2026.10.19.
@@ -37,7 +46,7 @@ That keeps SemVer and contributor history organized.
 - **pypdf 6.21.2** (2026-10-21) — closes four pypdf advisories published today
   (GHSA-39mj-jf6j-2qj3, GHSA-7mh2-4gg2-979f, GHSA-9mx8-4j7g-633p, GHSA-qfv9-64jg-mh7p): infinite
   loops and large memory use on crafted PDFs. Only the maintainer privacy-admission scripts parse PDFs;
-  dose calculation and the GUI do not. The core floor rises to `pypdf>=6.20.1`. Package version stays `1.0.0`.
+  dose calculation and the GUI do not. The core floor rises to `pypdf>=6.20.1`.
 
 - **Dependency updates** (2026-10-20) — Pillow 13.0.0 fixes nine advisories in image handling,
   including GHSA-65qm-jvmh-6pqg. Most are in GIF, TIFF, JPEG, EPS, and PDF decoding; one is in the
@@ -56,7 +65,6 @@ That keeps SemVer and contributor history organized.
   flow field does not hide the action. A `#` with no space before it is part of the
   ref, not a comment, and a tag lookup that returns an unreadable body is reported as an
   API error rather than a missing tag.
-  Package version stays `1.0.0`.
 
 - **Dependency updates** (2026-10-19) — aiohttp 3.14.5 closes three advisories in 3.14.3
   (GHSA-494j-54xm-rwp3, GHSA-5wr8-gcqf-gqf3, GHSA-2g87-pp6c-29x5). yarl moves to 1.25.1
@@ -66,15 +74,14 @@ That keeps SemVer and contributor history organized.
 - **Dependency updates** (2026-10-17) — NiceGUI 3.18.0 rejects uploads to disabled or hidden
   `ui.upload` elements (GHSA-9mxh-cwxr-cxjj). Pandas 3.0.6, tqdm 4.70.1, kaleido 1.5.0,
   and reportlab 5.0.1 move forward with no dose-calculation or GUI behavior change.
-  Package version stays `1.0.0` until the next release (patch-level when cut).
 
 ### Fixed
 
-- **Replacement workbook sheet** (2026-10-23) — Uploading another Excel file keeps the previously selected sheet when the new workbook contains that name, and uses the first sheet only when it does not. The sheet menu shows the sheet that was loaded. Dose calculation is unchanged. Package version stays `1.0.0`.
+- **Replacement workbook sheet** (2026-10-23) — Uploading another Excel file keeps the previously selected sheet when the new workbook contains that name, and uses the first sheet only when it does not. The sheet menu shows the sheet that was loaded. Dose calculation is unchanged.
 
-- **Schema and sheet changes with no file** (2026-10-22) — Changing the input schema or workbook sheet when the selected file is no longer on disk keeps the new selection, skips the tabular load, and shows a notice to upload the file again. Dose calculation is unchanged. The dev extra now allows pytest 9.1 (`pytest>=7.0,<10`, locked at 9.1.1). Package version stays `1.0.0`.
+- **Schema and sheet changes with no file** (2026-10-22) — Changing the input schema or workbook sheet when the selected file is no longer on disk keeps the new selection, skips the tabular load, and shows a notice to upload the file again. Dose calculation is unchanged. The dev extra now allows pytest 9.1 (`pytest>=7.0,<10`, locked at 9.1.1).
 
-- **reportlab floor** (2026-10-22) — `reportlab` 4.0.0 hard-depends on `rlPyCairo`, which needs a system Cairo library to build `pycairo`. A lowest-direct install of `reportlab>=4.0` failed before PDF export could be imported. The floor is now 4.0.4, the first release that moves Cairo into an optional extra this package does not use. Locked installs stay on reportlab 5.0.1. Package version stays `1.0.0`.
+- **reportlab floor** (2026-10-22) — `reportlab` 4.0.0 hard-depends on `rlPyCairo`, which needs a system Cairo library to build `pycairo`. A lowest-direct install of `reportlab>=4.0` failed before PDF export could be imported. The floor is now 4.0.4, the first release that moves Cairo into an optional extra this package does not use. Locked installs stay on reportlab 5.0.1.
 
 - **Dependency floors** (2026-10-21) — `pip install guiskindose` could pick versions the code
   does not run on. pydicom 2.0–2.2 failed when reading an RDSR, NiceGUI before 3.9 could not
@@ -82,7 +89,7 @@ That keeps SemVer and contributor history organized.
   at all. The floors are now pydicom 2.3, NiceGUI 3.18 (the GUI needs 3.9; 3.18 also brings
   the upload fix for GHSA-9mxh-cwxr-cxjj to `pip install` users), tqdm 4.66, psutil 5.9,
   rich 13.0, openpyxl 3.1, and kaleido 0.2.1, and a weekly CI job runs the test suite at them. Installs
-  from `uv.lock` are unchanged. Package version stays `1.0.0`.
+  from `uv.lock` are unchanged.
 
 - **Export writes without Git** (2026-10-18) — Clinical and derived exports succeed when Git is not
   installed (the checkout-path guard is skipped instead of aborting the write). Frozen
@@ -112,7 +119,7 @@ That keeps SemVer and contributor history organized.
   On first run, `run_gui.sh` / `run_gui.bat` give it the app icon (macOS) or create a git-ignored
   `GUISkinDose.lnk` (Windows) or `GUISkinDose.desktop` (Linux) with the icon. Set
   `GUISKINDOSE_NO_LAUNCHER_SETUP=1` to skip. The macOS window pauses on an error so it stays
-  readable. Package version stays `1.0.0`.
+  readable.
 
 - **App icon** (2026-10-19) — The GUI now shows a GUISkinDose icon in the browser tab. Native mode
   uses it for the window and taskbar on Windows and Linux. macOS still shows the Python icon in the
@@ -1921,6 +1928,7 @@ That keeps SemVer and contributor history organized.
 - MyPySkinDose fork baseline: peak skin dose estimation and 3D skin dose maps from fluoroscopic RDSR data.
 - NiceGUI application (`python -m mypyskindose --mode gui`).
 
-[Unreleased]: https://github.com/kgrizz-git/GUISkinDose/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/kgrizz-git/GUISkinDose/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/kgrizz-git/GUISkinDose/releases/tag/v1.1.0
 [1.0.0]: https://github.com/kgrizz-git/GUISkinDose/compare/v25.1.1...v1.0.0
 [25.1.1]: https://github.com/kgrizz-git/GUISkinDose/releases/tag/v25.1.1

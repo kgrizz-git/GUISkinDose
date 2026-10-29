@@ -1,21 +1,20 @@
 # Publishing to PyPI
 
-> **Status:** This project is **not currently published to PyPI** by this fork. The
-> `release.yml` workflow was inherited from upstream [PySkinDose](https://github.com/rvbCMTS/PySkinDose)
-> and stays **inert** unless you deliberately create a GitHub Release. You do not need
-> to do anything here for normal development.
+> **Status:** `1.1.0` is the first `guiskindose` release on PyPI. The `release.yml` workflow
+> runs only when you publish a GitHub Release. You do not need to do anything here for
+> normal development.
 
 For the full release map (changelog vs GitHub notes, SemVer, portable executables, checklist), see
 [dev-docs/RELEASES_AND_DISTRIBUTION.md](dev-docs/RELEASES_AND_DISTRIBUTION.md).
 
 **First GUISkinDose / `guiskindose` version is `1.0.0`** (new distribution identity;
-formerly MyPySkinDose `25.2.0` / a fork of PySkinDose). This fork is **not currently
-published** to PyPI. Details:
+formerly MyPySkinDose `25.2.0` / a fork of PySkinDose). `1.0.0` was never published;
+`1.1.0` is the first PyPI release. Details:
 [dev-docs/plans/archive/GUISKINDOSE_RENAME_PLAN.md](dev-docs/plans/archive/GUISKINDOSE_RENAME_PLAN.md).
 
 ## How releasing works now
 
-`.github/workflows/release.yml` runs only on a **GitHub Release (`created`)** event. It:
+`.github/workflows/release.yml` runs only on a **GitHub Release (`published`)** event. It:
 
 1. Verifies the release commit is on `main` with a successful CI run.
 2. Builds the sdist + wheel with `uv build` (pinned toolchain — no unpinned `pip install`).
@@ -25,7 +24,7 @@ published** to PyPI. Details:
 The publish step authenticates with a short-lived OpenID Connect token minted by GitHub
 Actions (`permissions: id-token: write`), so there is **no `PYPI_*` secret to leak or rotate**.
 
-## One-time PyPI setup (only if you ever want to publish)
+## One-time PyPI setup (required before the first publish)
 
 Trusted Publishing needs a one-time registration on PyPI so it will trust this repo:
 

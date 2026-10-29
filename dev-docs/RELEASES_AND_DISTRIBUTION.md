@@ -9,9 +9,9 @@ This page is the map. Detailed how-tos stay in the linked sources of truth.
 
 | Channel | Status | Source of truth |
 |---------|--------|-----------------|
-| **Python package** (`pip install guiskindose`) | Primary path; **not yet published** to PyPI by this fork | [PUBLISHING.md](../PUBLISHING.md), `.github/workflows/release.yml` |
-| **GitHub Release** (tag + notes + optional assets) | Maintainer-triggered; drives the PyPI workflow when a Release is created | This page § Cutting a release; [FORK_MAINTAINER_GUIDE.md](FORK_MAINTAINER_GUIDE.md) §6 |
-| **Source / editable install** | Default for developers and most users today | [README.md](../README.md), [AGENTS.md](../AGENTS.md) |
+| **Python package** (`pip install guiskindose`) | Primary path; published to PyPI from `1.1.0` | [PUBLISHING.md](../PUBLISHING.md), `.github/workflows/release.yml` |
+| **GitHub Release** (tag + notes + optional assets) | Maintainer-triggered; drives the PyPI workflow when a Release is published | This page § Cutting a release; [FORK_MAINTAINER_GUIDE.md](FORK_MAINTAINER_GUIDE.md) §6 |
+| **Source / editable install** | Developer path; users install from PyPI | [README.md](../README.md), [AGENTS.md](../AGENTS.md) |
 | **Portable GUI executable** (PyInstaller / `nicegui-pack`) | Planned, not started — no freeze pipeline yet | [plans/PORTABLE_APP_PLAN.md](plans/PORTABLE_APP_PLAN.md) |
 
 **Non-goals:** a single binary for all OSes; committing built executables to git; wrapping the stack for the JVM (call CLI/API from Java instead — see the portable-exec note).
@@ -40,8 +40,8 @@ These serve different audiences.
 ## Versioning
 
 - **SemVer** via `pyproject.toml` (source of truth for the package version).
-- **Live package today:** GUISkinDose / `guiskindose` `1.0.0` (new distribution identity;
-  formerly MyPySkinDose `25.2.0` / a fork of PySkinDose). Not yet published to PyPI.
+- **Live package today:** GUISkinDose / `guiskindose` `1.1.0`, the first version published to PyPI.
+  `1.0.0` was the unpublished rename point (formerly MyPySkinDose `25.2.0` / a fork of PySkinDose).
 - **First GUISkinDose / `guiskindose` version (locked): `1.0.0`.** New distribution identity;
   not `26.0.0`, not a patch on `25.2.0`, and not an imitation of upstream PySkinDose.
   Changelog `[1.0.0]` and GitHub Release notes must say it was formerly MyPySkinDose `25.2.0` / a fork
@@ -61,7 +61,7 @@ Use a release PR or written checklist. Condensed from [FORK_MAINTAINER_GUIDE.md]
    changes, run `python scripts/verify_distribution.py` (hermetic install + packaged-data
    parity proof) and attach the PASS report.
 6. Privacy: no identifiers, private paths, or unapproved assets in fixtures, logs, or artifacts.
-7. Create a **GitHub Release** on that commit (user-facing notes per above). That event runs `release.yml`.
+7. Wait for the `ci.yml` run on that `main` commit to succeed; `release.yml` refuses a commit without one. Then publish a **GitHub Release** on that commit (user-facing notes per above). Publishing runs `release.yml`; saving a draft does not.
 8. Verify workflow: privacy gates → build → grype → PyPI publish (only after Trusted Publisher is registered — see `PUBLISHING.md`).
 
 Until the first Trusted Publisher registration, the publish step is expected to fail rather than publish silently.
