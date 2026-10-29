@@ -26,6 +26,10 @@ First GUISkinDose release published to PyPI. Version `1.0.0` was the in-repo ren
 
 ### Security
 
+- **tornado 6.6** (2026-10-29) — closes GHSA-pw9p-v7r6-gx4p, GHSA-r4j5-9xpp-3985, and
+  GHSA-pcg2-g6cj-q92c. Tornado reaches the lock only through Jupyter in the `docs` and `notebooks`
+  extras. Dose calculation and the GUI are unchanged.
+
 - **msgpack 1.2.3** (2026-10-28) — closes GHSA-j586-36cw-2gc2 (memory leak in the C extension on
   `strict_map_key` failure). msgpack reaches the lock only through `pip-audit` → `cachecontrol` in the `dev`
   extra, which now carries a `msgpack>=1.2.3` floor. Dose calculation and the GUI are unchanged. Package
