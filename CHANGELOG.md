@@ -5,7 +5,7 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-**Version source of truth:** the package version in `pyproject.toml` (currently `1.0.0`).
+**Version source of truth:** the package version in `pyproject.toml` (currently `1.1.0`).
 **First GUISkinDose version is `1.0.0`** — a new distribution identity, formerly
 MyPySkinDose `25.2.0` / a fork of PySkinDose. Historical sections through `[25.2.0]`
 remain MyPySkinDose history. Bump `pyproject.toml` when releasing.
@@ -18,6 +18,11 @@ That keeps SemVer and contributor history organized.
 [dev-docs/RELEASES_AND_DISTRIBUTION.md](dev-docs/RELEASES_AND_DISTRIBUTION.md).
 
 ## [Unreleased]
+
+## [1.1.0] - 2026-10-29
+
+First GUISkinDose release published to PyPI. Version `1.0.0` was the in-repo rename point
+(formerly MyPySkinDose `25.2.0` / a fork of PySkinDose) and was never published.
 
 ### Security
 
