@@ -7,7 +7,7 @@ static-analysis environment (`dev` + `gui` extras):
 uv run --extra dev --extra gui --locked python scripts/check_licenses.py --write-notices
 ```
 
-Regenerate with `uv run --extra dev --extra gui --locked python scripts/check_licenses.py --write-notices` (last updated: 2026-10-28).
+Regenerate with `uv run --extra dev --extra gui --locked python scripts/check_licenses.py --write-notices` (last updated: 2026-10-29).
 
 Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIANCE.md`](LICENSE_COMPLIANCE.md).
 
@@ -200,7 +200,7 @@ Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIAN
 | tinycss2 | 1.5.1 | BSD-3-Clause | Changelog, https://github.com/Kozea/tinycss2/releases |
 | tomli | 2.4.1 | MIT | Homepage, https://github.com/hukkin/tomli |
 | tomli_w | 1.2.0 | MIT | Changelog, https://github.com/hukkin/tomli-w/blob/master/CHANGELOG.md |
-| tornado | 6.5.10 | Apache-2.0 | http://www.tornadoweb.org/ |
+| tornado | 6.6 | Apache-2.0 | http://www.tornadoweb.org/ |
 | tqdm | 4.70.1 | MIT | homepage, https://tqdm.github.io |
 | traitlets | 5.15.1 | BSD-3-Clause | Homepage, https://github.com/ipython/traitlets |
 | types-Pillow | 10.2.0.20240822 | Apache-2.0 | https://github.com/python/typeshed |

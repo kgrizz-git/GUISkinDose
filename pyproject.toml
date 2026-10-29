@@ -54,7 +54,7 @@ docs = [
     "ipykernel",
     "ipywidgets",
     "pandoc",
-    "tornado>=6.5.8",  # transitive via ipykernel; GHSA-8423-8fgw-73vq / GHSA-wwv5-g3v4-889x / GHSA-mpf4-983q-p7j4
+    "tornado>=6.6",  # transitive via ipykernel; GHSA-8423-8fgw-73vq / GHSA-wwv5-g3v4-889x / GHSA-mpf4-983q-p7j4; 6.6: see CHANGELOG 1.1.0
     "nbconvert>=7.17.2",  # transitive via nbsphinx; GHSA-pjvx-prjx-h659 (path traversal in output filenames)
 ]
 # Interactive notebook editing (JupyterLab); the docs build does not need this.
@@ -62,7 +62,7 @@ notebooks = [
     "jupyterlab>=4.6.2",
     "ipykernel",
     "ipywidgets",
-    "tornado>=6.5.8",  # transitive via jupyter-client/ipykernel; same advisories as docs extra
+    "tornado>=6.6",  # transitive via jupyter-client/ipykernel; same advisories as docs extra
     "nbconvert>=7.17.2",  # transitive via jupyterlab; same advisory as docs extra
 ]
 # Optional, local-only Presidio text scan. This is intentionally separate from
