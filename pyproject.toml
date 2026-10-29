@@ -65,17 +65,6 @@ notebooks = [
     "tornado>=6.6",  # transitive via jupyter-client/ipykernel; same advisories as docs extra
     "nbconvert>=7.17.2",  # transitive via jupyterlab; same advisory as docs extra
 ]
-# Optional, local-only Presidio text scan. This is intentionally separate from
-# the core/runtime and normal dev installs; it is advisory and does not upload
-# input or findings anywhere.
-privacy-scan = [
-    # Declared explicitly so a later `uv sync` cannot remove Presidio's local NLP model.
-    "en-core-web-sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl",
-    "presidio-analyzer>=2.2.360,<3",
-    "spacy>=3.8,<4",
-    # setuptools is transitive via spacy/thinc. 84.1.0 closes GHSA-xmj3-9gf7-h52w.
-    "setuptools>=84.1.0",
-]
 # Headless phantom library tooling (reduced Mesh3d previews need real quadric
 # decimation — triangle subsample looks like scatter fragments in Settings).
 phantom-gen = [
@@ -277,3 +266,18 @@ ignore = []
 # NOTE (Dependabot): GitHub's advisory feed is independent of these ignores, and the uv.lock
 # dep_scope reads as runtime to Dependabot, so its alerts may stay open for suppressed transitive
 # dev-only advisories. CI's `uv audit` is the gate that matters.
+
+# Optional, local-only Presidio text scan. This is intentionally separate from
+# the core/runtime and normal dev installs; it is advisory and does not upload
+# input or findings anywhere.
+# Local/CI-only tool groups (PEP 735). Not published in package metadata; PyPI rejects the
+# direct URL dependency on the spaCy model, so this cannot be an extra.
+[dependency-groups]
+privacy-scan = [
+    # Declared explicitly so a later `uv sync` cannot remove Presidio's local NLP model.
+    "en-core-web-sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl",
+    "presidio-analyzer>=2.2.360,<3",
+    "spacy>=3.8,<4",
+    # setuptools is transitive via spacy/thinc. 84.1.0 closes GHSA-xmj3-9gf7-h52w.
+    "setuptools>=84.1.0",
+]

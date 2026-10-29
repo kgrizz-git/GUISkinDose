@@ -382,7 +382,7 @@ it has no report upload or AI review.
 review view precisely matches the machine-enforced JSON.
 `python scripts/render_privacy_tool_inventory.py --check` similarly ensures every conditional scanner names its
 direct external tools and that their reviewed version, execution boundary, purpose, and output policy are recorded.
-For a local Presidio check, install the `privacy-scan` extra and run
+For a local Presidio check, install the `privacy-scan` dependency group (`uv sync --group privacy-scan`) and run
 `uv run --no-sync python scripts/run_presidio_advisory.py`. Automation checks structured identifiers with value-safe
 path tokens; targeted local name review adds `--include-person --verbose-paths`. No findings are uploaded.
 

@@ -19,6 +19,13 @@ That keeps SemVer and contributor history organized.
 
 ## [Unreleased]
 
+### Fixed
+
+- **PyPI upload** (2026-10-29) — PyPI rejected the 1.1.0 upload because the `privacy-scan` extra
+  declared the spaCy model as a direct URL dependency. `privacy-scan` is now a uv dependency group
+  (`uv sync --group privacy-scan`), so it no longer appears in package metadata. Installs from PyPI
+  are unaffected; the group was never meant for end users.
+
 ## [1.1.0] - 2026-10-29
 
 First GUISkinDose release prepared for PyPI publication. Version `1.0.0` was the in-repo rename point

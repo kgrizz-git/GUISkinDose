@@ -25,7 +25,7 @@ jobs:
         with:
           python-version: '3.12'
       - name: Install pinned local scanner and language model
-        run: uv sync --extra privacy-scan --locked
+        run: uv sync --group privacy-scan --locked
       - name: Run Presidio without person-name NLP or report upload
         run: >-
           uv run --no-sync python scripts/run_presidio_advisory.py
