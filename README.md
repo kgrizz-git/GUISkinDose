@@ -219,8 +219,17 @@ Within the intended-use boundary above, GUISkinDose is meant to be used in a few
 
 ## Installation
 
-GUISkinDose is not yet published on PyPI. Clone the repository and install it
-in editable mode:
+Install GUISkinDose from PyPI:
+
+```bash
+pip install "guiskindose[gui]"          # library, CLI, and browser GUI
+pip install "guiskindose[gui-native]"   # adds the native window (pywebview)
+pip install guiskindose                 # library and CLI only
+```
+
+Then run `guiskindose --mode gui` to start the GUI.
+
+To work on the code, clone the repository and install it in editable mode:
 
 ```bash
 git clone https://github.com/kgrizz-git/GUISkinDose.git

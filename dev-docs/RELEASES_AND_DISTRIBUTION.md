@@ -9,7 +9,7 @@ This page is the map. Detailed how-tos stay in the linked sources of truth.
 
 | Channel | Status | Source of truth |
 |---------|--------|-----------------|
-| **Python package** (`pip install guiskindose`) | Primary path; **not yet published** to PyPI by this fork | [PUBLISHING.md](../PUBLISHING.md), `.github/workflows/release.yml` |
+| **Python package** (`pip install guiskindose`) | Primary path; published to PyPI from `1.1.0` | [PUBLISHING.md](../PUBLISHING.md), `.github/workflows/release.yml` |
 | **GitHub Release** (tag + notes + optional assets) | Maintainer-triggered; drives the PyPI workflow when a Release is created | This page § Cutting a release; [FORK_MAINTAINER_GUIDE.md](FORK_MAINTAINER_GUIDE.md) §6 |
 | **Source / editable install** | Default for developers and most users today | [README.md](../README.md), [AGENTS.md](../AGENTS.md) |
 | **Portable GUI executable** (PyInstaller / `nicegui-pack`) | Planned, not started — no freeze pipeline yet | [plans/PORTABLE_APP_PLAN.md](plans/PORTABLE_APP_PLAN.md) |
