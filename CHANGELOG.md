@@ -19,6 +19,13 @@ That keeps SemVer and contributor history organized.
 
 ## [Unreleased]
 
+### Added
+
+- **Portable app spike** (2026-10-30) — First step toward a double-clickable desktop download
+  ([PORTABLE_APP_PLAN.md](dev-docs/plans/PORTABLE_APP_PLAN.md) Phase 0). A PyInstaller spec and frozen
+  entry under `packaging/portable/` build a Windows onedir in a spike-only CI workflow. Nothing is
+  published yet. `guiskindose.debug.default_native_log_path()` gives windowed runs a per-user temp log.
+
 ## [1.1.0] - 2026-10-29
 
 First GUISkinDose release prepared for PyPI publication. Version `1.0.0` was the in-repo rename point

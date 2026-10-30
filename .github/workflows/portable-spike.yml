@@ -1,0 +1,157 @@
+# Portable app Phase 0 spike (dev-docs/plans/PORTABLE_APP_PLAN.md): freeze the
+# Light shape on Windows with PyInstaller, zip the onedir, record sizes, and run the
+# frozen self-check with git removed from PATH and outbound network blocked for the
+# app. No release, no signing, no bundled browser. The zip is a short-lived artifact.
+name: portable-spike
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ spike/portable-phase0-windows ]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: portable-spike-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows-light:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      PYTHONUTF8: "1"
+      APP_DIR: tmp/portable/dist/GUISkinDose
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      with:
+        persist-credentials: false
+    - name: Setup python 3.14
+      uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+      with:
+        python-version: "3.14"
+    - name: Install uv
+      uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884  # v10.3.0
+      with:
+        version: "0.11.25"
+    - name: Install locked runtime + freeze toolchain
+      run: uv sync --locked --extra gui-native --group portable
+
+    - name: Freeze (PyInstaller onedir, windowed)
+      run: |
+        $sw = [Diagnostics.Stopwatch]::StartNew()
+        uv run --no-sync pyinstaller packaging/portable/guiskindose.spec --noconfirm `
+          --distpath tmp/portable/dist --workpath tmp/portable/work
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+        "BUILD_SECONDS=$([math]::Round($sw.Elapsed.TotalSeconds, 1))" >> $env:GITHUB_ENV
+        uv run --no-sync python -c "import PyInstaller; print('PyInstaller', PyInstaller.__version__)"
+
+    - name: Zip onedir and record sizes
+      run: |
+        $files = Get-ChildItem $env:APP_DIR -Recurse -File
+        $onedir = ($files | Measure-Object Length -Sum).Sum
+        New-Item -ItemType Directory -Force out | Out-Null
+        7z a -tzip -mx=9 out/GUISkinDose-light-windows-x64.zip ./tmp/portable/dist/GUISkinDose | Out-Null
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+        $zip = (Get-Item out/GUISkinDose-light-windows-x64.zip).Length
+        $mb = { param($b) [math]::Round($b / 1MB, 1) }
+        "ONEDIR_MB=$(& $mb $onedir)" >> $env:GITHUB_ENV
+        "ZIP_MB=$(& $mb $zip)" >> $env:GITHUB_ENV
+        "ONEDIR_FILES=$($files.Count)" >> $env:GITHUB_ENV
+        Write-Output "onedir: $(& $mb $onedir) MB in $($files.Count) files; zip: $(& $mb $zip) MB"
+        Write-Output "Largest top-level entries under _internal:"
+        Get-ChildItem "$env:APP_DIR/_internal" | ForEach-Object {
+          $size = if ($_.PSIsContainer) { (Get-ChildItem $_.FullName -Recurse -File | Measure-Object Length -Sum).Sum } else { $_.Length }
+          [pscustomobject]@{ Name = $_.Name; MB = & $mb $size }
+        } | Sort-Object MB -Descending | Select-Object -First 15 | Format-Table -AutoSize | Out-String | Write-Output
+
+    - name: Unzip into a fresh folder (what a user runs)
+      run: |
+        $dest = Join-Path $env:RUNNER_TEMP "unzipped"
+        7z x out/GUISkinDose-light-windows-x64.zip "-o$dest" | Out-Null
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+        $exe = Join-Path $dest "GUISkinDose/GUISkinDose.exe"
+        if (-not (Test-Path $exe)) { throw "exe missing after unzip" }
+        "APP_EXE=$exe" >> $env:GITHUB_ENV
+
+    - name: Block outbound network for the app
+      run: |
+        New-NetFirewallRule -DisplayName "guiskindose-spike-block" -Direction Outbound `
+          -Program $env:APP_EXE -Action Block | Out-Null
+
+    - name: Frozen self-check (no git on PATH, network blocked)
+      run: |
+        $env:PATH = ($env:PATH -split ';' | Where-Object { $_ -and -not (Test-Path (Join-Path $_ 'git.exe')) }) -join ';'
+        if (Get-Command git -ErrorAction SilentlyContinue) { throw "git still on PATH" }
+        $timings = @()
+        foreach ($run in 1, 2) {
+          $out = Join-Path $env:RUNNER_TEMP "selfcheck-$run"
+          $sw = [Diagnostics.Stopwatch]::StartNew()
+          $proc = Start-Process -FilePath $env:APP_EXE -ArgumentList '--self-check', $out -Wait -PassThru
+          $timings += [math]::Round($sw.Elapsed.TotalSeconds, 1)
+          Write-Output "self-check run $run exit=$($proc.ExitCode) wall=$($timings[-1])s"
+          if (Test-Path "$out/selfcheck_report.json") { Get-Content "$out/selfcheck_report.json" | Write-Output }
+          if ($proc.ExitCode -ne 0) { throw "self-check run $run failed" }
+          foreach ($name in 'selfcheck.html', 'selfcheck.json', 'selfcheck_dose_map.csv') {
+            if (-not (Test-Path (Join-Path $out $name))) { throw "missing $name" }
+          }
+        }
+        "SELFCHECK_COLD_S=$($timings[0])" >> $env:GITHUB_ENV
+        "SELFCHECK_WARM_S=$($timings[1])" >> $env:GITHUB_ENV
+        Copy-Item (Join-Path $env:RUNNER_TEMP "selfcheck-1/selfcheck_report.json") out/
+
+    - name: Native GUI launch smoke (server up + window child)
+      id: gui
+      continue-on-error: true
+      run: |
+        $env:PATH = ($env:PATH -split ';' | Where-Object { $_ -and -not (Test-Path (Join-Path $_ 'git.exe')) }) -join ';'
+        $log = Join-Path $env:TEMP "guiskindose/guiskindose-native.log"
+        $sw = [Diagnostics.Stopwatch]::StartNew()
+        $proc = Start-Process -FilePath $env:APP_EXE -PassThru
+        $up = $false
+        while ($sw.Elapsed.TotalSeconds -lt 120 -and -not $up) {
+          Start-Sleep -Milliseconds 500
+          $client = New-Object Net.Sockets.TcpClient
+          try { $client.Connect('127.0.0.1', 8765); $up = $true } catch { } finally { $client.Dispose() }
+          if ($proc.HasExited) { break }
+        }
+        $startup = [math]::Round($sw.Elapsed.TotalSeconds, 1)
+        Start-Sleep -Seconds 15
+        $procs = @(Get-Process GUISkinDose -ErrorAction SilentlyContinue)
+        Write-Output "server_up=$up seconds=$startup exited=$($proc.HasExited) guiskindose_processes=$($procs.Count)"
+        if (Test-Path $log) {
+          Write-Output "log file present ($((Get-Content $log).Count) lines); last lines:"
+          Get-Content $log -Tail 25 | Write-Output
+        } else { Write-Output "log file missing" }
+        $procs | Stop-Process -Force -ErrorAction SilentlyContinue
+        "GUI_UP=$up" >> $env:GITHUB_ENV
+        "GUI_START_S=$startup" >> $env:GITHUB_ENV
+        "GUI_PROCS=$($procs.Count)" >> $env:GITHUB_ENV
+        if (-not $up) { throw "GUI server never listened" }
+
+    - name: Summary
+      if: always()
+      run: |
+        @"
+        ## Portable spike (Windows, Light shape)
+        | Metric | Value |
+        |---|---|
+        | Build seconds | $env:BUILD_SECONDS |
+        | Onedir size | $env:ONEDIR_MB MB ($env:ONEDIR_FILES files) |
+        | Zip size | $env:ZIP_MB MB |
+        | Self-check cold / warm (s) | $env:SELFCHECK_COLD_S / $env:SELFCHECK_WARM_S |
+        | GUI server up / seconds / processes | $env:GUI_UP / $env:GUI_START_S / $env:GUI_PROCS |
+        "@ >> $env:GITHUB_STEP_SUMMARY
+
+    - name: Upload zip and self-check report
+      if: always()
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
+      with:
+        name: guiskindose-light-windows-x64-spike
+        path: out/
+        retention-days: 7
+        if-no-files-found: warn
