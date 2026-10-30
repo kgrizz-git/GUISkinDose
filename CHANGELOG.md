@@ -19,6 +19,10 @@ That keeps SemVer and contributor history organized.
 
 ## [Unreleased]
 
+### Fixed
+
+- The wheel and sdist now include the equipment-profile templates, filled examples, and README under `example_data/equipment_profiles/`. Version 1.1.0 left them out of the package.
+
 ## [1.1.0] - 2026-10-29
 
 First GUISkinDose release prepared for PyPI publication. Version `1.0.0` was the in-repo rename point

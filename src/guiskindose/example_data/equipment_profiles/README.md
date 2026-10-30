@@ -177,5 +177,5 @@ The field set above follows the locked schema, resolution, and fallback rules in
 
 Also note: the JSON, CSV, and XLSX shapes are verified to produce identical profile hashes through the
 parser (a workbook built from the CSV parses to the same profiles as the JSON). TSV and XLSX packaged
-variants are still outstanding (a tracked `.xlsx` needs hash-pinned human clearance first), and packaging
-of this folder into the wheel is not done.
+variants are still outstanding (a tracked `.xlsx` needs hash-pinned human clearance first). This folder
+ships in both the wheel and the sdist.
