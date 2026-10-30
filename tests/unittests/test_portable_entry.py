@@ -11,6 +11,8 @@ from __future__ import annotations
 import importlib.util
 import logging
 import os
+import sys
+import types
 from pathlib import Path
 
 import pytest
@@ -165,12 +167,48 @@ def test_log_stream_flush_emits_pending_text(entry_module, captured_root):
     assert len(captured_root.records) == 1
 
 
-@pytest.mark.parametrize("flag", ["--self-check", "--network-probe"])
-def test_headless_flag_without_directory_fails_closed(entry_module, monkeypatch, capsys, flag):
-    def _no_gui(*_args, **_kwargs):
-        raise AssertionError("must not configure logging or start the GUI")
+@pytest.fixture
+def fake_dispatch(entry_module, monkeypatch):
+    """Stub the file log, the GUI, and the ``selfcheck`` module; record what main() reaches."""
+    calls: list[tuple] = []
+    monkeypatch.setattr(entry_module, "_configure_file_log", lambda: calls.append(("log",)))
+    fake = types.ModuleType("selfcheck")
+    monkeypatch.setattr(
+        fake, "run_self_check", lambda out, *, process_start: calls.append(("self_check", out)) or 0, raising=False
+    )
+    monkeypatch.setattr(fake, "run_network_probe", lambda out: calls.append(("network_probe", out)) or 0, raising=False)
+    monkeypatch.setitem(sys.modules, "selfcheck", fake)
+    fake_app = types.ModuleType("guiskindose.gui.app")
+    monkeypatch.setattr(fake_app, "run_gui", lambda native: calls.append(("gui", native)), raising=False)
+    monkeypatch.setitem(sys.modules, "guiskindose.gui.app", fake_app)
+    monkeypatch.setattr(sys, "excepthook", sys.excepthook)
+    return calls
 
-    monkeypatch.setattr(entry_module, "_configure_file_log", _no_gui)
-    code = entry_module.main([flag])
+
+@pytest.mark.parametrize("argv", [["--self-check"], ["--network-probe"], ["--self-check", ""], ["--network-probe", ""]])
+def test_headless_flag_without_directory_fails_closed(entry_module, fake_dispatch, capsys, caplog, argv):
+    with caplog.at_level(logging.ERROR, logger="guiskindose.portable"):
+        code = entry_module.main(argv)
     assert code == 2
-    assert flag in capsys.readouterr().err
+    assert argv[0] in capsys.readouterr().err
+    assert any("requires an output directory" in r.getMessage() for r in caplog.records)
+    assert fake_dispatch == [("log",)]
+
+
+def test_self_check_flag_dispatches(entry_module, fake_dispatch):
+    code = entry_module.main(["--self-check", "out-dir"])
+    assert code == 0
+    assert fake_dispatch == [("log",), ("self_check", "out-dir")]
+
+
+def test_network_probe_flag_dispatches(entry_module, fake_dispatch):
+    code = entry_module.main(["--network-probe", "probe-dir"])
+    assert code == 0
+    assert fake_dispatch == [("log",), ("network_probe", "probe-dir")]
+
+
+def test_no_arguments_start_the_gui(entry_module, fake_dispatch):
+    code = entry_module.main([])
+    assert code == 0
+    assert fake_dispatch[-1][0] == "gui"
+    assert ("self_check", "") not in fake_dispatch
