@@ -73,6 +73,9 @@ def _check_package_data() -> dict[str, Any]:
         "kerma_example_rows": len(kerma_csv.read_text(encoding="utf-8").splitlines()),
         "example_rdsr_dcm": _count(("example_data", "RDSR"), ".dcm"),
         "example_tabular_csv": _count(("example_data", "tabular"), ".csv"),
+        "equipment_profile_json": _count(("example_data", "equipment_profiles"), ".json"),
+        "equipment_profile_csv": _count(("example_data", "equipment_profiles"), ".csv"),
+        "equipment_profile_readme": _pkg("example_data", "equipment_profiles", "README.md").is_file(),
     }
     empty = [name for name, value in found.items() if not value]
     if empty:

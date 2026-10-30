@@ -19,9 +19,7 @@ PKG = ROOT / "src" / "guiskindose"
 ICON = PKG / "gui" / "static" / "guiskindose_icon.ico"
 
 # (glob under src/guiskindose, destination folder inside the bundle)
-# Mirrors MANIFEST.in. example_data/equipment_profiles/ is left out on purpose: the
-# wheel does not ship it either, and no runtime code reads it (it is an authoring
-# template for the repository docs).
+# Mirrors MANIFEST.in, including the equipment-profile templates users copy.
 _PACKAGE_DATA = [
     ("phantom_data/*.stl", "phantom_data"),
     ("table_data/*.csv", "table_data"),
@@ -38,6 +36,9 @@ _PACKAGE_DATA = [
     ("example_data/tabular/*.csv", "example_data/tabular"),
     ("example_data/kerma_meter/*.csv", "example_data/kerma_meter"),
     ("example_data/kerma_meter/*.md", "example_data/kerma_meter"),
+    ("example_data/equipment_profiles/*.json", "example_data/equipment_profiles"),
+    ("example_data/equipment_profiles/*.csv", "example_data/equipment_profiles"),
+    ("example_data/equipment_profiles/*.md", "example_data/equipment_profiles"),
 ]
 
 datas = [(str(PKG / pattern), str(Path("guiskindose") / dest)) for pattern, dest in _PACKAGE_DATA]
