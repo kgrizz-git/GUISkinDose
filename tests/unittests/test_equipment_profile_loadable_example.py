@@ -21,6 +21,7 @@ from guiskindose.equipment_profiles import (
     parse_csv_bytes,
     parse_json_bytes,
 )
+from guiskindose.equipment_profiles.resolver import LEAF_ORDER
 
 EXAMPLES = Path(__file__).resolve().parents[2] / "src" / "guiskindose" / "example_data" / "equipment_profiles"
 
@@ -44,4 +45,4 @@ def test_loadable_example_applies_as_a_complete_exact_match() -> None:
     bundled = bundled_coordinate_set(json.loads(settings_path.read_bytes())["normalization_settings"])
     match = session.resolve(ExamCoordinateIdentity(manufacturer="Acme Imaging", model="DemoScope 3000", event_count=3), bundled)
     assert match.record.profile_id == "demo-scope-3000"
-    assert len(match.record.fields) == 15
+    assert len(match.record.fields) == len(LEAF_ORDER)
