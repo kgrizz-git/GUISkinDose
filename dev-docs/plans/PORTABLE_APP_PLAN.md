@@ -205,7 +205,7 @@ The failures that matter for a no-admin PC are Windows-only. Do this spike on Wi
 
 This spike is not the Light shape and not the Full shape. It bundles all 138 STLs and no browser. `.github/workflows/portable-spike.yml` exists only for this spike. Phase 1 replaces it with the release build jobs or deletes it.
 
-Run [41124115603](https://github.com/kgrizz-git/GUISkinDose/actions/runs/41124115603) of `.github/workflows/portable-spike.yml` passed, with every check described below enforced. The earlier run [41098630145](https://github.com/kgrizz-git/GUISkinDose/actions/runs/41098630145) gave the same sizes and was 0.4–0.7 s faster on each timing. It used Python 3.14.9 and PyInstaller 6.22.3, from the `portable` dependency group (`pyinstaller>=6.15`, `pywebview>=6.1`).
+Run [41124115603](https://github.com/kgrizz-git/GUISkinDose/actions/runs/41124115603) of `.github/workflows/portable-spike.yml` passed, with every check described below enforced. The earlier run [41098630145](https://github.com/kgrizz-git/GUISkinDose/actions/runs/41098630145) gave the same sizes. Its timings were slightly lower, which is within normal runner variation. It used Python 3.14.9 and PyInstaller 6.22.3, from the `portable` dependency group (`pyinstaller>=6.15`, `pywebview>=6.1`).
 
 | Measure | Value |
 |---------|------:|
@@ -239,7 +239,7 @@ Phase 0 still needs the Chromium artifact and its license, the Full-shape sizes,
 Run this alongside Phase 0. The maintainer now has an Apple Developer account, so the macOS signing risk can be tested early instead of waiting for Phase 5. Signing and notarization often break a frozen layout, and that is cheaper to learn now.
 
 - [ ] Create a **Developer ID Application** certificate and an App Store Connect API key for `notarytool`. Keep both out of the repository. CI later reads them from GitHub secrets.
-- [x] Freeze a Light-shape `GUISkinDose.app` with PyInstaller on an arm64 runner, and record whether an x86_64 or universal2 build is practical. Use the Light file list (the edition module can wait for Phase 1) and the Phase 0 frozen entry, with the app icon converted to `.icns` and the ATS key in `Info.plist`.
+- [ ] Freeze a Light-shape `GUISkinDose.app` with PyInstaller on an arm64 runner, and record whether an x86_64 or universal2 build is practical. Use the Light file list (the edition module can wait for Phase 1) and the Phase 0 frozen entry, with the app icon converted to `.icns` and the ATS key in `Info.plist`.
 - [ ] Sign every nested Mach-O file (dylibs, `.so` extensions, the Python framework) inside-out with the hardened runtime and a timestamp. Do not use `codesign --deep`. Record the entitlements that were actually needed, such as `allow-unsigned-executable-memory` or `disable-library-validation`, and keep the list minimal.
 - [ ] Notarize in this order: `ditto -c -k --keepParent GUISkinDose.app` → `xcrun notarytool submit --wait` → `xcrun stapler staple GUISkinDose.app` → re-zip the stapled app with `ditto` for download. `notarytool` takes a zip, not a bare `.app`, and a zip cannot be stapled. Record any rejected files from the notary log.
 - [ ] Verify with `codesign --verify --deep --strict`, `spctl -a -t exec -vv`, and `xcrun stapler validate`.
@@ -252,9 +252,9 @@ Run this alongside Phase 0. The maintainer now has an Apple Developer account, s
 
 **Acceptance:** a notarized, stapled Light `.app` opens with no Gatekeeper prompt on a clean Mac, then calculates and exports HTML offline. The Full app exports PNG offline from the bundled Chromium, or the progress log records why offline PNG is dropped on macOS. `codesign`, `spctl`, and `stapler validate` pass. The progress log records the entitlements (Light and Full), architectures, sizes, and a PyInstaller-versus-Briefcase recommendation. The Freeze design switches tools only through a decision-log entry.
 
-#### Phase 0b progress notes (2026-10-30, local arm64 Mac)
+#### Phase 0b progress notes (2026-10-30, uncommitted local spike on an arm64 Mac)
 
-Signing and notarization are not done. Their checkboxes stay open.
+These are results from a local, uncommitted spike. The `.icns` icon, the `Info.plist` ATS key, and the hardened ad-hoc signing it used are not in the committed spec. There is no macOS CI job yet, so none of this is reproduced in CI. Signing and notarization are not done, and their checkboxes stay open.
 
 - **PyInstaller build.** PyInstaller 6.22.3 built an arm64 `.app` with the Light mesh set. The `.app` is 218 MB and its `ditto` zip is 97 MB.
 - **Self-check.** The frozen self-check passed. A `hudfrid` run on the Siemens example gave a PSD of 14.076 mGy.

@@ -1,14 +1,16 @@
-# PyInstaller spec for the portable GUISkinDose app (Phase 0 spike, Light shape).
+# PyInstaller spec for the portable GUISkinDose app (Phase 0 full-mesh, no-browser spike).
 #
 # Build from the repository root (outputs go to gitignored tmp/):
-#   uv sync --locked --extra gui-native --group portable --no-editable
+#   uv sync --locked --extra gui-native --group portable
 #   uv run --no-sync pyinstaller packaging/portable/guiskindose.spec --noconfirm \
 #       --distpath tmp/portable/dist --workpath tmp/portable/work
 #
 # Onedir, windowed (no console), entry = packaging/portable/entry.py. Package data
 # is an explicit include list placed under guiskindose/ inside the bundle, so
 # importlib.resources and Path(__file__) lookups resolve exactly as in a wheel.
-# No browser is bundled (Light shape); see PORTABLE_APP_PLAN.md Phase 0.
+# It bundles every shipped STL and no browser, so it is neither the Light nor the
+# Full shape; see PORTABLE_APP_PLAN.md Phase 0. src/ is on pathex, so an editable
+# install is fine.
 # ruff: noqa
 from pathlib import Path
 

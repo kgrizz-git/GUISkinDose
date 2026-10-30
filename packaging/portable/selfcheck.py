@@ -195,6 +195,17 @@ def _log_sink_state() -> dict[str, Any]:
     return {"log_file_created": True}
 
 
+def _write_atomic(path: Path, text: str) -> None:
+    """Write *text* to a sibling temp file, then replace *path* in one step.
+
+    CI reads the report as soon as the process exits; a partial file must never
+    look like a result.
+    """
+    temporary = path.with_name(f".{path.name}.tmp")
+    temporary.write_text(text, encoding="utf-8")
+    temporary.replace(path)
+
+
 def _run_step(report: dict[str, Any], name: str, step: Callable[[], dict[str, Any]]) -> bool:
     try:
         report[name] = step()
@@ -226,7 +237,7 @@ def run_self_check(output_dir: str, *, process_start: float) -> int:
     ok = _run_step(report, "log_sink", _log_sink_state) and ok
     report["passed"] = ok
     report["total_seconds"] = round(time.perf_counter() - process_start, 2)
-    (out_dir / "selfcheck_report.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
+    _write_atomic(out_dir / "selfcheck_report.json", json.dumps(report, indent=2))
     return 0 if ok else 1
 
 
@@ -240,6 +251,7 @@ def run_network_probe(output_dir: str) -> int:
     Used by the spike workflow to prove its firewall rule applies to the frozen exe.
     Writes ``network_probe.json`` holding a boolean and an exception class name only.
     """
+    import urllib.error
     import urllib.request
 
     from guiskindose.privacy import exception_class_name
@@ -250,7 +262,10 @@ def run_network_probe(output_dir: str) -> int:
     try:
         with urllib.request.urlopen(_PROBE_URL, timeout=15):  # nosec B310 - fixed https URL
             pass
+    except urllib.error.HTTPError as exc:
+        # The server answered, so the request left the machine: not blocked.
+        result = {"outbound_blocked": False, "error_type": exception_class_name(exc)}
     except OSError as exc:
         result = {"outbound_blocked": True, "error_type": exception_class_name(exc)}
-    (out_dir / "network_probe.json").write_text(json.dumps(result), encoding="utf-8")
+    _write_atomic(out_dir / "network_probe.json", json.dumps(result))
     return 0

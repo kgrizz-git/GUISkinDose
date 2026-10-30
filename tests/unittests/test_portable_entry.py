@@ -69,7 +69,8 @@ def test_default_native_log_path_returns_none_when_folder_unusable(monkeypatch, 
     blocker = tmp_path / "file-not-dir"
     blocker.write_text("x", encoding="utf-8")
     monkeypatch.setattr(dbg.tempfile, "gettempdir", lambda: str(blocker))
-    assert dbg.default_native_log_path() is None
+    result = dbg.default_native_log_path()
+    assert result is None
 
 
 def _expected_folder(tmp_path: Path) -> Path:
@@ -85,13 +86,15 @@ def test_default_native_log_path_refuses_symlinked_folder(monkeypatch, tmp_path)
     except OSError:
         pytest.skip("symlinks unavailable for this user")
     monkeypatch.setattr(dbg.tempfile, "gettempdir", lambda: str(tmp_path))
-    assert dbg.default_native_log_path() is None
+    result = dbg.default_native_log_path()
+    assert result is None
 
 
 def test_default_native_log_path_refuses_file_in_folder_place(monkeypatch, tmp_path):
     _expected_folder(tmp_path).write_text("not a folder", encoding="utf-8")
     monkeypatch.setattr(dbg.tempfile, "gettempdir", lambda: str(tmp_path))
-    assert dbg.default_native_log_path() is None
+    result = dbg.default_native_log_path()
+    assert result is None
 
 
 @pytest.mark.skipif(os.name != "posix", reason="POSIX permission bits")
@@ -100,7 +103,8 @@ def test_default_native_log_path_tightens_existing_folder(monkeypatch, tmp_path)
     folder.mkdir(mode=0o755)
     folder.chmod(0o755)
     monkeypatch.setattr(dbg.tempfile, "gettempdir", lambda: str(tmp_path))
-    assert dbg.default_native_log_path() == folder / "guiskindose-native.log"
+    result = dbg.default_native_log_path()
+    assert result == folder / "guiskindose-native.log"
     assert folder.stat().st_mode & 0o777 == 0o700
 
 
@@ -128,7 +132,8 @@ def test_log_stream_drops_output_without_handlers(entry_module):
     root.handlers.clear()
     try:
         stream = entry_module._LogStream("guiskindose.stderr", logging.DEBUG)
-        assert stream.write("window child noise\n") == len("window child noise\n")
+        written = stream.write("window child noise\n")
+        assert written == len("window child noise\n")
     finally:
         root.handlers[:] = saved
 

@@ -102,7 +102,7 @@ jobs:
         if ($app.Program -ne $env:APP_EXE) { throw "firewall rule targets another program" }
         # The frozen exe itself must fail an outbound HTTPS request.
         $probe = Join-Path $env:RUNNER_TEMP "netprobe"
-        $proc = Start-Process -FilePath $env:APP_EXE -ArgumentList '--network-probe', $probe -Wait -PassThru
+        $proc = Start-Process -FilePath $env:APP_EXE -ArgumentList '--network-probe', "`"$probe`"" -Wait -PassThru
         $result = Get-Content (Join-Path $probe "network_probe.json") | ConvertFrom-Json
         Write-Output "network probe exit=$($proc.ExitCode) outbound_blocked=$($result.outbound_blocked) error_type=$($result.error_type)"
         if ($proc.ExitCode -ne 0 -or -not $result.outbound_blocked) { throw "outbound request was not blocked" }
@@ -115,7 +115,7 @@ jobs:
         foreach ($run in 1, 2) {
           $out = Join-Path $env:RUNNER_TEMP "selfcheck-$run"
           $sw = [Diagnostics.Stopwatch]::StartNew()
-          $proc = Start-Process -FilePath $env:APP_EXE -ArgumentList '--self-check', $out -Wait -PassThru
+          $proc = Start-Process -FilePath $env:APP_EXE -ArgumentList '--self-check', "`"$out`"" -Wait -PassThru
           $timings += [math]::Round($sw.Elapsed.TotalSeconds, 1)
           Write-Output "self-check run $run exit=$($proc.ExitCode) wall=$($timings[-1])s"
           if (Test-Path "$out/selfcheck_report.json") { Get-Content "$out/selfcheck_report.json" | Write-Output }
@@ -140,6 +140,9 @@ jobs:
       run: |
         $env:PATH = ($env:PATH -split ';' | Where-Object { $_ -and -not (Test-Path (Join-Path $_ 'git.exe')) }) -join ';'
         $log = Join-Path $env:TEMP "guiskindose/guiskindose-native.log"
+        # The self-check runs above wrote this log too; start clean so only this launch counts.
+        Remove-Item "$log*" -Force -ErrorAction SilentlyContinue
+        if (Test-Path $log) { throw "could not clear the earlier log" }
         $sw = [Diagnostics.Stopwatch]::StartNew()
         $proc = Start-Process -FilePath $env:APP_EXE -PassThru
         $up = $false
@@ -154,6 +157,8 @@ jobs:
         $procs = @(Get-Process GUISkinDose -ErrorAction SilentlyContinue)
         Write-Output "server_up=$up seconds=$startup exited=$($proc.HasExited) guiskindose_processes=$($procs.Count)"
         # Summarize the log without printing its lines (they can carry paths or a URL).
+        $started = $false
+        $ready = $false
         if (Test-Path $log) {
           $lines = @(Get-Content $log)
           $levels = $lines | ForEach-Object { if ($_ -match '\[(DEBUG|INFO|WARNING|ERROR|CRITICAL)\]') { $Matches[1] } } |
@@ -169,6 +174,8 @@ jobs:
         if (-not $up) { throw "GUI server never listened" }
         if (-not (Test-Path $log)) { throw "native log file missing" }
         if ($procs.Count -lt 2) { throw "native window child process not seen" }
+        if (-not $started) { throw "log lacks the portable startup line" }
+        if (-not $ready) { throw "log lacks the NiceGUI ready line" }
 
     - name: Summary
       if: always()
