@@ -103,12 +103,12 @@ This is useful for logging, reproducibility, and debugging.
 
 Installing as a package enables several distribution methods:
 
-**GitHub install (current):**
+**GitHub install (from source):**
 ```bash
 pip install git+https://github.com/kgrizz-git/GUISkinDose.git
 ```
 
-**PyPI (if published):**
+**PyPI:**
 ```bash
 pip install guiskindose
 ```
@@ -124,7 +124,7 @@ Without the package structure, users would need to clone the repo, understand th
 
 ## Publishing to PyPI
 
-If you want to make the package installable via `pip install guiskindose`, you can publish it to PyPI.
+Releases publish to PyPI automatically through `.github/workflows/release.yml` and Trusted Publishing (see [PUBLISHING.md](../../PUBLISHING.md)). The manual `twine` steps below are a fallback only.
 
 ### Prerequisites
 
@@ -163,7 +163,7 @@ PyPI does not allow re-uploading the same version number.
 
 ### GitHub Releases
 
-You can also automate PyPI uploads via GitHub Actions. The project already has a `release.yml` workflow that could be extended to publish to PyPI when you create a GitHub release.
+You can also automate PyPI uploads via GitHub Actions. `release.yml` already publishes to PyPI when a GitHub Release is published.
 
 ## Summary
 

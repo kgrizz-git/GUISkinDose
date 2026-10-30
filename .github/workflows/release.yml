@@ -77,10 +77,10 @@ jobs:
         retention-days: 30
     - name: Publish distribution to PyPI (Trusted Publishing / OIDC)
       # No password/secret: authenticates via a short-lived OIDC token (needs the
-      # job-level `id-token: write` permission above). Before the FIRST real publish,
-      # register a PyPI "trusted publisher" for this project pointing at owner/repo +
-      # workflow filename `release.yml` (see PUBLISHING.md). This step only runs when a
-      # release is published; until a trusted publisher is registered it will FAIL rather
-      # than publish silently, and releases are maintainer-triggered only.
+      # job-level `id-token: write` permission above). PyPI trusts this repo through a
+      # "trusted publisher" registered for owner/repo + workflow filename `release.yml`
+      # (see PUBLISHING.md). This step only runs when a release is published; without that
+      # registration it FAILS rather than publishing silently. Releases are
+      # maintainer-triggered only.
       if: startsWith(github.ref, 'refs/tags')
       uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33  # v1.14.2

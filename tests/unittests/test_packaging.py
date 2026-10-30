@@ -1,6 +1,6 @@
 """Packaging smoke for the ``guiskindose`` distribution identity.
 
-Guards Phase 4b of the rename: installed metadata reports ``1.0.0``, and a built
+Guards Phase 4b of the rename: installed metadata matches ``pyproject.toml``, and a built
 wheel contains the ``guiskindose`` package (not an empty or old-name tree).
 
 Phase D (correction-data distribution proof) adds content assertions: every

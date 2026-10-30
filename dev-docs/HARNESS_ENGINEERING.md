@@ -408,7 +408,7 @@ without `ci.yml`'s schedule gate, so a newly published advisory fails a schedule
 
 - **Scope:** PyPI-resolved packages for core dependencies plus `[dev]` and `[gui]` extras (widest maintained install surface).
 - **Gate:** CI **fails** on any known vulnerability in the OSV/PyPI advisory data (via `uv audit` when `uv` is available, otherwise `pip-audit`).
-- **Local editable install:** `guiskindose` itself is skipped (not published on PyPI); this is expected.
+- **Local editable install:** `guiskindose` itself is skipped because the audit covers its dependencies, not the local project; this is expected.
 - **Remediation:** bump the affected dependency in `pyproject.toml`, or add a documented entry under
   `[tool.uv.audit]` in `pyproject.toml` only after maintainer review (avoid silent ignores). Use
   `ignore-until-fixed` when no patched release exists yet so the audit re-fails automatically once

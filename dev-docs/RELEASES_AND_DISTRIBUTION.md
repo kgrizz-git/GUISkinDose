@@ -44,7 +44,7 @@ These serve different audiences.
   `1.0.0` was the unpublished rename point (formerly MyPySkinDose `25.2.0` / a fork of PySkinDose).
 - **First GUISkinDose / `guiskindose` version (locked): `1.0.0`.** New distribution identity;
   not `26.0.0`, not a patch on `25.2.0`, and not an imitation of upstream PySkinDose.
-  Changelog `[1.0.0]` and GitHub Release notes must say it was formerly MyPySkinDose `25.2.0` / a fork
+  Changelog `[1.0.0]` and the `1.1.0` GitHub Release notes must say it was formerly MyPySkinDose `25.2.0` / a fork
   of PySkinDose. Details: [plans/archive/GUISKINDOSE_RENAME_PLAN.md](plans/archive/GUISKINDOSE_RENAME_PLAN.md).
 - Bump at release time (not on every docs PR). Document SemVer impact in Unreleased notes when shipping user-visible library/GUI changes.
 - `scripts/check_changelog.py` requires an Unreleased touch when `src/` or `tests/` change (pre-push).
@@ -62,9 +62,9 @@ Use a release PR or written checklist. Condensed from [FORK_MAINTAINER_GUIDE.md]
    parity proof) and attach the PASS report.
 6. Privacy: no identifiers, private paths, or unapproved assets in fixtures, logs, or artifacts.
 7. Wait for the `ci.yml` run on that `main` commit to succeed; `release.yml` refuses a commit without one. Then publish a **GitHub Release** on that commit (user-facing notes per above). Publishing runs `release.yml`; saving a draft does not.
-8. Verify workflow: privacy gates → build → grype → PyPI publish (only after Trusted Publisher is registered — see `PUBLISHING.md`).
+8. Verify workflow: privacy gates → build → grype → PyPI publish through the registered Trusted Publisher (see `PUBLISHING.md`).
 
-Until the first Trusted Publisher registration, the publish step is expected to fail rather than publish silently.
+If the Trusted Publisher registration is ever removed, the publish step fails rather than publishing silently.
 
 ## Portable executables (planned, not started)
 
