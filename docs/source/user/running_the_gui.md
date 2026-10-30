@@ -45,7 +45,8 @@ Setup is best effort; if it cannot finish, the launcher script still works.
 | Windows | `GUISkinDose.lnk` | The first `run_gui.bat` run |
 | Linux | `GUISkinDose.desktop` (GNOME: allow launching if asked) | The first `./run_gui.sh` run, if setup succeeds |
 
-The shortcuts stay inside the checkout and are git-ignored. On Linux, setup is skipped under
+The generated shortcuts (`GUISkinDose.lnk` and `GUISkinDose.desktop`) stay inside the
+checkout and are git-ignored; `GUISkinDose.command` is tracked. On Linux, setup is skipped under
 WSL, when the checkout path contains characters a desktop file cannot hold, and when
 `GUISkinDose.desktop` is a symlink. On Linux, GNOME records the
 "allow launching" trust flag in its own metadata store under your home folder. Set
