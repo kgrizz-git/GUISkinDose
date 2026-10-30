@@ -96,8 +96,9 @@ Install `guiskindose` with no extras for the library and CLI only.
 The GUI walks through **Upload** (RDSR DICOM or tabular CSV/TSV/XLSX) → **Data** review →
 **Settings** (phantom, per-exam offsets) → **Corrections** → **Geometry** preview →
 **Calculate** → **Results** (PSD, dose map) → **Export** (JSON, HTML dose maps, and
-XLSX/PDF/DOCX audit reports; PNG images need a Chromium-family browser). Bundled example RDSR files let you try it without data of
-your own.
+XLSX/PDF/DOCX audit reports). PNG exports, and the images embedded in PDF and DOCX
+reports, need a Chromium-family browser such as Chrome or Edge. Bundled example RDSR files
+let you try it without data of your own.
 
 Feature highlights include multi-exam aggregation with per-exam offsets, DoseTrack and
 Radimetrics imports with schema auto-detection, kerma-meter correction by equipment and
@@ -109,8 +110,8 @@ tube, rich audit reports, and a human phantom library with habitus scaling. See 
 
 GUISkinDose runs entirely on your machine and does not upload study data. The GUI listens
 only on `127.0.0.1`. In browser mode it also requires a per-launch link that the app opens
-for you. Logs leave
-out file names and paths, because those often contain patient identifiers. See
+for you. Default logging leaves out file names and paths, because those often contain
+patient identifiers. See
 [Running the GUI](https://github.com/kgrizz-git/GUISkinDose/blob/main/docs/source/user/running_the_gui.md) for launch options, local-access
 details, logging, and platform notes.
 

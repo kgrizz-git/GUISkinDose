@@ -61,8 +61,9 @@ Browser mode adds three protections on top of loopback binding (see
 `src/guiskindose/gui/loopback_security.py`):
 
 - **Per-launch token.** The console prints a launch URL with a random secret, and the
-  browser opens it automatically. Only that URL starts a session. Every other HTTP and
-  websocket request needs the session cookie. The URL stays valid until the server
+  browser opens it automatically. An HTTP request that carries the token in its query
+  string starts a session, on any path. All other HTTP and websocket requests need the
+  session cookie. The token stays valid until the server
   restarts, so a second browser profile or a cleared cookie does not lock you out. After
   a restart, old tabs stop working; use the new console URL.
 - **Strict Host validation.** Only the loopback address is accepted, which blocks DNS
@@ -84,9 +85,10 @@ launch it from a shell if you need to read diagnostic output. No log file is wri
 unless `configure_logging(log_file=...)` is wired at startup; the optional file sink in
 `guiskindose.debug` supports rotation and size caps.
 
-The app does not log file names or paths, because RDSR filenames often contain patient
-identifiers. It logs only file type, size, and event counts. Extra category-tagged `DEBUG` output is
-opt-in through a `debug.json` in the working directory:
+The app's default logging does not record file names or paths, because RDSR filenames
+often contain patient identifiers. It records only file type, size, and event counts. This
+guarantee does not cover module-level `DEBUG` output, described below. Extra
+category-tagged `DEBUG` output is opt-in through a `debug.json` in the working directory:
 
 ```json
 { "GUI": true, "PROCESSING": true, "CALCULATION": true, "RENDERING": true }
