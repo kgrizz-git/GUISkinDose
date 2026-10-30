@@ -185,13 +185,29 @@ def fake_dispatch(entry_module, monkeypatch):
     return calls
 
 
-@pytest.mark.parametrize("argv", [["--self-check"], ["--network-probe"], ["--self-check", ""], ["--network-probe", ""]])
-def test_headless_flag_without_directory_fails_closed(entry_module, fake_dispatch, capsys, caplog, argv):
-    with caplog.at_level(logging.ERROR, logger="guiskindose.portable"):
+@pytest.mark.parametrize(
+    "argv",
+    [["--self-check"], ["--network-probe"], ["--self-check", ""], ["--network-probe", ""], ["--self-check", "   "]],
+)
+def test_headless_flag_without_directory_fails_closed(entry_module, fake_dispatch, argv):
+    # A local handler on the portable logger keeps this independent of test order:
+    # an earlier configure_logging() turns off propagation from ``guiskindose``.
+    portable = logging.getLogger("guiskindose.portable")
+    records: list[logging.LogRecord] = []
+
+    class _Collect(logging.Handler):
+        def emit(self, record: logging.LogRecord) -> None:
+            records.append(record)
+
+    handler = _Collect(logging.ERROR)
+    portable.addHandler(handler)
+    try:
         code = entry_module.main(argv)
+    finally:
+        portable.removeHandler(handler)
     assert code == 2
-    assert argv[0] in capsys.readouterr().err
-    assert any("requires an output directory" in r.getMessage() for r in caplog.records)
+    messages = [r.getMessage() for r in records]
+    assert messages == [f"{argv[0]} requires an output directory"]
     assert fake_dispatch == [("log",)]
 
 

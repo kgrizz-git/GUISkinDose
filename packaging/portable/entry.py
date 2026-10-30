@@ -136,11 +136,11 @@ def main(argv: list[str]) -> int:
     """Run the GUI, or the headless self-check when ``--self-check DIR`` is given."""
     _configure_file_log()
     logger = logging.getLogger("guiskindose.portable")
-    if argv and argv[0] in _HEADLESS_FLAGS and (len(argv) < 2 or not argv[1]):
-        # Fail closed: a missing or empty directory must never fall through to the GUI.
-        # Logged as well, because a windowed build has no console for stderr.
+    if argv and argv[0] in _HEADLESS_FLAGS and (len(argv) < 2 or not argv[1].strip()):
+        # Fail closed: a missing or blank directory must never fall through to the GUI.
+        # Logged once: the console handler shows it in a console build, and the file
+        # sink keeps it in a windowed build.
         logger.error("%s requires an output directory", argv[0])
-        print(f"{argv[0]} requires an output directory.", file=sys.stderr)
         return 2
     if argv and argv[0] == "--self-check":
         from selfcheck import run_self_check
