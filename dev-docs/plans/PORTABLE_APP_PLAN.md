@@ -1,6 +1,6 @@
 # Portable desktop app — GUISkinDose
 
-_Status: plan only — not started._
+_Status: in progress. The Phase 0 Windows spike is on branch `spike/portable-phase0-windows`. A Light-shape build passes its CI smoke test. The Chromium pick and the Full shape are still open._
 _Created: 2026-10-17._
 _Parent hub: [RELEASES_AND_DISTRIBUTION.md](../RELEASES_AND_DISTRIBUTION.md)._
 _Feasibility note: [references/PORTABLE_EXECUTABLE_PACKAGING.md](../references/PORTABLE_EXECUTABLE_PACKAGING.md)._
@@ -191,15 +191,40 @@ Each phase is a separate PR. Do not start Phase 1 until Phase 0 and Phase 0b hav
 
 The failures that matter for a no-admin PC are Windows-only. Do this spike on Windows. Phase 0b is a macOS spike that runs alongside it. Linux checks belong to the Phase 1 Linux CI job.
 
-- [ ] Freeze `run_gui(native=True)` with the **full** phantom payload, `table_data/`, the Upload examples, `pywebview`, GUI help, `gui/static/`, `gui/ui_copy.json`, `normalization_settings.json`, and `example_data/kerma_meter/`.
-- [ ] Write the dedicated frozen entry as described under Freeze. Confirm the native window child starts.
-- [ ] Verify export with `git` absent. `safe_output` already catches `OSError`, uses `CREATE_NO_WINDOW`, and skips the checkout check when frozen (shipped 2026-10-18). Acceptance runs with `git` removed from `PATH` and still saves HTML.
-- [ ] Build the log sink from the TO_DO design. Confirm a windowed launch does not crash when `sys.stdout` is `None`, and that the log file is created.
-- [ ] Pick the exact Chromium artifact to fetch. It is not Chrome for Testing, which includes `chrome-headless-shell`. Record its provider, size, license, and the notices it must ship with. Stop the Full-bundle path if redistribution is not allowed.
-- [ ] Record onedir size, zip size, and cold-start time twice: without that browser (Light shape) and with it (Full shape).
-- [ ] Launch with the network disabled. Load a local RDSR, calculate, and export HTML, JSON, and CSV. With Chromium bundled and its path passed explicitly, export PNG with no system Chrome installed, and record which binary launched. Fail the check if Kaleido's generated page references any `http` script URL.
-- [ ] Prove package data resolves inside the freeze by opening, from the frozen app, `phantom_data`, `table_data`, `gui/help`, `gui/static`, `gui/ui_copy.json`, `normalization_settings.json`, `settings_example.json`, and the kerma-meter example CSV. A list of `__file__` call sites is not the acceptance test. PyInstaller sets `__file__` for collected modules. Watch repo-root climbs such as the fun-mesh manifest path and the `ui_copy` repo-catalog fallback.
-- [ ] Document the hidden imports and data files that actually worked.
+- [x] Freeze `run_gui(native=True)` with the **full** phantom payload, `table_data/`, the Upload examples, `pywebview`, GUI help, `gui/static/`, `gui/ui_copy.json`, `normalization_settings.json`, and `example_data/kerma_meter/`.
+- [x] Write the dedicated frozen entry as described under Freeze. Confirm the native window child starts. The entry is `packaging/portable/entry.py`. CI saw two `GUISkinDose.exe` processes 15 s after launch. A onedir build runs as one process, so the second one is the window child. Nobody has yet looked at the page the window renders.
+- [x] Verify export with `git` absent. `safe_output` already catches `OSError`, uses `CREATE_NO_WINDOW`, and skips the checkout check when frozen (shipped 2026-10-18). Acceptance runs with `git` removed from `PATH` and still saves HTML.
+- [x] Build the log sink from the TO_DO design. Confirm a windowed launch does not crash when `sys.stdout` is `None`, and that the log file is created. Only the frozen entry uses it so far. It calls `debug.default_native_log_path()` and reuses the existing purge, rotation, and `0o600` handler. Setting `GUISKINDOSE_NO_FILE_LOG` turns the file off. A source-checkout `--native` run still has no file sink, and that item stays in TO_DO.
+- [ ] Pick the exact Chromium artifact to fetch. It is not Chrome for Testing, which includes `chrome-headless-shell`. Record its provider, size, license, and the notices it must ship with. Stop the Full-bundle path if redistribution is not allowed. The spike workflow does not fetch a browser yet. The candidates to compare are a pinned upstream Chromium snapshot from `commondatastorage.googleapis.com/chromium-browser-snapshots` and a third-party Chromium build such as ungoogled-chromium. For each, record the version, the sha256, the BSD-3 and third-party notices, and whether `--headless` works. The Full job should then add a step that copies the browser into the onedir and passes its path to `kaleido.start_sync_server(path=..., mathjax=False)`.
+- [ ] Record onedir size, zip size, and cold-start time twice: without that browser (Light shape) and with it (Full shape). The Light numbers are recorded below. The Full numbers wait for the Chromium pick.
+- [ ] Launch with the network disabled. Load a local RDSR, calculate, and export HTML, JSON, and CSV. The headless half is proven: HTML, JSON, and CSV exports ran with a Windows Firewall outbound block on the exe. PNG and an interactive GUI calculation are still open. With Chromium bundled and its path passed explicitly, export PNG with no system Chrome installed, and record which binary launched. Fail the check if Kaleido's generated page references any `http` script URL.
+- [x] Prove package data resolves inside the freeze by opening, from the frozen app, `phantom_data`, `table_data`, `gui/help`, `gui/static`, `gui/ui_copy.json`, `normalization_settings.json`, `settings_example.json`, and the kerma-meter example CSV. A list of `__file__` call sites is not the acceptance test. PyInstaller sets `__file__` for collected modules. Watch repo-root climbs such as the fun-mesh manifest path and the `ui_copy` repo-catalog fallback.
+- [x] Document the hidden imports and data files that actually worked.
+
+#### Phase 0 results so far (2026-10-30, `windows-latest`, Light shape)
+
+Run [41098630145](https://github.com/kgrizz-git/GUISkinDose/actions/runs/41098630145) of `.github/workflows/portable-spike.yml` passed. It used Python 3.14.9 and PyInstaller 6.22.3, from the `portable` dependency group (`pyinstaller>=6.15`, `pywebview>=6.1`).
+
+| Measure | Value |
+|---------|------:|
+| Onedir (full 138-STL phantom payload, no browser) | 312.6 MB, 1885 files |
+| Zip (`7z -mx=9`) | 145 MB |
+| Build time | 94 s |
+| Self-check wall time, first and second run | 3.3 s and 3.3 s |
+| Native launch to loopback port listening | 3.1 s |
+
+The largest `_internal` entries are `guiskindose` at 74.4 MB (mostly meshes), scipy at 47.8 MB, nicegui at 23.7 MB, `numpy.libs` at 20.0 MB, `scipy.libs` at 19.3 MB, plotly at 17.7 MB, PIL at 12.9 MB, and pandas at 12.4 MB. The ~20 MB Light mesh set would remove about 50 MB from the onedir.
+
+The self-check is `GUISkinDose.exe --self-check DIR`, implemented in `packaging/portable/selfcheck.py`. It ran from a freshly unzipped folder, with `git` off `PATH` and outbound traffic blocked for the exe. It reported `frozen=true` and `stdout_was_none=true`. It opened every data root through `importlib.resources`. It imported nicegui, `guiskindose.gui.app`, pywebview, plotly, kaleido, reportlab, docx, and openpyxl. It ran a plane `calculate_dose` on `siemens_axiom_example_procedure.dcm` and got a PSD of 8.9542 mGy, the same as an unfrozen run. It then wrote HTML, JSON, and CSV. The `ui_copy` and fun-mesh `parents[3]` climbs did not fail in the onedir layout.
+
+These spec settings in `packaging/portable/guiskindose.spec` worked:
+
+- Package data is an explicit glob list, placed under `guiskindose/` in the bundle. It covers `phantom_data/*.stl`, `table_data/*.csv|*.json`, `table_data/hvl_tables/*.csv`, `gui/help/*.md`, the `gui/static` icons and fonts, `gui/ui_copy.json`, `settings_example.json`, `normalization_settings.json`, the example RDSR `.dcm` files, the tabular CSVs, and the kerma-meter CSV and README.
+- `collect_data_files` covers nicegui, plotly, and kaleido. `copy_metadata` covers guiskindose (for `__version__`), nicegui, plotly, kaleido, pydicom, and pywebview.
+- Hidden imports are `collect_submodules("guiskindose")` minus the `table_data` build scripts, plus `webview` and `selfcheck`. pyinstaller-hooks-contrib handled pythonnet, clr_loader, and pywebview with no extra hooks.
+- The spec excludes pytest, playwright, Jupyter, Sphinx, Semgrep, Presidio, spaCy, and tkinter. The build warned only about absent optional modules (`scipy.special._cdflib` and the `pycparser` tables).
+
+Phase 0 still needs the Chromium artifact and its license, the Full-shape sizes, and offline PNG. It also needs a person to confirm that the native window renders and calculates, on a PC that has never had Python installed.
 
 **Acceptance:** a Windows zip runs calculate and HTML export with the network off and with `git` absent. The Chromium artifact's size and license are written down. No release workflow yet. The Light PNG gate is Phase 1, because the edition file is not in this spike.
 
@@ -292,6 +317,7 @@ Light's missing-runtime message is Phase 1. This phase only adds the runtime to 
 - **2026-10-19** — Added Phase 0b, a macOS spike that signs and notarizes a Light build early and compares Briefcase with PyInstaller.
 - **2026-10-19** — Reviews (`opencode/deepseek-v4.1-flash-free`, `opencode-go/minimax-m3.1-flash-free`) folded in. The macOS notarize order uses `ditto` and staples before the final zip. Full macOS signs its Chromium. Kaleido gets the browser path explicitly, because `BROWSER_PATH` loses to a downloaded Chrome. The frozen entry is a dedicated script. `corrections.db` leaves the freeze. Upload examples ship. The git item is already shipped. The log sink follows the TO_DO design. Architectures, ATS, Windows cloud signing, the GitHub asset CDN redirect, zip extraction rules, and the phantom-resolution refactor are now explicit. Mesh sizes use byte sums.
 - **2026-10-19** — Review (`cursor/grok-4.7`, high) folded in after each claim was checked against the installed packages or vendor docs. choreographer runs Chromium through `sys.executable` on macOS and Linux, which breaks in a PyInstaller freeze. Kaleido loads MathJax from a CDN unless told not to, and writes figure pages to a temp directory. `chrome-headless-shell` is Chrome for Testing. pywebview's `_is_chromium()` trusts a set runtime path, so the pre-check reads the folder itself. Briefcase supports a Windows zip and Python 3.14. PyInstaller must be 6.15 or later. The Fixed Version cab is expanded with `expand -F:*`. Two claims were corrected rather than adopted: `freeze_support()` works on every OS, and a `None` stdout drops output silently instead of crashing.
+- **2026-10-30** — The Phase 0 Windows spike started. A Light-shape onedir (full meshes, no browser) froze with PyInstaller 6.22.3 on Python 3.14. It passed a frozen self-check with `git` absent and outbound network blocked. A native launch reached a listening server and started a window child process. The onedir is 312.6 MB and the zip is 145 MB. The Chromium pick, the Full sizes, and PNG remain open.
 
 ## Decision log
 

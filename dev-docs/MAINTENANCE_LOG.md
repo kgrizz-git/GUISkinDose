@@ -8,6 +8,14 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ## [Unreleased]
 
+- **Portable app Phase 0 spike** (2026-10-30) — The new `portable-spike.yml` workflow runs on
+  `windows-latest` on demand and on pushes to `spike/portable-phase0-windows`. It freezes
+  `packaging/portable/guiskindose.spec` with the new `portable` dependency group, then zips the onedir and
+  records its sizes. It runs the frozen `--self-check` from the unzipped folder with `git` removed from `PATH`
+  and outbound traffic firewalled for the exe. It then launches the native GUI and checks for a listening
+  server. The zip is kept as a 7-day artifact. Results are in
+  [PORTABLE_APP_PLAN.md](plans/PORTABLE_APP_PLAN.md).
+
 - **msgpack advisory** (2026-10-28) — The weekly dependency-audit run failed on msgpack 1.2.1
   (GHSA-j586-36cw-2gc2, fixed in 1.2.3). Dependabot's security update reported it could not resolve the fix;
   msgpack is transitive only (`pip-audit` → `cachecontrol`). The lock now has msgpack 1.2.3, with
