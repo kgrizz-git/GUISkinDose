@@ -20,3 +20,5 @@ pre-commit install --hook-type pre-push
 pre-commit install --hook-type commit-msg
 echo "Git hooks installed (pre-commit + pre-push + commit-msg)."
 echo "For routed privacy changes, run: python scripts/privacy_admission.py run --mode staged"
+echo "Optional: install the privacy-scan group if the privacy hook asks for a Presidio receipt:"
+echo "  uv sync --extra dev --extra gui --group privacy-scan   (or pip 25.1+: pip install --group privacy-scan)"
