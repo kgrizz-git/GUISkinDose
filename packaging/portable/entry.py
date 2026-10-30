@@ -83,7 +83,17 @@ class _LogStream(io.TextIOBase):
         self._logger.log(self._level, "%s", line)
 
     def flush(self) -> None:
-        pass
+        """Emit any buffered text that has no trailing newline yet."""
+        local = self._local
+        pending = getattr(local, "pending", "")
+        if getattr(local, "busy", False) or not pending:
+            return
+        local.pending = ""
+        local.busy = True
+        try:
+            self._emit(pending)
+        finally:
+            local.busy = False
 
 
 def _route_missing_streams() -> None:
@@ -116,15 +126,22 @@ def _native_window() -> bool:
     return not sys.platform.startswith("linux")
 
 
+_HEADLESS_FLAGS = ("--self-check", "--network-probe")
+
+
 def main(argv: list[str]) -> int:
     """Run the GUI, or the headless self-check when ``--self-check DIR`` is given."""
+    if argv and argv[0] in _HEADLESS_FLAGS and len(argv) < 2:
+        # Fail closed: a missing directory must never fall through to the GUI.
+        print(f"{argv[0]} requires an output directory.", file=sys.stderr)
+        return 2
     _configure_file_log()
     logger = logging.getLogger("guiskindose.portable")
-    if len(argv) >= 2 and argv[0] == "--self-check":
+    if argv and argv[0] == "--self-check":
         from selfcheck import run_self_check
 
         return run_self_check(argv[1], process_start=_PROCESS_START)
-    if len(argv) >= 2 and argv[0] == "--network-probe":
+    if argv and argv[0] == "--network-probe":
         from selfcheck import run_network_probe
 
         return run_network_probe(argv[1])

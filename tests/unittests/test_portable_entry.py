@@ -153,3 +153,24 @@ def test_log_stream_breaks_handler_feedback_loop(entry_module):
         root.handlers[:] = saved[0]
         root.setLevel(saved[1])
         root.propagate = saved[2]
+
+
+def test_log_stream_flush_emits_pending_text(entry_module, captured_root):
+    stream = entry_module._LogStream("guiskindose.stdout", logging.INFO)
+    stream.write("no newline yet")
+    assert captured_root.records == []
+    stream.flush()
+    assert [r.getMessage() for r in captured_root.records] == ["no newline yet"]
+    stream.flush()  # nothing pending: no duplicate record
+    assert len(captured_root.records) == 1
+
+
+@pytest.mark.parametrize("flag", ["--self-check", "--network-probe"])
+def test_headless_flag_without_directory_fails_closed(entry_module, monkeypatch, capsys, flag):
+    def _no_gui(*_args, **_kwargs):
+        raise AssertionError("must not configure logging or start the GUI")
+
+    monkeypatch.setattr(entry_module, "_configure_file_log", _no_gui)
+    code = entry_module.main([flag])
+    assert code == 2
+    assert flag in capsys.readouterr().err
