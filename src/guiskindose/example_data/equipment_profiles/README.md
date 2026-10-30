@@ -1,10 +1,13 @@
 # Example equipment profiles
 
 These files are starting points for your own profiles. Every equipment name, number, and date in them is
-**fictional** — nothing here describes a real scanner or a real measurement. Copy a file and replace the values
-with your own data.
+**fictional** — nothing here describes a real scanner or a real measurement. To write a profile that loads
+today, copy `equipment_profile_loadable_example` and replace the values with your own data.
 
+- `equipment_profile_loadable_example.json` / `.csv` — one exact-model, coordinate-only profile that passes
+  the current gate. Start here.
 - `equipment_profile_example.json` / `.csv` — the same three profiles in both supported shapes, filled in.
+  They preview the full schema and do **not** load today (see *Loading a profile*).
 - `equipment_profile_template.json` / `.csv` — blank starting points (header/skeleton only).
 
 The CSV is the same content as the JSON, in a different shape: **JSON is nested** (`provenance` is an object,
@@ -164,7 +167,7 @@ The three filled examples above are each rejected **wholesale** under the initia
 coordinate-only gate — no subset is applied from a rejected file. Transmission rows,
 model wildcards without promotion acknowledgement, and manufacturer aliases are
 all beyond the current activation; write exact, coordinate-only, alias-free files
-to load today.
+to load today, as `equipment_profile_loadable_example` does.
 Blank templates remain invalid until filled (see above).
 
 Privacy split: manufacturer and model names are ordinary audit data and may appear in reports and logs.

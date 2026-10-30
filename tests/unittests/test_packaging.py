@@ -167,6 +167,8 @@ _EXAMPLE_EQUIPMENT_PROFILE_FILES = (
     "guiskindose/example_data/equipment_profiles/README.md",
     "guiskindose/example_data/equipment_profiles/equipment_profile_example.csv",
     "guiskindose/example_data/equipment_profiles/equipment_profile_example.json",
+    "guiskindose/example_data/equipment_profiles/equipment_profile_loadable_example.csv",
+    "guiskindose/example_data/equipment_profiles/equipment_profile_loadable_example.json",
     "guiskindose/example_data/equipment_profiles/equipment_profile_template.csv",
     "guiskindose/example_data/equipment_profiles/equipment_profile_template.json",
 )

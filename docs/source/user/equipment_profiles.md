@@ -6,10 +6,11 @@ on settings before loading **raw** input (DICOM or raw-shaped tabular). Matching
 match, inheritance notice, and session hashes under `equipment_profile_match`.
 
 Blank templates and filled examples in JSON and CSV ship with the package, with a README that
-explains every field. Copy a blank `equipment_profile_template` file and fill it in. The filled
-`equipment_profile_example` files are illustrations only: the current coordinate-only gate
-rejects them, because they include transmission rows, wildcard models, and aliases. To find the
-folder:
+explains every field. Copy `equipment_profile_loadable_example` and replace its values: it is an
+exact-model, coordinate-only profile that loads today. The blank `equipment_profile_template`
+files are also valid once filled in. The `equipment_profile_example` files preview the full
+schema, and the current coordinate-only gate rejects them because they include transmission
+rows, wildcard models, and aliases. To find the folder:
 
 ```bash
 python -c "import guiskindose, pathlib; print(pathlib.Path(guiskindose.__file__).parent / 'example_data' / 'equipment_profiles')"

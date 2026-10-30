@@ -23,6 +23,10 @@ That keeps SemVer and contributor history organized.
 
 - The wheel and sdist now include the equipment-profile templates, filled examples, and README under `example_data/equipment_profiles/`. Version 1.1.0 left them out of the package.
 
+### Added
+
+- A new `equipment_profile_loadable_example` (JSON and CSV) is an exact-model, coordinate-only profile that passes today's capability gate, so users have a filled example they can copy and load. A test keeps it loadable. The existing filled examples preview the full schema and are still rejected by the gate.
+
 ## [1.1.0] - 2026-10-29
 
 First GUISkinDose release prepared for PyPI publication. Version `1.0.0` was the in-repo rename point
