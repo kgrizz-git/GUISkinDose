@@ -179,11 +179,13 @@ async def _download_example_calibration_file() -> None:
     """
     from guiskindose import get_path_to_example_kerma_meter_file
 
-    from ..io_helpers import _get_save_path
+    from ..io_helpers import _get_save_path, _is_native_mode
     from .export import _write_or_download
 
     path = get_path_to_example_kerma_meter_file()
     save_path = await _get_save_path(path.name, "csv")
+    if save_path is None and _is_native_mode():
+        return  # user cancelled the native dialog
     _write_or_download(
         save_path, path.read_bytes(), path.name, "Example calibration file saved.", "example_calibration_write"
     )

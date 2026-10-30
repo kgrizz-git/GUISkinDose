@@ -22,6 +22,7 @@ That keeps SemVer and contributor history organized.
 ### Fixed
 
 - The wheel and sdist now include the equipment-profile templates, filled examples, and README under `example_data/equipment_profiles/`. Version 1.1.0 left them out of the package.
+- In native mode, cancelling the Save As dialog for the example calibration file on the Corrections tab no longer falls through to a browser download.
 
 ### Added
 
