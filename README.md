@@ -96,8 +96,8 @@ Install `guiskindose` with no extras for the library and CLI only.
 The GUI walks through **Upload** (RDSR DICOM or tabular CSV/TSV/XLSX) → **Data** review →
 **Settings** (phantom, per-exam offsets) → **Corrections** → **Geometry** preview →
 **Calculate** → **Results** (PSD, dose map) → **Export** (JSON, HTML dose maps, and
-XLSX/PDF/DOCX audit reports). PNG exports, and the images embedded in PDF and DOCX
-reports, need a Chromium-family browser such as Chrome or Edge. Bundled example RDSR files
+XLSX/PDF/DOCX audit reports). PNG exports, and the dose-map images embedded in the XLSX,
+PDF, HTML, and DOCX reports, need a Chromium-family browser such as Chrome or Edge. Bundled example RDSR files
 let you try it without data of your own.
 
 Feature highlights include multi-exam aggregation with per-exam offsets, DoseTrack and

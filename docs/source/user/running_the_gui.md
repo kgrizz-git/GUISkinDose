@@ -86,7 +86,8 @@ unless `configure_logging(log_file=...)` is wired at startup; the optional file 
 `guiskindose.debug` supports rotation and size caps.
 
 The app's default logging does not record file names or paths, because RDSR filenames
-often contain patient identifiers. It records only file type, size, and event counts. This
+often contain patient identifiers. It logs progress and warning messages. File type, size,
+and event counts appear only in the opt-in category-tagged output described below. This
 guarantee does not cover module-level `DEBUG` output, described below. Extra
 category-tagged `DEBUG` output is opt-in through a `debug.json` in the working directory:
 
@@ -100,10 +101,11 @@ pasting it into an issue.
 
 ## PNG export
 
-PNG dose maps, and the images embedded in PDF and DOCX reports, are rendered by Kaleido.
+PNG dose maps, and the dose-map images embedded in XLSX, PDF, HTML, and DOCX reports, are
+rendered by Kaleido.
 Kaleido needs a Chromium-family browser such as Chrome or Edge installed on the machine.
-Without one, PNG export reports an error and reports omit the images. HTML, JSON, CSV, and
-the XLSX, PDF, and DOCX reports still work.
+Without one, PNG export reports an error, and reports show "Image unavailable" in place of
+the images. HTML dose maps, JSON, CSV, and the report text and tables still work.
 
 ## Platform notes (Tkinter)
 
