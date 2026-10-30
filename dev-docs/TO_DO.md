@@ -56,7 +56,7 @@ be archived.
   - *Native window* — restore-from-maximize and multi-display OS smokes
     ([MAC_NATIVE_WINDOW_MAXIMIZE_PLAN.md](plans/archive/MAC_NATIVE_WINDOW_MAXIMIZE_PLAN.md),
     [NATIVE_WINDOW_GEOMETRY_PLAN.md](plans/archive/NATIVE_WINDOW_GEOMETRY_PLAN.md)).
-- [ ] **Portable desktop app (PyInstaller)** — Phase 0 Windows spike in progress (Light shape builds and passes CI smoke):
+- [ ] **Portable desktop app (PyInstaller)** — Phase 0 Windows spike in progress (a full-mesh, no-browser build passes CI smoke; Light and Full sizes are still open):
   [PORTABLE_APP_PLAN.md](plans/PORTABLE_APP_PLAN.md). Light is a small phantom set with no PNG export
   and no bundled browser. Full is the clinical library plus Chromium for offline Kaleido PNG
   (not Chrome for Testing). Phase 0 is a Windows freeze spike. Light checks for

@@ -1,6 +1,6 @@
 # Portable desktop app — GUISkinDose
 
-_Status: in progress. The Phase 0 Windows spike is on branch `spike/portable-phase0-windows`. A Light-shape build passes its CI smoke test. The Chromium pick and the Full shape are still open._
+_Status: in progress. The Phase 0 Windows spike is on branch `spike/portable-phase0-windows`. A full-mesh, no-browser build passes its CI smoke test. That build is neither Light nor Full, so both of their sizes are still open, as is the Chromium pick._
 _Created: 2026-10-17._
 _Parent hub: [RELEASES_AND_DISTRIBUTION.md](../RELEASES_AND_DISTRIBUTION.md)._
 _Feasibility note: [references/PORTABLE_EXECUTABLE_PACKAGING.md](../references/PORTABLE_EXECUTABLE_PACKAGING.md)._
@@ -196,26 +196,32 @@ The failures that matter for a no-admin PC are Windows-only. Do this spike on Wi
 - [x] Verify export with `git` absent. `safe_output` already catches `OSError`, uses `CREATE_NO_WINDOW`, and skips the checkout check when frozen (shipped 2026-10-18). Acceptance runs with `git` removed from `PATH` and still saves HTML.
 - [x] Build the log sink from the TO_DO design. Confirm a windowed launch does not crash when `sys.stdout` is `None`, and that the log file is created. Only the frozen entry uses it so far. It calls `debug.default_native_log_path()` and reuses the existing purge, rotation, and `0o600` handler. Setting `GUISKINDOSE_NO_FILE_LOG` turns the file off. A source-checkout `--native` run still has no file sink, and that item stays in TO_DO.
 - [ ] Pick the exact Chromium artifact to fetch. It is not Chrome for Testing, which includes `chrome-headless-shell`. Record its provider, size, license, and the notices it must ship with. Stop the Full-bundle path if redistribution is not allowed. The spike workflow does not fetch a browser yet. The candidates to compare are a pinned upstream Chromium snapshot from `commondatastorage.googleapis.com/chromium-browser-snapshots` and a third-party Chromium build such as ungoogled-chromium. For each, record the version, the sha256, the BSD-3 and third-party notices, and whether `--headless` works. The Full job should then add a step that copies the browser into the onedir and passes its path to `kaleido.start_sync_server(path=..., mathjax=False)`.
-- [ ] Record onedir size, zip size, and cold-start time twice: without that browser (Light shape) and with it (Full shape). The Light numbers are recorded below. The Full numbers wait for the Chromium pick.
+- [ ] Record onedir size, zip size, and cold-start time twice: without that browser (Light shape) and with it (Full shape). Neither is recorded yet. The spike below froze all 138 STLs with no browser, which is a third shape. Its numbers bound Light from above, since Light keeps only ~20 MB of meshes. Full waits for the Chromium pick.
 - [ ] Launch with the network disabled. Load a local RDSR, calculate, and export HTML, JSON, and CSV. The headless half is proven: HTML, JSON, and CSV exports ran with a Windows Firewall outbound block on the exe. PNG and an interactive GUI calculation are still open. With Chromium bundled and its path passed explicitly, export PNG with no system Chrome installed, and record which binary launched. Fail the check if Kaleido's generated page references any `http` script URL.
 - [x] Prove package data resolves inside the freeze by opening, from the frozen app, `phantom_data`, `table_data`, `gui/help`, `gui/static`, `gui/ui_copy.json`, `normalization_settings.json`, `settings_example.json`, and the kerma-meter example CSV. A list of `__file__` call sites is not the acceptance test. PyInstaller sets `__file__` for collected modules. Watch repo-root climbs such as the fun-mesh manifest path and the `ui_copy` repo-catalog fallback.
 - [x] Document the hidden imports and data files that actually worked.
 
-#### Phase 0 results so far (2026-10-30, `windows-latest`, Light shape)
+#### Phase 0 results so far (2026-10-30, `windows-latest`, full-mesh no-browser spike)
 
-Run [41098630145](https://github.com/kgrizz-git/GUISkinDose/actions/runs/41098630145) of `.github/workflows/portable-spike.yml` passed. It used Python 3.14.9 and PyInstaller 6.22.3, from the `portable` dependency group (`pyinstaller>=6.15`, `pywebview>=6.1`).
+This spike is not the Light shape and not the Full shape. It bundles all 138 STLs and no browser. `.github/workflows/portable-spike.yml` exists only for this spike. Phase 1 replaces it with the release build jobs or deletes it.
+
+Run [41124115603](https://github.com/kgrizz-git/GUISkinDose/actions/runs/41124115603) of `.github/workflows/portable-spike.yml` passed, with every check described below enforced. The earlier run [41098630145](https://github.com/kgrizz-git/GUISkinDose/actions/runs/41098630145) gave the same sizes and was 0.4–0.7 s faster on each timing. It used Python 3.14.9 and PyInstaller 6.22.3, from the `portable` dependency group (`pyinstaller>=6.15`, `pywebview>=6.1`).
 
 | Measure | Value |
 |---------|------:|
 | Onedir (full 138-STL phantom payload, no browser) | 312.6 MB, 1885 files |
 | Zip (`7z -mx=9`) | 145 MB |
-| Build time | 94 s |
-| Self-check wall time, first and second run | 3.3 s and 3.3 s |
-| Native launch to loopback port listening | 3.1 s |
+| Build time | 108 s |
+| Self-check wall time, first and second run | 3.8 s and 3.8 s |
+| Native launch to loopback port listening | 3.7 s |
 
 The largest `_internal` entries are `guiskindose` at 74.4 MB (mostly meshes), scipy at 47.8 MB, nicegui at 23.7 MB, `numpy.libs` at 20.0 MB, `scipy.libs` at 19.3 MB, plotly at 17.7 MB, PIL at 12.9 MB, and pandas at 12.4 MB. The ~20 MB Light mesh set would remove about 50 MB from the onedir.
 
-The self-check is `GUISkinDose.exe --self-check DIR`, implemented in `packaging/portable/selfcheck.py`. It ran from a freshly unzipped folder, with `git` off `PATH` and outbound traffic blocked for the exe. It reported `frozen=true` and `stdout_was_none=true`. It opened every data root through `importlib.resources`. It imported nicegui, `guiskindose.gui.app`, pywebview, plotly, kaleido, reportlab, docx, and openpyxl. It ran a plane `calculate_dose` on `siemens_axiom_example_procedure.dcm` and got a PSD of 8.9542 mGy, the same as an unfrozen run. It then wrote HTML, JSON, and CSV. The `ui_copy` and fun-mesh `parents[3]` climbs did not fail in the onedir layout.
+The self-check is `GUISkinDose.exe --self-check DIR`, implemented in `packaging/portable/selfcheck.py`. It ran from a freshly unzipped folder, with `git` off `PATH` and outbound traffic blocked for the exe. The workflow confirms the firewall rule with `Get-NetFirewallRule`, and the frozen exe's own `--network-probe` HTTPS request must fail before the self-check runs. It reported `frozen=true` and `stdout_was_none=true`. It opened every data root through `importlib.resources`. It imported nicegui, `guiskindose.gui.app`, pywebview, plotly, kaleido, reportlab, docx, and openpyxl. It ran a plane `calculate_dose` on `siemens_axiom_example_procedure.dcm` and got a PSD of 8.9542 mGy. The self-check asserts that value as a golden (`GOLDEN_PSD_MGY`, relative tolerance 1e-3). The workflow also runs the same self-check unfrozen on the runner first, and fails if the frozen PSD differs from it. It then wrote HTML, JSON, and CSV. It asserts that `guiskindose.__version__` is not `0.0.0+unknown` and that nicegui and plotly metadata resolve.
+
+Two lookups climb `parents[3]` toward a source checkout. The self-check probes both. The UI copy must be read from the packaged catalog. The fun-mesh manifest must be absent from the bundle, and mesh measurement (`get_mesh_baseline_torso_width("hudfrid")`) must still return a positive width without it.
+
+`example_data/equipment_profiles/` is left out on purpose. The wheel does not ship it either (`MANIFEST.in`), and no runtime code reads it.
 
 These spec settings in `packaging/portable/guiskindose.spec` worked:
 
@@ -233,7 +239,7 @@ Phase 0 still needs the Chromium artifact and its license, the Full-shape sizes,
 Run this alongside Phase 0. The maintainer now has an Apple Developer account, so the macOS signing risk can be tested early instead of waiting for Phase 5. Signing and notarization often break a frozen layout, and that is cheaper to learn now.
 
 - [ ] Create a **Developer ID Application** certificate and an App Store Connect API key for `notarytool`. Keep both out of the repository. CI later reads them from GitHub secrets.
-- [ ] Freeze a Light-shape `GUISkinDose.app` with PyInstaller on an arm64 runner, and record whether an x86_64 or universal2 build is practical. Use the Light file list (the edition module can wait for Phase 1) and the Phase 0 frozen entry, with the app icon converted to `.icns` and the ATS key in `Info.plist`.
+- [x] Freeze a Light-shape `GUISkinDose.app` with PyInstaller on an arm64 runner, and record whether an x86_64 or universal2 build is practical. Use the Light file list (the edition module can wait for Phase 1) and the Phase 0 frozen entry, with the app icon converted to `.icns` and the ATS key in `Info.plist`.
 - [ ] Sign every nested Mach-O file (dylibs, `.so` extensions, the Python framework) inside-out with the hardened runtime and a timestamp. Do not use `codesign --deep`. Record the entitlements that were actually needed, such as `allow-unsigned-executable-memory` or `disable-library-validation`, and keep the list minimal.
 - [ ] Notarize in this order: `ditto -c -k --keepParent GUISkinDose.app` → `xcrun notarytool submit --wait` → `xcrun stapler staple GUISkinDose.app` → re-zip the stapled app with `ditto` for download. `notarytool` takes a zip, not a bare `.app`, and a zip cannot be stapled. Record any rejected files from the notary log.
 - [ ] Verify with `codesign --verify --deep --strict`, `spctl -a -t exec -vv`, and `xcrun stapler validate`.
@@ -245,6 +251,19 @@ Run this alongside Phase 0. The maintainer now has an Apple Developer account, s
 - [ ] Compare Briefcase against the plan constraints: pywebview's native child process, package data resolving through `importlib.resources`, and the choreographer wrapper launch. On Windows, try `briefcase package windows -p zip` for real; MSI is only the default. Briefcase has no portable Linux zip (its outputs are system packages, Flatpak, or AppImage), so browser-mode Linux is recorded as a gap.
 
 **Acceptance:** a notarized, stapled Light `.app` opens with no Gatekeeper prompt on a clean Mac, then calculates and exports HTML offline. The Full app exports PNG offline from the bundled Chromium, or the progress log records why offline PNG is dropped on macOS. `codesign`, `spctl`, and `stapler validate` pass. The progress log records the entitlements (Light and Full), architectures, sizes, and a PyInstaller-versus-Briefcase recommendation. The Freeze design switches tools only through a decision-log entry.
+
+#### Phase 0b progress notes (2026-10-30, local arm64 Mac)
+
+Signing and notarization are not done. Their checkboxes stay open.
+
+- **PyInstaller build.** PyInstaller 6.22.3 built an arm64 `.app` with the Light mesh set. The `.app` is 218 MB and its `ditto` zip is 97 MB.
+- **Self-check.** The frozen self-check passed. A `hudfrid` run on the Siemens example gave a PSD of 14.076 mGy.
+- **Native window.** The window loaded the page from `127.0.0.1`, and a WebKit connection was observed. Cold start took 3.3 s the first time and about 1.6 s after that.
+- **stdout.** Under LaunchServices, stdout is `/dev/null`, not `None`. The `None` path is therefore proven only on Windows.
+- **Architectures.** A universal2 build is impractical. The uv-managed Python is arm64-only, and scipy ships separate wheels per architecture. An x86_64 build needs an Intel runner.
+- **Signing.** An ad-hoc, hardened-runtime signature was applied inside-out to 272 Mach-O files without `--deep`. It needed only `com.apple.security.cs.disable-library-validation`. That entitlement is likely needed only because an ad-hoc signature has no Team ID. Developer ID signing is untested, because it stopped at a keychain prompt for the private key.
+- **Briefcase.** Briefcase 0.4.7 is rejected for now. Its app was 455 MB with a 137 MB zip. It needed `min_os` 14.0, the `pywebview>=6.1` pin plus a locally built `proxy_tools` wheel, and a `multiprocessing.set_executable` fix. Even then, its window never connected to the server.
+- **Recommendation.** Use PyInstaller for macOS too. The Freeze design is unchanged, so no decision-log entry is needed.
 
 ### Phase 1 — Light and Full payloads
 
@@ -317,7 +336,7 @@ Light's missing-runtime message is Phase 1. This phase only adds the runtime to 
 - **2026-10-19** — Added Phase 0b, a macOS spike that signs and notarizes a Light build early and compares Briefcase with PyInstaller.
 - **2026-10-19** — Reviews (`opencode/deepseek-v4.1-flash-free`, `opencode-go/minimax-m3.1-flash-free`) folded in. The macOS notarize order uses `ditto` and staples before the final zip. Full macOS signs its Chromium. Kaleido gets the browser path explicitly, because `BROWSER_PATH` loses to a downloaded Chrome. The frozen entry is a dedicated script. `corrections.db` leaves the freeze. Upload examples ship. The git item is already shipped. The log sink follows the TO_DO design. Architectures, ATS, Windows cloud signing, the GitHub asset CDN redirect, zip extraction rules, and the phantom-resolution refactor are now explicit. Mesh sizes use byte sums.
 - **2026-10-19** — Review (`cursor/grok-4.7`, high) folded in after each claim was checked against the installed packages or vendor docs. choreographer runs Chromium through `sys.executable` on macOS and Linux, which breaks in a PyInstaller freeze. Kaleido loads MathJax from a CDN unless told not to, and writes figure pages to a temp directory. `chrome-headless-shell` is Chrome for Testing. pywebview's `_is_chromium()` trusts a set runtime path, so the pre-check reads the folder itself. Briefcase supports a Windows zip and Python 3.14. PyInstaller must be 6.15 or later. The Fixed Version cab is expanded with `expand -F:*`. Two claims were corrected rather than adopted: `freeze_support()` works on every OS, and a `None` stdout drops output silently instead of crashing.
-- **2026-10-30** — The Phase 0 Windows spike started. A Light-shape onedir (full meshes, no browser) froze with PyInstaller 6.22.3 on Python 3.14. It passed a frozen self-check with `git` absent and outbound network blocked. A native launch reached a listening server and started a window child process. The onedir is 312.6 MB and the zip is 145 MB. The Chromium pick, the Full sizes, and PNG remain open.
+- **2026-10-30** — The Phase 0 Windows spike started. A full-mesh, no-browser onedir froze with PyInstaller 6.22.3 on Python 3.14. It passed a frozen self-check with `git` absent and outbound network blocked. A native launch reached a listening server and started a window child process. The onedir is 312.6 MB and the zip is 145 MB. The Chromium pick, the Full sizes, and PNG remain open.
 
 ## Decision log
 
