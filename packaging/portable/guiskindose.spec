@@ -21,7 +21,8 @@ PKG = ROOT / "src" / "guiskindose"
 ICON = PKG / "gui" / "static" / "guiskindose_icon.ico"
 
 # (glob under src/guiskindose, destination folder inside the bundle)
-# Mirrors MANIFEST.in, including the equipment-profile templates users copy.
+# Mirrors MANIFEST.in. The equipment-profile templates users copy are added here now;
+# their MANIFEST.in lines land separately in PR #198.
 _PACKAGE_DATA = [
     ("phantom_data/*.stl", "phantom_data"),
     ("table_data/*.csv", "table_data"),
