@@ -388,7 +388,7 @@ python scripts/check_sensitive_content.py --require-approved-assets
 python scripts/render_asset_inventory.py --check
 semgrep --config=.semgrep/mypyskindose-privacy.yml --error --metrics=off src scripts tests
 python scripts/run_hounddog_advisory.py
-uv run --extra privacy-scan python scripts/run_presidio_advisory.py
+uv run --group privacy-scan python scripts/run_presidio_advisory.py
 python scripts/check_untracked_scratch.py
 python scripts/check_ignored_asset_files.py --strict
 python scripts/check_doc_freshness.py

@@ -32,7 +32,7 @@ The following are already in good shape:
 | Issues | Enabled with no-PHI issue forms; Bug Tracker URL matches. | Package metadata and support policy stay coherent. |
 | Main ruleset | Active ruleset requires PRs; blocks force-push and branch deletion. | Protects the integration branch. |
 | Private vulnerability reporting | Enabled; SECURITY.md points reporters there. | Avoids public disclosure of security issues. |
-| Release publishing | release.yml uses PyPI Trusted Publishing (OIDC); no `PYPI_DEPLOY_API_KEY` secret present. | Prefer short-lived credentials; register a PyPI trusted publisher before the first real publish. |
+| Release publishing | release.yml uses PyPI Trusted Publishing (OIDC); no `PYPI_DEPLOY_API_KEY` secret present. | Prefer short-lived credentials; the PyPI trusted publisher is registered (pending until the first upload). |
 
 ### Fork baseline (record syncs here)
 
@@ -62,14 +62,14 @@ ops notes below).
 | 2 | Protect main; use PRs | Done — active ruleset; keep using PRs for your own work. |
 | 3 | CONTRIBUTING / SECURITY / SUPPORT / CODE_OF_CONDUCT | Done (plus GOVERNANCE, CITATION.cff, PR template). |
 | 4 | Intended-use boundary | Done — README / SUPPORT / issue templates. |
-| 5 | PyPI Trusted Publishing | Mostly done — OIDC in release.yml; register publisher on PyPI before first publish; revoke any leftover PyPI token if one still exists on the PyPI account. |
+| 5 | PyPI Trusted Publishing | Done — OIDC in release.yml; publisher registered on PyPI; revoke any leftover PyPI token if one still exists on the PyPI account. |
 | 6 | Stale README / migration-status docs | Done — docs extra install path; migration status corrected. |
 
 ### Remaining maintainer ops (not blocking community files)
 
 - Confirm delete-branch-on-merge stays enabled in GitHub settings.
 - Optionally require named CI checks in the main ruleset if CodeQL/coverage alone are not enough.
-- Before first PyPI publish: register trusted publisher; delete any legacy PyPI API token.
+- PyPI: the trusted publisher is registered; delete any legacy PyPI API token.
 - Monthly: re-check upstream per §3 and §8.
 
 ### Do not over-correct

@@ -144,7 +144,7 @@ pip install -e ".[docs,notebooks]"   # Sphinx site + JupyterLab for the getting-
 
 Extras live in `pyproject.toml` (`gui`, `gui-native`, `dev`, `docs`, `notebooks`) — the single
 source of truth for dependencies; there are no `requirements*.txt` files. `uv.lock` pins exact
-versions (`uv sync --all-extras`). Installing and using **`uv`** is recommended for package
+versions (`uv sync --all-extras --group privacy-scan`; the group adds the local Presidio scanner the commit hook uses). Installing and using **`uv`** is recommended for package
 management and local development (it runs dependency audits and environment syncing much faster).
 
 ### Local Python version

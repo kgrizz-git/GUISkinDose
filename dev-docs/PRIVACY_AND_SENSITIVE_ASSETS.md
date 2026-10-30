@@ -254,7 +254,7 @@ does not authorise a binary asset or prove a DICOM is safe.
 require a Presidio cloud service or an API key. Set it up on a developer-controlled machine with:
 
 ```bash
-uv sync --extra privacy-scan
+uv sync --group privacy-scan
 uv run --no-sync python scripts/run_presidio_advisory.py
 ```
 

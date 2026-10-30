@@ -24,6 +24,13 @@ That keeps SemVer and contributor history organized.
 First GUISkinDose release prepared for PyPI publication. Version `1.0.0` was the in-repo rename point
 (formerly MyPySkinDose `25.2.0` / a fork of PySkinDose) and was never published.
 
+### Fixed
+
+- **PyPI upload** (2026-10-29) — PyPI rejected the first 1.1.0 upload attempt because the `privacy-scan` extra
+  declared the spaCy model as a direct URL dependency. `privacy-scan` is now a uv dependency group
+  (`uv sync --group privacy-scan`), so it no longer appears in package metadata. Installs from PyPI
+  are unaffected; the group was never meant for end users.
+
 ### Security
 
 - **tornado 6.6** (2026-10-29) — closes GHSA-pw9p-v7r6-gx4p, GHSA-r4j5-9xpp-3985, and

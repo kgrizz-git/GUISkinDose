@@ -24,7 +24,7 @@ are **local-only** manual tools that never run in public CI. All are value-safe 
 | Scanner | Layer | How to run |
 |---|---|---|
 | **phi-scan** | CSV/TSV secondary scan (tracked files) | Mirrors the [`phi-scan` workflow](../../.github/workflows/phi-scan.yml): `git archive HEAD \| tar -x -C <tmp>` then `uvx --from 'phi-scan==0.7.0' phi-scan scan . --config <repo>/.phi-scanner.yml --baseline --no-cache --quiet --workers 4`. New and expired high-severity findings fail; matched values and reports are not printed or uploaded. |
-| **Presidio** | NLP text (tracked bounded text) | `uv sync --extra privacy-scan` once, then `uv run --no-sync python scripts/run_presidio_advisory.py`. Automation hashes paths, suppresses values, and excludes noisy `PERSON`@0.85 results. For a targeted local name review add `--include-person --verbose-paths`; every result then requires manual triage. |
+| **Presidio** | NLP text (tracked bounded text) | `uv sync --group privacy-scan` once, then `uv run --no-sync python scripts/run_presidio_advisory.py`. Automation hashes paths, suppresses values, and excludes noisy `PERSON`@0.85 results. For a targeted local name review add `--include-person --verbose-paths`; every result then requires manual triage. |
 | **HoundDog** | Code dataflow (tracked source) | Install the standalone binary. `python scripts/privacy_admission.py run --mode staged` invokes the value-safe wrapper when sensitive source/sink terms changed. Required mode fails if the tool is unavailable; raw JSON remains private and ephemeral. |
 | **dicom-phi-scan** | DICOM header + pixel OCR (local data) | Install in an isolated environment. Conditional admission invokes `scripts/run_dicom_phi_advisory.py` against a private snapshot, forces CPU mode, summarizes only counts, and deletes its raw report. |
 | **Image OCR + Presidio** | Burned-in text in images and image-bearing files | Conditional admission invokes `scripts/run_image_privacy_advisory.py`; it uses local Tesseract, bounded extraction, and targeted high-threshold `PERSON` recognition. It prints only counts/tokens and never retains OCR text. |
@@ -111,7 +111,7 @@ For the initial local trial:
 
 ## Integration shape if evaluation succeeds
 
-Keep any new model outside the default dependencies and CI. A safe interface would be a new optional extra and a
+Keep any new model outside the default dependencies and CI. A safe interface would be a new dependency group (not a published extra) and a
 dedicated advisory command with an explicit `--engine gliner2` selection.
 
 - Scan only tracked, UTF-8-readable text within a bounded file size.

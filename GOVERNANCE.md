@@ -27,8 +27,8 @@ Releases are maintainer-triggered. See
 [dev-docs/RELEASES_AND_DISTRIBUTION.md](dev-docs/RELEASES_AND_DISTRIBUTION.md) (hub),
 [PUBLISHING.md](PUBLISHING.md) (PyPI), and
 [dev-docs/FORK_MAINTAINER_GUIDE.md](dev-docs/FORK_MAINTAINER_GUIDE.md). The
-project may or may not publish to PyPI depending on maintainer readiness; the
-release workflow stays inert until a GitHub Release is created.
+project publishes to PyPI from `1.1.0`. The release workflow runs only when a
+maintainer publishes a GitHub Release.
 
 Record calculation-, privacy-, security-, and release-affecting work in
 `CHANGELOG.md`. GitHub Release notes should stay **user-facing** (see the hub);

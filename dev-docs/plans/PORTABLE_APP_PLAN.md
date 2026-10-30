@@ -20,7 +20,7 @@ A later phase lets a Light install add the rest from a phantom pack: download wh
 
 ## What exists today
 
-The GUI already runs as `python -m guiskindose --mode gui`, with `--native` opening a pywebview window. Source checkouts also have double-click launchers with the app icon ([DESKTOP_LAUNCHERS_PLAN.md](DESKTOP_LAUNCHERS_PLAN.md)); they still need Python. There is no freeze pipeline, no installer, and no PyPI publish yet. Mesh lookup is confined to the package directory `src/guiskindose/phantom_data/` (`resolve_human_mesh_stl_path`). A frozen bundle is often read-only and signed, so extra phantoms cannot be dropped into that directory. They need a separate user library.
+The GUI already runs as `python -m guiskindose --mode gui`, with `--native` opening a pywebview window. Source checkouts also have double-click launchers with the app icon ([DESKTOP_LAUNCHERS_PLAN.md](DESKTOP_LAUNCHERS_PLAN.md)); they still need Python. There is no freeze pipeline and no installer yet; Python users install from PyPI (from `1.1.0`). Mesh lookup is confined to the package directory `src/guiskindose/phantom_data/` (`resolve_human_mesh_stl_path`). A frozen bundle is often read-only and signed, so extra phantoms cannot be dropped into that directory. They need a separate user library.
 
 ## Measured sizes (2026-10-17, this tree)
 

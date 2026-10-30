@@ -63,7 +63,7 @@ If you are experimenting locally, or the maintainer has invited a PR:
 
 ```bash
 # Recommended: uv
-uv sync --all-extras
+uv sync --all-extras --group privacy-scan
 
 # Or pip
 pip install -e ".[dev,gui]"
