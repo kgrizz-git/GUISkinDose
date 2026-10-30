@@ -74,6 +74,7 @@ Loopback binding is per machine, not per user. Anyone logged into the same machi
 has the launch URL or an active session sees the same state. On shared workstations, use
 one operator at a time or per-operator machines. Native mode enforces the same Host and
 Origin checks but has no launch token, because the embedded window is the trusted client.
+Another local user can therefore still reach its port.
 The in-app help page *Loopback scope and local access* covers this in more detail.
 
 ## Logging and privacy
@@ -84,15 +85,23 @@ unless `configure_logging(log_file=...)` is wired at startup; the optional file 
 `guiskindose.debug` supports rotation and size caps.
 
 The app does not log file names or paths, because RDSR filenames often contain patient
-identifiers. It logs only file type, size, and event counts. Verbose `DEBUG` output is
-opt-in per category through a `debug.json` in the working directory:
+identifiers. It logs only file type, size, and event counts. Extra category-tagged `DEBUG` output is
+opt-in through a `debug.json` in the working directory:
 
 ```json
 { "GUI": true, "PROCESSING": true, "CALCULATION": true, "RENDERING": true }
 ```
 
-Identifiers stay redacted with debug enabled. Still, review console output for PHI before
+Some module-level debug lines print without that file. The app's own error logging
+redacts identifiers, but debug output may not. Review console output for PHI before
 pasting it into an issue.
+
+## PNG export
+
+PNG dose maps, and the images embedded in PDF and DOCX reports, are rendered by Kaleido.
+Kaleido needs a Chromium-family browser such as Chrome or Edge installed on the machine.
+Without one, PNG export reports an error and reports omit the images. HTML, JSON, CSV, and
+the XLSX, PDF, and DOCX reports still work.
 
 ## Platform notes (Tkinter)
 

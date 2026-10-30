@@ -17,12 +17,12 @@
   <a href="https://github.com/kgrizz-git/GUISkinDose/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-0D9488" alt="MIT license"></a>
   <a href="https://nicegui.io"><img src="https://img.shields.io/badge/GUI-NiceGUI-4338CA" alt="NiceGUI"></a>
   <a href="https://github.com/astral-sh/ruff"><img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json" alt="Ruff"></a>
-  <a href="#intended-use-and-responsibility"><img src="https://img.shields.io/badge/use-research%20%2F%20QA%20only-831843" alt="Research and QA use only; not FDA-cleared"></a>
+  <a href="https://github.com/kgrizz-git/GUISkinDose/blob/main/README.md#intended-use-and-responsibility"><img src="https://img.shields.io/badge/use-research%20%2F%20QA%20only-831843" alt="Research and QA use only; not FDA-cleared"></a>
 </p>
 
 <p align="center">
-  <a href="#quick-start">Quick start</a> ·
-    <a href="#headless-use">Headless use</a> ·
+  <a href="https://github.com/kgrizz-git/GUISkinDose/blob/main/README.md#quick-start">Quick start</a> ·
+  <a href="https://github.com/kgrizz-git/GUISkinDose/blob/main/README.md#headless-use">Headless use</a> ·
   <a href="https://github.com/kgrizz-git/GUISkinDose/blob/main/docs/source/user/user_guide.md">User guide</a> ·
   <a href="https://github.com/kgrizz-git/GUISkinDose/blob/main/CHANGELOG.md">Changelog</a> ·
   <a href="https://github.com/kgrizz-git/GUISkinDose/discussions">Discussions</a>
@@ -76,20 +76,27 @@ pip install "guiskindose[gui]"
 guiskindose --mode gui
 ```
 
-Or install it as a standalone app with [uv](https://docs.astral.sh/uv/) or [pipx](https://pipx.pypa.io/):
+Or install the command in its own isolated environment with [uv](https://docs.astral.sh/uv/) or [pipx](https://pipx.pypa.io/):
 
 ```bash
 uv tool install "guiskindose[gui]"     # or: pipx install "guiskindose[gui]"
 guiskindose --mode gui
 ```
 
-The GUI opens in your browser. Use `guiskindose[gui-native]` and `--native` to open it in
-its own window instead. Install `guiskindose` with no extras for the library and CLI only.
+The GUI opens in your browser. To open it in its own window, install the native extra and
+add `--native`:
+
+```bash
+pip install "guiskindose[gui-native]"   # or: uv tool install "guiskindose[gui-native]"
+guiskindose --mode gui --native
+```
+
+Install `guiskindose` with no extras for the library and CLI only.
 
 The GUI walks through **Upload** (RDSR DICOM or tabular CSV/TSV/XLSX) → **Data** review →
 **Settings** (phantom, per-exam offsets) → **Corrections** → **Geometry** preview →
-**Calculate** → **Results** (PSD, dose map) → **Export** (JSON, HTML/PNG dose maps, and
-XLSX/PDF/DOCX audit reports). Bundled example RDSR files let you try it without data of
+**Calculate** → **Results** (PSD, dose map) → **Export** (JSON, HTML dose maps, and
+XLSX/PDF/DOCX audit reports; PNG images need a Chromium-family browser). Bundled example RDSR files let you try it without data of
 your own.
 
 Feature highlights include multi-exam aggregation with per-exam offsets, DoseTrack and
@@ -101,7 +108,8 @@ tube, rich audit reports, and a human phantom library with habitus scaling. See 
 ### Your data stays on your computer
 
 GUISkinDose runs entirely on your machine and does not upload study data. The GUI listens
-only on `127.0.0.1` and requires a per-launch link that the app opens for you. Logs leave
+only on `127.0.0.1`. In browser mode it also requires a per-launch link that the app opens
+for you. Logs leave
 out file names and paths, because those often contain patient identifiers. See
 [Running the GUI](https://github.com/kgrizz-git/GUISkinDose/blob/main/docs/source/user/running_the_gui.md) for launch options, local-access
 details, logging, and platform notes.
@@ -214,7 +222,8 @@ Common phantom models: `plane`, `cylinder`, `human`.
 
 The user documentation lives under [docs/source](https://github.com/kgrizz-git/GUISkinDose/blob/main/docs/source), including the
 getting-started notebook. To build it locally, run `pip install -e ".[docs]"` and then
-`python -m sphinx -b html docs/source docs/build/html`.
+`python -m sphinx -b html docs/source docs/build/html`, then open
+`docs/build/html/index.html`.
 
 ## Notes for this fork
 
