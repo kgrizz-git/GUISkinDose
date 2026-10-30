@@ -14,18 +14,17 @@
   <a href="https://sonarcloud.io/summary/new_code?id=kgrizz-git_GUISkinDose"><img src="https://sonarcloud.io/api/project_badges/measure?project=kgrizz-git_GUISkinDose&amp;metric=alert_status" alt="SonarCloud quality gate"></a>
   <br>
   <img src="https://img.shields.io/python/required-version-toml?tomlFilePath=https%3A%2F%2Fraw.githubusercontent.com%2Fkgrizz-git%2FGUISkinDose%2Fmain%2Fpyproject.toml&amp;logo=python&amp;logoColor=white&amp;color=3776AB" alt="Supported Python versions (from pyproject.toml)">
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-0D9488" alt="MIT license"></a>
+  <a href="https://github.com/kgrizz-git/GUISkinDose/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-0D9488" alt="MIT license"></a>
   <a href="https://nicegui.io"><img src="https://img.shields.io/badge/GUI-NiceGUI-4338CA" alt="NiceGUI"></a>
   <a href="https://github.com/astral-sh/ruff"><img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json" alt="Ruff"></a>
   <a href="#intended-use-and-responsibility"><img src="https://img.shields.io/badge/use-research%20%2F%20QA%20only-831843" alt="Research and QA use only; not FDA-cleared"></a>
 </p>
 
 <p align="center">
-  <a href="#quick-launch-gui">Quick launch</a> ·
-  <a href="#installation">Installation</a> ·
-  <a href="#headless-use">Headless use</a> ·
-  <a href="docs/source/user/user_guide.md">User guide</a> ·
-  <a href="CHANGELOG.md">Changelog</a> ·
+  <a href="#quick-start">Quick start</a> ·
+    <a href="#headless-use">Headless use</a> ·
+  <a href="https://github.com/kgrizz-git/GUISkinDose/blob/main/docs/source/user/user_guide.md">User guide</a> ·
+  <a href="https://github.com/kgrizz-git/GUISkinDose/blob/main/CHANGELOG.md">Changelog</a> ·
   <a href="https://github.com/kgrizz-git/GUISkinDose/discussions">Discussions</a>
 </p>
 
@@ -68,153 +67,44 @@ Never commit or attach real patient data to issues, pull requests, or the
 repository — see [CONTRIBUTING.md](https://github.com/kgrizz-git/GUISkinDose/blob/main/CONTRIBUTING.md) and
 [dev-docs/PRIVACY_AND_SENSITIVE_ASSETS.md](https://github.com/kgrizz-git/GUISkinDose/blob/main/dev-docs/PRIVACY_AND_SENSITIVE_ASSETS.md).
 
-## Quick launch (GUI)
+## Quick start
 
-The typical way to use GUISkinDose is the NiceGUI-based graphical interface:
-**Upload** (RDSR DICOM or tabular CSV/TSV/XLSX) → **Data** review →
-**Settings** (phantom, per-exam offsets) → **Corrections** (patient-support
-transmission, kerma-meter factors) → **Geometry** preview →
-**Calculate** → **Results** (PSD, dose map) → **Export** (JSON, dose-map
-HTML/PNG, rich XLSX/PDF/DOCX report).
-
-After installing `guiskindose[gui]` (see [Installation](#installation)), start the GUI:
+Install from PyPI and launch the GUI:
 
 ```bash
-guiskindose --mode gui            # opens in your browser
-guiskindose --mode gui --native   # own window; needs guiskindose[gui-native]
+pip install "guiskindose[gui]"
+guiskindose --mode gui
 ```
 
-From a source checkout, the launcher scripts below also set up the environment.
-
-**macOS / Linux:**
+Or install it as a standalone app with [uv](https://docs.astral.sh/uv/) or [pipx](https://pipx.pypa.io/):
 
 ```bash
-chmod +x run_gui.sh   # one-time setup, enables executing the sh script
-./run_gui.sh
+uv tool install "guiskindose[gui]"     # or: pipx install "guiskindose[gui]"
+guiskindose --mode gui
 ```
 
-**Windows:**
+The GUI opens in your browser. Use `guiskindose[gui-native]` and `--native` to open it in
+its own window instead. Install `guiskindose` with no extras for the library and CLI only.
 
-```bat
-run_gui.bat
-```
+The GUI walks through **Upload** (RDSR DICOM or tabular CSV/TSV/XLSX) → **Data** review →
+**Settings** (phantom, per-exam offsets) → **Corrections** → **Geometry** preview →
+**Calculate** → **Results** (PSD, dose map) → **Export** (JSON, HTML/PNG dose maps, and
+XLSX/PDF/DOCX audit reports). Bundled example RDSR files let you try it without data of
+your own.
 
-Both scripts prompt you to run in browser mode (option 1) or native
-window mode (option 2, default).
+Feature highlights include multi-exam aggregation with per-exam offsets, DoseTrack and
+Radimetrics imports with schema auto-detection, kerma-meter correction by equipment and
+tube, rich audit reports, and a human phantom library with habitus scaling. See the
+[User guide](https://github.com/kgrizz-git/GUISkinDose/blob/main/docs/source/user/user_guide.md) and the
+[feature inventory](https://github.com/kgrizz-git/GUISkinDose/blob/main/dev-docs/FEATURE_INVENTORY.md).
 
-**Double-click launchers.** After the first run, each OS has a file you can
-double-click, with the GUISkinDose icon:
+### Your data stays on your computer
 
-| OS | Double-click | Created by |
-|----|--------------|------------|
-| macOS | `GUISkinDose.command` (opens Terminal) | Tracked; its icon is set on first run |
-| Windows | `GUISkinDose.lnk` | The first `run_gui.bat` run |
-| Linux | `GUISkinDose.desktop` (GNOME: allow launching if asked) | The first `./run_gui.sh` run |
-
-The shortcuts stay inside the checkout and are git-ignored (on Linux, GNOME records
-the "allow launching" trust flag in its own metadata store under your home folder). Set
-`GUISKINDOSE_NO_LAUNCHER_SETUP=1` to skip creating them. On macOS, a checkout
-downloaded as a ZIP is quarantined: allow it under System Settings → Privacy &
-Security → Open Anyway. A `git clone` is not quarantined.
-
-Or launch directly:
-
-```bash
-python -m guiskindose --mode gui              # browser mode
-python -m guiskindose --mode gui --native     # native window (requires pywebview)
-
-# or the equivalent installed console command:
-guiskindose --mode gui [--native]
-```
-
-Example RDSR files ship under `src/guiskindose/example_data/RDSR/`. In-app
-help on each tab mirrors `docs/source/gui_help/` (mirrored into the package
-by `scripts/sync_gui_help.py`, enforced by pre-commit + CI).
-
-Feature highlights: multi-exam aggregation with per-exam offsets, tabular
-DoseTrack/Radimetrics imports with schema auto-detection, kerma-meter
-correction keyed by equipment × tube, rich audit reports, and a human phantom
-library with habitus scaling. Details in
-[dev-docs/FEATURE_INVENTORY.md](https://github.com/kgrizz-git/GUISkinDose/blob/main/dev-docs/FEATURE_INVENTORY.md) and the
-[User guide](https://github.com/kgrizz-git/GUISkinDose/blob/main/docs/source/user/user_guide.md).
-
-### Privacy / network
-
-The GUI has **no user accounts** and loads PHI-derived RDSR data into a single
-shared, process-global state. It always binds to `127.0.0.1` (localhost only)
-and refuses any non-loopback host. There is no LAN/remote mode: do not try to
-expose it with a proxy; move the computation to the machine where the data may
-reside instead.
-
-Loopback binding is not an authentication boundary, so browser mode adds
-three controls (see `src/guiskindose/gui/loopback_security.py`):
-
-- A **per-launch token**: the console prints a launch URL with a random secret (valid until the
-  server restarts — deliberately reusable, so a second browser profile or a
-  cleared cookie doesn't lock you out), and the browser opens it automatically.
-  Only that URL bootstraps a session (session cookie); every other request —
-  HTTP and websocket alike — needs the cookie. Stale tabs and old URLs stop working after each restart — relaunch
-  and use the new console URL.
-- **Strict Host validation**: only the loopback authority is accepted, so DNS
-  rebinding (`evil.com` resolving to `127.0.0.1`) is rejected.
-- **Origin validation**: a present-but-foreign `Origin` on websockets and
-  HTTP is a cross-site page (browsers always send `Origin`). Sockets need
-  the session whenever tokens are on — an allowlisted origin alone proves
-  nothing against local processes, which can forge it.
-
-Anyone logged into the same machine who obtains the launch URL (or an active
-session) sees the same shared state — OS accounts alone do not protect it, so
-shared workstations need their own access story (e.g. one operator at a time,
-or per-operator machines). **Native** mode enforces the same Host/Origin
-checks but no launch token (the embedded window is the trusted client), so
-another local user can still reach its port.
-
-### Logging & privacy
-
-The CLI and GUI log to the console (stderr) by default. **Native** mode has no
-visible terminal, so diagnostic output is still emitted to stderr but may not be
-easy to read unless you launch from a shell. No log file is written unless
-`configure_logging(log_file=...)` is wired at startup (the optional file sink in
-`guiskindose.debug` supports rotation and size caps when enabled).
-
-To protect PHI, the app **does not log file names or paths** (RDSR filenames
-often contain patient name/MRN/accession) — only file type, size, and event
-counts. Verbose `DEBUG` output is opt-in per category via a `debug.json` in the
-working directory, e.g.:
-
-```json
-{ "GUI": true, "PROCESSING": true, "CALCULATION": true, "RENDERING": true }
-```
-
-Even with debug enabled, identifiers are still redacted. Do not paste console
-output into issues or commits without reviewing it for PHI first.
-
-### Platform notes (Tkinter)
-
-The GUI works fully without Tkinter, but uses it for two niceties: the native
-**Save As** file dialog when exporting, and detecting your screen size to size
-the native window. If Tkinter is missing you'll see a log line like
-`No module named '_tkinter'`, exports fall back to a browser-style download, and
-the window opens at a default size — nothing crashes.
-
-Tkinter ships with Python but is only built when the Tcl/Tk libraries are present
-at build time, so it can be absent (commonly with `pyenv` builds). It is **not** a
-pip package — do not add it to the project dependencies. To install it:
-
-| Platform | Command |
-|---|---|
-| macOS, Homebrew Python | `brew install python-tk` (or `python-tk@3.12` for a specific version) |
-| macOS, pyenv Python | `brew install tcl-tk`, then reinstall the interpreter: `pyenv install 3.12.9` |
-| Debian / Ubuntu | `sudo apt install python3-tk` |
-| Fedora | `sudo dnf install python3-tkinter` |
-| Windows | Included with the python.org installer — keep "tcl/tk and IDLE" checked |
-
-Verify with: `python -c "import tkinter; print(tkinter.TkVersion)"`.
-
-Native window mode remembers the last window size, position, and maximized state in
-`~/.guiskindose/gui.json` (first launch opens maximized; Restore returns to the saved
-normal size). Existing `~/.mypyskindose/gui.json` is still read when the new file is
-absent.
+GUISkinDose runs entirely on your machine and does not upload study data. The GUI listens
+only on `127.0.0.1` and requires a per-launch link that the app opens for you. Logs leave
+out file names and paths, because those often contain patient identifiers. See
+[Running the GUI](https://github.com/kgrizz-git/GUISkinDose/blob/main/docs/source/user/running_the_gui.md) for launch options, local-access
+details, logging, and platform notes.
 
 ## What this code is for
 
@@ -226,50 +116,19 @@ Within the intended-use boundary above, GUISkinDose is meant to be used in a few
 4. Export the calculation result as HTML, JSON, XLSX, PDF, or DOCX rich audit report, or as a Python dictionary for downstream processing.
 5. Run the analysis headlessly from your own Python scripts.
 
-## Installation
-
-Install GUISkinDose from PyPI:
-
-```bash
-pip install "guiskindose[gui]"          # library, CLI, and browser GUI
-pip install "guiskindose[gui-native]"   # adds the native window (pywebview)
-pip install guiskindose                 # library and CLI only; no GUI
-```
-
-With `[gui]`, run `guiskindose --mode gui` to open the GUI in your browser.
-With `[gui-native]`, run `guiskindose --mode gui --native` to open it in its own window.
+## Working from source
 
 To work on the code, clone the repository and install it in editable mode:
 
 ```bash
 git clone https://github.com/kgrizz-git/GUISkinDose.git
 cd GUISkinDose
-pip install -e .
+uv sync --extra gui        # or: pip install -e ".[gui]"
 ```
 
-With [uv](https://docs.astral.sh/uv/), `uv sync --extra gui` creates the
-environment from the pinned `uv.lock` instead.
-
-To include the GUI dependencies:
-
-```bash
-pip install -e ".[gui]"          # browser mode
-pip install -e ".[gui-native]"   # native window mode (includes pywebview)
-```
-
-For full development setup (linting, testing, docs, Jupyter), install the
-optional extras you need:
-
-```bash
-pip install -e ".[dev,gui]"             # lint/type/test toolchain + GUI
-pip install -e ".[dev,gui,docs,notebooks]"   # everything (docs + JupyterLab)
-```
-
-If you only need the documentation tooling as well:
-
-```bash
-pip install -e ".[docs]"
-```
+`run_gui.sh` (macOS/Linux) and `run_gui.bat` (Windows) launch the GUI from a checkout and
+set up the environment. Install `.[dev,gui]` for the lint, type, and test toolchain. See
+[CONTRIBUTING.md](https://github.com/kgrizz-git/GUISkinDose/blob/main/CONTRIBUTING.md) for the full development setup.
 
 ## Requirements
 
@@ -353,19 +212,9 @@ Common phantom models: `plane`, `cylinder`, `human`.
 
 ## Documentation
 
-Documentation sources live under [docs/source](https://github.com/kgrizz-git/GUISkinDose/blob/main/docs/source), including the getting-started notebook and user guide material.
-
-To build the HTML documentation locally from this repository (use the `docs`
-optional extra — there are no `requirements*.txt` files):
-
-```bash
-pip install -e ".[docs]"
-python -m sphinx -b html docs/source docs/build/html
-```
-
-Then open the built site locally (path exists only after the Sphinx step above):
-
-- `docs/build/html/index.html`
+The user documentation lives under [docs/source](https://github.com/kgrizz-git/GUISkinDose/blob/main/docs/source), including the
+getting-started notebook. To build it locally, run `pip install -e ".[docs]"` and then
+`python -m sphinx -b html docs/source docs/build/html`.
 
 ## Notes for this fork
 
