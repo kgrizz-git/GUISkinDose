@@ -36,15 +36,18 @@ Both scripts prompt you to run in browser mode (option 1) or native window mode
 
 ### Double-click launchers
 
-After the first run, each OS has a file you can double-click, with the GUISkinDose icon:
+After the first run, each OS usually has a file you can double-click, with the GUISkinDose icon.
+Setup is best effort; if it cannot finish, the launcher script still works.
 
 | OS | Double-click | Created by |
 |----|--------------|------------|
 | macOS | `GUISkinDose.command` (opens Terminal) | Tracked; its icon is set on first run |
 | Windows | `GUISkinDose.lnk` | The first `run_gui.bat` run |
-| Linux | `GUISkinDose.desktop` (GNOME: allow launching if asked) | The first `./run_gui.sh` run |
+| Linux | `GUISkinDose.desktop` (GNOME: allow launching if asked) | The first `./run_gui.sh` run, if setup succeeds |
 
-The shortcuts stay inside the checkout and are git-ignored. On Linux, GNOME records the
+The shortcuts stay inside the checkout and are git-ignored. On Linux, setup is skipped under
+WSL, when the checkout path contains characters a desktop file cannot hold, and when
+`GUISkinDose.desktop` is a symlink. On Linux, GNOME records the
 "allow launching" trust flag in its own metadata store under your home folder. Set
 `GUISKINDOSE_NO_LAUNCHER_SETUP=1` to skip creating them. On macOS, a checkout downloaded
 as a ZIP is quarantined: allow it under System Settings → Privacy & Security → Open
@@ -109,10 +112,12 @@ the images. HTML dose maps, JSON, CSV, and the report text and tables still work
 
 ## Platform notes (Tkinter)
 
-The GUI works fully without Tkinter. It uses Tkinter for the native **Save As** dialog
-when exporting and to size the native window to your screen. Without it, you see a log
-line such as `No module named '_tkinter'`. Exports then fall back to a browser download,
-and the window opens at a default size.
+Tkinter is optional. Native mode asks pywebview for your screen size, and uses Tkinter only if
+pywebview cannot report it. If neither works, the window opens at a default size. The failure
+is logged at `DEBUG` level only.
+
+The native **Save As** dialog comes from pywebview, not Tkinter. In native mode, cancelling
+that dialog skips the export. Browser-mode exports always go through a normal browser download.
 
 Tkinter ships with Python but is built only when the Tcl/Tk libraries are present, so it
 can be missing (commonly with `pyenv` builds). It is not a pip package. To install it:
