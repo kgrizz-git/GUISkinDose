@@ -19,14 +19,14 @@ That keeps SemVer and contributor history organized.
 
 ## [Unreleased]
 
+### Added
+
+- A new `equipment_profile_loadable_example` (JSON and CSV) is an exact-model, coordinate-only profile that passes today's capability gate, so users have a filled example they can copy and load. A test keeps it loadable. The existing filled examples preview the full schema and are still rejected by the gate.
+
 ### Fixed
 
 - The wheel and sdist now include the equipment-profile templates, filled examples, and README under `example_data/equipment_profiles/`. Version 1.1.0 left them out of the package.
 - In native mode, cancelling the Save As dialog for the example calibration file on the Corrections tab no longer falls through to a browser download.
-
-### Added
-
-- A new `equipment_profile_loadable_example` (JSON and CSV) is an exact-model, coordinate-only profile that passes today's capability gate, so users have a filled example they can copy and load. A test keeps it loadable. The existing filled examples preview the full schema and are still rejected by the gate.
 
 ## [1.1.0] - 2026-10-29
 

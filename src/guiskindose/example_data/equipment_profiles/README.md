@@ -163,7 +163,7 @@ initial coordinate-only capability gate (see below). Available entry points:
   [dev-docs/plans/CUSTOM_EQUIPMENT_PROFILES_EXECUTION.md](../../../../dev-docs/plans/CUSTOM_EQUIPMENT_PROFILES_EXECUTION.md)
   for status.
 
-The three filled examples above are each rejected **wholesale** under the initial
+The three profiles in `equipment_profile_example` are each rejected **wholesale** under the initial
 coordinate-only gate — no subset is applied from a rejected file. Transmission rows,
 model wildcards without promotion acknowledgement, and manufacturer aliases are
 all beyond the current activation; write exact, coordinate-only, alias-free files
