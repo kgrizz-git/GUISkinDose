@@ -19,7 +19,7 @@
       "name": "Microsoft Presidio Analyzer",
       "status": "active",
       "version": "2.2.363",
-      "version_source": "uv.lock privacy-scan extra",
+      "version_source": "uv.lock privacy-scan dependency group",
       "execution": "local and GitHub Actions",
       "role": "Structured identifier and targeted OCR-text analysis",
       "output_policy": "Matched values suppressed; no report upload",
