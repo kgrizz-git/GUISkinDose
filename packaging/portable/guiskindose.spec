@@ -19,6 +19,9 @@ PKG = ROOT / "src" / "guiskindose"
 ICON = PKG / "gui" / "static" / "guiskindose_icon.ico"
 
 # (glob under src/guiskindose, destination folder inside the bundle)
+# Mirrors MANIFEST.in. example_data/equipment_profiles/ is left out on purpose: the
+# wheel does not ship it either, and no runtime code reads it (it is an authoring
+# template for the repository docs).
 _PACKAGE_DATA = [
     ("phantom_data/*.stl", "phantom_data"),
     ("table_data/*.csv", "table_data"),
@@ -42,11 +45,14 @@ datas = [(str(PKG / pattern), str(Path("guiskindose") / dest)) for pattern, dest
 datas += collect_data_files("nicegui")
 datas += collect_data_files("plotly")
 datas += collect_data_files("kaleido")
+# guiskindose's metadata backs __version__; the self-check fails if it is missing.
 for dist in ("guiskindose", "nicegui", "plotly", "kaleido", "pydicom", "pywebview"):
     try:
         datas += copy_metadata(dist)
-    except Exception:  # noqa: BLE001 - optional metadata, recorded by the self-check instead
-        pass
+    except Exception as exc:
+        print(f"WARNING: copy_metadata({dist!r}) failed: {type(exc).__name__}")
+        if dist == "guiskindose":
+            raise
 
 # Lazy and dynamic imports inside the package (writers, tabs, adapters). The
 # table_data build scripts are maintainer tools with import-time side effects.

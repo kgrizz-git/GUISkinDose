@@ -16,6 +16,8 @@ Order matters (see ``dev-docs/plans/PORTABLE_APP_PLAN.md`` -> Freeze):
 3. Only under ``__main__`` does it configure the file log and call ``run_gui``.
    ``--self-check <dir>`` instead runs the headless packaged-data and
    calculate/export check in ``selfcheck.py`` (used by CI; no network, no git).
+   ``--network-probe <dir>`` makes one outbound HTTPS request so the spike
+   workflow can prove its firewall rule blocks the exe.
 """
 
 from __future__ import annotations
@@ -49,6 +51,13 @@ class _LogStream(io.TextIOBase):
         self._logger = logging.getLogger(logger_name)
         self._level = level
         self._local = threading.local()
+
+    # Libraries read these to decide what they may write.
+    encoding = "utf-8"
+    errors = "replace"
+
+    def reconfigure(self, **_kwargs: object) -> None:
+        """Accept ``sys.stdout.reconfigure(...)`` calls and ignore them."""
 
     def writable(self) -> bool:
         return True
@@ -115,6 +124,10 @@ def main(argv: list[str]) -> int:
         from selfcheck import run_self_check
 
         return run_self_check(argv[1], process_start=_PROCESS_START)
+    if len(argv) >= 2 and argv[0] == "--network-probe":
+        from selfcheck import run_network_probe
+
+        return run_network_probe(argv[1])
 
     from guiskindose.gui.app import run_gui
     from guiskindose.privacy import install_value_safe_excepthook

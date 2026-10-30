@@ -20,6 +20,7 @@ import io
 import json
 import logging
 import math
+import os
 import shutil
 import sys
 import time
@@ -29,6 +30,10 @@ from pathlib import Path
 from typing import Any
 
 _EXAMPLE_RDSR = "siemens_axiom_example_procedure.dcm"
+# Plane-phantom PSD for _EXAMPLE_RDSR with settings_example.json, from unfrozen runs on
+# macOS and Windows (2026-10-30). A freeze that drops or swaps a correction table moves it.
+GOLDEN_PSD_MGY = 8.9542
+_GOLDEN_REL_TOL = 1e-3
 _logger = logging.getLogger("guiskindose.portable.selfcheck")
 
 
@@ -53,7 +58,7 @@ def _check_package_data() -> dict[str, Any]:
     from guiskindose.phantom_mesh_names import resolve_human_mesh_stl_path
 
     kerma_csv = _pkg("example_data", "kerma_meter", "calibration_factors_example.csv")
-    return {
+    found = {
         "phantom_data_stl": _count(("phantom_data",), ".stl"),
         "hudfrid_stl_bytes": resolve_human_mesh_stl_path("hudfrid").stat().st_size,
         "table_data_csv": _count(("table_data",), ".csv"),
@@ -69,6 +74,46 @@ def _check_package_data() -> dict[str, Any]:
         "example_rdsr_dcm": _count(("example_data", "RDSR"), ".dcm"),
         "example_tabular_csv": _count(("example_data", "tabular"), ".csv"),
     }
+    empty = [name for name, value in found.items() if not value]
+    if empty:
+        raise FileNotFoundError(f"package_data_missing:{','.join(empty)}")
+    return found
+
+
+def _check_metadata() -> dict[str, Any]:
+    """Distribution metadata the app reads at runtime (``__version__``, library versions)."""
+    from importlib.metadata import version
+
+    import guiskindose
+
+    found: dict[str, Any] = {"guiskindose_version": guiskindose.__version__}
+    for dist in ("nicegui", "plotly"):
+        found[f"{dist}_version"] = version(dist)
+    if guiskindose.__version__ == "0.0.0+unknown":
+        raise LookupError("guiskindose_metadata_missing")
+    return found
+
+
+def _check_repo_root_climbs() -> dict[str, Any]:
+    """Exercise the two ``parents[3]`` lookups that assume a source checkout.
+
+    In a bundle they point outside the app, so the code must fall back cleanly: the
+    UI copy comes from the packaged catalog, and mesh measurement works without the
+    fun-mesh manifest.
+    """
+    from guiskindose.gui import helpers, ui_copy
+
+    width = helpers.get_mesh_baseline_torso_width("hudfrid")
+    found = {
+        "ui_copy_read_from_package": ui_copy._read_catalog_text()
+        == ui_copy._PACKAGED_CATALOG_TRAVERSABLE.read_text(encoding="utf-8"),
+        "fun_mesh_manifest_present": helpers._FUN_MESH_MANIFEST_PATH.is_file(),
+        "fun_manifest_override": helpers._fun_manifest_torso_override("hudfrid") != (None, None),
+        "hudfrid_torso_width_cm": round(width, 2),
+    }
+    if not found["ui_copy_read_from_package"] or width <= 0:
+        raise ValueError("repo_root_fallback_failed")
+    return found
 
 
 def _check_imports() -> dict[str, Any]:
@@ -123,10 +168,11 @@ def _calculate_and_export(out_dir: Path) -> dict[str, Any]:
     )
 
     psd = float(result["psd"])
-    if not math.isfinite(psd) or psd <= 0:
-        raise ValueError("psd_not_positive")
+    if not math.isclose(psd, GOLDEN_PSD_MGY, rel_tol=_GOLDEN_REL_TOL):
+        raise ValueError("psd_differs_from_golden")
     return {
         "psd_mGy": round(psd, 4),
+        "golden_psd_mGy": GOLDEN_PSD_MGY,
         "dose_map_cells": len(result["dose_map"]),
         "calc_and_export_seconds": round(time.perf_counter() - started, 2),
         "html_bytes": (out_dir / "selfcheck.html").stat().st_size,
@@ -138,8 +184,12 @@ def _calculate_and_export(out_dir: Path) -> dict[str, Any]:
 def _log_sink_state() -> dict[str, Any]:
     from guiskindose.debug import default_native_log_path
 
+    if os.environ.get("GUISKINDOSE_NO_FILE_LOG"):
+        return {"log_file_created": False, "opted_out": True}
     path = default_native_log_path()
-    return {"log_file_created": bool(path is not None and path.is_file())}
+    if path is None or not path.is_file():
+        raise FileNotFoundError("diagnostic_log_missing")
+    return {"log_file_created": True}
 
 
 def _run_step(report: dict[str, Any], name: str, step: Callable[[], dict[str, Any]]) -> bool:
@@ -166,10 +216,38 @@ def run_self_check(output_dir: str, *, process_start: float) -> int:
         "stdout_was_none": type(sys.stdout).__name__ == "_LogStream",
     }
     ok = _run_step(report, "package_data", _check_package_data)
+    ok = _run_step(report, "metadata", _check_metadata) and ok
     ok = _run_step(report, "imports", _check_imports) and ok
+    ok = _run_step(report, "repo_root_climbs", _check_repo_root_climbs) and ok
     ok = _run_step(report, "calculate_export", lambda: _calculate_and_export(out_dir)) and ok
     ok = _run_step(report, "log_sink", _log_sink_state) and ok
     report["passed"] = ok
     report["total_seconds"] = round(time.perf_counter() - process_start, 2)
     (out_dir / "selfcheck_report.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
     return 0 if ok else 1
+
+
+# A fixed public HTTPS endpoint. The request carries no data; CI expects it to fail.
+_PROBE_URL = "https://pypi.org/simple/"
+
+
+def run_network_probe(output_dir: str) -> int:
+    """Try one outbound HTTPS request and record whether it was blocked.
+
+    Used by the spike workflow to prove its firewall rule applies to the frozen exe.
+    Writes ``network_probe.json`` holding a boolean and an exception class name only.
+    """
+    import urllib.request
+
+    from guiskindose.privacy import exception_class_name
+
+    out_dir = Path(output_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    result: dict[str, Any] = {"outbound_blocked": False, "error_type": None}
+    try:
+        with urllib.request.urlopen(_PROBE_URL, timeout=15):  # nosec B310 - fixed https URL
+            pass
+    except OSError as exc:
+        result = {"outbound_blocked": True, "error_type": exception_class_name(exc)}
+    (out_dir / "network_probe.json").write_text(json.dumps(result), encoding="utf-8")
+    return 0

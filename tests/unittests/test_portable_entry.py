@@ -72,6 +72,46 @@ def test_default_native_log_path_returns_none_when_folder_unusable(monkeypatch, 
     assert dbg.default_native_log_path() is None
 
 
+def _expected_folder(tmp_path: Path) -> Path:
+    getuid = getattr(os, "getuid", None)
+    return tmp_path / (f"guiskindose-{getuid()}" if getuid is not None else "guiskindose")
+
+
+def test_default_native_log_path_refuses_symlinked_folder(monkeypatch, tmp_path):
+    target = tmp_path / "elsewhere"
+    target.mkdir()
+    try:
+        _expected_folder(tmp_path).symlink_to(target, target_is_directory=True)
+    except OSError:
+        pytest.skip("symlinks unavailable for this user")
+    monkeypatch.setattr(dbg.tempfile, "gettempdir", lambda: str(tmp_path))
+    assert dbg.default_native_log_path() is None
+
+
+def test_default_native_log_path_refuses_file_in_folder_place(monkeypatch, tmp_path):
+    _expected_folder(tmp_path).write_text("not a folder", encoding="utf-8")
+    monkeypatch.setattr(dbg.tempfile, "gettempdir", lambda: str(tmp_path))
+    assert dbg.default_native_log_path() is None
+
+
+@pytest.mark.skipif(os.name != "posix", reason="POSIX permission bits")
+def test_default_native_log_path_tightens_existing_folder(monkeypatch, tmp_path):
+    folder = _expected_folder(tmp_path)
+    folder.mkdir(mode=0o755)
+    folder.chmod(0o755)
+    monkeypatch.setattr(dbg.tempfile, "gettempdir", lambda: str(tmp_path))
+    assert dbg.default_native_log_path() == folder / "guiskindose-native.log"
+    assert folder.stat().st_mode & 0o777 == 0o700
+
+
+def test_log_stream_text_attributes(entry_module):
+    stream = entry_module._LogStream("guiskindose.stdout", logging.INFO)
+    assert stream.encoding == "utf-8"
+    assert stream.errors == "replace"
+    stream.reconfigure(encoding="ascii", line_buffering=True)  # no-op, must not raise
+    assert stream.encoding == "utf-8"
+
+
 def test_log_stream_forwards_complete_lines(entry_module, captured_root):
     stream = entry_module._LogStream("guiskindose.stdout", logging.INFO)
     print("Port 8765 is in use;", "using 8766", file=stream)
