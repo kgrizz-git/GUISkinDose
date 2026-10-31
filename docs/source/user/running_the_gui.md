@@ -92,11 +92,14 @@ unless `configure_logging(log_file=...)` is wired at startup; the optional file 
 The portable desktop app is the exception, because it has no console. It writes
 `guiskindose-native.log` in a private per-user folder under the system temp directory:
 `%TEMP%\guiskindose` on Windows, or `guiskindose-<uid>` under the temp directory on
-macOS and Linux. The folder is owner-only (`0o700`), and on macOS and Linux the file is
-`0o600`. The app clears the log at each launch and caps it at about 4 MiB across rotated
+macOS and Linux. On macOS and Linux the folder is owner-only (`0o700`) and the file is
+`0o600`. On Windows the folder inherits the permissions of your per-user `%TEMP%`
+folder. The app clears the log at each launch and caps it at about 4 MiB across rotated
 files. Set `GUISKINDOSE_NO_FILE_LOG=1` to turn it off, for example on a shared computer.
-It follows the same rules as the console: no file names, paths, or patient identifiers.
-The portable app is still a development spike and is not yet published.
+At the default INFO level, the file carries no file names, paths, or patient
+identifiers. If a `debug.json` category is turned on, the file also records DEBUG
+output, and the caveats below about debug output apply to it. The portable app is still
+a development spike and is not yet published.
 
 The app's default logging does not record file names or paths, because RDSR filenames
 often contain patient identifiers. It logs progress and warning messages. File type, size,
@@ -109,8 +112,9 @@ category-tagged `DEBUG` output is opt-in through a `debug.json` in the working d
 ```
 
 Some module-level debug lines print without that file. The app's own error logging
-redacts identifiers, but debug output may not. Review console output for PHI before
-pasting it into an issue.
+redacts identifiers, but debug output may not. Review console output and any log file
+for PHI before sharing them, for example in an issue. If in doubt, delete the log file
+instead of sharing it.
 
 ## PNG export
 

@@ -234,8 +234,30 @@ def test_calculate_and_export_overwrites_its_own_files_on_rerun(tmp_path, monkey
     """A second self-check in the same directory replaces the files it wrote."""
     monkeypatch.syspath_prepend(str(_ENTRY.parent))
     selfcheck = importlib.import_module("selfcheck")
-    first = selfcheck._calculate_and_export(tmp_path)
-    second = selfcheck._calculate_and_export(tmp_path)
+    owned = tmp_path / selfcheck.OWNED_SUBDIR
+    owned.mkdir()
+    first = selfcheck._calculate_and_export(owned)
+    second = selfcheck._calculate_and_export(owned)
     assert second["psd_mGy"] == first["psd_mGy"]
-    names = sorted(p.name for p in tmp_path.iterdir())
+    names = sorted(p.name for p in owned.iterdir())
     assert names == ["selfcheck.html", "selfcheck.json", "selfcheck_dose_map.csv"]
+
+
+def test_outputs_stay_inside_the_owned_subfolder(tmp_path, monkeypatch):
+    """A same-named file already in the named directory is left alone."""
+    import urllib.request
+
+    monkeypatch.syspath_prepend(str(_ENTRY.parent))
+    selfcheck = importlib.import_module("selfcheck")
+
+    def _refuse(*_args, **_kwargs):
+        raise OSError("blocked in test")
+
+    monkeypatch.setattr(urllib.request, "urlopen", _refuse)
+    bystander = tmp_path / "network_probe.json"
+    bystander.write_text("user file", encoding="utf-8")
+    code = selfcheck.run_network_probe(str(tmp_path))
+    assert code == 0
+    assert bystander.read_text(encoding="utf-8") == "user file"
+    report = tmp_path / selfcheck.OWNED_SUBDIR / "network_probe.json"
+    assert '"outbound_blocked": true' in report.read_text(encoding="utf-8")

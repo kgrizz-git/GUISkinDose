@@ -32,9 +32,11 @@ That keeps SemVer and contributor history organized.
 
 ### Security
 
-- **pypdf 6.21.4** (2026-10-30) — closes seven pypdf parser advisories published today, including
-  GHSA-x3rh-gjgm-fmqc, GHSA-cggf-277g-3q54, and GHSA-mfr5-77xh-9j7h. The core dependency floor is now
-  `pypdf>=6.21.4`. They are memory and loop issues when parsing a malformed PDF.
+- **pypdf 6.21.4** (2026-10-30) — closes seven pypdf parser advisories published this week. Four
+  (GHSA-x3rh-gjgm-fmqc, GHSA-42gh-23hr-vphw, GHSA-4vqv-7265-gm2w, GHSA-62m5-6wh8-28x7) were already
+  fixed in 6.21.3. The other three (GHSA-5849-834g-hvw5, GHSA-cggf-277g-3q54, GHSA-mfr5-77xh-9j7h) need
+  6.21.4. The core dependency floor is now `pypdf>=6.21.4`. They are memory and loop issues when parsing a
+  malformed PDF.
 
 ## [1.1.0] - 2026-10-29
 

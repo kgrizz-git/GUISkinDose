@@ -29,6 +29,8 @@ jobs:
       PYTHONUTF8: "1"
       APP_DIR: tmp/portable/dist/GUISkinDose
       ZIP_NAME: GUISkinDose-spike-fullmesh-nobrowser-windows-x64.zip
+      # selfcheck.OWNED_SUBDIR: the checks write only inside this subfolder.
+      SC_SUB: guiskindose-selfcheck
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
       with:
@@ -49,6 +51,7 @@ jobs:
         $out = Join-Path $env:RUNNER_TEMP "selfcheck-unfrozen"
         uv run --no-sync python packaging/portable/entry.py --self-check $out
         if ($LASTEXITCODE -ne 0) { throw "unfrozen self-check failed" }
+        $out = Join-Path $out $env:SC_SUB
         $report = Get-Content "$out/selfcheck_report.json" | ConvertFrom-Json
         Write-Output "unfrozen psd_mGy=$($report.calculate_export.psd_mGy) passed=$($report.passed)"
         "UNFROZEN_PSD=$($report.calculate_export.psd_mGy)" >> $env:GITHUB_ENV
@@ -94,11 +97,23 @@ jobs:
       run: |
         # Control: before the rule, the same probe must reach the network. Otherwise a
         # later "blocked" result would prove nothing about the rule.
-        $control = Join-Path $env:RUNNER_TEMP "netprobe-control"
-        $proc = Start-Process -FilePath $env:APP_EXE -ArgumentList '--network-probe', "`"$control`"" -Wait -PassThru
-        $result = Get-Content (Join-Path $control "network_probe.json") | ConvertFrom-Json
-        Write-Output "control probe exit=$($proc.ExitCode) outbound_blocked=$($result.outbound_blocked) error_type=$($result.error_type)"
-        if ($proc.ExitCode -ne 0 -or $result.outbound_blocked) { throw "control probe could not reach the network" }
+        # Retried, because a hosted runner's network can blip.
+        $reached = $false
+        foreach ($attempt in 1, 2, 3) {
+          $control = Join-Path $env:RUNNER_TEMP "netprobe-control-$attempt"
+          $proc = Start-Process -FilePath $env:APP_EXE -ArgumentList '--network-probe', "`"$control`"" -Wait -PassThru
+          $report = Join-Path $control "$env:SC_SUB/network_probe.json"
+          if (-not (Test-Path $report)) {
+            Write-Output "control probe $attempt wrote no report (exit=$($proc.ExitCode))"
+            Start-Sleep -Seconds 5
+            continue
+          }
+          $result = Get-Content $report | ConvertFrom-Json
+          Write-Output "control probe $attempt exit=$($proc.ExitCode) outbound_blocked=$($result.outbound_blocked) error_type=$($result.error_type)"
+          if ($proc.ExitCode -eq 0 -and -not $result.outbound_blocked) { $reached = $true; break }
+          Start-Sleep -Seconds 5
+        }
+        if (-not $reached) { throw "control probe could not reach the network in 3 attempts" }
         New-NetFirewallRule -DisplayName "guiskindose-spike-block" -Direction Outbound `
           -Program $env:APP_EXE -Action Block -ErrorAction Stop | Out-Null
         $rule = Get-NetFirewallRule -DisplayName "guiskindose-spike-block" -ErrorAction Stop
@@ -110,7 +125,9 @@ jobs:
         # The frozen exe itself must fail an outbound HTTPS request.
         $probe = Join-Path $env:RUNNER_TEMP "netprobe"
         $proc = Start-Process -FilePath $env:APP_EXE -ArgumentList '--network-probe', "`"$probe`"" -Wait -PassThru
-        $result = Get-Content (Join-Path $probe "network_probe.json") | ConvertFrom-Json
+        $report = Join-Path $probe "$env:SC_SUB/network_probe.json"
+        if (-not (Test-Path $report)) { throw "blocked probe wrote no report (exit=$($proc.ExitCode))" }
+        $result = Get-Content $report | ConvertFrom-Json
         Write-Output "network probe exit=$($proc.ExitCode) outbound_blocked=$($result.outbound_blocked) error_type=$($result.error_type)"
         if ($proc.ExitCode -ne 0 -or -not $result.outbound_blocked) { throw "outbound request was not blocked" }
 
@@ -124,6 +141,7 @@ jobs:
           $sw = [Diagnostics.Stopwatch]::StartNew()
           $proc = Start-Process -FilePath $env:APP_EXE -ArgumentList '--self-check', "`"$out`"" -Wait -PassThru
           $timings += [math]::Round($sw.Elapsed.TotalSeconds, 1)
+          $out = Join-Path $out $env:SC_SUB
           Write-Output "self-check run $run exit=$($proc.ExitCode) wall=$($timings[-1])s"
           if (Test-Path "$out/selfcheck_report.json") { Get-Content "$out/selfcheck_report.json" | Write-Output }
           if ($proc.ExitCode -ne 0) { throw "self-check run $run failed" }
@@ -141,7 +159,7 @@ jobs:
         Write-Output "frozen PSD matches unfrozen PSD ($env:UNFROZEN_PSD mGy)"
         "SELFCHECK_COLD_S=$($timings[0])" >> $env:GITHUB_ENV
         "SELFCHECK_WARM_S=$($timings[1])" >> $env:GITHUB_ENV
-        Copy-Item (Join-Path $env:RUNNER_TEMP "selfcheck-1/selfcheck_report.json") out/
+        Copy-Item (Join-Path $env:RUNNER_TEMP "selfcheck-1/$env:SC_SUB/selfcheck_report.json") out/
 
     - name: Native GUI launch smoke (server up + window child)
       run: |

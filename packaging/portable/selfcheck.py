@@ -30,6 +30,9 @@ from pathlib import Path
 from typing import Any
 
 _EXAMPLE_RDSR = "siemens_axiom_example_procedure.dcm"
+# Every file the checks write goes in this subfolder of the directory the caller names,
+# so a rerun may overwrite them (force=True) without touching anything else there.
+OWNED_SUBDIR = "guiskindose-selfcheck"
 # Plane-phantom PSD for _EXAMPLE_RDSR with settings_example.json, from unfrozen runs on
 # macOS and Windows (2026-10-30). A freeze that drops or swaps a correction table moves it.
 GOLDEN_PSD_MGY = 8.9542
@@ -222,7 +225,7 @@ def _run_step(report: dict[str, Any], name: str, step: Callable[[], dict[str, An
 
 def run_self_check(output_dir: str, *, process_start: float) -> int:
     """Run every check, write ``selfcheck_report.json``, and return the exit code."""
-    out_dir = Path(output_dir)
+    out_dir = Path(output_dir) / OWNED_SUBDIR
     out_dir.mkdir(parents=True, exist_ok=True)
     report: dict[str, Any] = {
         "frozen": bool(getattr(sys, "frozen", False)),
@@ -258,7 +261,7 @@ def run_network_probe(output_dir: str) -> int:
 
     from guiskindose.privacy import exception_class_name
 
-    out_dir = Path(output_dir)
+    out_dir = Path(output_dir) / OWNED_SUBDIR
     out_dir.mkdir(parents=True, exist_ok=True)
     result: dict[str, Any] = {"outbound_blocked": False, "error_type": None}
     try:
