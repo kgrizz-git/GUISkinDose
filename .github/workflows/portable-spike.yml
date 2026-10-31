@@ -100,21 +100,12 @@ jobs:
         Copy-Item packaging/portable/chromium/LICENSE.chromium.txt, packaging/portable/chromium/LICENSE.ungoogled-chromium-windows.txt $dest
         # The third-party notices are compiled into the binary (chrome://credits). Dump them
         # from this exact build so the shipped CREDITS.html matches what ships.
-        $profile = Join-Path $env:RUNNER_TEMP "chromium-credits-profile"
         $credits = Join-Path $dest "CREDITS.html"
-        $p = Start-Process -FilePath $chrome -Wait -PassThru -NoNewWindow `
-          -RedirectStandardOutput $credits -RedirectStandardError (Join-Path $dl "credits.err") `
-          -ArgumentList '--headless', '--disable-gpu', '--virtual-time-budget=20000', "--user-data-dir=`"$profile`"", '--dump-dom', 'chrome://credits/'
-        $bytes = (Get-Item $credits).Length
-        $libs = @(Select-String -Path $credits -Pattern 'class="product"' -AllMatches).Matches.Count
-        Write-Output "CREDITS.html exit=$($p.ExitCode) bytes=$bytes product_entries=$libs"
-        if ($bytes -lt 100000) {
-          # Diagnose: the page title and tag census of a short dump (public browser page text only).
-          $text = Get-Content $credits -Raw
-          Write-Output ("head: " + $text.Substring(0, [math]::Min(600, $text.Length)))
-          Get-Content (Join-Path $dl "credits.err") -TotalCount 15 | Write-Output
-        }
-        if ($bytes -lt 100000) { throw "chrome://credits dump too small" }
+        $line = uv run --no-sync python -I packaging/portable/dump_chromium_credits.py $chrome $credits
+        $code = $LASTEXITCODE
+        Write-Output $line
+        if ($code -ne 0) { throw "chrome://credits dump is missing or a placeholder" }
+        $libs = ($line -split 'product_entries=')[1].Split(' ')[0]
         $bfiles = Get-ChildItem $dest -Recurse -File
         "BROWSER_MB=$([math]::Round(($bfiles | Measure-Object Length -Sum).Sum / 1MB, 1))" >> $env:GITHUB_ENV
         "BROWSER_FILES=$($bfiles.Count)" >> $env:GITHUB_ENV
