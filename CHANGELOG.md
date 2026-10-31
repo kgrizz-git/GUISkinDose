@@ -5,7 +5,7 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-**Version source of truth:** the package version in `pyproject.toml` (currently `1.1.0`).
+**Version source of truth:** the package version in `pyproject.toml`. `docs/source/conf.py` and the GUI header read it.
 **First GUISkinDose version is `1.0.0`** — a new distribution identity, formerly
 MyPySkinDose `25.2.0` / a fork of PySkinDose. Historical sections through `[25.2.0]`
 remain MyPySkinDose history. Bump `pyproject.toml` when releasing.
@@ -19,13 +19,14 @@ That keeps SemVer and contributor history organized.
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-10-31
+
+Patch release: ships the equipment-profile examples that 1.1.0 left out of the package, adds a
+loadable example, and raises the pypdf floor for this week's advisories.
+
 ### Added
 
 - A new `equipment_profile_loadable_example` (JSON and CSV) is an exact-model, coordinate-only profile that passes today's capability gate, so users have a filled example they can copy and load. A test keeps it loadable. The existing filled examples preview the full schema and are still rejected by the gate.
-- **Portable app spike** (2026-10-30) — First step toward a double-clickable desktop download
-  ([PORTABLE_APP_PLAN.md](dev-docs/plans/PORTABLE_APP_PLAN.md) Phase 0). A PyInstaller spec and frozen
-  entry under `packaging/portable/` build a Windows onedir in a spike-only CI workflow. Nothing is
-  published yet. `guiskindose.debug.default_native_log_path()` gives windowed runs a per-user temp log.
 
 ### Changed
 
@@ -1960,7 +1961,8 @@ First GUISkinDose release prepared for PyPI publication. Version `1.0.0` was the
 - MyPySkinDose fork baseline: peak skin dose estimation and 3D skin dose maps from fluoroscopic RDSR data.
 - NiceGUI application (`python -m mypyskindose --mode gui`).
 
-[Unreleased]: https://github.com/kgrizz-git/GUISkinDose/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/kgrizz-git/GUISkinDose/compare/v1.1.1...HEAD
+[1.1.1]: https://github.com/kgrizz-git/GUISkinDose/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/kgrizz-git/GUISkinDose/releases/tag/v1.1.0
 [1.0.0]: https://github.com/kgrizz-git/GUISkinDose/compare/v25.1.1...v1.0.0
 [25.1.1]: https://github.com/kgrizz-git/GUISkinDose/releases/tag/v25.1.1
