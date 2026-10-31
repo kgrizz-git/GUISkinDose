@@ -26,6 +26,7 @@ import io
 import logging
 import multiprocessing
 import os
+import re
 import sys
 import threading
 import time
@@ -34,6 +35,16 @@ _PROCESS_START = time.perf_counter()
 
 # Opt-out for shared machines: no diagnostic file is written when this is set.
 NO_FILE_LOG_ENV = "GUISKINDOSE_NO_FILE_LOG"
+
+# Browser mode (Linux) prints its launch URL with the per-launch token
+# (``loopback_security.TOKEN_QUERY_PARAM``). That URL is a credential, so it must
+# never reach the persistent log. The app opens the URL itself, so nothing is lost.
+_TOKEN_QUERY = re.compile(r"([?&]token=)[^&#\s]+")
+
+
+def redact_launch_token(text: str) -> str:
+    """Replace any ``token=`` query value in *text* with ``<redacted>``."""
+    return _TOKEN_QUERY.sub(r"\1<redacted>", text)
 
 
 class _LogStream(io.TextIOBase):
@@ -80,7 +91,7 @@ class _LogStream(io.TextIOBase):
         line = line.rstrip("\r")
         if not line.strip() or not logging.getLogger("guiskindose").handlers:
             return
-        self._logger.log(self._level, "%s", line)
+        self._logger.log(self._level, "%s", redact_launch_token(line))
 
     def flush(self) -> None:
         """Emit any buffered text that has no trailing newline yet.

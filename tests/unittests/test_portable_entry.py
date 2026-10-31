@@ -261,3 +261,33 @@ def test_outputs_stay_inside_the_owned_subfolder(tmp_path, monkeypatch):
     assert bystander.read_text(encoding="utf-8") == "user file"
     report = tmp_path / selfcheck.OWNED_SUBDIR / "network_probe.json"
     assert '"outbound_blocked": true' in report.read_text(encoding="utf-8")
+
+
+def test_launch_token_is_redacted_in_the_file_log(entry_module, tmp_path):
+    """Browser mode prints its token URL; the file sink must never hold the secret."""
+    root = logging.getLogger("guiskindose")
+    saved = root.handlers[:], root.level, root.propagate
+    log_file = tmp_path / "native.log"
+    file_handler = logging.FileHandler(log_file, encoding="utf-8")
+    root.handlers[:] = [file_handler]
+    root.setLevel(logging.DEBUG)
+    root.propagate = False
+    secret = "s3cr3t-Launch_Token-value"
+    try:
+        stream = entry_module._LogStream("guiskindose.stdout", logging.INFO)
+        print(f"GUISkinDose GUI: open http://127.0.0.1:8765/?token={secret}", file=stream)
+        print(f"retry http://127.0.0.1:8765/?a=1&token={secret}#x", file=stream)
+    finally:
+        file_handler.close()
+        root.handlers[:] = saved[0]
+        root.setLevel(saved[1])
+        root.propagate = saved[2]
+    text = log_file.read_text(encoding="utf-8")
+    assert secret not in text
+    assert text.count("token=<redacted>") == 2
+    assert "http://127.0.0.1:8765/?token=<redacted>" in text
+
+
+def test_redact_launch_token_leaves_other_text_alone(entry_module):
+    line = "NiceGUI ready to go on http://127.0.0.1:8765"
+    assert entry_module.redact_launch_token(line) == line

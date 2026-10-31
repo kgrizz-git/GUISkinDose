@@ -90,15 +90,19 @@ unless `configure_logging(log_file=...)` is wired at startup; the optional file 
 `guiskindose.debug` supports rotation and size caps.
 
 The portable desktop app is the exception, because it has no console. It writes
-`guiskindose-native.log` in a private per-user folder under the system temp directory:
-`%TEMP%\guiskindose` on Windows, or `guiskindose-<uid>` under the temp directory on
+`guiskindose-native.log` in a per-user folder under the system temporary directory
+(Python's `tempfile.gettempdir()`, which honors `TMPDIR`, `TEMP`, or `TMP` before a
+platform default). The folder is `guiskindose` on Windows and `guiskindose-<uid>` on
 macOS and Linux. On macOS and Linux the folder is owner-only (`0o700`) and the file is
-`0o600`. On Windows the folder inherits the permissions of your per-user `%TEMP%`
-folder. The app clears the log at each launch and caps it at about 4 MiB across rotated
+`0o600`. On Windows the folder inherits the permissions of that temporary directory,
+which is normally your per-user `%TEMP%`. The app clears the log at each launch and caps it at about 4 MiB across rotated
 files. Set `GUISKINDOSE_NO_FILE_LOG=1` to turn it off, for example on a shared computer.
 At the default INFO level, the file carries no file names, paths, or patient
 identifiers. If a `debug.json` category is turned on, the file also records DEBUG
-output, and the caveats below about debug output apply to it. The portable app is still
+output, and the caveats below about debug output apply to it. On Linux the portable app
+opens in your browser, and the launch URL it prints carries a per-launch secret. The app
+opens that URL for you, and the log file records it as `token=<redacted>`, so the secret
+never reaches the file. The portable app is still
 a development spike and is not yet published.
 
 The app's default logging does not record file names or paths, because RDSR filenames
