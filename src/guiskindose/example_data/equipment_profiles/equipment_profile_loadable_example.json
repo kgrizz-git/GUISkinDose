@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "profiles": [
+    {
+      "profile_id": "demo-scope-3000",
+      "manufacturer": "Acme Imaging",
+      "models": [
+        "DemoScope 3000"
+      ],
+      "provenance": {
+        "source": "Example profile packaged with GUISkinDose",
+        "notes": "Fictional values. Loads today: one exact model and coordinates only. Copy this file and replace every value with your own data."
+      },
+      "coordinates": {
+        "translation_offset": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": -12.5
+        },
+        "translation_direction": {
+          "x": "+",
+          "y": "+",
+          "z": "+"
+        },
+        "rotation_direction": {
+          "Ap1": "+",
+          "Ap2": "+",
+          "Ap3": "+",
+          "At1": "+",
+          "At2": "+",
+          "At3": "+"
+        },
+        "swap_lateral_longitudinal": false,
+        "field_size_mode": "CFA",
+        "detector_side_length": 40
+      }
+    }
+  ]
+}

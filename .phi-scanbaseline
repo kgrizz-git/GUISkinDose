@@ -186,3 +186,14 @@ entries:
   severity: high
   created_at: '2026-10-10T16:40:30+00:00'
   expires_at: '2027-01-08T16:40:30+00:00'
+
+# Reviewed synthetic equipment-profile CSV header (loadable example); no identifier values.
+- file_path: src/guiskindose/example_data/equipment_profiles/equipment_profile_loadable_example.csv
+  line_number: 1
+  line_content_hash: 7efbf5810be04a08d3ec9413c23adb1a3c3c32974779b4dedc66c5f009896139
+  entity_type: HEALTH_PLAN + UNIQUE_ID
+  hipaa_category: quasi_identifier_combination
+  value_hash: 9a14a19e434922c22ceb79849756b689a2dc71b17a5056a60cf4137a9b32fc1f
+  severity: high
+  created_at: '2026-10-30T21:21:51+00:00'
+  expires_at: '2027-01-28T21:21:51+00:00'

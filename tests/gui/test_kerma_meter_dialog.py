@@ -586,6 +586,23 @@ async def test_example_calibration_native_branch_saves_to_the_chosen_path(
     assert downloads == []  # native save, no browser download
 
 
+@pytest.mark.asyncio
+async def test_example_calibration_native_cancel_does_not_download(monkeypatch: pytest.MonkeyPatch) -> None:
+    from guiskindose.gui import io_helpers
+    from guiskindose.gui.tabs import corrections as settings_tab
+    from guiskindose.gui.tabs import export as export_tab
+
+    async def _cancelled(default_name: str, extension: str) -> None:
+        return None
+
+    downloads: list[object] = []
+    monkeypatch.setattr(io_helpers, "_get_save_path", _cancelled)
+    monkeypatch.setattr(io_helpers, "_is_native_mode", lambda: True)
+    monkeypatch.setattr(export_tab.ui, "download", lambda *args: downloads.append(args))
+    await settings_tab._download_example_calibration_file()
+    assert downloads == []  # cancelling the native dialog skips the export
+
+
 # ── review findings: stale results, unchosen periods, editable unit override ─
 
 

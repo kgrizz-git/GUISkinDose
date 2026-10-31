@@ -3,7 +3,23 @@
 Validated manufacturer/model coordinate profiles can be assembled into a frozen session and bound
 on settings before loading **raw** input (DICOM or raw-shaped tabular). Matching exams apply all
 15 effective coordinate fields before geometry calculation; dict/JSON results report the per-exam
-match, inheritance notice, and session hashes under `equipment_profile_match`:
+match, inheritance notice, and session hashes under `equipment_profile_match`.
+
+Blank templates and filled examples in JSON and CSV ship with the package, with a README that
+explains every field. Copy `equipment_profile_loadable_example` and replace its values: it is an
+exact-model, coordinate-only profile that loads today. The blank `equipment_profile_template`
+files are also valid once filled in. The `equipment_profile_example` files preview the full
+schema, and the current coordinate-only gate rejects them because they include transmission
+rows, wildcard models, and aliases. To copy the folder into an `equipment_profiles` folder in
+the current directory:
+
+```bash
+python -c "import shutil, importlib.resources as r; shutil.copytree(r.files('guiskindose') / 'example_data' / 'equipment_profiles', 'equipment_profiles')"
+```
+
+The command prints nothing and fails if `equipment_profiles` already exists.
+
+A minimal example:
 
 ```python
 from guiskindose import PyskindoseSettings, load_settings_example_json

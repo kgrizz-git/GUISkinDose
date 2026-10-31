@@ -163,6 +163,34 @@ def test_manifest_includes_example_kerma_meter_files() -> None:
     assert "include src/guiskindose/example_data/kerma_meter/*.md" in manifest
 
 
+_EXAMPLE_EQUIPMENT_PROFILE_FILES = (
+    "guiskindose/example_data/equipment_profiles/README.md",
+    "guiskindose/example_data/equipment_profiles/equipment_profile_example.csv",
+    "guiskindose/example_data/equipment_profiles/equipment_profile_example.json",
+    "guiskindose/example_data/equipment_profiles/equipment_profile_loadable_example.csv",
+    "guiskindose/example_data/equipment_profiles/equipment_profile_loadable_example.json",
+    "guiskindose/example_data/equipment_profiles/equipment_profile_template.csv",
+    "guiskindose/example_data/equipment_profiles/equipment_profile_template.json",
+)
+
+
+def test_wheel_contains_example_equipment_profile_files() -> None:
+    """The equipment-profile templates and filled examples must ship in the wheel."""
+    dist = Path(__file__).resolve().parents[2] / "dist"
+    wheel = _single_artifact(dist, "guiskindose-*.whl", "wheel")
+    with zipfile.ZipFile(wheel) as archive:
+        names = set(archive.namelist())
+    missing = [path for path in _EXAMPLE_EQUIPMENT_PROFILE_FILES if path not in names]
+    assert not missing, f"wheel is missing example equipment-profile files: {missing}"
+
+
+def test_manifest_includes_example_equipment_profile_files() -> None:
+    """MANIFEST.in ships the equipment-profile example folder."""
+    manifest = (Path(__file__).resolve().parents[2] / "MANIFEST.in").read_text(encoding="utf-8")
+    for suffix in ("json", "csv", "md"):
+        assert f"include src/guiskindose/example_data/equipment_profiles/*.{suffix}" in manifest
+
+
 _EXAMPLE_TABULAR_FILES = (
     "guiskindose/example_data/tabular/radimetrics_example_older_export_biplane.csv",
     "guiskindose/example_data/tabular/radimetrics_example_newer_export_single_tube.csv",
