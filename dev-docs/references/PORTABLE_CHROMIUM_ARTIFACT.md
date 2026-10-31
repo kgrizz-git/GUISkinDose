@@ -12,6 +12,15 @@ Chromium stable channel, it is smaller, and it removes the Google service calls 
 site would otherwise see as blocked traffic. The upstream snapshot is the fallback if the maintainer
 prefers a Google-built binary over a community build.
 
+## Decisions (maintainer, 2026-10-31)
+
+- **ungoogled-chromium, not the Google snapshot.** It is a tested stable-branch build with security
+  updates, it is half the snapshot's unpacked size, and it makes no Google service calls. Its
+  `chrome://credits` carries the third-party notices, while the snapshot's is a placeholder.
+- **Kaleido's `--no-sandbox` stays.** The browser only renders plots the app generates locally,
+  from a `file://` page with no remote scripts, and the Full build runs with outbound traffic
+  blocked. So no untrusted web content reaches the unsandboxed renderer.
+
 ## Pinned artifact (Windows x64)
 
 | Field | Value |
@@ -23,7 +32,7 @@ prefers a Google-built binary over a community build.
 | Zip size | 200,854,085 bytes (191.5 MB) |
 | Unpacked size | 443,240,984 bytes (422.7 MB), 75 files; `chrome.dll` alone is 302 MB |
 | Built by | the repository's own GitHub Actions workflows (`build-x64.yml`, `publish-release.yml`); the release author is `github-actions[bot]` |
-| Code signing | none; the Windows binaries are not Authenticode-signed |
+| Code signing | none; the Windows binaries are not Authenticode-signed. Phase 5 signs `chrome.exe` and its DLLs with the project certificate. Until then, Smart App Control or antivirus heuristics may block it and break PNG export |
 
 `.github/workflows/portable-spike.yml` holds the same URL and sha256. The Full job downloads the
 zip, refuses it unless the sha256 matches, and moves its single top-level folder to
@@ -87,8 +96,9 @@ equivalent to Google's.
 | macOS arm64 | `ungoogled-chromium-macos` release `156.0.8078.47-1.1`, `..._arm64-macos.dmg`, 150.9 MB | `Mac_Arm/1732297/chrome-mac.zip`, 180.1 MB |
 | Linux x86_64 | `ungoogled-chromium-portablelinux` release `156.0.8078.79-1`, `..._x86_64.AppImage`, 209.5 MB (a `.tar.xz` is also published) | `Linux_x64/1732295/chrome-linux.zip`, 254.9 MB |
 
-The macOS build is a nested `.app` with helper apps. Phase 0b must re-sign it inside-out with the
-project identity before notarization. The macOS and Linux sha256 values are not pinned yet.
+The macOS build is a nested `.app` with helper apps. Phase 0b re-signs every nested binary,
+the browser included, inside-out with our Developer ID for notarization. So the upstream signature
+does not matter on macOS. The macOS and Linux sha256 values are not pinned yet.
 
 ## Kaleido and choreographer facts that shape the integration
 
