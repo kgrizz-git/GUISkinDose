@@ -29,7 +29,7 @@ dependencies = [
     "kaleido >= 0.2.1",
     "rich >= 13.0",
     "openpyxl >= 3.1",
-    "pypdf>=6.20.1",
+    "pypdf>=6.21.4",  # GHSA-x3rh-gjgm-fmqc, GHSA-cggf-277g-3q54, GHSA-mfr5-77xh-9j7h and four other parser advisories
     "reportlab>=4.0.4",
     "python-docx>=1.1",
 ]

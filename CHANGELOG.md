@@ -30,6 +30,12 @@ That keeps SemVer and contributor history organized.
 
 - The README is shorter. It leads with a PyPI quick start, including a `uv tool install` / `pipx install` option. Launch, local-access, logging, and Tkinter details moved to a new *Running the GUI* page in the user docs.
 
+### Security
+
+- **pypdf 6.21.4** (2026-10-30) — closes seven pypdf parser advisories published today, including
+  GHSA-x3rh-gjgm-fmqc, GHSA-cggf-277g-3q54, and GHSA-mfr5-77xh-9j7h. The core dependency floor is now
+  `pypdf>=6.21.4`. They are memory and loop issues when parsing a malformed PDF.
+
 ## [1.1.0] - 2026-10-29
 
 First GUISkinDose release prepared for PyPI publication. Version `1.0.0` was the in-repo rename point
