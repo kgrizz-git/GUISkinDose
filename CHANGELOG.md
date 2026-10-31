@@ -22,11 +22,27 @@ That keeps SemVer and contributor history organized.
 ### Added
 
 - A new `equipment_profile_loadable_example` (JSON and CSV) is an exact-model, coordinate-only profile that passes today's capability gate, so users have a filled example they can copy and load. A test keeps it loadable. The existing filled examples preview the full schema and are still rejected by the gate.
+- **Portable app spike** (2026-10-30) — First step toward a double-clickable desktop download
+  ([PORTABLE_APP_PLAN.md](dev-docs/plans/PORTABLE_APP_PLAN.md) Phase 0). A PyInstaller spec and frozen
+  entry under `packaging/portable/` build a Windows onedir in a spike-only CI workflow. Nothing is
+  published yet. `guiskindose.debug.default_native_log_path()` gives windowed runs a per-user temp log.
+
+### Changed
+
+- The README is shorter. It leads with a PyPI quick start, including a `uv tool install` / `pipx install` option. Launch, local-access, logging, and Tkinter details moved to a new *Running the GUI* page in the user docs.
 
 ### Fixed
 
 - The wheel and sdist now include the equipment-profile templates, filled examples, and README under `example_data/equipment_profiles/`. Version 1.1.0 left them out of the package.
 - In native mode, cancelling the Save As dialog for the example calibration file on the Corrections tab no longer falls through to a browser download.
+
+### Security
+
+- **pypdf 6.21.4** (2026-10-30) — closes seven pypdf parser advisories published this week. Four
+  (GHSA-x3rh-gjgm-fmqc, GHSA-42gh-23hr-vphw, GHSA-4vqv-7265-gm2w, GHSA-62m5-6wh8-28x7) were already
+  fixed in 6.21.3. The other three (GHSA-5849-834g-hvw5, GHSA-cggf-277g-3q54, GHSA-mfr5-77xh-9j7h) need
+  6.21.4. The core dependency floor is now `pypdf>=6.21.4`. They are memory and loop issues when parsing a
+  malformed PDF.
 
 ## [1.1.0] - 2026-10-29
 

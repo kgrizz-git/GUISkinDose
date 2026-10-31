@@ -21,6 +21,8 @@ from __future__ import annotations
 import json
 import logging
 import os
+import stat
+import tempfile
 from contextlib import suppress
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
@@ -122,6 +124,37 @@ def _file_handler_level() -> int:
     handler level keeps those out unless the operator opts into debug.
     """
     return logging.DEBUG if any(DEBUG_FLAGS.values()) else logging.INFO
+
+
+_NATIVE_LOG_NAME = "guiskindose-native.log"
+
+
+def default_native_log_path() -> Path | None:
+    """Return the per-user temp-path diagnostic log for windowed (native/frozen) runs.
+
+    A windowed launch has no console, so this file is where its messages go. The
+    folder sits under the OS temp directory and on POSIX is named per uid. It is
+    checked with ``lstat``: a symlink, a non-directory, or (on POSIX) a folder
+    another user owns is refused, which matters in a shared ``/tmp``. An existing
+    folder is tightened to ``0o700``. The file itself gets the same session purge,
+    rotation, and ``0o600`` as any ``configure_logging(log_file=...)`` sink.
+    Returns ``None`` when the folder is unusable, so callers run without a file sink.
+    """
+    getuid = getattr(os, "getuid", None)
+    folder_name = f"guiskindose-{getuid()}" if getuid is not None else "guiskindose"
+    folder = Path(tempfile.gettempdir()) / folder_name
+    try:
+        folder.mkdir(mode=0o700, exist_ok=True)
+        info = folder.lstat()
+        if not stat.S_ISDIR(info.st_mode):  # symlinks and files both fail S_ISDIR under lstat
+            return None
+        if getuid is not None and info.st_uid != getuid():
+            return None
+        if stat.S_IMODE(info.st_mode) != 0o700:
+            folder.chmod(0o700)
+    except OSError:
+        return None
+    return folder / _NATIVE_LOG_NAME
 
 
 def _purge_log_files(target: str) -> None:

@@ -151,7 +151,7 @@ The new script stays under the C901 ≤ 10 and 800-line gates.
 
 ## Docs
 
-`README.md` Quick launch, `CHANGELOG.md` (Unreleased → Added), `dev-docs/branding/README.md`,
+`README.md` Working from source and `docs/source/user/running_the_gui.md`, `CHANGELOG.md` (Unreleased → Added), `dev-docs/branding/README.md`,
 `dev-docs/index.md`, and a pointer from `PORTABLE_APP_PLAN.md` "What exists today".
 
 ## Manual smoke (required before merge)

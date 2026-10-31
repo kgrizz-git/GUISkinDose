@@ -28,7 +28,7 @@ be archived.
    next: close remaining Phase 2 acceptance and per-slice contracts; later activation/transmission/authoring work remains open.
 - [ ] **Geometry-driven support transmission** — See the correction-data roadmap in
   Active Work / [GEOMETRY_DRIVEN_SUPPORT_TRANSMISSION_PLAN.md](plans/GEOMETRY_DRIVEN_SUPPORT_TRANSMISSION_PLAN.md).
-- [ ] **Portable desktop app** — Light and Full double-click builds. Plan written, not started:
+- [ ] **Portable desktop app** — Light and Full double-click builds. Phase 0 Windows spike in progress:
   [PORTABLE_APP_PLAN.md](plans/PORTABLE_APP_PLAN.md). Detail in Active Work.
 
 ## Active Work
@@ -56,7 +56,7 @@ be archived.
   - *Native window* — restore-from-maximize and multi-display OS smokes
     ([MAC_NATIVE_WINDOW_MAXIMIZE_PLAN.md](plans/archive/MAC_NATIVE_WINDOW_MAXIMIZE_PLAN.md),
     [NATIVE_WINDOW_GEOMETRY_PLAN.md](plans/archive/NATIVE_WINDOW_GEOMETRY_PLAN.md)).
-- [ ] **Portable desktop app (PyInstaller / `nicegui-pack`)** — plan written, not started:
+- [ ] **Portable desktop app (PyInstaller)** — Phase 0 Windows spike in progress (a full-mesh, no-browser build passes CI smoke; Light and Full sizes are still open):
   [PORTABLE_APP_PLAN.md](plans/PORTABLE_APP_PLAN.md). Light is a small phantom set with no PNG export
   and no bundled browser. Full is the clinical library plus Chromium for offline Kaleido PNG
   (not Chrome for Testing). Phase 0 is a Windows freeze spike. Light checks for
@@ -109,7 +109,7 @@ be archived.
 
 ### GUI / UX
 
-- [ ] **Native GUI optional file logging** — `run_gui()` / `__main__` never pass `log_file`, so there is one console sink only (stderr), including `--native`. **Goal:** pass a temp-path `log_file` in native/pywebview mode. Privacy model: value-free logging boundaries stay as-is; file defaults to INFO (DEBUG only with an explicit `dprint` category); rotation ~1 MiB × 4, session purge, POSIX `0o600` (`guiskindose.debug`). **Acceptance:** manual native smoke shows the file; README + `PRIVACY_AND_SENSITIVE_ASSETS.md` updated; unit test for handler registration; privacy review of the enabled path. **Optional follow-on:** settings/CLI toggle to disable file logging on shared machines.
+- [ ] **Native GUI optional file logging** — `run_gui()` / `__main__` never pass `log_file`, so there is one console sink only (stderr), including `--native`. **Goal:** pass a temp-path `log_file` in native/pywebview mode. Privacy model: value-free logging boundaries stay as-is; file defaults to INFO (DEBUG only with an explicit `dprint` category); rotation ~1 MiB × 4, session purge, POSIX `0o600` (`guiskindose.debug`). **Acceptance:** manual native smoke shows the file; `docs/source/user/running_the_gui.md` + `PRIVACY_AND_SENSITIVE_ASSETS.md` updated; unit test for handler registration; privacy review of the enabled path. **Optional follow-on:** settings/CLI toggle to disable file logging on shared machines. **Progress (2026-10-30):** the portable frozen entry (`packaging/portable/entry.py`) already attaches this sink at `debug.default_native_log_path()`, a per-user `0o700` temp folder, and honors a `GUISKINDOSE_NO_FILE_LOG` opt-out. It is documented under *Logging and privacy* in `docs/source/user/running_the_gui.md`. Source-checkout `--native` runs and the privacy review remain.
 - [ ] **GUI clutter cleanup** — simplify the interface and hide lower-priority or advanced info behind warning/info buttons, collapsible cards, or similar patterns; consider other UX ideas for reducing cognitive load.
 - [ ] **Better export-failure messaging** — when an export fails due to a missing dependency, show clear user-facing info and actionable warnings (e.g. which package to install and how).
 - [ ] **Export audit trail for `table_origin_override`** — record per-exam table-origin overrides in normalized

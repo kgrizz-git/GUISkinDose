@@ -16,6 +16,15 @@ Then run `guiskindose --mode gui` to open the GUI in your browser.
 For a native window, install `guiskindose[gui-native]` and run `guiskindose --mode gui --native`.
 Plain `guiskindose` installs the library and CLI only, without GUI mode.
 
+To install it as a standalone command in its own isolated environment, use
+[uv](https://docs.astral.sh/uv/) or [pipx](https://pipx.pypa.io/):
+
+```bash
+uv tool install "guiskindose[gui]"     # or: pipx install "guiskindose[gui]"
+```
+
+See [Running the GUI](running_the_gui.md) for launch options, local access, and logging.
+
 For local development:
 
 ```bash
