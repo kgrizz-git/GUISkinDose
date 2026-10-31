@@ -26,6 +26,10 @@ That keeps SemVer and contributor history organized.
   entry under `packaging/portable/` build a Windows onedir in a spike-only CI workflow. Nothing is
   published yet. `guiskindose.debug.default_native_log_path()` gives windowed runs a per-user temp log.
 
+### Changed
+
+- The README is shorter. It leads with a PyPI quick start, including a `uv tool install` / `pipx install` option. Launch, local-access, logging, and Tkinter details moved to a new *Running the GUI* page in the user docs.
+
 ## [1.1.0] - 2026-10-29
 
 First GUISkinDose release prepared for PyPI publication. Version `1.0.0` was the in-repo rename point

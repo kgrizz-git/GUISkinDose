@@ -17,6 +17,7 @@ Welcome to GUISkinDose's documentation!
    user/background.md
    user/description.md
    user/install.md
+   user/running_the_gui.md
    user/user_guide.md
    gui_help/input_formats.md
    user/correction_data.md
