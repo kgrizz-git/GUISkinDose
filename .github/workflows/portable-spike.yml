@@ -1,15 +1,17 @@
-# Portable app Phase 0 spike (dev-docs/plans/PORTABLE_APP_PLAN.md): a full-mesh,
-# no-browser freeze on Windows with PyInstaller. It zips the onedir, records sizes,
-# and runs the frozen self-check with git removed from PATH and outbound network
-# blocked for the app. It is neither the Light nor the Full shape: it ships all 138
-# STLs and no browser. No release, no signing. The zip is a short-lived artifact.
+# Portable app Phase 0 spike (dev-docs/plans/PORTABLE_APP_PLAN.md): Windows freezes
+# with PyInstaller in two shapes. Light ships only the proposed Light mesh set and no
+# browser. Full ships the clinical meshes plus a pinned, sha256-verified Chromium
+# (dev-docs/references/PORTABLE_CHROMIUM_ARTIFACT.md) and proves offline PNG export
+# from it. Each leg zips the onedir, records sizes, and runs the frozen self-check
+# with git removed from PATH and outbound network blocked for the app (and, in Full,
+# for the bundled browser). No release, no signing. The zip is a short-lived artifact.
 # Phase 1 replaces this workflow with the release build jobs, or deletes it.
 name: portable-spike
 
 on:
   workflow_dispatch:
   push:
-    branches: [ spike/portable-phase0-windows ]
+    branches: [ spike/portable-phase0-windows, spike/portable-chromium ]
 
 permissions:
   contents: read
@@ -19,16 +21,27 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  windows-full-mesh-no-browser:
+  windows-shape:
+    name: windows-${{ matrix.shape }}
     runs-on: windows-latest
-    timeout-minutes: 60
+    timeout-minutes: 75
+    strategy:
+      fail-fast: false
+      matrix:
+        shape: [ light, full ]
     defaults:
       run:
         shell: pwsh
     env:
       PYTHONUTF8: "1"
       APP_DIR: tmp/portable/dist/GUISkinDose
-      ZIP_NAME: GUISkinDose-spike-fullmesh-nobrowser-windows-x64.zip
+      ZIP_NAME: GUISkinDose-spike-${{ matrix.shape }}-windows-x64.zip
+      GUISKINDOSE_PORTABLE_SHAPE: ${{ matrix.shape }}
+      # Pinned Full browser: ungoogled-chromium for Windows x64 (BSD-3-Clause).
+      # Bumping it means editing all three values and PORTABLE_CHROMIUM_ARTIFACT.md.
+      CHROMIUM_VERSION: 156.0.8078.73-1.1
+      CHROMIUM_URL: https://github.com/ungoogled-software/ungoogled-chromium-windows/releases/download/156.0.8078.73-1.1/ungoogled-chromium_156.0.8078.73-1.1_windows_x64.zip
+      CHROMIUM_SHA256: 360406931fb55b04ac276bcf409511bd86e4e67e6950029fc45ca5ca63443090
       # selfcheck.OWNED_SUBDIR: the checks write only inside this subfolder.
       SC_SUB: guiskindose-selfcheck
     steps:
@@ -64,6 +77,42 @@ jobs:
         if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
         "BUILD_SECONDS=$([math]::Round($sw.Elapsed.TotalSeconds, 1))" >> $env:GITHUB_ENV
         uv run --no-sync python -c "import PyInstaller; print('PyInstaller', PyInstaller.__version__)"
+
+    - name: Bundle pinned Chromium into the onedir (Full only, fail closed on sha256)
+      if: matrix.shape == 'full'
+      run: |
+        $dl = Join-Path $env:RUNNER_TEMP "chromium-download"
+        New-Item -ItemType Directory -Force $dl | Out-Null
+        $zip = Join-Path $dl "chromium.zip"
+        Invoke-WebRequest -Uri $env:CHROMIUM_URL -OutFile $zip -ErrorAction Stop
+        $actual = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+        if ($actual -ne $env:CHROMIUM_SHA256) { throw "Chromium sha256 mismatch: got $actual" }
+        Write-Output "Chromium $env:CHROMIUM_VERSION sha256 verified; zip bytes=$((Get-Item $zip).Length)"
+        $unpacked = Join-Path $dl "unpacked"
+        7z x $zip "-o$unpacked" | Out-Null
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+        $top = @(Get-ChildItem $unpacked -Directory)
+        if ($top.Count -ne 1) { throw "expected one top-level folder in the Chromium zip" }
+        $dest = Join-Path $env:APP_DIR "chromium"
+        Move-Item $top[0].FullName $dest
+        $chrome = Join-Path $dest "chrome.exe"
+        if (-not (Test-Path $chrome)) { throw "chrome.exe missing after unpack" }
+        Copy-Item packaging/portable/chromium/LICENSE.chromium.txt, packaging/portable/chromium/LICENSE.ungoogled-chromium-windows.txt $dest
+        # The third-party notices are compiled into the binary (chrome://credits). Dump them
+        # from this exact build so the shipped CREDITS.html matches what ships.
+        $profile = Join-Path $env:RUNNER_TEMP "chromium-credits-profile"
+        $credits = Join-Path $dest "CREDITS.html"
+        $p = Start-Process -FilePath $chrome -Wait -PassThru -NoNewWindow `
+          -RedirectStandardOutput $credits -RedirectStandardError (Join-Path $dl "credits.err") `
+          -ArgumentList '--headless', '--disable-gpu', "--user-data-dir=`"$profile`"", '--dump-dom', 'chrome://credits'
+        $bytes = (Get-Item $credits).Length
+        $libs = @(Select-String -Path $credits -Pattern 'class="product"' -AllMatches).Matches.Count
+        Write-Output "CREDITS.html exit=$($p.ExitCode) bytes=$bytes product_entries=$libs"
+        if ($bytes -lt 100000) { throw "chrome://credits dump too small" }
+        $bfiles = Get-ChildItem $dest -Recurse -File
+        "BROWSER_MB=$([math]::Round(($bfiles | Measure-Object Length -Sum).Sum / 1MB, 1))" >> $env:GITHUB_ENV
+        "BROWSER_FILES=$($bfiles.Count)" >> $env:GITHUB_ENV
+        "CREDITS_PRODUCTS=$libs" >> $env:GITHUB_ENV
 
     - name: Zip onedir and record sizes
       run: |
@@ -122,6 +171,17 @@ jobs:
           throw "firewall rule not active"
         }
         if ($app.Program -ne $env:APP_EXE) { throw "firewall rule targets another program" }
+        if ($env:GUISKINDOSE_PORTABLE_SHAPE -eq 'full') {
+          # Kaleido's browser is a separate program, so it needs its own block rule.
+          $chrome = Join-Path (Split-Path $env:APP_EXE) "chromium/chrome.exe"
+          New-NetFirewallRule -DisplayName "guiskindose-spike-block-chromium" -Direction Outbound `
+            -Program $chrome -Action Block -ErrorAction Stop | Out-Null
+          $crule = Get-NetFirewallRule -DisplayName "guiskindose-spike-block-chromium" -ErrorAction Stop
+          $cprog = ($crule | Get-NetFirewallApplicationFilter).Program
+          if ($crule.Enabled -ne 'True' -or $crule.Action -ne 'Block' -or $cprog -ne $chrome) {
+            throw "chromium firewall rule not active"
+          }
+        }
         # The frozen exe itself must fail an outbound HTTPS request.
         $probe = Join-Path $env:RUNNER_TEMP "netprobe"
         $proc = Start-Process -FilePath $env:APP_EXE -ArgumentList '--network-probe', "`"$probe`"" -Wait -PassThru
@@ -160,6 +220,34 @@ jobs:
         "SELFCHECK_COLD_S=$($timings[0])" >> $env:GITHUB_ENV
         "SELFCHECK_WARM_S=$($timings[1])" >> $env:GITHUB_ENV
         Copy-Item (Join-Path $env:RUNNER_TEMP "selfcheck-1/$env:SC_SUB/selfcheck_report.json") out/
+
+    - name: Frozen offline PNG from the bundled Chromium (Full only)
+      if: matrix.shape == 'full'
+      run: |
+        $env:PATH = ($env:PATH -split ';' | Where-Object { $_ -and -not (Test-Path (Join-Path $_ 'git.exe')) }) -join ';'
+        # Decoy: point BROWSER_PATH at the runner's system Chrome. The app must still
+        # launch the bundled copy, because it passes that path explicitly.
+        $system = @("$env:ProgramFiles\Google\Chrome\Application\chrome.exe",
+          "${env:ProgramFiles(x86)}\Google\Chrome\Application\chrome.exe") |
+          Where-Object { Test-Path $_ } | Select-Object -First 1
+        Write-Output "system Chrome present on runner: $([bool]$system)"
+        if ($system) { $env:BROWSER_PATH = $system }
+        $out = Join-Path $env:RUNNER_TEMP "pngcheck"
+        $sw = [Diagnostics.Stopwatch]::StartNew()
+        $proc = Start-Process -FilePath $env:APP_EXE -ArgumentList '--png-check', "`"$out`"" -Wait -PassThru
+        $wall = [math]::Round($sw.Elapsed.TotalSeconds, 1)
+        $report = Join-Path $out "$env:SC_SUB/pngcheck_report.json"
+        Write-Output "png-check exit=$($proc.ExitCode) wall=$($wall)s"
+        if (Test-Path $report) { Get-Content $report | Write-Output } else { throw "png-check wrote no report" }
+        if ($proc.ExitCode -ne 0) { throw "png-check failed" }
+        $r = Get-Content $report | ConvertFrom-Json
+        if ($r.page.http_script_refs -ne 0) { throw "Kaleido page references an http script" }
+        if ($r.render.launched_outside_onedir -ne 0) { throw "a browser outside the onedir launched" }
+        if (-not ($r.render.launched_from_onedir -contains 'chromium/chrome.exe')) { throw "bundled chrome.exe not seen" }
+        "PNG_WALL_S=$wall" >> $env:GITHUB_ENV
+        "PNG_IMAGES=$($r.render.png_images)" >> $env:GITHUB_ENV
+        "PNG_FLAGS=$($r.render.flags -join ' ')" >> $env:GITHUB_ENV
+        Copy-Item $report out/
 
     - name: Native GUI launch smoke (server up + window child)
       run: |
@@ -206,7 +294,7 @@ jobs:
       if: always()
       run: |
         @"
-        ## Portable spike (Windows, full meshes, no browser)
+        ## Portable spike (Windows, $env:GUISKINDOSE_PORTABLE_SHAPE shape)
         | Metric | Value |
         |---|---|
         | Build seconds | $env:BUILD_SECONDS |
@@ -215,13 +303,15 @@ jobs:
         | Unfrozen reference PSD (mGy) | $env:UNFROZEN_PSD |
         | Self-check cold / warm (s) | $env:SELFCHECK_COLD_S / $env:SELFCHECK_WARM_S |
         | GUI server up / seconds / processes | $env:GUI_UP / $env:GUI_START_S / $env:GUI_PROCS |
+        | Bundled browser | $env:CHROMIUM_VERSION ($env:BROWSER_MB MB, $env:BROWSER_FILES files, $env:CREDITS_PRODUCTS credits entries) |
+        | Offline PNG wall (s) / images / browser flags | $env:PNG_WALL_S / $env:PNG_IMAGES / $env:PNG_FLAGS |
         "@ >> $env:GITHUB_STEP_SUMMARY
 
     - name: Upload zip and self-check report
       if: always()
       uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
       with:
-        name: guiskindose-spike-fullmesh-nobrowser-windows-x64
+        name: guiskindose-spike-${{ matrix.shape }}-windows-x64
         path: out/
         retention-days: 7
         if-no-files-found: warn
