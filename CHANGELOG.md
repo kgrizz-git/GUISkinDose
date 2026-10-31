@@ -5,7 +5,7 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-**Version source of truth:** the package version in `pyproject.toml` (currently `1.1.0`).
+**Version source of truth:** the package version in `pyproject.toml`. `docs/source/conf.py` and the GUI header read it.
 **First GUISkinDose version is `1.0.0`** — a new distribution identity, formerly
 MyPySkinDose `25.2.0` / a fork of PySkinDose. Historical sections through `[25.2.0]`
 remain MyPySkinDose history. Bump `pyproject.toml` when releasing.
@@ -1966,7 +1966,7 @@ First GUISkinDose release prepared for PyPI publication. Version `1.0.0` was the
 - NiceGUI application (`python -m mypyskindose --mode gui`).
 
 [Unreleased]: https://github.com/kgrizz-git/GUISkinDose/compare/v1.1.1...HEAD
-[1.1.1]: https://github.com/kgrizz-git/GUISkinDose/releases/tag/v1.1.1
+[1.1.1]: https://github.com/kgrizz-git/GUISkinDose/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/kgrizz-git/GUISkinDose/releases/tag/v1.1.0
 [1.0.0]: https://github.com/kgrizz-git/GUISkinDose/compare/v25.1.1...v1.0.0
 [25.1.1]: https://github.com/kgrizz-git/GUISkinDose/releases/tag/v25.1.1

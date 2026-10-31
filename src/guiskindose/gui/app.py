@@ -27,6 +27,7 @@ os.environ["COLORAMA_DISABLE"] = "1"
 
 from nicegui import Client, app, ui
 
+from guiskindose import __version__
 from guiskindose.debug import configure_logging, dprint
 from guiskindose.privacy import opaque_exam_label, safe_error_event
 
@@ -73,7 +74,8 @@ from .window_prefs import (
 
 logger = logging.getLogger(__name__)
 
-GUI_VERSION = "1.1.0"
+# Shown in the header; follows the package version so a release bumps it in one place.
+GUI_VERSION = __version__
 
 _STATIC_DIR = Path(__file__).resolve().parent / "static"
 _STATIC_URL = "/guiskindose-static"

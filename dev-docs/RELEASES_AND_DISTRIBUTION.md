@@ -56,7 +56,7 @@ Use a release PR or written checklist. Condensed from [FORK_MAINTAINER_GUIDE.md]
 1. Compare/sync upstream intent; record in the fork guide if you sync.
 2. Confirm `main` is green for the exact commit you will tag.
 3. Bump the version on a `release/x.y.z` branch. The version lives only in `pyproject.toml`: the
-   Sphinx `release` in `docs/source/conf.py` reads it, and the packaging tests compare the installed
+   Sphinx `release` in `docs/source/conf.py` and the GUI header (`GUI_VERSION`) read it, and the tests compare the installed
    version against it. Then:
    - run `uv lock` so `uv.lock` records the new version (the `--locked` hooks fail if you forget);
    - fold `CHANGELOG.md` `[Unreleased]` into `## [x.y.z] - YYYY-MM-DD`, leave an empty `[Unreleased]`,

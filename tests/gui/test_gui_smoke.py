@@ -17,10 +17,11 @@ pytestmark = pytest.mark.nicegui_main_file("tests/gui/nicegui_main.py")
 
 def test_gui_module_imports() -> None:
     """GUI package and page module import without starting ui.run()."""
-    import guiskindose.gui  # noqa: F401
+    import guiskindose
+    import guiskindose.gui
     import guiskindose.gui.app as gui_app
 
-    assert gui_app.GUI_VERSION
+    assert guiskindose.__version__ == gui_app.GUI_VERSION
     assert callable(gui_app.run_gui)
 
 
