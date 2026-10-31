@@ -104,10 +104,16 @@ jobs:
         $credits = Join-Path $dest "CREDITS.html"
         $p = Start-Process -FilePath $chrome -Wait -PassThru -NoNewWindow `
           -RedirectStandardOutput $credits -RedirectStandardError (Join-Path $dl "credits.err") `
-          -ArgumentList '--headless', '--disable-gpu', "--user-data-dir=`"$profile`"", '--dump-dom', 'chrome://credits'
+          -ArgumentList '--headless', '--disable-gpu', '--virtual-time-budget=20000', "--user-data-dir=`"$profile`"", '--dump-dom', 'chrome://credits/'
         $bytes = (Get-Item $credits).Length
         $libs = @(Select-String -Path $credits -Pattern 'class="product"' -AllMatches).Matches.Count
         Write-Output "CREDITS.html exit=$($p.ExitCode) bytes=$bytes product_entries=$libs"
+        if ($bytes -lt 100000) {
+          # Diagnose: the page title and tag census of a short dump (public browser page text only).
+          $text = Get-Content $credits -Raw
+          Write-Output ("head: " + $text.Substring(0, [math]::Min(600, $text.Length)))
+          Get-Content (Join-Path $dl "credits.err") -TotalCount 15 | Write-Output
+        }
         if ($bytes -lt 100000) { throw "chrome://credits dump too small" }
         $bfiles = Get-ChildItem $dest -Recurse -File
         "BROWSER_MB=$([math]::Round(($bfiles | Measure-Object Length -Sum).Sum / 1MB, 1))" >> $env:GITHUB_ENV
