@@ -19,6 +19,11 @@ That keeps SemVer and contributor history organized.
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-10-31
+
+Patch release: ships the equipment-profile examples that 1.1.0 left out of the package, adds a
+loadable example, and raises the pypdf floor for this week's advisories.
+
 ### Added
 
 - A new `equipment_profile_loadable_example` (JSON and CSV) is an exact-model, coordinate-only profile that passes today's capability gate, so users have a filled example they can copy and load. A test keeps it loadable. The existing filled examples preview the full schema and are still rejected by the gate.
@@ -1960,7 +1965,8 @@ First GUISkinDose release prepared for PyPI publication. Version `1.0.0` was the
 - MyPySkinDose fork baseline: peak skin dose estimation and 3D skin dose maps from fluoroscopic RDSR data.
 - NiceGUI application (`python -m mypyskindose --mode gui`).
 
-[Unreleased]: https://github.com/kgrizz-git/GUISkinDose/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/kgrizz-git/GUISkinDose/compare/v1.1.1...HEAD
+[1.1.1]: https://github.com/kgrizz-git/GUISkinDose/releases/tag/v1.1.1
 [1.1.0]: https://github.com/kgrizz-git/GUISkinDose/releases/tag/v1.1.0
 [1.0.0]: https://github.com/kgrizz-git/GUISkinDose/compare/v25.1.1...v1.0.0
 [25.1.1]: https://github.com/kgrizz-git/GUISkinDose/releases/tag/v25.1.1

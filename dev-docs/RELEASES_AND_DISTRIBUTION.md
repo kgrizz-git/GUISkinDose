@@ -40,7 +40,7 @@ These serve different audiences.
 ## Versioning
 
 - **SemVer** via `pyproject.toml` (source of truth for the package version).
-- **Live package today:** GUISkinDose / `guiskindose` `1.1.0`, the first version published to PyPI.
+- **Live package today:** GUISkinDose / `guiskindose` `1.1.1`. `1.1.0` was the first version published to PyPI.
   `1.0.0` was the unpublished rename point (formerly MyPySkinDose `25.2.0` / a fork of PySkinDose).
 - **First GUISkinDose / `guiskindose` version (locked): `1.0.0`.** New distribution identity;
   not `26.0.0`, not a patch on `25.2.0`, and not an imitation of upstream PySkinDose.
