@@ -156,7 +156,7 @@ twine upload dist/*
 Before uploading a new version, update the version in `pyproject.toml`:
 
 ```toml
-version = "1.1.0"  # first PyPI release; 1.0.0 was the unpublished rename point
+version = "1.1.1"  # 1.1.0 was the first PyPI release; 1.0.0 was the unpublished rename point
 ```
 
 PyPI does not allow re-uploading the same version number.

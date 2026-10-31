@@ -27,7 +27,7 @@ copyright = "2020, Max Hellström"
 author = "Max Hellström"
 
 # The full version, read from pyproject.toml so a release bumps it in one place.
-release = tomllib.loads((Path(__file__).parents[2] / "pyproject.toml").read_text(encoding="utf-8"))["project"][
+release = tomllib.loads((Path(__file__).resolve().parents[2] / "pyproject.toml").read_text(encoding="utf-8"))["project"][
     "version"
 ]
 
