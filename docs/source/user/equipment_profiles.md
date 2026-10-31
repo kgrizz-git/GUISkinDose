@@ -10,11 +10,14 @@ explains every field. Copy `equipment_profile_loadable_example` and replace its 
 exact-model, coordinate-only profile that loads today. The blank `equipment_profile_template`
 files are also valid once filled in. The `equipment_profile_example` files preview the full
 schema, and the current coordinate-only gate rejects them because they include transmission
-rows, wildcard models, and aliases. To find the folder:
+rows, wildcard models, and aliases. To copy the folder into an `equipment_profiles` folder in
+the current directory:
 
 ```bash
-python -c "import guiskindose, pathlib; print(pathlib.Path(guiskindose.__file__).parent / 'example_data' / 'equipment_profiles')"
+python -c "import shutil, importlib.resources as r; shutil.copytree(r.files('guiskindose') / 'example_data' / 'equipment_profiles', 'equipment_profiles')"
 ```
+
+The command prints nothing and fails if `equipment_profiles` already exists.
 
 A minimal example:
 
