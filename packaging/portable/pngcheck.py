@@ -109,18 +109,32 @@ def _descendants(rows: list[dict[str, Any]], root: int) -> list[dict[str, Any]]:
     return found
 
 
+def _inside(exe: str, base: Path) -> bool:
+    """True when *exe* resolves inside *base*, compared case-insensitively where the OS is."""
+    import os
+
+    if not exe:
+        return False
+    target = os.path.normcase(str(Path(exe).resolve()))
+    root = os.path.normcase(str(base.resolve()))
+    try:
+        return os.path.commonpath([target, root]) == root
+    except ValueError:  # different drives on Windows
+        return False
+
+
 def _describe_launch(rows: list[dict[str, Any]]) -> dict[str, Any]:
     """Which browser binaries this process started, relative to the onedir."""
     import os
 
-    base = app_dir()
+    base = app_dir().resolve()
     browsers = [row for row in _descendants(rows, os.getpid()) if "chrom" in Path(row["exe"]).name.lower()]
     inside, outside = set(), 0
     flags: set[str] = set()
     for row in browsers:
-        exe = Path(row["exe"]).resolve()
-        if exe.is_relative_to(base):
-            inside.add(exe.relative_to(base).as_posix())
+        if _inside(row["exe"], base):
+            relative = os.path.relpath(Path(row["exe"]).resolve(), base)
+            inside.add(Path(relative).as_posix())
         else:
             outside += 1
         flags.update(re.findall(r"(?<!\S)(--[a-z0-9-]+)", row["cmd"]))
@@ -130,7 +144,7 @@ def _describe_launch(rows: list[dict[str, Any]]) -> dict[str, Any]:
         "launched_outside_onedir": outside,
         "flags": sorted(f for f in flags if f in {"--headless", "--no-sandbox", "--disable-gpu", "--user-data-dir"}),
         "system_chrome_processes_running": sum(
-            1 for row in rows if Path(row["exe"]).name.lower() == "chrome.exe" and not row["exe"].startswith(str(base))
+            1 for row in rows if Path(row["exe"]).name.lower() == "chrome.exe" and not _inside(row["exe"], base)
         ),
     }
 

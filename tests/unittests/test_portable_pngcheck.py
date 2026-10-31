@@ -57,3 +57,22 @@ def test_describe_launch_splits_inside_and_outside(pngcheck, monkeypatch, tmp_pa
     assert found["launched_from_onedir"] == ["chromium/chrome.exe"]
     assert found["launched_outside_onedir"] == 1
     assert found["flags"] == ["--headless", "--no-sandbox"]
+
+
+def test_inside_is_containment_not_prefix(pngcheck, tmp_path):
+    base = tmp_path / "GUISkinDose"
+    (base / "chromium").mkdir(parents=True)
+    assert pngcheck._inside(str(base / "chromium" / "chrome.exe"), base)
+    assert not pngcheck._inside(str(tmp_path / "GUISkinDose-other" / "chrome.exe"), base)
+    assert not pngcheck._inside("", base)
+
+
+def test_credits_placeholder_fails():
+    sys.path.insert(0, str(_PORTABLE))
+    try:
+        credits = importlib.import_module("dump_chromium_credits")
+    finally:
+        sys.path.remove(str(_PORTABLE))
+    assert credits.credits_exit_code(5_000_000, 497, placeholder=False) == 0
+    assert credits.credits_exit_code(5_000_000, 497, placeholder=True) == 1
+    assert credits.credits_exit_code(462, 0, placeholder=False) == 1

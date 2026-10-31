@@ -51,12 +51,17 @@ async def dump(browser_path: str, out_path: Path) -> tuple[int, int]:
     return out_path.stat().st_size, products
 
 
+def credits_exit_code(size: int, products: int, *, placeholder: bool) -> int:
+    """0 only for a real, non-placeholder credits page."""
+    return 0 if size >= _MIN_BYTES and products > 0 and not placeholder else 1
+
+
 def main(argv: list[str]) -> int:
     size, products = asyncio.run(dump(argv[0], Path(argv[1])))
     # Builds made without generate_about_credits=true serve a placeholder page.
     placeholder = "sample credits page" in Path(argv[1]).read_text(encoding="utf-8")
     print(f"CREDITS.html bytes={size} product_entries={products} placeholder={placeholder}")
-    return 0 if size >= _MIN_BYTES and products > 0 else 1
+    return credits_exit_code(size, products, placeholder=placeholder)
 
 
 if __name__ == "__main__":

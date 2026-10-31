@@ -290,6 +290,9 @@ jobs:
     - name: Summary
       if: always()
       run: |
+        $full = $env:GUISKINDOSE_PORTABLE_SHAPE -eq 'full'
+        $browserRow = if ($full) { "$env:CHROMIUM_VERSION ($env:BROWSER_MB MB, $env:BROWSER_FILES files, $env:CREDITS_PRODUCTS credits entries)" } else { "none" }
+        $pngRow = if ($full) { "$env:PNG_WALL_S / $env:PNG_IMAGES / $env:PNG_FLAGS" } else { "n/a" }
         @"
         ## Portable spike (Windows, $env:GUISKINDOSE_PORTABLE_SHAPE shape)
         | Metric | Value |
@@ -300,8 +303,8 @@ jobs:
         | Unfrozen reference PSD (mGy) | $env:UNFROZEN_PSD |
         | Self-check cold / warm (s) | $env:SELFCHECK_COLD_S / $env:SELFCHECK_WARM_S |
         | GUI server up / seconds / processes | $env:GUI_UP / $env:GUI_START_S / $env:GUI_PROCS |
-        | Bundled browser | $env:CHROMIUM_VERSION ($env:BROWSER_MB MB, $env:BROWSER_FILES files, $env:CREDITS_PRODUCTS credits entries) |
-        | Offline PNG wall (s) / images / browser flags | $env:PNG_WALL_S / $env:PNG_IMAGES / $env:PNG_FLAGS |
+        | Bundled browser | $browserRow |
+        | Offline PNG wall (s) / images / browser flags | $pngRow |
         "@ >> $env:GITHUB_STEP_SUMMARY
 
     - name: Upload zip and self-check report
