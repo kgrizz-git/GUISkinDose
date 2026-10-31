@@ -89,6 +89,22 @@ launch it from a shell if you need to read diagnostic output. No log file is wri
 unless `configure_logging(log_file=...)` is wired at startup; the optional file sink in
 `guiskindose.debug` supports rotation and size caps.
 
+The portable desktop app is the exception, because it has no console. It writes
+`guiskindose-native.log` in a per-user folder under the system temporary directory
+(Python's `tempfile.gettempdir()`, which honors `TMPDIR`, `TEMP`, or `TMP` before a
+platform default). The folder is `guiskindose` on Windows and `guiskindose-<uid>` on
+macOS and Linux. On macOS and Linux the folder is owner-only (`0o700`) and the file is
+`0o600`. On Windows the folder inherits the permissions of that temporary directory,
+which is normally your per-user `%TEMP%`. The app clears the log at each launch and caps it at about 4 MiB across rotated
+files. Set `GUISKINDOSE_NO_FILE_LOG=1` to turn it off, for example on a shared computer.
+At the default INFO level, the file carries no file names, paths, or patient
+identifiers. If a `debug.json` category is turned on, the file also records DEBUG
+output, and the caveats below about debug output apply to it. On Linux the portable app
+opens in your browser, and the launch URL it prints carries a per-launch secret. The app
+opens that URL for you, and the log file records it as `token=<redacted>`, so the secret
+never reaches the file. The portable app is still
+a development spike and is not yet published.
+
 The app's default logging does not record file names or paths, because RDSR filenames
 often contain patient identifiers. It logs progress and warning messages. File type, size,
 and event counts appear only in the opt-in category-tagged output described below. This
@@ -100,8 +116,9 @@ category-tagged `DEBUG` output is opt-in through a `debug.json` in the working d
 ```
 
 Some module-level debug lines print without that file. The app's own error logging
-redacts identifiers, but debug output may not. Review console output for PHI before
-pasting it into an issue.
+redacts identifiers, but debug output may not. Review console output and any log file
+for PHI before sharing them, for example in an issue. If in doubt, delete the log file
+instead of sharing it.
 
 ## PNG export
 
