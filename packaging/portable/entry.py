@@ -18,6 +18,8 @@ Order matters (see ``dev-docs/plans/PORTABLE_APP_PLAN.md`` -> Freeze):
    calculate/export check in ``selfcheck.py`` (used by CI; no network, no git).
    ``--network-probe <dir>`` makes one outbound HTTPS request so the spike
    workflow can prove its firewall rule blocks the exe.
+   ``--png-check <dir>`` renders dose-map PNGs through the Chromium bundled in
+   the onedir (Full shape only; see ``pngcheck.py``).
 """
 
 from __future__ import annotations
@@ -140,7 +142,7 @@ def _native_window() -> bool:
     return not sys.platform.startswith("linux")
 
 
-_HEADLESS_FLAGS = ("--self-check", "--network-probe")
+_HEADLESS_FLAGS = ("--self-check", "--network-probe", "--png-check")
 
 
 def main(argv: list[str]) -> int:
@@ -161,6 +163,10 @@ def main(argv: list[str]) -> int:
         from selfcheck import run_network_probe
 
         return run_network_probe(argv[1])
+    if argv and argv[0] == "--png-check":
+        from pngcheck import run_png_check
+
+        return run_png_check(argv[1], process_start=_PROCESS_START)
 
     from guiskindose.gui.app import run_gui
     from guiskindose.privacy import install_value_safe_excepthook

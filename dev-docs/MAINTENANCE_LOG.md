@@ -8,6 +8,18 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ## [Unreleased]
 
+- **Portable app Phase 0: bundled Chromium spike** (2026-10-31) — `portable-spike.yml` now builds two
+  Windows shapes as a matrix, selected by `GUISKINDOSE_PORTABLE_SHAPE` in `guiskindose.spec`. Light freezes
+  only the proposed Light mesh set (28 STLs) and no browser. Full freezes the clinical meshes without the
+  `_reduced_1000t` previews (92 STLs). It then downloads ungoogled-chromium `156.0.8078.73-1.1` by pinned
+  URL, fails closed on its sha256, and copies it to `GUISkinDose/chromium/` with the Chromium licence, the
+  ungoogled-chromium licence, and a `CREDITS.html` dumped from that build's `chrome://credits`. The new
+  `--png-check` (`packaging/portable/pngcheck.py`) renders dose-map PNGs through that browser while both
+  the exe and the browser are firewalled. It fails unless every browser process started runs from inside
+  the onedir and Kaleido's page has no `http` script. The artifact comparison is in
+  [PORTABLE_CHROMIUM_ARTIFACT.md](references/PORTABLE_CHROMIUM_ARTIFACT.md). `CREDITS.html` comes from
+  `packaging/portable/dump_chromium_credits.py`, which reads `chrome://credits` over DevTools.
+
 - **Portable app Phase 0 spike** (2026-10-30) — The new `portable-spike.yml` workflow runs on
   `windows-latest` on demand and on pushes to `spike/portable-phase0-windows`. It freezes
   `packaging/portable/guiskindose.spec` with the new `portable` dependency group. The build is a full-mesh,
