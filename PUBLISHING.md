@@ -44,8 +44,9 @@ Trusted Publishing needs a one-time registration on PyPI so it will trust this r
    Actions) **and** revoke that token on PyPI (Account → API tokens). Only after this is the
    "no `PYPI_*` secret" state actually true.
 
-That's it — no long-lived secret once the cleanup above is done. To cut a release afterward: bump
-the version in `pyproject.toml`, fold `CHANGELOG.md`, write **user-facing** GitHub Release notes
+That's it — no long-lived secret once the cleanup above is done. To cut a release afterward, follow the checklist in
+[RELEASES_AND_DISTRIBUTION.md](dev-docs/RELEASES_AND_DISTRIBUTION.md#cutting-a-release-checklist): bump
+the version in `pyproject.toml`, run `uv lock`, fold `CHANGELOG.md`, write **user-facing** GitHub Release notes
 (see [RELEASES_AND_DISTRIBUTION.md](dev-docs/RELEASES_AND_DISTRIBUTION.md) — do not dump every CI/refactor
 bullet), create the GitHub Release, and the workflow builds, scans, and publishes.
 

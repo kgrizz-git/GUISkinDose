@@ -11,7 +11,7 @@ the wheel, and the sdist file list must cover the same set.
 from __future__ import annotations
 
 import json
-import re
+import runpy
 import tarfile
 import tomllib
 import zipfile
@@ -26,7 +26,6 @@ def test_installed_package_version_matches_pyproject() -> None:
     pyproject = Path(__file__).resolve().parents[2] / "pyproject.toml"
     data = tomllib.loads(pyproject.read_text(encoding="utf-8"))
     declared = data["project"]["version"]
-    assert declared == "1.1.1"
     assert version("guiskindose") == declared
 
 
@@ -48,10 +47,8 @@ def test_sphinx_release_matches_pyproject() -> None:
     repo = Path(__file__).resolve().parents[2]
     pyproject = tomllib.loads((repo / "pyproject.toml").read_text(encoding="utf-8"))
     declared = pyproject["project"]["version"]
-    conf = (repo / "docs" / "source" / "conf.py").read_text(encoding="utf-8")
-    match = re.search(r'^release\s*=\s*["\']([^"\']+)["\']', conf, re.MULTILINE)
-    assert match is not None
-    assert match.group(1) == declared
+    conf = runpy.run_path(str(repo / "docs" / "source" / "conf.py"))
+    assert conf["release"] == declared
 
 
 def _single_artifact(dist: Path, pattern: str, label: str) -> Path:

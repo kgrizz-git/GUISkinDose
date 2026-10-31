@@ -55,7 +55,15 @@ Use a release PR or written checklist. Condensed from [FORK_MAINTAINER_GUIDE.md]
 
 1. Compare/sync upstream intent; record in the fork guide if you sync.
 2. Confirm `main` is green for the exact commit you will tag.
-3. Bump `pyproject.toml` version; fold `CHANGELOG.md` `[Unreleased]` into `## [x.y.z]`; update citation/support bits if needed.
+3. Bump the version on a `release/x.y.z` branch. The version lives only in `pyproject.toml`: the
+   Sphinx `release` in `docs/source/conf.py` reads it, and the packaging tests compare the installed
+   version against it. Then:
+   - run `uv lock` so `uv.lock` records the new version (the `--locked` hooks fail if you forget);
+   - fold `CHANGELOG.md` `[Unreleased]` into `## [x.y.z] - YYYY-MM-DD`, leave an empty `[Unreleased]`,
+     and update the link references at the bottom (`[Unreleased]` compares from `vx.y.z`, add `[x.y.z]`);
+   - run `git grep -n "<old version>"` and update docs that name the live version (for example this
+     page and `info/PACKAGE_INSTALL.md`). Leave historical mentions and third-party dependency versions alone;
+   - update citation/support bits if needed.
 4. Run full tests and documented privacy, secret, dependency, license, type, build, and doc checks. Confirm the documentation assessment is current — the matrix in [assessments/DOCUMENTATION_ASSESSMENT_2026-09-07.md](assessments/DOCUMENTATION_ASSESSMENT_2026-09-07.md) was touched this cycle, or note N/A with a reason.
 5. Locally `uv build` (or equivalent); inspect wheel/sdist contents. For correction-data
    changes, run `python scripts/verify_distribution.py` (hermetic install + packaged-data
@@ -66,11 +74,11 @@ Use a release PR or written checklist. Condensed from [FORK_MAINTAINER_GUIDE.md]
 
 If the Trusted Publisher registration is ever removed, the publish step fails rather than publishing silently.
 
-## Portable executables (planned, not started)
+## Portable executables (in progress)
 
 Frozen desktop apps are an optional channel for non-Python users. The execution plan is
 [plans/PORTABLE_APP_PLAN.md](plans/PORTABLE_APP_PLAN.md): a per-OS onedir zip, a Light build and a Full build, then a user phantom library. Feasibility and the Java non-goal stay in
-[references/PORTABLE_EXECUTABLE_PACKAGING.md](references/PORTABLE_EXECUTABLE_PACKAGING.md). Do not start the freeze until Phase 0 of that plan is explicitly picked up.
+[references/PORTABLE_EXECUTABLE_PACKAGING.md](references/PORTABLE_EXECUTABLE_PACKAGING.md). Phase 0 (a Windows freeze spike with a CI self-check) has landed; nothing is published yet.
 
 ## Related docs
 

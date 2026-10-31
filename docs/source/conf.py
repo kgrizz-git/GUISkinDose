@@ -7,6 +7,7 @@
 # -- Path setup --------------------------------------------------------------
 
 import sys
+import tomllib
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -25,8 +26,10 @@ project = "GUISkinDose"
 copyright = "2020, Max Hellström"
 author = "Max Hellström"
 
-# The full version, including alpha/beta/rc tags
-release = "1.1.1"
+# The full version, read from pyproject.toml so a release bumps it in one place.
+release = tomllib.loads((Path(__file__).parents[2] / "pyproject.toml").read_text(encoding="utf-8"))["project"][
+    "version"
+]
 
 
 # -- General configuration ---------------------------------------------------
