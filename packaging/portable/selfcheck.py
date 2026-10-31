@@ -153,13 +153,15 @@ def _calculate_and_export(out_dir: Path) -> dict[str, Any]:
     started = time.perf_counter()
     source = build_cli_export_source([rdsr], settings, report_title="Portable self-check")
     payload = collect_export_payload(source, with_images=False)
-    write_report(payload, out_dir / "selfcheck.html", "html", allow_ignored_checkout=True)
+    write_report(payload, out_dir / "selfcheck.html", "html", allow_ignored_checkout=True, force=True)
 
     settings.output_format = "json"
     result_json = main(file_path=rdsr, settings=settings)
     if not isinstance(result_json, str):
         raise TypeError("json_output_not_text")
-    atomic_write_private(out_dir / "selfcheck.json", result_json.encode("utf-8"), allow_ignored_checkout=True)
+    atomic_write_private(
+        out_dir / "selfcheck.json", result_json.encode("utf-8"), allow_ignored_checkout=True, force=True
+    )
     result = json.loads(result_json)
 
     buffer = io.StringIO()
@@ -167,7 +169,7 @@ def _calculate_and_export(out_dir: Path) -> dict[str, Any]:
     writer.writerow(["cell", "dose_mGy"])
     writer.writerows(enumerate(result["dose_map"]))
     atomic_write_private(
-        out_dir / "selfcheck_dose_map.csv", buffer.getvalue().encode("utf-8"), allow_ignored_checkout=True
+        out_dir / "selfcheck_dose_map.csv", buffer.getvalue().encode("utf-8"), allow_ignored_checkout=True, force=True
     )
 
     psd = float(result["psd"])

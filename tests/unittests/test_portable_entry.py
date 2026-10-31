@@ -228,3 +228,14 @@ def test_no_arguments_start_the_gui(entry_module, fake_dispatch):
     assert code == 0
     assert fake_dispatch[-1][0] == "gui"
     assert ("self_check", "") not in fake_dispatch
+
+
+def test_calculate_and_export_overwrites_its_own_files_on_rerun(tmp_path, monkeypatch):
+    """A second self-check in the same directory replaces the files it wrote."""
+    monkeypatch.syspath_prepend(str(_ENTRY.parent))
+    selfcheck = importlib.import_module("selfcheck")
+    first = selfcheck._calculate_and_export(tmp_path)
+    second = selfcheck._calculate_and_export(tmp_path)
+    assert second["psd_mGy"] == first["psd_mGy"]
+    names = sorted(p.name for p in tmp_path.iterdir())
+    assert names == ["selfcheck.html", "selfcheck.json", "selfcheck_dose_map.csv"]

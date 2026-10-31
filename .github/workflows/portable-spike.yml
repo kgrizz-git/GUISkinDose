@@ -92,6 +92,13 @@ jobs:
 
     - name: Block outbound network for the app and prove it
       run: |
+        # Control: before the rule, the same probe must reach the network. Otherwise a
+        # later "blocked" result would prove nothing about the rule.
+        $control = Join-Path $env:RUNNER_TEMP "netprobe-control"
+        $proc = Start-Process -FilePath $env:APP_EXE -ArgumentList '--network-probe', "`"$control`"" -Wait -PassThru
+        $result = Get-Content (Join-Path $control "network_probe.json") | ConvertFrom-Json
+        Write-Output "control probe exit=$($proc.ExitCode) outbound_blocked=$($result.outbound_blocked) error_type=$($result.error_type)"
+        if ($proc.ExitCode -ne 0 -or $result.outbound_blocked) { throw "control probe could not reach the network" }
         New-NetFirewallRule -DisplayName "guiskindose-spike-block" -Direction Outbound `
           -Program $env:APP_EXE -Action Block -ErrorAction Stop | Out-Null
         $rule = Get-NetFirewallRule -DisplayName "guiskindose-spike-block" -ErrorAction Stop
