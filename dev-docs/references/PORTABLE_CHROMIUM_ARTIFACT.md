@@ -36,19 +36,23 @@ allow redistribution in binary form if the copyright notice, the conditions, and
 ship in the documentation or other materials. Chromium also bundles many third-party libraries
 (for example ICU, FFmpeg, libvpx, and V8 dependencies) under their own licences.
 
-Neither candidate zip contains a licence or credits file. The third-party notices are compiled
-into the binary and shown at `chrome://credits`. So the Full onedir carries three files in
+Neither candidate zip contains a licence or credits file. In the ungoogled-chromium build the
+third-party notices are compiled into the binary and shown at `chrome://credits`. The upstream
+snapshot does not have them: its `chrome://credits` is a placeholder that says the build lacks
+`generate_about_credits=true` (checked on the `Mac_Arm/1732297` snapshot). Shipping a snapshot would
+mean generating the notices from a Chromium source checkout. The Full onedir carries three files in
 `GUISkinDose/chromium/`:
 
 | File | Source |
 |------|--------|
 | `LICENSE.chromium.txt` | the Chromium source `LICENSE` at tag `156.0.8078.73`, committed at [`../../packaging/portable/chromium/`](../../packaging/portable/chromium/) |
 | `LICENSE.ungoogled-chromium-windows.txt` | `LICENSE` of `ungoogled-chromium-windows` at tag `156.0.8078.73-1.1`, committed beside it |
-| `CREDITS.html` | generated in CI from the exact bundled build with `chrome.exe --headless --dump-dom chrome://credits` |
+| `CREDITS.html` | generated in CI from the exact bundled build by [`../../packaging/portable/dump_chromium_credits.py`](../../packaging/portable/dump_chromium_credits.py), which opens `chrome://credits` over DevTools (5,451,755 bytes, 497 credited products for `156.0.8078.73-1.1`) |
 
 `CREDITS.html` is generated rather than committed, so it always matches the binary that ships. The
-Full PNG check (`packaging/portable/pngcheck.py`) fails if any of the three is missing or if the
-credits dump is under 100 kB. A bump of the pinned version must refresh both committed licence
+dump script fails on a placeholder page, and the Full PNG check (`packaging/portable/pngcheck.py`)
+fails if any of the three files is missing or the credits dump is under 100 kB. `--dump-dom
+chrome://credits` on the command line does not work here: it returned a New Tab page. A bump of the pinned version must refresh both committed licence
 files.
 
 ## Candidates compared
@@ -63,14 +67,15 @@ files.
 | Built by | community project, on public GitHub Actions | Google's Chromium continuous builders |
 | Licence | BSD-3-Clause, plus Chromium's third-party notices | BSD-3-Clause, plus the same third-party notices |
 | Redistribution | allowed with the notices above | allowed with the notices above |
-| Notices file in zip | none; dump `chrome://credits` | none; dump `chrome://credits` |
+| Notices file in zip | none; `chrome://credits` holds them | none, and `chrome://credits` is a placeholder |
 | Update cadence | a release per Chromium stable update, roughly weekly (six releases between 2026-10-06 and 2026-10-30) | a new build per trunk commit range, many per day; no stable channel and no security backports |
 | Google service calls | removed by the project's patches | present (Safe Browsing, component updater, and similar) |
 | Retention | GitHub Release assets stay until the project deletes them | old revisions stay available for bisecting, but there is no published retention promise |
-| `--headless` with Kaleido 1.5 / choreographer 1.4 | **verified** in the Full CI job (see below) | not run; upstream trunk builds include the new headless mode, so it is expected to work |
+| `--headless` with Kaleido 1.5 / choreographer 1.4 | works: two PNGs rendered in CI run [41230921691](https://github.com/kgrizz-git/GUISkinDose/actions/runs/41230921691) | headless loads pages (the `Mac_Arm/1732297` snapshot ran under choreographer locally); a Kaleido PNG render was not run |
 
 The snapshot's provenance is Google's own build infrastructure, which is its main advantage. It is a
-trunk build with no release testing and twice the unpacked size before pruning. ungoogled-chromium
+trunk build with no release testing, twice the unpacked size before pruning, and no compiled-in
+credits. ungoogled-chromium
 is a stable-branch build with a smaller footprint, but its binaries come from a volunteer project.
 Its build logs are public on GitHub Actions, which makes the provenance auditable, not
 equivalent to Google's.
@@ -101,8 +106,12 @@ These come from the installed `kaleido` 1.5.0 and `choreographer` 1.4.0 (`uv.loc
 
 ## What the Full CI job proves
 
-See the run linked from the Phase 0 results in [`../plans/PORTABLE_APP_PLAN.md`](../plans/PORTABLE_APP_PLAN.md).
-The job blocks outbound traffic for both `GUISkinDose.exe` and the bundled `chromium/chrome.exe`
+Run [41230921691](https://github.com/kgrizz-git/GUISkinDose/actions/runs/41230921691) passed. The job blocks outbound traffic for both `GUISkinDose.exe` and the bundled `chromium/chrome.exe`
 with Windows Firewall rules. It sets `BROWSER_PATH` to the runner's system Chrome as a decoy. The
 frozen `GUISkinDose.exe --png-check` must then render PNG dose maps, every browser process started
 under it must run from inside the onedir, and the Kaleido page must reference no `http` script.
+
+The run rendered 2 PNGs (545,872 bytes) in 9.9 s. Seven browser processes started, all from
+`chromium/chrome.exe`, none from outside the onedir, although the runner has a system Chrome and
+`BROWSER_PATH` pointed at it. The browser flags included `--headless`, `--no-sandbox`, and
+`--disable-gpu`. The captured Kaleido page had 0 `http` script references and no MathJax.

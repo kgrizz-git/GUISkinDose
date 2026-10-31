@@ -17,7 +17,8 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
   `--png-check` (`packaging/portable/pngcheck.py`) renders dose-map PNGs through that browser while both
   the exe and the browser are firewalled. It fails unless every browser process started runs from inside
   the onedir and Kaleido's page has no `http` script. The artifact comparison is in
-  [PORTABLE_CHROMIUM_ARTIFACT.md](references/PORTABLE_CHROMIUM_ARTIFACT.md).
+  [PORTABLE_CHROMIUM_ARTIFACT.md](references/PORTABLE_CHROMIUM_ARTIFACT.md). `CREDITS.html` comes from
+  `packaging/portable/dump_chromium_credits.py`, which reads `chrome://credits` over DevTools.
 
 - **Portable app Phase 0 spike** (2026-10-30) — The new `portable-spike.yml` workflow runs on
   `windows-latest` on demand and on pushes to `spike/portable-phase0-windows`. It freezes
