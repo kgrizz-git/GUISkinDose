@@ -46,3 +46,14 @@ def test_loadable_example_applies_as_a_complete_exact_match() -> None:
     match = session.resolve(ExamCoordinateIdentity(manufacturer="Acme Imaging", model="DemoScope 3000", event_count=3), bundled)
     assert match.record.profile_id == "demo-scope-3000"
     assert len(match.record.fields) == len(LEAF_ORDER)
+    coordinates = json.loads((EXAMPLES / "equipment_profile_loadable_example.json").read_bytes())["profiles"][0][
+        "coordinates"
+    ]
+    expected = {
+        f"{group}.{key}" if isinstance(values, dict) else group: value
+        for group, values in coordinates.items()
+        for key, value in (values.items() if isinstance(values, dict) else [(None, values)])
+    }
+    resolved = {leaf.field: leaf.value for leaf in match.record.fields}
+    assert resolved == expected
+    assert all(leaf.source == "custom" and leaf.level == "exact" and not leaf.inherited for leaf in match.record.fields)
