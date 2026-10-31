@@ -67,12 +67,9 @@ def test_inside_is_containment_not_prefix(pngcheck, tmp_path):
     assert not pngcheck._inside("", base)
 
 
-def test_credits_placeholder_fails():
-    sys.path.insert(0, str(_PORTABLE))
-    try:
-        credits = importlib.import_module("dump_chromium_credits")
-    finally:
-        sys.path.remove(str(_PORTABLE))
+def test_credits_placeholder_fails(monkeypatch):
+    monkeypatch.syspath_prepend(str(_PORTABLE))
+    credits = importlib.import_module("dump_chromium_credits")
     assert credits.credits_exit_code(5_000_000, 497, placeholder=False) == 0
     assert credits.credits_exit_code(5_000_000, 497, placeholder=True) == 1
     assert credits.credits_exit_code(462, 0, placeholder=False) == 1
