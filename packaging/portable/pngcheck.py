@@ -211,7 +211,7 @@ def run_png_check(output_dir: str, *, process_start: float) -> int:
     pages: list[str] = []
     ok = _run_step(report, "bundle", _check_bundle)
     ok = ok and _run_step(report, "render", lambda: _render_pngs(pages))
-    ok = _run_step(report, "page", lambda: _check_page(pages)) and ok
+    ok = ok and _run_step(report, "page", lambda: _check_page(pages))
     report["passed"] = ok
     report["total_seconds"] = round(time.perf_counter() - process_start, 2)
     _write_atomic(out_dir / "pngcheck_report.json", json.dumps(report, indent=2))

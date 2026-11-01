@@ -73,3 +73,19 @@ def test_credits_placeholder_fails(monkeypatch):
     assert credits.credits_exit_code(5_000_000, 497, placeholder=False) == 0
     assert credits.credits_exit_code(5_000_000, 497, placeholder=True) == 1
     assert credits.credits_exit_code(462, 0, placeholder=False) == 1
+
+
+def test_failed_render_skips_page_step(pngcheck, monkeypatch, tmp_path):
+    import json
+
+    monkeypatch.setattr(pngcheck, "_check_bundle", lambda: {"browser_present": True})
+
+    def fail_render(_pages):
+        raise RuntimeError("render failed")
+
+    monkeypatch.setattr(pngcheck, "_render_pngs", fail_render)
+    assert pngcheck.run_png_check(str(tmp_path), process_start=0.0) == 1
+    report = json.loads((tmp_path / pngcheck.OWNED_SUBDIR / "pngcheck_report.json").read_text(encoding="utf-8"))
+    assert report["render"]["error_type"] == "RuntimeError"
+    assert "page" not in report
+    assert report["passed"] is False
