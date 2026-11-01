@@ -21,9 +21,13 @@
 #   2. Keychain profile: used when `notarytool history` accepts it (output discarded).
 #      Recreate a lost profile with
 #      xcrun notarytool store-credentials <profile> --key <AuthKey.p8> --key-id <ID> --issuer <ID>
-#   3. Env file: sourced only if it is a regular file (not a symlink), owned by the current
-#      user, and mode 600 or stricter. It must set all three variables, with no
-#      <KeyID>/<IssuerID> placeholder text. Then API-key mode is used.
+#   3. Env file: read only if it is a regular file (not a symlink), owned by the current
+#      user, and mode 600 or stricter. It is parsed, never sourced: blank lines and #
+#      comments are skipped, and each other line must be [export ]NAME=VALUE for one of
+#      the three variables, the value optionally single- or double-quoted. Only a leading
+#      $HOME/, ${HOME}/ or ~/ in GUISKINDOSE_NOTARY_KEY is expanded. Any other $, $( or
+#      backtick, an unknown name, a line without =, or <...> placeholder text is refused.
+#      All three must be set. Then API-key mode is used.
 #   4. Otherwise the script fails and explains how to restore options 2 or 3.
 #   Values, the key path, and the env file contents are never printed. Do not run with set -x.
 #
@@ -31,6 +35,7 @@
 # timestamp, deepest paths first, then each nested bundle, then the app. No --deep.
 # The output directory receives GUISkinDose-macos-<arch>.zip (stapled app, ditto zip).
 set -euo pipefail
+set +x
 
 if [[ $# -ne 2 ]]; then
     echo "usage: $0 <path/to/GUISkinDose.app> <output-dir>" >&2
@@ -55,8 +60,19 @@ count_key_vars() {
     echo "$count"
 }
 
+# True when a value still holds template text such as <KEY_ID> or <IssuerID>.
+is_placeholder() {
+    [[ "$1" == *"<"*">"* ]]
+}
+
 use_api_key() {
-    local key="$GUISKINDOSE_NOTARY_KEY"
+    local key="$GUISKINDOSE_NOTARY_KEY" value
+    for value in "$GUISKINDOSE_NOTARY_KEY" "$GUISKINDOSE_NOTARY_KEY_ID" "$GUISKINDOSE_NOTARY_ISSUER"; do
+        if is_placeholder "$value"; then
+            echo "a GUISKINDOSE_NOTARY_* value still contains <...> placeholder text" >&2
+            exit 1
+        fi
+    done
     if [[ ! -f "$key" || ! -r "$key" ]]; then
         echo "GUISKINDOSE_NOTARY_KEY does not name a readable file" >&2
         exit 1
@@ -68,22 +84,64 @@ use_api_key() {
     REDACTED_AUTH="--key <GUISKINDOSE_NOTARY_KEY> --key-id <GUISKINDOSE_NOTARY_KEY_ID> --issuer <GUISKINDOSE_NOTARY_ISSUER>"
 }
 
-# Refuse an env file that another user could have written or can read.
-check_env_file() {
-    local file="$1" mode
-    if [[ -L "$file" || ! -f "$file" ]]; then
-        echo "refusing GUISKINDOSE_NOTARY_ENV file: not a regular file (or a symlink)" >&2
-        exit 1
-    fi
-    if [[ "$(stat -f %u "$file")" != "$(id -u)" ]]; then
-        echo "refusing GUISKINDOSE_NOTARY_ENV file: not owned by the current user" >&2
-        exit 1
-    fi
-    mode="$(stat -f %Lp "$file")"
-    if (( (8#$mode & 8#077) != 0 )); then
-        echo "refusing GUISKINDOSE_NOTARY_ENV file: group or world access; chmod 600 it" >&2
-        exit 1
-    fi
+env_fail() {
+    echo "refusing GUISKINDOSE_NOTARY_ENV file: $1" >&2
+    exit 1
+}
+
+# Open the env file once on fd 3, check that open file, and parse from it, so the
+# checks and the parse see the same content. Values are never printed.
+load_env_file() {
+    local file="$1" line name value lineno=0 mode
+    [[ -L "$file" ]] && env_fail "it is a symlink"
+    exec 3<"$file" || env_fail "cannot open it"
+    [[ -f /dev/fd/3 ]] || env_fail "not a regular file"
+    [[ "$(stat -L -f %u /dev/fd/3)" == "$(id -u)" ]] || env_fail "not owned by the current user"
+    mode="$(stat -L -f %Lp /dev/fd/3)"
+    (( (8#$mode & 8#077) == 0 )) || env_fail "group or world access; chmod 600 it"
+    while IFS= read -r line <&3 || [[ -n "$line" ]]; do
+        lineno=$((lineno + 1))
+        line="${line#"${line%%[![:space:]]*}"}"
+        line="${line%"${line##*[![:space:]]}"}"
+        [[ -z "$line" || "$line" == "#"* ]] && continue
+        if [[ "$line" == "export "* ]]; then
+            line="${line#export }"
+            line="${line#"${line%%[![:space:]]*}"}"
+        fi
+        [[ "$line" == *=* ]] || env_fail "line $lineno is not NAME=VALUE"
+        name="${line%%=*}"
+        value="${line#*=}"
+        case "$name" in
+            GUISKINDOSE_NOTARY_KEY | GUISKINDOSE_NOTARY_KEY_ID | GUISKINDOSE_NOTARY_ISSUER) ;;
+            *) env_fail "line $lineno sets an unsupported name" ;;
+        esac
+        local quoted=""
+        if [[ ${#value} -ge 2 && "$value" == \"*\" ]]; then
+            value="${value:1:${#value}-2}"
+            quoted="double"
+        elif [[ ${#value} -ge 2 && "$value" == \'*\' ]]; then
+            value="${value:1:${#value}-2}"
+            quoted="single"
+        fi
+        # shellcheck disable=SC2016  # literal text to refuse, not an expansion
+        [[ "$value" == *'`'* || "$value" == *'$('* ]] && env_fail "line $lineno contains command substitution"
+        if [[ "$name" == GUISKINDOSE_NOTARY_KEY && "$quoted" != single ]]; then
+            # shellcheck disable=SC2016,SC2088  # literal prefixes matched, then expanded by hand
+            case "$value" in
+                '$HOME/'*) value="$HOME/${value#\$HOME/}" ;;
+                '${HOME}/'*) value="$HOME/${value#\$\{HOME\}/}" ;;
+                '~/'*) value="$HOME/${value#\~/}" ;;
+            esac
+        fi
+        if [[ "$quoted" != single ]]; then
+            local rest="$value"
+            [[ "$name" == GUISKINDOSE_NOTARY_KEY ]] && rest="${value#"$HOME"}"
+            [[ "$rest" == *'$'* ]] && env_fail "line $lineno contains a \$ expansion"
+        fi
+        is_placeholder "$value" && env_fail "line $lineno still contains <...> placeholder text"
+        printf -v "$name" '%s' "$value"
+    done
+    exec 3<&-
 }
 
 no_auth_message() {
@@ -118,20 +176,10 @@ resolve_notary_auth() {
         return
     fi
     if [[ -e "$NOTARY_ENV" || -L "$NOTARY_ENV" ]]; then
-        check_env_file "$NOTARY_ENV"
-        # shellcheck disable=SC1090  # the path is chosen at runtime and checked above
-        source "$NOTARY_ENV"
+        load_env_file "$NOTARY_ENV"
         if [[ "$(count_key_vars)" != 3 ]]; then
-            echo "GUISKINDOSE_NOTARY_ENV file must set all three GUISKINDOSE_NOTARY_* variables" >&2
-            exit 1
+            env_fail "it must set all three GUISKINDOSE_NOTARY_* variables"
         fi
-        local value
-        for value in "$GUISKINDOSE_NOTARY_KEY" "$GUISKINDOSE_NOTARY_KEY_ID" "$GUISKINDOSE_NOTARY_ISSUER"; do
-            if [[ "$value" == *"<KeyID>"* || "$value" == *"<IssuerID>"* ]]; then
-                echo "GUISKINDOSE_NOTARY_ENV file still contains placeholder text" >&2
-                exit 1
-            fi
-        done
         AUTH_MODE="api-key (env file)"
         use_api_key
         return
@@ -206,17 +254,24 @@ rm -f "$SUBMIT_ZIP"
 ditto -c -k --keepParent "$APP" "$SUBMIT_ZIP"
 start=$(date +%s)
 RESULT="$OUT/notary-result.plist"
-xcrun notarytool submit "$SUBMIT_ZIP" "${NOTARY_AUTH[@]}" --wait \
-    --output-format plist > "$RESULT" || true
+# notarytool output can carry account identifiers, so it goes to mode-600 files only.
+SUBMIT_ERR="$OUT/notary-submit.stderr"
+( umask 077; xcrun notarytool submit "$SUBMIT_ZIP" "${NOTARY_AUTH[@]}" --wait \
+    --output-format plist > "$RESULT" 2> "$SUBMIT_ERR" ) || true
 echo "notarization took $(( $(date +%s) - start )) s"
 STATUS="$(/usr/libexec/PlistBuddy -c 'Print :status' "$RESULT" 2>/dev/null || echo unknown)"
 SUB_ID="$(/usr/libexec/PlistBuddy -c 'Print :id' "$RESULT" 2>/dev/null || echo)"
 echo "notary status: $STATUS"
+if [[ "$STATUS" == unknown ]]; then
+    echo "notarytool submit failed; see notary-submit.stderr in the output directory" >&2
+fi
 rm -f "$SUBMIT_ZIP"
 if [[ "$STATUS" != "Accepted" ]]; then
     if [[ -n "$SUB_ID" ]]; then
         LOG="$OUT/notary-log.json"
-        xcrun notarytool log "$SUB_ID" "${NOTARY_AUTH[@]}" "$LOG" || true
+        ( umask 077; xcrun notarytool log "$SUB_ID" "${NOTARY_AUTH[@]}" "$LOG" \
+            > "$OUT/notary-log.stdout" 2> "$OUT/notary-log.stderr" ) \
+            || echo "notarytool log failed; see notary-log.stderr in the output directory" >&2
         # Print bundle-relative paths only.
         /usr/bin/python3 -I -c '
 import json, sys
