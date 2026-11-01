@@ -20,7 +20,6 @@ relative to the onedir only: no absolute paths and no exam values.
 from __future__ import annotations
 
 import json
-import logging
 import re
 import subprocess  # nosec B404 - fixed argv, used only to list this process's children
 import sys
@@ -36,7 +35,6 @@ NOTICE_FILES = ("LICENSE.chromium.txt", "LICENSE.ungoogled-chromium-windows.txt"
 _MIN_CREDITS_BYTES = 100_000
 _PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
 _HTTP_SCRIPT = re.compile(r"<script\b[^>]*\bsrc\s*=\s*[\"']?\s*https?:", re.IGNORECASE)
-_logger = logging.getLogger("guiskindose.portable.pngcheck")
 
 
 def app_dir() -> Path:
