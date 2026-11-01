@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Hardened-runtime entitlements for the portable GUISkinDose.app (Phase 0b).
+     Deliberately empty: a Developer ID signature gives every nested file the same
+     Team ID, so library validation passes without exceptions. Add a key only when a
+     signed build is shown to need it, and record why in PORTABLE_APP_PLAN.md. -->
+<plist version="1.0">
+<dict/>
+</plist>

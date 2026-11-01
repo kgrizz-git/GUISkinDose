@@ -15,8 +15,16 @@
 # The spec never bundles a browser. The Full workflow job copies a pinned, sha256-
 # verified Chromium into the onedir after the freeze (see PORTABLE_CHROMIUM_ARTIFACT.md).
 # src/ is on pathex, so an editable install is fine.
+# On macOS the build also writes GUISkinDose.app (BUNDLE). Its .icns is generated at
+# build time from the committed SVG icon into tmp/portable/icon (qlmanage + sips +
+# iconutil), so no binary icon is committed. Sign and notarize the .app afterwards with
+# packaging/portable/macos_sign_notarize.sh.
 # ruff: noqa
 import os
+import shutil
+import subprocess
+import sys
+from importlib.metadata import version as _dist_version
 from pathlib import Path
 
 from PyInstaller.utils.hooks import collect_data_files, collect_submodules, copy_metadata
@@ -24,6 +32,30 @@ from PyInstaller.utils.hooks import collect_data_files, collect_submodules, copy
 ROOT = Path(SPECPATH).resolve().parents[1]
 PKG = ROOT / "src" / "guiskindose"
 ICON = PKG / "gui" / "static" / "guiskindose_icon.ico"
+SVG_ICON = PKG / "gui" / "static" / "guiskindose_icon.svg"
+IS_MACOS = sys.platform == "darwin"
+BUNDLE_ID = "io.github.kgrizz-git.guiskindose"
+
+
+def _macos_icns() -> str:
+    """Render the SVG icon to tmp/portable/icon/GUISkinDose.icns (macOS tools only)."""
+    out = ROOT / "tmp" / "portable" / "icon"
+    iconset = out / "GUISkinDose.iconset"
+    shutil.rmtree(out, ignore_errors=True)
+    iconset.mkdir(parents=True)
+    # Quick Look rasterizes the SVG at 1024 px; sips scales it to each iconset size.
+    subprocess.run(["qlmanage", "-t", "-s", "1024", "-o", str(out), str(SVG_ICON)], check=True,
+                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    master = out / f"{SVG_ICON.name}.png"
+    for size in (16, 32, 128, 256, 512):
+        for scale in (1, 2):
+            px = size * scale
+            name = f"icon_{size}x{size}{'@2x' if scale == 2 else ''}.png"
+            subprocess.run(["sips", "-z", str(px), str(px), str(master), "--out", str(iconset / name)],
+                           check=True, stdout=subprocess.DEVNULL)
+    icns = out / "GUISkinDose.icns"
+    subprocess.run(["iconutil", "-c", "icns", str(iconset), "-o", str(icns)], check=True)
+    return str(icns)
 
 SHAPE = os.environ.get("GUISKINDOSE_PORTABLE_SHAPE", "spike")
 # Proposed Light set: PORTABLE_APP_PLAN.md -> "Proposed Light set".
@@ -142,7 +174,7 @@ exe = EXE(
     strip=False,
     upx=False,
     console=False,
-    icon=str(ICON),
+    icon=None if IS_MACOS else str(ICON),
 )
 coll = COLLECT(
     exe,
@@ -152,3 +184,26 @@ coll = COLLECT(
     upx=False,
     name="GUISkinDose",
 )
+
+if IS_MACOS:
+    _version = _dist_version("guiskindose")
+    app = BUNDLE(
+        coll,
+        name="GUISkinDose.app",
+        icon=_macos_icns(),
+        bundle_identifier=BUNDLE_ID,
+        version=_version,
+        info_plist={
+            "CFBundleName": "GUISkinDose",
+            "CFBundleDisplayName": "GUISkinDose",
+            "CFBundleShortVersionString": _version,
+            "CFBundleVersion": _version,
+            "LSMinimumSystemVersion": "12.0",
+            "NSHighResolutionCapable": True,
+            # The native window only loads the local NiceGUI server on 127.0.0.1.
+            "NSAppTransportSecurity": {
+                "NSAllowsArbitraryLoads": False,
+                "NSAllowsLocalNetworking": True,
+            },
+        },
+    )

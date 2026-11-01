@@ -246,6 +246,8 @@ The workflow is now a two-leg matrix, chosen by `GUISKINDOSE_PORTABLE_SHAPE` in 
 
 Both legs passed the frozen self-check with the golden PSD and the native GUI smoke. In Full, `GUISkinDose.exe --png-check` (`packaging/portable/pngcheck.py`) rendered 2 dose-map PNGs with outbound traffic firewalled for both the exe and `chromium/chrome.exe`. It passes the bundled path to `kaleido.start_sync_server(path=..., mathjax=False)`. `BROWSER_PATH` pointed at the runner's system Chrome as a decoy. All 7 browser processes ran from `chromium/chrome.exe`. Kaleido's page had no `http` script. The flags included `--no-sandbox`, so the sandbox stays off, as Kaleido defaults. The shipped notices are both BSD-3 licences and a `CREDITS.html` dumped from that build (497 products).
 
+**Decision (maintainer, 2026-11-01): two builds, no Medium.** A Medium build (bundled browser plus the Light mesh set) was considered and rejected. The browser dominates size. The measured Windows zips are Light 118 MB and Full 330 MB, and a Medium would be about 285–300 MB, because Full's extra meshes add only about 30–45 MB. Keep two builds. In Phase 1, Full bundles WebView2 only if testing shows the window cannot open without admin rights. If size becomes a problem, Full can ship the starter meshes and fetch the rest as a Phase 2 phantom pack, rather than adding a third build.
+
 The browser is not pruned. Dropping unused locales and the elevation services is a Phase 1 follow-up. Timings come from one run each.
 
 Phase 0 still needs a person to confirm that the native window renders and calculates, on a PC that has never had Python installed.
@@ -256,11 +258,11 @@ Phase 0 still needs a person to confirm that the native window renders and calcu
 
 Run this alongside Phase 0. The maintainer now has an Apple Developer account, so the macOS signing risk can be tested early instead of waiting for Phase 5. Signing and notarization often break a frozen layout, and that is cheaper to learn now.
 
-- [ ] Create a **Developer ID Application** certificate and an App Store Connect API key for `notarytool`. Keep both out of the repository. CI later reads them from GitHub secrets.
-- [ ] Freeze a Light-shape `GUISkinDose.app` with PyInstaller on an arm64 runner, and record whether an x86_64 or universal2 build is practical. Use the Light file list (the edition module can wait for Phase 1) and the Phase 0 frozen entry, with the app icon converted to `.icns` and the ATS key in `Info.plist`.
-- [ ] Sign every nested Mach-O file (dylibs, `.so` extensions, the Python framework) inside-out with the hardened runtime and a timestamp. Do not use `codesign --deep`. Record the entitlements that were actually needed, such as `allow-unsigned-executable-memory` or `disable-library-validation`, and keep the list minimal.
-- [ ] Notarize in this order: `ditto -c -k --keepParent GUISkinDose.app` → `xcrun notarytool submit --wait` → `xcrun stapler staple GUISkinDose.app` → re-zip the stapled app with `ditto` for download. `notarytool` takes a zip, not a bare `.app`, and a zip cannot be stapled. Record any rejected files from the notary log.
-- [ ] Verify with `codesign --verify --deep --strict`, `spctl -a -t exec -vv`, and `xcrun stapler validate`.
+- [x] Create a **Developer ID Application** certificate and an App Store Connect API key for `notarytool`. Keep both out of the repository. CI later reads them from GitHub secrets.
+- [x] Freeze a Light-shape `GUISkinDose.app` with PyInstaller on an arm64 runner, and record whether an x86_64 or universal2 build is practical. Use the Light file list (the edition module can wait for Phase 1) and the Phase 0 frozen entry, with the app icon converted to `.icns` and the ATS key in `Info.plist`.
+- [x] Sign every nested Mach-O file (dylibs, `.so` extensions, the Python framework) inside-out with the hardened runtime and a timestamp. Do not use `codesign --deep`. Record the entitlements that were actually needed, such as `allow-unsigned-executable-memory` or `disable-library-validation`, and keep the list minimal.
+- [x] Notarize in this order: `ditto -c -k --keepParent GUISkinDose.app` → `xcrun notarytool submit --wait` → `xcrun stapler staple GUISkinDose.app` → re-zip the stapled app with `ditto` for download. `notarytool` takes a zip, not a bare `.app`, and a zip cannot be stapled. Record any rejected files from the notary log.
+- [x] Verify with `codesign --verify --deep --strict`, `spctl -a -t exec -vv`, and `xcrun stapler validate`.
 - [ ] Confirm the windowed `.app` does not crash when `sys.stdout` is `None`, and that the native window actually renders the page from `127.0.0.1`.
 - [ ] Sign and notarize a Full-shape app that contains the Chromium artifact chosen in Phase 0, copied in with `ditto`. Sign it inside-out (binary, framework, helper apps) with the same identity, the hardened runtime, and a timestamp. Every nested binary, the browser included, is re-signed with our Developer ID for notarization, so the upstream signature does not matter on macOS. Record the entitlements Chromium needs. Confirm the helpers are still separate Mach-O images inside the stapled app.
 - [ ] Export PNG offline from that Full app. The process list must show the bundled Chromium, not the app bootloader, which proves the choreographer wrapper problem is solved. If this cannot be signed, notarized, or launched, drop offline PNG from Full macOS.
@@ -270,18 +272,30 @@ Run this alongside Phase 0. The maintainer now has an Apple Developer account, s
 
 **Acceptance:** a notarized, stapled Light `.app` opens with no Gatekeeper prompt on a clean Mac, then calculates and exports HTML offline. The Full app exports PNG offline from the bundled Chromium, or the progress log records why offline PNG is dropped on macOS. `codesign`, `spctl`, and `stapler validate` pass. The progress log records the entitlements (Light and Full), architectures, sizes, and a PyInstaller-versus-Briefcase recommendation. The Freeze design switches tools only through a decision-log entry.
 
-#### Phase 0b progress notes (2026-10-30, uncommitted local spike on an arm64 Mac)
+#### Phase 0b results (2026-11-01, arm64 Mac, macOS 26, committed recipe)
 
-These are results from a local, uncommitted spike. The `.icns` icon, the `Info.plist` ATS key, and the hardened ad-hoc signing it used are not in the committed spec. There is no macOS CI job yet, so none of this is reproduced in CI. Signing and notarization are not done, and their checkboxes stay open.
+The Light app is now reproduced from committed files. `guiskindose.spec` writes `GUISkinDose.app` on macOS, and `packaging/portable/macos_sign_notarize.sh` signs, notarizes, staples, and zips it. There is no macOS CI job yet, because the signing secrets come later.
 
-- **PyInstaller build.** PyInstaller 6.22.3 built an arm64 `.app` with the Light mesh set. The `.app` is 218 MB and its `ditto` zip is 97 MB.
-- **Self-check.** The frozen self-check passed. A `hudfrid` run on the Siemens example gave a PSD of 14.076 mGy.
-- **Native window.** The window loaded the page from `127.0.0.1`, and a WebKit connection was observed. Cold start took 3.3 s the first time and about 1.6 s after that.
-- **stdout.** Under LaunchServices, stdout is `/dev/null`, not `None`. The `None` path is therefore proven only on Windows.
+| Measure | Light, arm64 |
+|---------|------:|
+| `.app` | 213 MB, 1032 files |
+| Stapled `ditto` zip | 100.4 MB |
+| Freeze time (PyInstaller 6.22.3, Python 3.12) | 65 s |
+| Signing time, 210 Mach-O files plus bundles | 23 s |
+| Notarization wait (`notarytool submit --wait`) | 2103 s, one submission |
+| Frozen self-check from the signed app | 4 s, exit 0 |
+| Native launch to loopback port listening | 2 s |
+
+- **Build.** The `.icns` is generated at build time from the SVG icon with `qlmanage`, `sips`, and `iconutil` into `tmp/`. `Info.plist` has the bundle id `io.github.kgrizz-git.guiskindose`, the package version, and `NSAppTransportSecurity` with `NSAllowsLocalNetworking` true and `NSAllowsArbitraryLoads` false.
+- **Signing.** A Developer ID signature with the hardened runtime and a timestamp was applied to every nested Mach-O, then to each nested bundle with `find -depth`, then to the app. No `--deep` was used. No keychain prompt appeared.
+- **Entitlements.** None. `macos_entitlements.plist` is an empty dictionary. The earlier ad-hoc spike needed `disable-library-validation` only because an ad-hoc signature has no Team ID.
+- **Notarization.** The first submission was Accepted, with no rejected files. Stapling worked. `codesign --verify --deep --strict` passes, `xcrun stapler validate` passes, and `spctl -a -t exec -vv` reports `accepted, source=Notarized Developer ID`. `syspolicy_check distribution` also passes.
+- **Runtime.** The signed app passed `--self-check` and `--network-probe`. Launched through LaunchServices, it listened on `127.0.0.1:8765`, and `com.apple.WebKit.Networking` held a connection to it. stdout is `/dev/null` under LaunchServices, not `None`, so the `None` path is still proven only on Windows.
+- **Quarantine.** The zip was copied, given a Safari-style `com.apple.quarantine` attribute, and expanded with `ditto -x -k`. `spctl` accepts the expanded app as `Notarized Developer ID`, and `stapler validate` passes. Launched with `open`, it ran under App Translocation and waited at `_dyld_start` for the first-open confirmation. The screen was not visible to the agent, so a person must confirm that the dialog is the plain "downloaded from the Internet" prompt, not a block. The offline variant was not run, to avoid disrupting the machine.
+- **Credentials.** The script has two notary auth modes. When `GUISKINDOSE_NOTARY_KEY` (the `.p8` path), `GUISKINDOSE_NOTARY_KEY_ID`, and `GUISKINDOSE_NOTARY_ISSUER` are all set, `notarytool` gets `--key`, `--key-id`, and `--issuer` for both submit and log. When none is set, it uses the `--keychain-profile` profile, which is the local default. Setting only some of the three is an error. The script checks that the key file is readable and warns if it is group- or world-readable. It names these values by variable only and never prints them. If the keychain profile is missing, it stops before uploading and prints the `xcrun notarytool store-credentials` command to recreate it. `GUISKINDOSE_NOTARY_DRY_RUN=1` prints the redacted arguments without contacting Apple. The API-key mode was checked only by that dry run. CI will later supply the same three values from a protected GitHub Environment (for example `macos-release`, with a required reviewer). That environment will also hold the Developer ID `.p12` and its password, which the job imports into a temporary keychain and deletes afterwards.
 - **Architectures.** A universal2 build is impractical. The uv-managed Python is arm64-only, and scipy ships separate wheels per architecture. An x86_64 build needs an Intel runner.
-- **Signing.** An ad-hoc, hardened-runtime signature was applied inside-out to 272 Mach-O files without `--deep`. It needed only `com.apple.security.cs.disable-library-validation`. That entitlement is likely needed only because an ad-hoc signature has no Team ID. Developer ID signing is untested, because it stopped at a keychain prompt for the private key.
-- **Briefcase.** Briefcase 0.4.7 is rejected for now. Its app was 455 MB with a 137 MB zip. It needed `min_os` 14.0, the `pywebview>=6.1` pin plus a locally built `proxy_tools` wheel, and a `multiprocessing.set_executable` fix. Even then, its window never connected to the server.
-- **Recommendation.** Use PyInstaller for macOS too. The Freeze design is unchanged, so no decision-log entry is needed.
+- **Briefcase.** Unchanged from the 2026-10-30 local spike. Briefcase 0.4.7 gave a 455 MB app and a 137 MB zip, needed `min_os` 14.0, a locally built `proxy_tools` wheel, and a `multiprocessing.set_executable` fix, and its window never connected to the server. PyInstaller stays the macOS tool, so no decision-log entry is needed.
+- **Full shape.** Not started. The pinned ungoogled-chromium macOS arm64 build, its re-signing, and the offline PNG proof remain open.
 
 ### Phase 1 — Light and Full payloads
 
@@ -359,6 +373,8 @@ Until Phase 5, Smart App Control or antivirus heuristics may block the unsigned 
 - **2026-10-19** — Reviews (`opencode/deepseek-v4.1-flash-free`, `opencode-go/minimax-m3.1-flash-free`) folded in. The macOS notarize order uses `ditto` and staples before the final zip. Full macOS signs its Chromium. Kaleido gets the browser path explicitly, because `BROWSER_PATH` loses to a downloaded Chrome. The frozen entry is a dedicated script. `corrections.db` leaves the freeze. Upload examples ship. The git item is already shipped. The log sink follows the TO_DO design. Architectures, ATS, Windows cloud signing, the GitHub asset CDN redirect, zip extraction rules, and the phantom-resolution refactor are now explicit. Mesh sizes use byte sums.
 - **2026-10-19** — Review (`cursor/grok-4.7`, high) folded in after each claim was checked against the installed packages or vendor docs. choreographer runs Chromium through `sys.executable` on macOS and Linux, which breaks in a PyInstaller freeze. Kaleido loads MathJax from a CDN unless told not to, and writes figure pages to a temp directory. `chrome-headless-shell` is Chrome for Testing. pywebview's `_is_chromium()` trusts a set runtime path, so the pre-check reads the folder itself. Briefcase supports a Windows zip and Python 3.14. PyInstaller must be 6.15 or later. The Fixed Version cab is expanded with `expand -F:*`. Two claims were corrected rather than adopted: `freeze_support()` works on every OS, and a `None` stdout drops output silently instead of crashing.
 - **2026-10-30** — The Phase 0 Windows spike started. A full-mesh, no-browser onedir froze with PyInstaller 6.22.3 on Python 3.14. It passed a frozen self-check with `git` absent and outbound network blocked. A native launch reached a listening server and started a window child process. The onedir is 312.6 MB and the zip is 145 MB. The Chromium pick, the Full sizes, and PNG remain open.
+
+- **2026-11-01** — Phase 0b Light reproduced from committed files on an arm64 Mac. The Developer ID build needed no entitlements, notarization was accepted on the first submission, and `spctl` reports `Notarized Developer ID`. The stdout `None` and window-render item stays open until a person sees the window, and the Full shape is not started.
 
 ## Decision log
 
