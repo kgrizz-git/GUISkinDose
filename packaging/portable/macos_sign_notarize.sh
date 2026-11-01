@@ -277,9 +277,11 @@ if [[ "$STATUS" != "Accepted" ]]; then
 import json, sys
 log = json.load(open(sys.argv[1]))
 for issue in log.get("issues") or []:
-    path = issue.get("path", "")
-    path = path.split(".app/", 1)[-1] if ".app/" in path else path
-    print(f"{issue.get(\"severity\")}: {path}: {issue.get(\"message\")}")
+    severity = issue.get("severity")
+    message = issue.get("message")
+    path = issue.get("path") or ""
+    path = path.split(".app/", 1)[-1] if ".app/" in path else path.rsplit("/", 1)[-1]
+    print("%s: %s: %s" % (severity, path, message))
 ' "$LOG" || true
     fi
     exit 1
