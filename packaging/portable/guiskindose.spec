@@ -16,8 +16,8 @@
 # verified Chromium into the onedir after the freeze (see PORTABLE_CHROMIUM_ARTIFACT.md).
 # src/ is on pathex, so an editable install is fine.
 # On macOS the build also writes GUISkinDose.app (BUNDLE). Its .icns is generated at
-# build time from the committed SVG icon into tmp/portable/icon (qlmanage + sips +
-# iconutil), so no binary icon is committed. Sign and notarize the .app afterwards with
+# build time from the committed SVG icon into tmp/portable/icon (AppKit via osascript,
+# sips, iconutil), so no binary icon is committed. Sign and notarize the .app afterwards with
 # packaging/portable/macos_sign_notarize.sh.
 # ruff: noqa
 import os
@@ -37,16 +37,50 @@ IS_MACOS = sys.platform == "darwin"
 BUNDLE_ID = "io.github.kgrizz-git.guiskindose"
 
 
+# AppKit renders the SVG into a 1024 px RGBA bitmap with a clear background. The art is
+# scaled to 824 px and centered, and clipped to a rounded rect (radius 185 px), which
+# follows Apple's macOS icon grid. Quick Look thumbnails were not used, because they
+# flatten the SVG onto white and leave square white corners.
+_RENDER_ICON_JXA = r"""
+ObjC.import('AppKit');
+function run(argv) {
+  const size = 1024, art = 824, pad = (size - art) / 2, radius = 185;
+  const image = $.NSImage.alloc.initWithContentsOfFile(argv[0]);
+  if (image.isNil()) { throw new Error('cannot load SVG'); }
+  const rep = $.NSBitmapImageRep.alloc
+    .initWithBitmapDataPlanesPixelsWidePixelsHighBitsPerSampleSamplesPerPixelHasAlphaIsPlanarColorSpaceNameBytesPerRowBitsPerPixel(
+      null, size, size, 8, 4, true, false, 'NSDeviceRGBColorSpace', 0, 0);
+  rep.size = $.NSMakeSize(size, size);
+  const ctx = $.NSGraphicsContext.graphicsContextWithBitmapImageRep(rep);
+  $.NSGraphicsContext.saveGraphicsState;
+  $.NSGraphicsContext.setCurrentContext(ctx);
+  $.NSColor.clearColor.set;
+  $.NSRectFillUsingOperation($.NSMakeRect(0, 0, size, size), 1);
+  const rect = $.NSMakeRect(pad, pad, art, art);
+  $.NSBezierPath.bezierPathWithRoundedRectXRadiusYRadius(rect, radius, radius).addClip;
+  image.drawInRectFromRectOperationFractionRespectFlippedHints(rect, $.NSZeroRect, 2, 1.0, true, $());
+  ctx.flushGraphics;
+  $.NSGraphicsContext.restoreGraphicsState;
+  const png = rep.representationUsingTypeProperties(4, $({}));
+  if (!png.writeToFileAtomically(argv[1], true)) { throw new Error('cannot write PNG'); }
+}
+"""
+
+
 def _macos_icns() -> str:
     """Render the SVG icon to tmp/portable/icon/GUISkinDose.icns (macOS tools only)."""
     out = ROOT / "tmp" / "portable" / "icon"
     iconset = out / "GUISkinDose.iconset"
     shutil.rmtree(out, ignore_errors=True)
     iconset.mkdir(parents=True)
-    # Quick Look rasterizes the SVG at 1024 px; sips scales it to each iconset size.
-    subprocess.run(["qlmanage", "-t", "-s", "1024", "-o", str(out), str(SVG_ICON)], check=True,
-                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    master = out / f"{SVG_ICON.name}.png"
+    master = out / "master_1024.png"
+    subprocess.run(["osascript", "-l", "JavaScript", "-e", _RENDER_ICON_JXA, str(SVG_ICON), str(master)],
+                   check=True, stdout=subprocess.DEVNULL)
+    has_alpha = subprocess.run(["sips", "-g", "hasAlpha", str(master)], check=True,
+                               capture_output=True, text=True).stdout
+    if "hasAlpha: yes" not in has_alpha:
+        raise SystemExit("icon master PNG has no alpha channel")
+    # sips scales the master to each iconset size.
     for size in (16, 32, 128, 256, 512):
         for scale in (1, 2):
             px = size * scale
@@ -56,6 +90,7 @@ def _macos_icns() -> str:
     icns = out / "GUISkinDose.icns"
     subprocess.run(["iconutil", "-c", "icns", str(iconset), "-o", str(icns)], check=True)
     return str(icns)
+
 
 SHAPE = os.environ.get("GUISKINDOSE_PORTABLE_SHAPE", "spike")
 # Proposed Light set: PORTABLE_APP_PLAN.md -> "Proposed Light set".

@@ -10,7 +10,8 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 - **Portable app Phase 0b: signed and notarized macOS app** (2026-11-01) — `guiskindose.spec` now also
   writes `GUISkinDose.app` on macOS (`BUNDLE`). The `.icns` is rendered at build time from the committed
-  SVG icon into `tmp/portable/icon`, so no binary icon is committed. `Info.plist` carries the bundle id,
+  SVG icon into `tmp/portable/icon` through AppKit. The result has alpha, art of 824 px on a 1024 px
+  canvas, and rounded corners, and no binary icon is committed. `Info.plist` carries the bundle id,
   the package version, and an ATS dictionary that allows local networking only. The new
   `packaging/portable/macos_sign_notarize.sh` signs every nested Mach-O with the hardened runtime and a
   timestamp (no `--deep`), then the nested bundles and the app, verifies, notarizes through a
