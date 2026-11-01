@@ -19,6 +19,10 @@ That keeps SemVer and contributor history organized.
 
 ## [Unreleased]
 
+### Security
+
+- The PyPI release workflow now pins `pypa/gh-action-pypi-publish` v1.14.3 (was v1.14.2). Versions up to 1.14.2 bundled a `certifi` trust store that still trusted the compromised emSign root CA, which Sigstore relies on during Trusted Publishing and attestation ([GHSA-5xjx-3w67-w9x9](https://github.com/pypa/gh-action-pypi-publish/security/advisories/GHSA-5xjx-3w67-w9x9)).
+
 ## [1.1.1] - 2026-10-31
 
 Patch release: ships the equipment-profile examples that 1.1.0 left out of the package, adds a
