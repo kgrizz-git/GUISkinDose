@@ -44,6 +44,7 @@ Catalog of every file under `dev-docs/`. Start from [AGENTS.md](../AGENTS.md) fo
 | [PRIVACY_AND_SENSITIVE_ASSETS.md](PRIVACY_AND_SENSITIVE_ASSETS.md) | Public-repository privacy policy, DICOM/image review requirements, approved-asset inventory, and scanner use. |
 | [PRIVACY_INCIDENT_RESPONSE.md](PRIVACY_INCIDENT_RESPONSE.md) | Private evidence, historical audit, containment, rewrite/notification, verification, and privacy release checklist runbook. |
 | [references/LOCAL_PII_MODELS.md](references/LOCAL_PII_MODELS.md) | Local advisory PII/PHI model comparison, macOS/LM Studio boundaries, and synthetic-fixture evaluation protocol. |
+| [references/PORTABLE_CHROMIUM_ARTIFACT.md](references/PORTABLE_CHROMIUM_ARTIFACT.md) | Portable Full build: pinned Chromium artifact, licences and notices, snapshot vs ungoogled-chromium comparison. |
 | [references/PORTABLE_EXECUTABLE_PACKAGING.md](references/PORTABLE_EXECUTABLE_PACKAGING.md) | Research note: NiceGUI/`nicegui-pack` portable GUI executables; Java-wrap non-goals. Execution plan: [plans/PORTABLE_APP_PLAN.md](plans/PORTABLE_APP_PLAN.md). |
 | [SONARQUBE_LOCAL.md](SONARQUBE_LOCAL.md) | Optional loopback-only SonarQube Community Build runner, private result tracking, and local quality-gate workflow. |
 | [../scripts/check_help_registry.py](../scripts/check_help_registry.py) | Validates `dev-docs/help_registry.json`, source GUI help pages, mirrored bundled help files, GUI `HelpButton` references, and orphaned help files. |

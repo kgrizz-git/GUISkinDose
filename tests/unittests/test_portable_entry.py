@@ -187,7 +187,16 @@ def fake_dispatch(entry_module, monkeypatch):
 
 @pytest.mark.parametrize(
     "argv",
-    [["--self-check"], ["--network-probe"], ["--self-check", ""], ["--network-probe", ""], ["--self-check", "   "]],
+    [
+        ["--self-check"],
+        ["--network-probe"],
+        ["--png-check"],
+        ["--self-check", ""],
+        ["--network-probe", ""],
+        ["--png-check", ""],
+        ["--self-check", "   "],
+        ["--png-check", "   "],
+    ],
 )
 def test_headless_flag_without_directory_fails_closed(entry_module, fake_dispatch, argv):
     # A local handler on the portable logger keeps this independent of test order:
@@ -221,6 +230,20 @@ def test_network_probe_flag_dispatches(entry_module, fake_dispatch):
     code = entry_module.main(["--network-probe", "probe-dir"])
     assert code == 0
     assert fake_dispatch == [("log",), ("network_probe", "probe-dir")]
+
+
+def test_png_check_flag_dispatches(entry_module, fake_dispatch, monkeypatch, tmp_path):
+    fake = types.ModuleType("pngcheck")
+    monkeypatch.setattr(
+        fake,
+        "run_png_check",
+        lambda out, *, process_start: fake_dispatch.append(("png_check", out, process_start)) or 0,
+        raising=False,
+    )
+    monkeypatch.setitem(sys.modules, "pngcheck", fake)
+    code = entry_module.main(["--png-check", str(tmp_path)])
+    assert code == 0
+    assert fake_dispatch == [("log",), ("png_check", str(tmp_path), entry_module._PROCESS_START)]
 
 
 def test_no_arguments_start_the_gui(entry_module, fake_dispatch):

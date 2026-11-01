@@ -67,6 +67,17 @@ folded into `THIRD_PARTY_NOTICES.md`; the `.woff2` binary carries a
 hash-pinned entry in `approved_asset_inventory.json` (the `.css`/`.txt`
 sidecars are valid UTF-8 and are scanned as text).
 
+## Bundled Chromium in the portable Full build (not a Python dep)
+
+The Full portable zip ships ungoogled-chromium in `GUISkinDose/chromium/` so PNG export works
+offline. Chromium and ungoogled-chromium are BSD-3-Clause, and Chromium bundles many third-party
+libraries under their own licences. Three notice files must ship beside the browser:
+`LICENSE.chromium.txt` and `LICENSE.ungoogled-chromium-windows.txt` (committed under
+`packaging/portable/chromium/`), and `CREDITS.html`, generated at build time from that exact
+binary's `chrome://credits` by `packaging/portable/dump_chromium_credits.py`. The browser is never
+committed, and it is not folded into `THIRD_PARTY_NOTICES.md`. See
+[`references/PORTABLE_CHROMIUM_ARTIFACT.md`](references/PORTABLE_CHROMIUM_ARTIFACT.md).
+
 ## Commands
 
 ```bash
