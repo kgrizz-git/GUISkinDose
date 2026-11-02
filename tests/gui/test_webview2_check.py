@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib.util
 from pathlib import Path
 
 import pytest
@@ -236,22 +237,33 @@ def test_failure_is_logged_and_skips_print_without_a_console(monkeypatch, caplog
     assert capsys.readouterr().out == ""
 
 
+def _installed_winforms_source() -> str | None:
+    """WinForms backend source, or ``None`` when pywebview is not installed.
+
+    ``find_spec`` does not import the package. Importing it fails the static
+    type check in CI, where the ``gui-native`` extra is not installed, and on
+    Windows it loads the CLR backend.
+    """
+    spec = importlib.util.find_spec("webview")
+    origin = spec.origin if spec is not None else None
+    if not isinstance(origin, str):
+        return None
+    winforms = Path(origin).resolve().parent / "platforms" / "winforms.py"
+    if not winforms.is_file():
+        return None
+    return winforms.read_text(encoding="utf-8")
+
+
 def test_installed_pywebview_still_uses_our_registry_views() -> None:
     """Fail when a pywebview bump changes the EdgeUpdate view this probe copies.
 
     The dependency allows ``pywebview>=6.1`` while the probe copies 6.2.1's
     ``edge_build``. Reading the installed WinForms source keeps a later release
-    from drifting silently. The Windows module is not imported: off Windows it
-    pulls in the CLR loader. Skips when that source file is not installed.
+    from drifting silently. Skips when that source file is not installed.
     """
-    try:
-        import webview
-    except ImportError:
-        pytest.skip("pywebview is not installed")
-    winforms = Path(webview.__file__).resolve().parent / "platforms" / "winforms.py"
-    if not winforms.is_file():
-        pytest.skip("this pywebview install has no WinForms backend source")
-    source = winforms.read_text(encoding="utf-8")
+    source = _installed_winforms_source()
+    if source is None:
+        pytest.skip("pywebview WinForms source is not installed")
     assert "machine() == 'x86' or key_type == 'HKEY_CURRENT_USER'" in source
     assert r"Microsoft\EdgeUpdate\Clients\{key}" in source
     assert r"WOW6432Node\Microsoft\EdgeUpdate\Clients\{key}" in source
