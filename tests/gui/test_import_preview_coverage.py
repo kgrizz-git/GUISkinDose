@@ -69,20 +69,25 @@ def test_is_ge_from_import_warning() -> None:
     assert ctrl._is_ge() is True
 
 
-def test_set_transform_defaults_clears_flags_for_non_ge() -> None:
+def test_set_transform_defaults_syncs_globals_from_meta_without_clearing() -> None:
+    """Upload post-load hook must not wipe staged / preserved transform flags."""
     ctrl = _controller()
     state.import_provenance = SimpleNamespace(schema_name="radimetrics")
     state.is_multi_exam = False
-    state.swap_lat_lon = True
-    state.flip_ap1 = True
+    # Globals may still be at pre-load defaults; meta owns the loaded authority.
+    state.swap_lat_lon = False
+    state.flip_ap1 = False
+    state.flip_ap2 = False
     state.loaded_exam_meta = [{"swap_lat_lon": True, "flip_ap1": True, "flip_ap2": False}]
     state.manufacturer = "Philips"
 
     ctrl.set_transform_defaults()
 
-    assert state.swap_lat_lon is False
-    assert state.flip_ap1 is False
-    assert state.loaded_exam_meta[0]["swap_lat_lon"] is False
+    assert state.swap_lat_lon is True
+    assert state.flip_ap1 is True
+    assert state.flip_ap2 is False
+    assert state.loaded_exam_meta[0]["swap_lat_lon"] is True
+    assert state.loaded_exam_meta[0]["flip_ap1"] is True
     cast(MagicMock, ctrl.coord_auto_label.set_text).assert_called_with("")
 
 

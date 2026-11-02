@@ -64,6 +64,44 @@ def sync_global_patient_offset_to_single_exam_meta(app_state: AppState) -> None:
         m["d_lat"] = app_state.d_lat
 
 
+def offset_seeds_for_new_exams() -> tuple[float, float, float]:
+    """Return the patient offset for an exam this load creates.
+
+    Offsets belong to each exam. The default is ``(0, 0, 0)``. A newly added
+    exam uses that default whether the session was empty or already held other
+    exams, and whether the file contains one study or several. Slider positions
+    from before any exam was loaded are not copied forward, and neither are
+    offsets already stored on other exams. Callers that consume a staged
+    run-config entry ignore this seed and use the entry. Re-parse of a matched
+    exam keeps the offset stored on that exam instead of this default.
+    """
+    return (0.0, 0.0, 0.0)
+
+
+def reconcile_single_exam_offsets_after_load(
+    app_state: AppState, *, from_staged_entry: bool
+) -> None:
+    """Keep single-exam globals and ``meta[0]`` patient offsets in lockstep after load.
+
+    Fresh loads zero the globals via ``reset_global_offsets_on_new_load``.
+    A new exam's meta already starts at zero. This copy keeps a lone exam's
+    meta equal to the globals the single-exam calculation reads.
+
+    - Staged pending slot: meta wins → copy into globals.
+    - Ordinary single-exam load or re-parse: globals win → copy into meta.
+      Re-parse does not reset globals, so a lone exam keeps the offset the
+      slider is showing.
+    - Multi-exam loads: no-op. New exams stay at the default. A re-parse keeps
+      each matched exam's stored offset, and multi-exam calculation reads meta.
+    """
+    if len(app_state.loaded_exam_meta) != 1:
+        return
+    if from_staged_entry:
+        sync_single_exam_globals_from_meta(app_state)
+    else:
+        sync_global_patient_offset_to_single_exam_meta(app_state)
+
+
 def active_exam_index_for_offsets(app_state: AppState) -> int:
     """0-based exam index used for Geometry patient-offset read/write."""
     if app_state.is_multi_exam and app_state.active_exam_index is not None:

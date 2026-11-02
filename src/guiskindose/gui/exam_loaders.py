@@ -38,7 +38,11 @@ from .exam_transforms import (
     rebuild_rdsr_df,
 )
 from .geometry_preview import on_exams_loaded
-from .offset_handlers import reset_global_offsets_on_new_load, sync_single_exam_globals_from_meta
+from .offset_handlers import (
+    offset_seeds_for_new_exams,
+    reconcile_single_exam_offsets_after_load,
+    reset_global_offsets_on_new_load,
+)
 from .settings_builder import build_settings, refresh_normalization_warnings
 from .state import AppState
 
@@ -139,10 +143,7 @@ def load_rdsr(file_path: Path, state: AppState) -> tuple[bool, str]:
     """
     from guiskindose.input_adapters.models import InputAdapterResult, InputProvenance
 
-    # T20: seed per-exam meta from globals before reset zeros them.
-    seed_d_lon = state.d_lon
-    seed_d_ver = state.d_ver
-    seed_d_lat = state.d_lat
+    # A new exam starts at (0, 0, 0). A staged entry supplies its own offsets below.
     try:
         work = _load_candidate(state)
         reset_global_offsets_on_new_load(work)
@@ -153,6 +154,7 @@ def load_rdsr(file_path: Path, state: AppState) -> tuple[bool, str]:
         # slot replays the recipe instead of resolving live; a null slot
         # loads with live behavior but seeds the document's flags.
         pending, entry, replay_capture = _peek_pending_entry(state, live)
+        seed_d_lon, seed_d_ver, seed_d_lat = offset_seeds_for_new_exams()
 
         # Pre-read exam ceiling: a fresh DICOM load always appends exactly
         # one exam, so 64 loaded already refuse before the file is touched.
@@ -245,11 +247,11 @@ def load_rdsr(file_path: Path, state: AppState) -> tuple[bool, str]:
                 "z": float(norm.trans_offset.z),
             },
             "table_origin_override": override_value,
-            # Per-exam patient offset (Phase 2.3): staged document offsets for
-            # pending consumption, else the pre-reset globals; editable per
-            # exam in the loaded-exam list. Single-exam calculation reads
-            # globals, so adoption syncs meta back via
-            # sync_single_exam_globals_from_meta when len==1.
+            # Per-exam patient offset. A staged document entry wins. Otherwise
+            # a new exam starts at 0, including one appended onto exams that
+            # are already loaded. After a lone-exam load,
+            # reconcile_single_exam_offsets_after_load keeps globals and
+            # meta[0] aligned (staged meta→globals; otherwise globals→meta).
             "d_lon": entry.d_lon if entry is not None else seed_d_lon,
             "d_ver": entry.d_ver if entry is not None else seed_d_ver,
             "d_lat": entry.d_lat if entry is not None else seed_d_lat,
@@ -284,8 +286,8 @@ def load_rdsr(file_path: Path, state: AppState) -> tuple[bool, str]:
         work.table_offset_y = norm.trans_offset.y
         work.table_offset_z = norm.trans_offset.z
         refresh_normalization_warnings(work)
-        if entry is not None and not work.is_multi_exam:
-            sync_single_exam_globals_from_meta(work)
+        if not work.is_multi_exam:
+            reconcile_single_exam_offsets_after_load(work, from_staged_entry=entry is not None)
 
         state.__dict__.update(work.__dict__)
         if pending:
@@ -371,10 +373,7 @@ def _parse_tabular(
     identical with no restore pass.
     """
 
-    # T20: capture globals before reset; on re-parse keep current globals.
-    seed_d_lon = state.d_lon
-    seed_d_ver = state.d_ver
-    seed_d_lat = state.d_lat
+    # A new exam starts at (0, 0, 0). Re-parse keeps stored per-exam offsets.
     work = _load_candidate(state)
     if not replace_existing:
         reset_global_offsets_on_new_load(work)
@@ -382,6 +381,7 @@ def _parse_tabular(
     schema = work.input_schema or "auto"
     live = _live_session(settings)
     pending, entry, replay_capture = _peek_pending_entry(state, live)
+    seed_d_lon, seed_d_ver, seed_d_lat = offset_seeds_for_new_exams()
     if (
         not replace_existing
         and len(work.loaded_exams) >= MAX_PROFILES
@@ -444,8 +444,8 @@ def _parse_tabular(
         start=start,
     )
     _finalize_tabular_state(work, file_path, out[0])
-    if entry is not None and not work.is_multi_exam:
-        sync_single_exam_globals_from_meta(work)
+    if not work.is_multi_exam:
+        reconcile_single_exam_offsets_after_load(work, from_staged_entry=entry is not None)
     state.__dict__.update(work.__dict__)
     if pending:
         state.equipment_pending = pending[1:] or None
@@ -504,7 +504,12 @@ def _append_and_authorize_tabular(
 def _collect_preserved_flags(
     state: AppState, file_path: Path, replace_existing: bool
 ) -> list[dict]:
-    """Collect per-exam coordinate-transform flags from prior loads of file_path."""
+    """Collect per-exam transform flags and patient offsets for file_path.
+
+    Re-parse matches these records back onto the rebuilt exams. Offsets are
+    included so a matched exam keeps its own ``d_lon`` / ``d_ver`` / ``d_lat``
+    instead of starting over at 0.
+    """
     if not replace_existing:
         return []
     return [
@@ -516,6 +521,9 @@ def _collect_preserved_flags(
             "flip_tx": m.get("flip_tx", False),
             "flip_ty": m.get("flip_ty", False),
             "flip_tz": m.get("flip_tz", False),
+            "d_lon": _stored_offset(m, "d_lon"),
+            "d_ver": _stored_offset(m, "d_ver"),
+            "d_lat": _stored_offset(m, "d_lat"),
         }
         for m in state.loaded_exam_meta
         if m.get("file_path") == file_path
@@ -531,6 +539,32 @@ def _default_transform_flags(state: AppState) -> dict:
         "flip_ty": False,
         "flip_tz": False,
     }
+
+
+def _stored_offset(record: dict, key: str) -> float:
+    """Return one stored patient-offset axis, or 0 when it is missing or null."""
+    value = record.get(key)
+    if value is None:
+        return 0.0
+    return float(value)
+
+
+def _patient_offset_for_exam(
+    flags: dict, seed: tuple[float, float, float]
+) -> tuple[float, float, float]:
+    """Use the offset saved on a re-parsed exam, otherwise the new-exam seed.
+
+    Preserved re-parse records carry ``d_lon`` / ``d_ver`` / ``d_lat``. A new
+    exam has no such keys and starts at the seed, which is ``(0, 0, 0)``
+    unless the caller passed a staged run-config entry.
+    """
+    if "d_lon" not in flags:
+        return seed
+    return (
+        _stored_offset(flags, "d_lon"),
+        _stored_offset(flags, "d_ver"),
+        _stored_offset(flags, "d_lat"),
+    )
 
 
 def _blank_transform_flags() -> dict:
@@ -560,6 +594,7 @@ def _build_exam_meta_entry(
     table_origin_override: Any = None,
 ) -> dict:
     """Construct a per-exam meta entry shared by single and multi-study paths."""
+    d_lon, d_ver, d_lat = _patient_offset_for_exam(flags, (seed_d_lon, seed_d_ver, seed_d_lat))
     return {
         "file_name": file_path.name,
         "file_path": file_path,
@@ -581,9 +616,9 @@ def _build_exam_meta_entry(
         # then an absolute table-origin shift.
         "table_origin_detected": {"x": 0.0, "y": 0.0, "z": 0.0},
         "table_origin_override": table_origin_override,
-        "d_lon": seed_d_lon,
-        "d_ver": seed_d_ver,
-        "d_lat": seed_d_lat,
+        "d_lon": d_lon,
+        "d_ver": d_ver,
+        "d_lat": d_lat,
         "normalization_method": "Tabular",
         "input_manufacturer": "",
         "input_model": "",
