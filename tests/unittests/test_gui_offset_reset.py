@@ -29,6 +29,7 @@ from guiskindose.gui.helpers import (
     stage_table_origin_axis,
     sync_global_patient_offset_to_single_exam_meta,
 )
+from guiskindose.gui.offset_handlers import apply_patient_offset_slider_tick
 from guiskindose.gui.page_context import PageContext
 from guiskindose.gui.state import AppState
 from guiskindose.gui.tabs.geometry import geometry_vendor_notice
@@ -77,7 +78,7 @@ def test_load_tabular_resets_global_patient_offset():
 
 
 def test_sequential_second_load_does_not_revive_pre_load_offset_seed():
-    """Pre-load globals seed meta, then reset; a second file must not resurrect them."""
+    """A fresh load starts at 0. A second file stays at 0 and does not revive the old sliders."""
     st = AppState()
     st.d_lon = 12.0
     st.d_ver = 3.0
@@ -97,6 +98,53 @@ def test_sequential_second_load_does_not_revive_pre_load_offset_seed():
     assert st.loaded_exam_meta[1]["d_lon"] == 0.0
     assert st.loaded_exam_meta[1]["d_ver"] == 0.0
     assert st.loaded_exam_meta[1]["d_lat"] == 0.0
+
+
+def test_appended_exam_starts_at_zero_and_keeps_existing_offset():
+    """A newly added exam starts at 0. The exam already loaded keeps its own offset."""
+    st = AppState()
+    st.input_schema = "normalized"
+    ok, _ = load_tabular(_FIXTURES / "normalized_events.csv", st)
+    assert ok
+    apply_patient_offset_slider_tick(st, "d_lon", 5.0)
+    apply_patient_offset_slider_tick(st, "d_ver", 6.0)
+    apply_patient_offset_slider_tick(st, "d_lat", 7.0)
+
+    ok, _ = load_rdsr(_EXAMPLE_RDSR, st)
+    assert ok
+    assert st.is_multi_exam
+    assert st.loaded_exam_meta[0]["d_lon"] == 5.0
+    assert st.loaded_exam_meta[0]["d_ver"] == 6.0
+    assert st.loaded_exam_meta[0]["d_lat"] == 7.0
+    assert st.loaded_exam_meta[1]["d_lon"] == 0.0
+    assert st.loaded_exam_meta[1]["d_ver"] == 0.0
+    assert st.loaded_exam_meta[1]["d_lat"] == 0.0
+
+
+def test_multi_exam_reparse_keeps_per_exam_offsets():
+    """Re-parse keeps each exam's offset. It does not copy the shared slider value."""
+    st = AppState()
+    st.input_schema = "normalized"
+    ok, _ = load_tabular(_FIXTURES / "normalized_events_multistudy.csv", st)
+    assert ok
+    assert len(st.loaded_exam_meta) == 2
+    st.loaded_exam_meta[0]["d_lon"] = 8.0
+    st.loaded_exam_meta[0]["d_ver"] = 1.0
+    st.loaded_exam_meta[0]["d_lat"] = 2.0
+    st.loaded_exam_meta[1]["d_lon"] = -3.0
+    st.loaded_exam_meta[1]["d_ver"] = 4.0
+    st.loaded_exam_meta[1]["d_lat"] = 0.5
+    st.d_lon = 99.0
+
+    ok, _ = load_tabular(_FIXTURES / "normalized_events_multistudy.csv", st, replace_existing=True)
+    assert ok
+    assert len(st.loaded_exam_meta) == 2
+    assert st.loaded_exam_meta[0]["d_lon"] == 8.0
+    assert st.loaded_exam_meta[0]["d_ver"] == 1.0
+    assert st.loaded_exam_meta[0]["d_lat"] == 2.0
+    assert st.loaded_exam_meta[1]["d_lon"] == -3.0
+    assert st.loaded_exam_meta[1]["d_ver"] == 4.0
+    assert st.loaded_exam_meta[1]["d_lat"] == 0.5
 
 
 def test_load_tabular_replace_existing_preserves_global_patient_offset():

@@ -64,22 +64,18 @@ def sync_global_patient_offset_to_single_exam_meta(app_state: AppState) -> None:
         m["d_lat"] = app_state.d_lat
 
 
-def offset_seeds_for_new_exams(
-    app_state: AppState, *, fresh_load: bool, from_staged_entry: bool
-) -> tuple[float, float, float]:
-    """Return the patient-offset seed for exams created by this load.
+def offset_seeds_for_new_exams() -> tuple[float, float, float]:
+    """Return the patient offset for an exam this load creates.
 
-    A file opened into an empty session starts every exam at ``(0, 0, 0)``,
-    whether the file contains one study or several. Numbers sitting in the
-    sliders before any exam existed are not a default. A staged run-config
-    entry supplies its own offsets at the append site, so this returns the
-    current globals and the caller ignores them. Appending a file onto exams
-    that are already loaded keeps those globals, so the new exam starts where
-    the session already is.
+    Offsets belong to each exam. The default is ``(0, 0, 0)``. A newly added
+    exam uses that default whether the session was empty or already held other
+    exams, and whether the file contains one study or several. Slider positions
+    from before any exam was loaded are not copied forward, and neither are
+    offsets already stored on other exams. Callers that consume a staged
+    run-config entry ignore this seed and use the entry. Re-parse of a matched
+    exam keeps the offset stored on that exam instead of this default.
     """
-    if fresh_load and not from_staged_entry:
-        return (0.0, 0.0, 0.0)
-    return (float(app_state.d_lon), float(app_state.d_ver), float(app_state.d_lat))
+    return (0.0, 0.0, 0.0)
 
 
 def reconcile_single_exam_offsets_after_load(
@@ -88,15 +84,15 @@ def reconcile_single_exam_offsets_after_load(
     """Keep single-exam globals and ``meta[0]`` patient offsets in lockstep after load.
 
     Fresh loads zero the globals via ``reset_global_offsets_on_new_load``.
-    ``offset_seeds_for_new_exams`` already starts an empty session at zero for
-    every exam in the file. This copy keeps a lone exam's meta equal to the
-    globals the calculation reads, including a staged pending slot (meta wins)
-    and a re-parse that preserved the current globals.
+    A new exam's meta already starts at zero. This copy keeps a lone exam's
+    meta equal to the globals the single-exam calculation reads.
 
     - Staged pending slot: meta wins → copy into globals.
-    - Ordinary single-exam load: globals win → copy into meta.
-    - Multi-exam loads: no-op. Each exam keeps the seed from
-      ``offset_seeds_for_new_exams``, and multi-exam calculation reads meta.
+    - Ordinary single-exam load or re-parse: globals win → copy into meta.
+      Re-parse does not reset globals, so a lone exam keeps the offset the
+      slider is showing.
+    - Multi-exam loads: no-op. New exams stay at the default. A re-parse keeps
+      each matched exam's stored offset, and multi-exam calculation reads meta.
     """
     if len(app_state.loaded_exam_meta) != 1:
         return

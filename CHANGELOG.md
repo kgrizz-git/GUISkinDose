@@ -44,9 +44,10 @@ That keeps SemVer and contributor history organized.
   sliders with nothing loaded, then opening a file, used to store those numbers on the
   exam. A one-exam file calculated from the reset value (0) but kept the old numbers in
   its exam record, so adding a second file applied them. A file that already contained
-  several exams applied them immediately. Either file now starts every exam at 0.
-  Adding another file onto exams that are already loaded still starts that new exam from
-  the current offset. A staged run-config entry still supplies its own offsets.
+  several exams applied them immediately.   Either file now starts every exam at 0. Each exam keeps its own offset. A file
+  added later starts that new exam at 0 and leaves the exams already loaded alone.
+  Re-parsing a file keeps the offset stored on each exam it can match; a study that
+  cannot be matched starts at 0. A staged run-config entry still supplies its own offsets.
 - **Import Preview wiped staged tabular transform flags** — after a successful single-exam
   tabular upload, `ImportPreviewController.set_transform_defaults` forced
   `swap_lat_lon`/`flip_ap*` to false in globals and `meta[0]`, then re-derived the frame.

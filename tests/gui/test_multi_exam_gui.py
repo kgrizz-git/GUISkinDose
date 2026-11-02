@@ -20,8 +20,9 @@ _FIXTURES = Path(__file__).resolve().parent.parent / "fixtures" / "tabular_input
 
 class TestGuiPerExamOffsets:
     """The GUI stores a per-exam patient offset on each loaded_exam_meta entry
-    and run_calculation forwards them to analyze_multiple_exams. A file opened
-    into an empty session starts every exam at zero. These tests pin the
+    and run_calculation forwards them to analyze_multiple_exams. Every newly
+    created exam starts at zero, including a later file added to a session
+    that already has exams. These tests pin the
     loader/wiring contract without needing the NiceGUI runtime."""
 
     def _fresh_state(self, d_lon=0.0, d_ver=0.0, d_lat=0.0):
