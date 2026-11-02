@@ -29,6 +29,13 @@ That keeps SemVer and contributor history organized.
   seed). Lone-exam loads now reconcile meta to the post-reset globals; staged run-config
   pending slots still copy meta into globals.
 
+- **Import Preview wiped staged tabular transform flags** — after a successful single-exam
+  tabular upload, `ImportPreviewController.set_transform_defaults` forced
+  `swap_lat_lon`/`flip_ap*` to false in globals and `meta[0]`, then re-derived the frame.
+  Staged run-config geometry flags (and preserved re-parse flags) were undone before
+  calculation, silently restoring raw coordinates. The hook now syncs toggles from meta
+  and leaves the loader-applied frame alone.
+
 ### Security
 
 - The PyPI release workflow now pins `pypa/gh-action-pypi-publish` v1.14.3 (was v1.14.2). Versions up to 1.14.2 bundled a `certifi` trust store that still trusted the compromised emSign root CA, which Sigstore relies on during Trusted Publishing and attestation ([GHSA-5xjx-3w67-w9x9](https://github.com/pypa/gh-action-pypi-publish/security/advisories/GHSA-5xjx-3w67-w9x9)).
