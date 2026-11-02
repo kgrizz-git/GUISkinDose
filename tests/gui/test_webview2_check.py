@@ -90,7 +90,7 @@ def test_native_path_only_follows_process_architecture(monkeypatch: pytest.Monke
     reads ``WOW6432Node`` for every other architecture. Approving the native key on a
     64-bit process lets startup continue into an MSHTML fallback.
     """
-    reader_values = {_pv("HKEY_LOCAL_MACHINE", _NATIVE): "130.0.2849.80"}
+    reader_values: dict[tuple[str, str, str], object] = {_pv("HKEY_LOCAL_MACHINE", _NATIVE): "130.0.2849.80"}
 
     monkeypatch.setattr(webview2, "_process_machine", lambda: "AMD64")
     amd64 = webview2.probe_webview2(_reader(reader_values))
