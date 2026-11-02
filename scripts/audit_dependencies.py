@@ -192,7 +192,7 @@ def _probe_uv_audit(repo_root: Path) -> str | None:
     return uv_bin
 
 
-def _run_uv_audit(uv_bin: str, repo_root: Path, extra_args: list[str]) -> int:
+def _run_uv_audit(uv_bin: str, repo_root: Path, extra_args: list[str], *, allow_fallback: bool = True) -> int:
     """Build and run ``uv audit``; fall back to pip-audit on FileNotFoundError."""
     print("Using 'uv audit' to check locked dependencies...")
     sys.stdout.flush()
@@ -212,6 +212,8 @@ def _run_uv_audit(uv_bin: str, repo_root: Path, extra_args: list[str]) -> int:
         result = subprocess.run(audit_argv, cwd=repo_root, timeout=300.0)
         return result.returncode
     except FileNotFoundError:
+        if not allow_fallback:
+            return _refuse_tool_fallback()
         # Fallback if shutil.which returned a path that is not executable
         return _run_pip_audit_fallback(repo_root, extra_args)
 
@@ -251,6 +253,13 @@ def _run_pip_audit_fallback(repo_root: Path, extra_args: list[str]) -> int:
         return 1
 
 
+def _refuse_tool_fallback() -> int:
+    """pip-audit would audit the active root environment, not the tool lock, so refuse."""
+    print("ERROR: auditing a --tool-project lock needs 'uv audit' (uv >= 0.11.19); pip-audit cannot do it.",
+          file=sys.stderr)
+    return 1
+
+
 def _split_tool_project(repo_root: Path, args: list[str]) -> tuple[Path, list[str]]:
     """Pop ``--tool-project <dir>`` and return the directory ``uv audit`` should run in.
 
@@ -274,11 +283,19 @@ def _split_tool_project(repo_root: Path, args: list[str]) -> tuple[Path, list[st
 def main(argv: list[str] | None = None) -> int:
     repo_root = Path(__file__).resolve().parent.parent
     extra_args = sys.argv[1:] if argv is None else list(argv)
-    repo_root, extra_args = _split_tool_project(repo_root, extra_args)
+    try:
+        project_root, extra_args = _split_tool_project(repo_root, extra_args)
+    except ValueError as error:
+        print(f"usage error: {error}", file=sys.stderr)
+        return 2
+    is_tool = project_root != repo_root
+    repo_root = project_root
     uv_bin = _probe_uv_audit(repo_root)
+    if is_tool and not uv_bin:
+        return _refuse_tool_fallback()
 
     if uv_bin:
-        code = _run_uv_audit(uv_bin, repo_root, extra_args)
+        code = _run_uv_audit(uv_bin, repo_root, extra_args, allow_fallback=not is_tool)
     else:
         code = _run_pip_audit_fallback(repo_root, extra_args)
     return code

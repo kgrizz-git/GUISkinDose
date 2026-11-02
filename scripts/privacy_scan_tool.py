@@ -39,6 +39,18 @@ def tool_environment(environ: Mapping[str, str] | None = None, *, root: Path | N
     return source
 
 
+def environment_missing(root: Path | None = None) -> bool:
+    """Return whether the tool project's venv has not been synced yet."""
+    base = repo_root() if root is None else root
+    return not (base / TOOL_PROJECT / _TOOL_ENV_DIRNAME / "pyvenv.cfg").is_file()
+
+
+SYNC_COMMAND: Final = (
+    'env -u UV_PYTHON -u VIRTUAL_ENV UV_PROJECT_ENVIRONMENT="$PWD/tools/privacy-scan/.venv" '
+    "uv sync --project tools/privacy-scan --locked"
+)
+
+
 def script_argv(script: str | Path, args: Sequence[str] = (), *, root: Path | None = None) -> list[str]:
     """Build ``uv run --project <tool> --no-sync python <script> <args>``."""
     base = repo_root() if root is None else root

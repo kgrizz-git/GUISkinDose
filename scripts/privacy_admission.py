@@ -377,6 +377,13 @@ def materialize_head(root: Path, destination: Path) -> None:
 
 
 def run_scanner(root: Path, snapshot: Path, rule: ScannerRule, input_paths: Sequence[str]) -> int:
+    if rule.scanner_id in {"presidio", "image-ocr"} and privacy_scan_tool.environment_missing(root):
+        print(
+            f"The {rule.scanner_id} scanner needs the tools/privacy-scan environment. From the repository root, run:\n"
+            f"  {privacy_scan_tool.SYNC_COMMAND}",
+            file=sys.stderr,
+        )
+        return 1
     python = sys.executable
     environment = os.environ.copy()
     uv_cache = git_path_directory(root, "privacy-uv-cache")

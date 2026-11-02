@@ -10,7 +10,7 @@
 # Action SHAs and uv/Python versions mirror ci.yml's static-analysis job.
 # Scope: root uv.lock and tools/privacy-scan/uv.lock (via the wrapper's --tool-project flag).
 # tools/semgrep/uv.lock is not audited here yet; see the "audit the locked tool environments"
-# item in dev-docs/TO_DO.md.
+# item in dev-docs/TO_DO.md (now narrowed to semgrep).
 #
 # Second job (vulnerable-actions): zizmor's known-vulnerable-actions audit over every workflow.
 # This repo pins actions by commit SHA, and Dependabot raises alerts only for actions referenced

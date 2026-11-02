@@ -6,6 +6,7 @@ import tomllib
 from pathlib import Path
 from unittest import mock
 
+import pytest
 from packaging.requirements import Requirement
 from packaging.version import Version
 
@@ -38,6 +39,8 @@ def _run_scanner_capture(scanner_id: str, tmp_path: Path) -> mock.Mock:
         diff_regex=None,
     )
     completed = mock.Mock(returncode=0, stdout="", stderr="")
+    (tmp_path / "tools/privacy-scan/.venv").mkdir(parents=True)
+    (tmp_path / "tools/privacy-scan/.venv/pyvenv.cfg").write_text("home = x\n", encoding="utf-8")
     with (
         mock.patch.object(privacy_admission, "git_path_directory", return_value=tmp_path / "cache"),
         mock.patch.object(privacy_admission.subprocess, "run", return_value=completed) as run,
@@ -80,3 +83,26 @@ def test_tool_project_floors_not_below_root() -> None:
     tool_floors = _floors(ROOT / "tools/privacy-scan/pyproject.toml")
     for name in ("pillow", "pypdf", "pydicom"):
         assert tool_floors[name] >= root_floors[name], name
+
+
+def test_environment_missing_reflects_pyvenv_cfg(tmp_path: Path) -> None:
+    assert privacy_scan_tool.environment_missing(tmp_path)
+    venv = tmp_path / "tools/privacy-scan/.venv"
+    venv.mkdir(parents=True)
+    (venv / "pyvenv.cfg").write_text("home = x\n", encoding="utf-8")
+    assert not privacy_scan_tool.environment_missing(tmp_path)
+
+
+def test_run_scanner_refuses_missing_env_without_paths(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    rule = privacy_admission.ScannerRule(
+        scanner_id="presidio", version="v", trigger_extensions=frozenset(), trigger_prefixes=(),
+        input_extensions=frozenset(), input_prefixes=(), scope="all_matching", config_paths=(), diff_regex=None,
+    )
+    with mock.patch.object(privacy_admission.subprocess, "run") as run:
+        code = privacy_admission.run_scanner(tmp_path, tmp_path / "snap", rule, ["a.md"])
+    err = capsys.readouterr().err
+    assert code == 1
+    run.assert_not_called()
+    assert "uv sync --project tools/privacy-scan --locked" in err
+    assert str(tmp_path) not in err
+    assert not (tmp_path / "tools").exists()
