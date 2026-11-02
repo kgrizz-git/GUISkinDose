@@ -19,6 +19,7 @@ inject a fake registry reader.
 from __future__ import annotations
 
 import logging
+import sys
 from collections.abc import Callable
 from dataclasses import dataclass
 
@@ -172,8 +173,12 @@ def native_window_runtime_ready(
     if status.usable:
         logger.info("WebView2 pre-check passed (runtime %s)", status.summary()["runtime_version"])
         return True
-    logger.error("WebView2 pre-check failed: runtime_ok=%s dotnet_ok=%s", status.runtime_ok, status.dotnet_ok)
     message = missing_runtime_message(status)
-    print(message)
+    # The message is fixed copy plus a public URL: no paths, names, or exam values.
+    logger.error(
+        "WebView2 pre-check failed: runtime_ok=%s dotnet_ok=%s. %s", status.runtime_ok, status.dotnet_ok, message
+    )
+    if sys.stdout is not None:  # a windowed build has no console
+        print(message)
     (show_message or _show_message_box)(message)
     return False

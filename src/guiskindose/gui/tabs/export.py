@@ -255,6 +255,9 @@ class ExportTabController:
 
     async def download_png(self) -> None:
         """Download png."""
+        if not png_export_available():
+            ui.notify(copy_text("export.light_edition.no_png"), type="warning", multi_line=True)
+            return
         if not state.calculation_done:
             ui.notify(_NO_DATA_TO_EXPORT_MESSAGE, color="warning")
             return

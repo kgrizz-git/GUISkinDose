@@ -154,3 +154,14 @@ def test_run_gui_browser_mode_skips_the_check(monkeypatch) -> None:
     gui_app.run_gui(native=False, port=8765)
 
     assert ran == [True]
+
+
+def test_failure_is_logged_and_skips_print_without_a_console(monkeypatch, caplog, capsys) -> None:
+    monkeypatch.setattr(webview2.sys, "stdout", None)
+
+    with caplog.at_level("ERROR", logger=webview2.logger.name):
+        assert webview2.native_window_runtime_ready(_reader({}), show_message=lambda _m: None) is False
+
+    assert any(webview2.WEBVIEW2_DOWNLOAD_URL in record.getMessage() for record in caplog.records)
+    monkeypatch.undo()
+    assert capsys.readouterr().out == ""

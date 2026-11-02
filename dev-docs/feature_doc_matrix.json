@@ -220,7 +220,8 @@
         "tests/unittests/test_export_xlsx.py",
         "tests/unittests/test_export_pdf.py",
         "tests/unittests/test_export_docx.py",
-        "tests/unittests/test_export_cli.py"
+        "tests/unittests/test_export_cli.py",
+        "tests/unittests/test_edition.py"
       ],
       "docs": [
         "dev-docs/plans/RICH_EXPORT_PLAN.md",

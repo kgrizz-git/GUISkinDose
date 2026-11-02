@@ -99,3 +99,16 @@ def test_calculate_refuses_a_mesh_that_is_not_installed(light, monkeypatch, note
 
     monkeypatch.setattr(state, "phantom_model", "plane")
     assert calc_tab._CalculationController._human_mesh_is_installed() is True
+
+
+@pytest.mark.asyncio
+async def test_light_download_png_returns_early_with_the_light_notice(light, monkeypatch, notes) -> None:
+    from guiskindose.gui.tabs import export as export_tab
+
+    monkeypatch.setattr(state, "calculation_done", True)
+    monkeypatch.setattr(export_tab, "_get_save_path", lambda *_a: pytest.fail("save dialog opened in Light"))
+    monkeypatch.setattr(export_tab, "make_dosemap_png", lambda *_a: pytest.fail("PNG rendered in Light"))
+
+    await export_tab.ExportTabController().download_png()
+
+    assert notes == [copy_text("export.light_edition.no_png")]
