@@ -19,6 +19,7 @@ from pathlib import Path
 
 from nicegui import run, ui
 
+from guiskindose.edition import png_export_available
 from guiskindose.export import MissingExportDependencyError
 from guiskindose.intended_use import INTENDED_USE_NOTICE
 from guiskindose.privacy import safe_error_event, safe_user_error
@@ -353,6 +354,8 @@ def _build_export_header(controller: ExportTabController) -> None:
         copy_text("export.include_identifiers.label"), value=False
     ).props("color=warning")
     ui.label(copy_text("export.include_identifiers.explanation")).classes("text-xs text-orange-5")
+    if not png_export_available():
+        ui.label(copy_text("export.light_edition.no_png")).classes("text-caption text-grey-6")
 
 
 def _build_export_card(title: str, description: str, button_label: str, icon: str, on_click, *, teal: bool = False):
@@ -375,11 +378,13 @@ def _build_export_cards(controller: ExportTabController) -> None:
             "Standalone HTML file with interactive 3D map.",
             "Download HTML", "html", controller.download_html, teal=True,
         )
-        _build_export_card(
-            "PNG dose map",
-            "Static capture of the current dose map view.",
-            "Download PNG", "image", controller.download_png,
-        )
+        # Light ships no browser for Kaleido, so the PNG card is not offered at all.
+        if png_export_available():
+            _build_export_card(
+                "PNG dose map",
+                "Static capture of the current dose map view.",
+                "Download PNG", "image", controller.download_png,
+            )
         _build_export_card(
             "Rich report — audit document",
             "Self-contained XLSX / PDF / HTML with results, settings, "

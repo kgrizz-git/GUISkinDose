@@ -1,0 +1,101 @@
+"""GUI behavior of the Light edition: no PNG card, PNG helper refuses, missing meshes reported."""
+
+from __future__ import annotations
+
+import pytest
+
+pytest.importorskip("nicegui")
+
+from nicegui import ui
+from nicegui.testing import User
+
+from guiskindose import _edition
+from guiskindose.edition import EDITION_LIGHT, PngExportUnavailableError
+from guiskindose.gui.state import state
+from guiskindose.gui.ui_copy import copy_text
+
+pytestmark = pytest.mark.nicegui_main_file("tests/gui/nicegui_main.py")
+
+
+@pytest.fixture
+def light(monkeypatch):
+    monkeypatch.setattr(_edition, "EDITION", EDITION_LIGHT)
+
+
+@pytest.fixture
+def notes(monkeypatch):
+    calls: list[str] = []
+    monkeypatch.setattr(ui, "notify", lambda message, **_k: calls.append(str(message)))
+    return calls
+
+
+async def _open_export_tab(user: User) -> None:
+    await user.open("/")
+    await user.should_see("8 · Export", retries=20)
+    user.find("8 · Export").click()
+
+
+@pytest.mark.asyncio
+async def test_light_export_tab_hides_the_png_card(user: User, light) -> None:
+    await _open_export_tab(user)
+    await user.should_see("Interactive HTML dose map")
+    await user.should_see(copy_text("export.light_edition.no_png"))
+    await user.should_not_see("Download PNG")
+
+
+@pytest.mark.asyncio
+async def test_full_export_tab_offers_the_png_card(user: User) -> None:
+    await _open_export_tab(user)
+    await user.should_see("Download PNG")
+    await user.should_not_see(copy_text("export.light_edition.no_png"))
+
+
+def test_light_make_dosemap_png_raises_before_building_a_figure(light, monkeypatch) -> None:
+    from guiskindose.gui import figures
+
+    def refuse(**_kwargs):
+        raise AssertionError("figure built in Light")
+
+    monkeypatch.setattr(figures, "make_dosemap_fig", refuse)
+    with pytest.raises(PngExportUnavailableError):
+        figures.make_dosemap_png()
+
+
+def test_settings_reports_a_saved_mesh_that_is_not_installed(light, monkeypatch) -> None:
+    from guiskindose.gui.tabs import settings as settings_tab
+
+    monkeypatch.setattr(state, "human_mesh", "senior_male")
+    monkeypatch.setattr(
+        settings_tab, "human_mesh_not_installed_message", lambda stem: "missing" if stem == "senior_male" else None
+    )
+    options = {"adult_male": "Adult Male", "hudfrid": "Hudfrid"}
+
+    note = settings_tab._select_installed_mesh(options)
+
+    assert state.human_mesh == "adult_male"
+    assert note == copy_text("settings.human_mesh.not_installed").format(label="Adult Male")
+
+
+def test_settings_stays_silent_for_an_installed_mesh(monkeypatch) -> None:
+    from guiskindose.gui.tabs import settings as settings_tab
+
+    monkeypatch.setattr(state, "human_mesh", "adult_male")
+    assert settings_tab._select_installed_mesh({"adult_male": "Adult Male"}) is None
+    assert state.human_mesh == "adult_male"
+
+
+def test_calculate_refuses_a_mesh_that_is_not_installed(light, monkeypatch, notes) -> None:
+    from guiskindose import phantom_mesh_names
+    from guiskindose.gui.tabs import calculate as calc_tab
+
+    monkeypatch.setattr(state, "phantom_model", "human")
+    monkeypatch.setattr(state, "human_mesh", "senior_male")
+    monkeypatch.setattr(
+        phantom_mesh_names, "human_mesh_not_installed_message", lambda stem, **_k: f"{stem} is not installed"
+    )
+
+    assert calc_tab._CalculationController._human_mesh_is_installed() is False
+    assert notes == ["senior_male is not installed"]
+
+    monkeypatch.setattr(state, "phantom_model", "plane")
+    assert calc_tab._CalculationController._human_mesh_is_installed() is True

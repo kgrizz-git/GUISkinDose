@@ -414,6 +414,8 @@ class _CalculationController:
         if state.import_has_errors:
             ui.notify("Fix import errors before calculating (tab 1)", color="warning")
             return
+        if not self._human_mesh_is_installed():
+            return
         if not await self._below_floor_policy_is_ready():
             return
         if not await self._rotational_is_ready():
@@ -426,6 +428,18 @@ class _CalculationController:
                 return
             ok, message = await self._run_calculation()
         self._finish_calculation(ok, message)
+
+    @staticmethod
+    def _human_mesh_is_installed() -> bool:
+        """Refuse a human mesh this build does not ship, with the reason, before any work."""
+        if state.phantom_model != "human":
+            return True
+        from guiskindose.phantom_mesh_names import human_mesh_not_installed_message
+
+        missing = human_mesh_not_installed_message(state.human_mesh)
+        if missing:
+            ui.notify(missing, type="negative", timeout=0, close_button="Dismiss", multi_line=True)
+        return missing is None
 
     async def _below_floor_policy_is_ready(self) -> bool:
         """Return True when below-floor policy is set or the user confirms the prompt."""

@@ -19,6 +19,16 @@ That keeps SemVer and contributor history organized.
 
 ## [Unreleased]
 
+### Changed
+
+- On Windows, `--mode gui --native` now checks for the Microsoft Edge WebView2 Runtime and .NET Framework 4.6.2
+  or later before it opens the window. When either is missing, the app shows a message that points at Microsoft's
+  Evergreen Bootstrapper and exits, instead of opening a broken window on the old MSHTML engine. Browser mode and
+  other operating systems are unchanged.
+- A human phantom whose STL file is not installed is now refused with a message that names it, instead of a
+  generic "Unknown human mesh stem" error. The Settings tab says when a saved mesh is not installed and which mesh
+  it selected instead, and Calculate refuses that mesh before it starts.
+
 ### Security
 
 - The PyPI release workflow now pins `pypa/gh-action-pypi-publish` v1.14.3 (was v1.14.2). Versions up to 1.14.2 bundled a `certifi` trust store that still trusted the compromised emSign root CA, which Sigstore relies on during Trusted Publishing and attestation ([GHSA-5xjx-3w67-w9x9](https://github.com/pypa/gh-action-pypi-publish/security/advisories/GHSA-5xjx-3w67-w9x9)).

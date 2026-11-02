@@ -19,8 +19,12 @@ Available exports:
 
 - JSON with the full result dictionary and metadata.
 - Interactive HTML dose map.
-- PNG dose-map image.
+- PNG dose-map image (not in the Light portable app).
 - Rich report in XLSX, PDF, HTML, or DOCX format.
+
+The Light portable app ships no browser for rendering images, so it has no PNG card. Its rich reports mark each
+dose-map image as unavailable, and the interactive HTML dose map still works. The Full portable app and the pip
+install keep PNG export.
 
 The rich report collects the calculation output, effective settings, input provenance, correction summaries, warnings, discarded-event notes, and dose-map images. It is intended as an audit-friendly review artifact, not as a replacement for source RDSR data.
 

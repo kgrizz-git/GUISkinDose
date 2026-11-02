@@ -14,6 +14,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+from guiskindose.edition import PngExportUnavailableError, png_export_available
 from guiskindose.privacy import safe_error_event
 
 from .geometry_preview import effective_patient_offset_for_preview, rdsr_df_for_geometry_preview
@@ -179,7 +180,11 @@ def make_dosemap_png(explicit_dose_map=None, explicit_patient=None) -> bytes:
 
     Raises on failure (instead of returning ``None``) — mirrors
     ``make_dosemap_html``; see that docstring for the cancel-vs-failure rationale.
+    The Light edition raises ``PngExportUnavailableError`` before any figure is
+    built, so Kaleido never looks for a browser.
     """
+    if not png_export_available():
+        raise PngExportUnavailableError()
     try:
         fig_dict = make_dosemap_fig(explicit_dose_map=explicit_dose_map, explicit_patient=explicit_patient)
         if fig_dict is None:

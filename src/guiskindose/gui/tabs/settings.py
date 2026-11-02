@@ -13,6 +13,8 @@ from collections.abc import Callable
 
 from nicegui import ui
 
+from guiskindose.phantom_mesh_names import human_mesh_not_installed_message, resolve_human_mesh_stem
+
 from ..components import HelpButton
 from ..constants import (
     COLORSCALES,
@@ -102,6 +104,19 @@ def build(ctx: PageContext) -> None:
         _build_visual_section()
 
 
+def _select_installed_mesh(mesh_options: dict[str, str]) -> str | None:
+    """Point ``state.human_mesh`` at a selectable mesh; explain a not-installed one.
+
+    A saved stem that this build does not ship (a Light starter set) cannot stay in
+    the selector, so the fallback is shown to the user instead of applied silently.
+    """
+    saved = state.human_mesh
+    state.human_mesh = canonicalize_human_mesh_selection(saved, mesh_options)
+    if state.human_mesh == resolve_human_mesh_stem(saved or "") or not human_mesh_not_installed_message(saved):
+        return None
+    return copy_text("settings.human_mesh.not_installed").format(label=mesh_options.get(state.human_mesh, state.human_mesh))
+
+
 def _build_phantom_section(ctx: PageContext, on_change: Callable[[], None]) -> None:
     """Phantom Settings expansion: model, mesh, offsets, and habitus scaling.
 
@@ -123,7 +138,7 @@ def _build_phantom_section(ctx: PageContext, on_change: Callable[[], None]) -> N
                 ).on(_MODEL_VALUE_EVENT, on_change).classes("grow")
 
                 mesh_options = get_human_mesh_options()
-                state.human_mesh = canonicalize_human_mesh_selection(state.human_mesh, mesh_options)
+                not_installed_note = _select_installed_mesh(mesh_options)
                 mesh_select = (
                     ui.select(mesh_options, label="Human mesh", value=state.human_mesh)
                     .bind_value(state, "human_mesh")
@@ -142,6 +157,8 @@ def _build_phantom_section(ctx: PageContext, on_change: Callable[[], None]) -> N
                     on_change()
 
                 mesh_select.on(_MODEL_VALUE_EVENT, _on_human_mesh_change)
+            if not_installed_note:
+                ui.label(not_installed_note).classes("text-caption text-warning")
 
             # show/hide mesh selector based on model
             def _update_mesh_visibility():

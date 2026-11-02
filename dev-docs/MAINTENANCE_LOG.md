@@ -8,6 +8,21 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ## [Unreleased]
 
+- **Portable app Phase 1: Light and Full editions, WebView2 pre-check** (2026-11-01) — The new
+  `guiskindose/_edition.py` holds `EDITION = "full"`, and `guiskindose/edition.py` reads it and holds the
+  Light and Full phantom include lists. `guiskindose.spec` now takes `GUISKINDOSE_PORTABLE_EDITION`
+  (`light` or `full`; the `spike` shape is gone), copies the package to `tmp/portable/stage/<edition>/`,
+  rewrites that copy's `_edition.py`, and freezes the copy. The source tree and the pip wheel stay
+  `full`. In Light, `export/images.render_dosemap_png` returns `None` and `gui/figures.make_dosemap_png`
+  raises `PngExportUnavailableError` before a figure is built, so Kaleido never looks for a browser. The
+  static writer in `plotting/create_dose_map_plot.py` stops too, and the Export tab drops its PNG card.
+  Rich reports keep the "image unavailable" path with Light wording. The new `gui/webview2.py` reads
+  the registry values pywebview's `_is_chromium()` reads, in HKCU and HKLM and both registry views, plus
+  the .NET Framework release. `run_gui(native=True)` stops before `ui.run` when no runtime is usable. A
+  missing clinical mesh raises `HumanMeshNotInstalledError`. The portable self-check reports the
+  edition and the WebView2 probe, and `portable-spike.yml` builds both editions from the lists and
+  asserts them. See [PORTABLE_APP_PLAN.md](plans/PORTABLE_APP_PLAN.md) Phase 1.
+
 - **Portable app Phase 0b: signed and notarized macOS app** (2026-11-01) — `guiskindose.spec` now also
   writes `GUISkinDose.app` on macOS (`BUNDLE`). The `.icns` is rendered at build time from the committed
   SVG icon into `tmp/portable/icon` through AppKit. The result has alpha, art of 824 px on a 1024 px

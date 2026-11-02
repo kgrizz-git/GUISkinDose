@@ -653,6 +653,12 @@ def run_gui(native: bool = False, host: str | None = None, port: int | None = No
     dprint("GUI", f"Starting run_gui, native={native}")
 
     if native:
+        # Windows: no usable WebView2 means pywebview would fall back to MSHTML and
+        # open a broken window. Stop before the server starts, with a message.
+        from .webview2 import native_window_runtime_ready
+
+        if not native_window_runtime_ready():
+            return
         _register_native_focus_handler()
 
     logging.getLogger("nicegui").setLevel(logging.ERROR)

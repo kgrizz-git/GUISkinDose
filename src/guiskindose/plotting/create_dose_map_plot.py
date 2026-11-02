@@ -6,6 +6,7 @@ import numpy as np
 import plotly.graph_objects as go
 from PIL import Image
 
+from guiskindose.edition import PNG_UNAVAILABLE_MESSAGE, png_export_available
 from guiskindose.intended_use import stamp_figure
 from guiskindose.phantom_class import Phantom
 from guiskindose.plotting.create_layout_for_dose_map_plots import (
@@ -128,6 +129,16 @@ def create_dose_map_plot(patient: Phantom, settings: PyskindoseSettings, dose_ma
 
     if settings.plot.interactivity:
         fig.show()
+        return
+
+    _write_and_show_static_dose_maps(fig, settings)
+
+
+def _write_and_show_static_dose_maps(fig: go.Figure, settings: PyskindoseSettings) -> None:
+    """Write the four static PNG dose maps, then show them (PIL or notebook)."""
+    # The Light edition has no browser for Kaleido, so static images stop here.
+    if not png_export_available():
+        print(PNG_UNAVAILABLE_MESSAGE)
         return
 
     # proceed with creating static dose map

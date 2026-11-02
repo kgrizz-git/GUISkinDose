@@ -41,6 +41,22 @@
       "text": "Off by default. Enable only when an identified clinical record is intentionally required.",
       "owner": "gui/tabs/export.py"
     },
+    "export.light_edition.no_png": {
+      "text": "GUISkinDose Light has no PNG dose-map export. Use the interactive HTML dose map instead. Rich reports mark each dose-map image as unavailable.",
+      "owner": "gui/tabs/export.py"
+    },
+    "native.webview2.runtime_missing": {
+      "text": "GUISkinDose cannot open its window, because the Microsoft Edge WebView2 Runtime is not installed on this PC.\n\nTo fix it, download the Evergreen Bootstrapper from Microsoft:\n{url}\n\nRun it normally, not as administrator. It then installs for your user account only and needs no admin rights. Start GUISkinDose again afterwards.",
+      "owner": "gui/webview2.py"
+    },
+    "native.webview2.dotnet_missing": {
+      "text": "GUISkinDose cannot open its window, because this PC does not have .NET Framework 4.6.2 or later. Windows 10 and 11 include it, so it may have been removed or blocked. Ask your IT department to restore .NET Framework 4.8, then start GUISkinDose again.",
+      "owner": "gui/webview2.py"
+    },
+    "settings.human_mesh.not_installed": {
+      "text": "The saved human mesh is not installed in this build, so {label} is selected instead. GUISkinDose Light ships a starter set of phantoms. The Full download has the whole clinical library.",
+      "owner": "gui/tabs/settings.py"
+    },
     "upload.privacy_notice": {
       "text": "Privacy: filenames and file contents may contain PHI. Uploads are copied to a private random-name session directory and removed on clear or shutdown.",
       "owner": "gui/tabs/upload.py"

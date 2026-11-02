@@ -13,6 +13,8 @@ from datetime import UTC, datetime
 import numpy as np
 import pandas as pd
 
+from guiskindose.edition import PNG_UNAVAILABLE_MESSAGE, png_export_available
+
 from . import _format as _format
 from . import images as _images
 from . import metrics as _metrics
@@ -177,11 +179,16 @@ def _cumulative_section(resolved: _Resolved, source: ExportSource) -> Cumulative
     )
 
 
+_IMAGE_RENDER_FAILED = "Image unavailable (kaleido/export error)"
+
+
 def _render_images(resolved: _Resolved, source: ExportSource) -> list[ImageEntry]:
     images: list[ImageEntry] = []
     views = resolved.views
     if not views:
         return images
+    # Light has no PNG export: each entry keeps the "image unavailable" path, worded for Light.
+    unavailable = _IMAGE_RENDER_FAILED if png_export_available() else f"Image unavailable. {PNG_UNAVAILABLE_MESSAGE}"
     colorscale = source.colorscale
     patient0 = views[0].patient
     agg = resolved.aggregate_dose_map
@@ -193,7 +200,7 @@ def _render_images(resolved: _Resolved, source: ExportSource) -> list[ImageEntry
         images.append(
             ImageEntry(
                 label=label, view=view, exam_id=exam_id, png_bytes=png,
-                error_message=None if png is not None else "Image unavailable (kaleido/export error)",
+                error_message=None if png is not None else unavailable,
             )
         )
 

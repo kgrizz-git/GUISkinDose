@@ -198,11 +198,52 @@ def resolve_human_mesh_stem(stem: str) -> str:
     return canonical
 
 
+class HumanMeshNotInstalledError(ValueError):
+    """A clinical catalog mesh that this build does not ship (for example in Light)."""
+
+
+def is_clinical_catalog_stem(stem: str) -> bool:
+    """True when *stem* (alias, pose, or preview variant) names a clinical catalog mesh."""
+    try:
+        base = resolve_human_mesh_stem(stem)
+    except ValueError:
+        return False
+    for suffix in _PREVIEW_REDUCED_SUFFIXES:
+        base = base.removesuffix(suffix)
+    return base.removesuffix(_ARMS_DOWN_SUFFIX) in _CLINICAL_DISPLAY_LABELS
+
+
+def human_mesh_not_installed_message(stem: str, *, phantom_data_dir: Path | None = None) -> str | None:
+    """Explain why a clinical catalog *stem* cannot load, or return ``None`` if it can.
+
+    Returns ``None`` for stems outside the clinical catalog too; those are reported
+    as unknown by :func:`resolve_human_mesh_stl_path`. The message names the stem
+    and its label only, never a path.
+    """
+    if not stem or not is_clinical_catalog_stem(stem):
+        return None
+    canonical = resolve_human_mesh_stem(stem)
+    data_dir = (phantom_data_dir or package_phantom_data_dir()).resolve()
+    if (data_dir / f"{canonical}.stl").is_file():
+        return None
+    from guiskindose.edition import is_light
+
+    where = (
+        "GUISkinDose Light ships a starter set of phantoms. Use the Full download for the whole clinical library."
+        if is_light()
+        else "Its STL file is missing from the installed package. Reinstall GUISkinDose to restore it."
+    )
+    return f"Human mesh '{human_mesh_display_label(canonical)}' ({canonical}) is not installed in this build. {where}"
+
+
 def resolve_human_mesh_stl_path(stem: str, *, phantom_data_dir: Path | None = None) -> Path:
     """Resolve *stem* to an STL path confined under package ``phantom_data/``.
 
     Raises
     ------
+    HumanMeshNotInstalledError
+        If *stem* names a clinical catalog mesh whose STL this build does not ship.
+        It is never replaced by another body.
     ValueError
         If *stem* contains path separators / parent references, resolves outside
         ``phantom_data/``, or does not name an existing ``.stl`` file.
@@ -214,6 +255,9 @@ def resolve_human_mesh_stl_path(stem: str, *, phantom_data_dir: Path | None = No
     if not candidate.is_relative_to(data_dir):
         raise ValueError("human_mesh path escaped phantom_data/.")
     if not candidate.is_file():
+        missing = human_mesh_not_installed_message(resolved, phantom_data_dir=data_dir)
+        if missing:
+            raise HumanMeshNotInstalledError(missing)
         raise ValueError("Unknown human mesh stem.")
     return candidate
 
