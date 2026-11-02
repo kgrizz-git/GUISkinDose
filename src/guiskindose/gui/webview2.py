@@ -68,9 +68,9 @@ def _process_machine() -> str:
 def _clients_key(hive: str, machine_name: str) -> str:
     """EdgeUpdate Clients key pywebview opens for *hive* on a process of *machine_name*.
 
-    HKCU always uses the native key. HKLM uses that native key when the process is
-    ``x86``, and ``WOW6432Node`` for every other architecture, including ``AMD64`` and
-    ``ARM64``.
+    HKCU always uses the native key. HKLM uses that native key when
+    ``platform.machine()`` is ``x86``, and ``WOW6432Node`` for every other value,
+    including ``AMD64`` and ``ARM64``. pywebview calls the same function.
     """
     if machine_name == "x86" or hive == "HKEY_CURRENT_USER":
         return _NATIVE_CLIENTS

@@ -24,7 +24,10 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
   before `ui.run` when no runtime is usable. A
   missing clinical mesh raises `HumanMeshNotInstalledError`. The portable self-check reports the
   edition and the WebView2 probe, and `portable-spike.yml` builds both editions from the lists and
-  asserts them. See [PORTABLE_APP_PLAN.md](plans/PORTABLE_APP_PLAN.md) Phase 1.
+  asserts them. `tests/gui/test_webview2_check.py` reads the installed pywebview WinForms
+  source and fails if `edge_build` no longer uses the native EdgeUpdate key for `x86` or
+  HKCU and `WOW6432Node` otherwise; it skips when that file is not installed. See
+  [PORTABLE_APP_PLAN.md](plans/PORTABLE_APP_PLAN.md) Phase 1.
 
 - **Portable app Phase 0b: signed and notarized macOS app** (2026-11-01) — `guiskindose.spec` now also
   writes `GUISkinDose.app` on macOS (`BUNDLE`). The `.icns` is rendered at build time from the committed

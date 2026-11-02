@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 pytest.importorskip("nicegui")
@@ -232,3 +234,24 @@ def test_failure_is_logged_and_skips_print_without_a_console(monkeypatch, caplog
     assert any(webview2.WEBVIEW2_DOWNLOAD_URL in record.getMessage() for record in caplog.records)
     monkeypatch.undo()
     assert capsys.readouterr().out == ""
+
+
+def test_installed_pywebview_still_uses_our_registry_views() -> None:
+    """Fail when a pywebview bump changes the EdgeUpdate view this probe copies.
+
+    The dependency allows ``pywebview>=6.1`` while the probe copies 6.2.1's
+    ``edge_build``. Reading the installed WinForms source keeps a later release
+    from drifting silently. The Windows module is not imported: off Windows it
+    pulls in the CLR loader. Skips when that source file is not installed.
+    """
+    try:
+        import webview
+    except ImportError:
+        pytest.skip("pywebview is not installed")
+    winforms = Path(webview.__file__).resolve().parent / "platforms" / "winforms.py"
+    if not winforms.is_file():
+        pytest.skip("this pywebview install has no WinForms backend source")
+    source = winforms.read_text(encoding="utf-8")
+    assert "machine() == 'x86' or key_type == 'HKEY_CURRENT_USER'" in source
+    assert r"Microsoft\EdgeUpdate\Clients\{key}" in source
+    assert r"WOW6432Node\Microsoft\EdgeUpdate\Clients\{key}" in source
