@@ -63,7 +63,9 @@ If you are experimenting locally, or the maintainer has invited a PR:
 
 ```bash
 # Recommended: uv
-uv sync --all-extras --group privacy-scan
+uv sync --all-extras
+# Optional, for the Presidio privacy scan (hooks redirect the environment automatically):
+env -u UV_PYTHON -u VIRTUAL_ENV UV_PROJECT_ENVIRONMENT="$PWD/tools/privacy-scan/.venv" uv sync --project tools/privacy-scan --locked
 
 # Or pip
 pip install -e ".[dev,gui]"

@@ -382,8 +382,15 @@ it has no report upload or AI review.
 review view precisely matches the machine-enforced JSON.
 `python scripts/render_privacy_tool_inventory.py --check` similarly ensures every conditional scanner names its
 direct external tools and that their reviewed version, execution boundary, purpose, and output policy are recorded.
-For a local Presidio check, install the `privacy-scan` dependency group (`uv sync --group privacy-scan`) and run
-`uv run --no-sync python scripts/run_presidio_advisory.py`. Automation checks structured identifiers with value-safe
+For a local Presidio check, sync the standalone `tools/privacy-scan` project and run the advisory inside it.
+Under direnv, `.envrc` exports `UV_PYTHON` and `UV_PROJECT_ENVIRONMENT`, so use this form:
+
+```bash
+env -u UV_PYTHON -u VIRTUAL_ENV UV_PROJECT_ENVIRONMENT="$PWD/tools/privacy-scan/.venv" uv sync --project tools/privacy-scan --locked
+env -u UV_PYTHON -u VIRTUAL_ENV UV_PROJECT_ENVIRONMENT="$PWD/tools/privacy-scan/.venv" uv run --project tools/privacy-scan --no-sync python scripts/run_presidio_advisory.py
+```
+
+The commit hook and CI redirect the environment automatically. Automation checks structured identifiers with value-safe
 path tokens; targeted local name review adds `--include-person --verbose-paths`. No findings are uploaded.
 
 `python scripts/privacy_admission.py route --mode staged` determines whether the index requires phi-scan, Presidio,

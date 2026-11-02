@@ -252,11 +252,11 @@ the secondary workflow and must be triaged. phi-scan supplements, rather than re
 does not authorise a binary asset or prove a DICOM is safe.
 
 [Presidio](https://github.com/data-privacy-stack/presidio) is available as a local, advisory text scan. It does not
-require a Presidio cloud service or an API key. Set it up on a developer-controlled machine with:
+require a Presidio cloud service or an API key. Set it up on a developer-controlled machine with the standalone `tools/privacy-scan` project. The commit hook redirects the environment itself. The `env` prefix keeps direnv's `UV_PYTHON` and `UV_PROJECT_ENVIRONMENT` from leaking in:
 
 ```bash
-uv sync --group privacy-scan
-uv run --no-sync python scripts/run_presidio_advisory.py
+env -u UV_PYTHON -u VIRTUAL_ENV UV_PROJECT_ENVIRONMENT="$PWD/tools/privacy-scan/.venv" uv sync --project tools/privacy-scan --locked
+env -u UV_PYTHON -u VIRTUAL_ENV UV_PROJECT_ENVIRONMENT="$PWD/tools/privacy-scan/.venv" uv run --project tools/privacy-scan --no-sync python scripts/run_presidio_advisory.py
 ```
 
 The runner scans tracked, readable text files only (including when individual paths are supplied), skips

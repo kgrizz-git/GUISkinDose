@@ -144,7 +144,7 @@ pip install -e ".[docs,notebooks]"   # Sphinx site + JupyterLab for the getting-
 
 Extras live in `pyproject.toml` (`gui`, `gui-native`, `dev`, `docs`, `notebooks`) — the single
 source of truth for dependencies; there are no `requirements*.txt` files. `uv.lock` pins exact
-versions (`uv sync --all-extras --group privacy-scan`; the group adds the local Presidio scanner the commit hook uses). Installing and using **`uv`** is recommended for package
+versions (`uv sync --all-extras`). Installing and using **`uv`** is recommended for package
 management and local development (it runs dependency audits and environment syncing much faster).
 
 ### Local Python version
@@ -224,6 +224,12 @@ The scanner's environment lives at `tools/semgrep/.venv` (gitignored). Note that
 `.envrc` exports `UV_PYTHON` and `UV_PROJECT_ENVIRONMENT`, and `uv run` honours both, so
 `semgrep_tool.tool_environment()` must be used to launch it — otherwise the scanner installs
 straight into the project `.venv`.
+
+`tools/privacy-scan` is a second isolated tool project. It carries Presidio, spaCy, the `en_core_web_sm`
+model and the image-advisory imports. The model is a direct github.com wheel URL, and Dependabot's proxy
+fails on that download, so the wheel cannot sit in the root lock. The project is not a workspace member.
+It has no Dependabot version entry. `dependency-audit.yml` audits its lock weekly. Its environment lives
+at `tools/privacy-scan/.venv`, and `scripts/privacy_scan_tool.py` redirects the `.envrc` uv variables.
 
 The **semgrep** pre-push hook fetches `p/owasp-top-ten` from the Semgrep registry, so it
 needs network access (offline pushes will fail). On Windows, semgrep runs natively (beta)
