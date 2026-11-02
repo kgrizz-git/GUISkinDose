@@ -245,6 +245,12 @@ Run the GUI locally:
 python -m guiskindose --mode gui
 ```
 
+On Windows, `--native` first checks the registry for the WebView2 runtime and .NET Framework 4.6.2+
+(`gui/webview2.py`) and exits with a message instead of opening a broken MSHTML window. The portable app
+comes in a Light and a Full edition (`guiskindose/edition.py`; committed `_edition.py` stays `"full"`, so the
+wheel is Full). Light ships a starter phantom set and no PNG export. See
+[dev-docs/plans/PORTABLE_APP_PLAN.md](dev-docs/plans/PORTABLE_APP_PLAN.md).
+
 From a checkout, `run_gui.sh` / `run_gui.bat` (or double-click `GUISkinDose.command` on macOS) wrap
 this with interpreter and dependency setup; on each run `scripts/desktop_launchers.py` converges a
 double-click launcher with the app icon (generated `GUISkinDose.lnk` / `GUISkinDose.desktop` are
