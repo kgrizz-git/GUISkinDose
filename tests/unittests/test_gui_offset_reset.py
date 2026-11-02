@@ -59,6 +59,11 @@ def test_load_rdsr_resets_global_patient_offset():
     assert st.d_lon == 0.0
     assert st.d_ver == 0.0
     assert st.d_lat == 0.0
+    # Lone-exam meta must match the reset globals; otherwise a later second-file
+    # append would apply the pre-load seed as a ghost multi-exam offset.
+    assert st.loaded_exam_meta[0]["d_lon"] == 0.0
+    assert st.loaded_exam_meta[0]["d_ver"] == 0.0
+    assert st.loaded_exam_meta[0]["d_lat"] == 0.0
 
 
 def test_load_tabular_resets_global_patient_offset():
@@ -68,6 +73,30 @@ def test_load_tabular_resets_global_patient_offset():
     ok, _ = load_tabular(_FIXTURES / "normalized_events.csv", st)
     assert ok
     assert st.d_lon == 0.0
+    assert st.loaded_exam_meta[0]["d_lon"] == 0.0
+
+
+def test_sequential_second_load_does_not_revive_pre_load_offset_seed():
+    """Pre-load globals seed meta, then reset; a second file must not resurrect them."""
+    st = AppState()
+    st.d_lon = 12.0
+    st.d_ver = 3.0
+    st.d_lat = -4.0
+    ok, _ = load_rdsr(_EXAMPLE_RDSR, st)
+    assert ok
+    assert st.d_lon == 0.0
+    assert st.loaded_exam_meta[0]["d_lon"] == 0.0
+
+    st.input_schema = "normalized"
+    ok, _ = load_tabular(_FIXTURES / "normalized_events.csv", st)
+    assert ok
+    assert st.is_multi_exam
+    assert st.loaded_exam_meta[0]["d_lon"] == 0.0
+    assert st.loaded_exam_meta[0]["d_ver"] == 0.0
+    assert st.loaded_exam_meta[0]["d_lat"] == 0.0
+    assert st.loaded_exam_meta[1]["d_lon"] == 0.0
+    assert st.loaded_exam_meta[1]["d_ver"] == 0.0
+    assert st.loaded_exam_meta[1]["d_lat"] == 0.0
 
 
 def test_load_tabular_replace_existing_preserves_global_patient_offset():

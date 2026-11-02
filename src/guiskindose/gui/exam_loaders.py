@@ -38,7 +38,10 @@ from .exam_transforms import (
     rebuild_rdsr_df,
 )
 from .geometry_preview import on_exams_loaded
-from .offset_handlers import reset_global_offsets_on_new_load, sync_single_exam_globals_from_meta
+from .offset_handlers import (
+    reconcile_single_exam_offsets_after_load,
+    reset_global_offsets_on_new_load,
+)
 from .settings_builder import build_settings, refresh_normalization_warnings
 from .state import AppState
 
@@ -247,9 +250,9 @@ def load_rdsr(file_path: Path, state: AppState) -> tuple[bool, str]:
             "table_origin_override": override_value,
             # Per-exam patient offset (Phase 2.3): staged document offsets for
             # pending consumption, else the pre-reset globals; editable per
-            # exam in the loaded-exam list. Single-exam calculation reads
-            # globals, so adoption syncs meta back via
-            # sync_single_exam_globals_from_meta when len==1.
+            # exam in the loaded-exam list. After a lone-exam load,
+            # reconcile_single_exam_offsets_after_load keeps globals and
+            # meta[0] aligned (staged meta→globals; otherwise globals→meta).
             "d_lon": entry.d_lon if entry is not None else seed_d_lon,
             "d_ver": entry.d_ver if entry is not None else seed_d_ver,
             "d_lat": entry.d_lat if entry is not None else seed_d_lat,
@@ -284,8 +287,8 @@ def load_rdsr(file_path: Path, state: AppState) -> tuple[bool, str]:
         work.table_offset_y = norm.trans_offset.y
         work.table_offset_z = norm.trans_offset.z
         refresh_normalization_warnings(work)
-        if entry is not None and not work.is_multi_exam:
-            sync_single_exam_globals_from_meta(work)
+        if not work.is_multi_exam:
+            reconcile_single_exam_offsets_after_load(work, from_staged_entry=entry is not None)
 
         state.__dict__.update(work.__dict__)
         if pending:
@@ -444,8 +447,8 @@ def _parse_tabular(
         start=start,
     )
     _finalize_tabular_state(work, file_path, out[0])
-    if entry is not None and not work.is_multi_exam:
-        sync_single_exam_globals_from_meta(work)
+    if not work.is_multi_exam:
+        reconcile_single_exam_offsets_after_load(work, from_staged_entry=entry is not None)
     state.__dict__.update(work.__dict__)
     if pending:
         state.equipment_pending = pending[1:] or None

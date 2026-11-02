@@ -19,6 +19,16 @@ That keeps SemVer and contributor history organized.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Ghost pre-load patient offsets on 1→2 exam loads** — a fresh single-exam load still
+  resets global `d_lon`/`d_ver`/`d_lat` to 0, but used to keep the pre-reset values in
+  `loaded_exam_meta[0]`. Single-exam calculation correctly used the reset globals; adding
+  a second file then made multi-exam calculation apply the ghost meta offset to the first
+  exam (example Siemens RDSR: PSD ~1.09 mGy at 0 cm vs ~0.25 mGy at a leftover 12 cm lon
+  seed). Lone-exam loads now reconcile meta to the post-reset globals; staged run-config
+  pending slots still copy meta into globals.
+
 ### Security
 
 - The PyPI release workflow now pins `pypa/gh-action-pypi-publish` v1.14.3 (was v1.14.2). Versions up to 1.14.2 bundled a `certifi` trust store that still trusted the compromised emSign root CA, which Sigstore relies on during Trusted Publishing and attestation ([GHSA-5xjx-3w67-w9x9](https://github.com/pypa/gh-action-pypi-publish/security/advisories/GHSA-5xjx-3w67-w9x9)).

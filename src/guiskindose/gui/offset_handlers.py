@@ -64,6 +64,31 @@ def sync_global_patient_offset_to_single_exam_meta(app_state: AppState) -> None:
         m["d_lat"] = app_state.d_lat
 
 
+def reconcile_single_exam_offsets_after_load(
+    app_state: AppState, *, from_staged_entry: bool
+) -> None:
+    """Keep single-exam globals and ``meta[0]`` patient offsets in lockstep after load.
+
+    Loaders always seed ``meta[i].d_*`` from pre-reset globals (or a staged
+    pending entry). Fresh loads then zero the globals via
+    ``reset_global_offsets_on_new_load``. Without reconciliation, a lone exam
+    would calculate from globals (0) while retaining the pre-reset seed in
+    meta — and a later second-file append would suddenly apply that ghost
+    offset in multi-exam mode.
+
+    - Staged pending slot: meta wins → copy into globals (existing behavior).
+    - Ordinary single-exam load: globals win (reset or preserved) → copy into meta.
+    - Multi-exam loads (including one-shot multi-study files): no-op; each
+      exam keeps its seeded meta and multi-exam calculation reads meta.
+    """
+    if len(app_state.loaded_exam_meta) != 1:
+        return
+    if from_staged_entry:
+        sync_single_exam_globals_from_meta(app_state)
+    else:
+        sync_global_patient_offset_to_single_exam_meta(app_state)
+
+
 def active_exam_index_for_offsets(app_state: AppState) -> int:
     """0-based exam index used for Geometry patient-offset read/write."""
     if app_state.is_multi_exam and app_state.active_exam_index is not None:
