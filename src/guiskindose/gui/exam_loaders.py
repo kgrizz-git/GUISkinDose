@@ -521,9 +521,9 @@ def _collect_preserved_flags(
             "flip_tx": m.get("flip_tx", False),
             "flip_ty": m.get("flip_ty", False),
             "flip_tz": m.get("flip_tz", False),
-            "d_lon": float(m.get("d_lon", 0.0)),
-            "d_ver": float(m.get("d_ver", 0.0)),
-            "d_lat": float(m.get("d_lat", 0.0)),
+            "d_lon": _stored_offset(m, "d_lon"),
+            "d_ver": _stored_offset(m, "d_ver"),
+            "d_lat": _stored_offset(m, "d_lat"),
         }
         for m in state.loaded_exam_meta
         if m.get("file_path") == file_path
@@ -541,6 +541,14 @@ def _default_transform_flags(state: AppState) -> dict:
     }
 
 
+def _stored_offset(record: dict, key: str) -> float:
+    """Return one stored patient-offset axis, or 0 when it is missing or null."""
+    value = record.get(key)
+    if value is None:
+        return 0.0
+    return float(value)
+
+
 def _patient_offset_for_exam(
     flags: dict, seed: tuple[float, float, float]
 ) -> tuple[float, float, float]:
@@ -553,9 +561,9 @@ def _patient_offset_for_exam(
     if "d_lon" not in flags:
         return seed
     return (
-        float(flags["d_lon"]),
-        float(flags.get("d_ver", 0.0)),
-        float(flags.get("d_lat", 0.0)),
+        _stored_offset(flags, "d_lon"),
+        _stored_offset(flags, "d_ver"),
+        _stored_offset(flags, "d_lat"),
     )
 
 

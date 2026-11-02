@@ -13,7 +13,7 @@ import pytest
 pytest.importorskip("nicegui")
 
 from guiskindose import get_path_to_example_rdsr_files
-from guiskindose.gui.exam_loaders import _append_multi_study_exams
+from guiskindose.gui.exam_loaders import _append_multi_study_exams, _collect_preserved_flags
 from guiskindose.gui.helpers import (
     build_settings,
     commit_table_origin_transform,
@@ -147,6 +147,24 @@ def test_multi_exam_reparse_keeps_per_exam_offsets():
     assert st.loaded_exam_meta[1]["d_lat"] == 0.5
 
 
+def test_collect_preserved_flags_treats_null_offset_as_zero():
+    """A null stored offset is 0. Re-parse must not raise on it."""
+    st = AppState()
+    st.loaded_exam_meta = [
+        {
+            "file_path": Path("reparse.csv"),
+            "study_id": "A",
+            "d_lon": None,
+            "d_ver": None,
+            "d_lat": None,
+        }
+    ]
+    flags = _collect_preserved_flags(st, Path("reparse.csv"), True)
+    assert flags[0]["d_lon"] == 0.0
+    assert flags[0]["d_ver"] == 0.0
+    assert flags[0]["d_lat"] == 0.0
+
+
 def test_load_tabular_replace_existing_preserves_global_patient_offset():
     st = AppState()
     st.input_schema = "normalized"
@@ -173,7 +191,12 @@ def test_multi_study_reparse_only_preserves_matching_study_id_flags():
         frame = pd.DataFrame({"Tx": [1.0], "Ty": [2.0], "Tz": [3.0], "Ap1": [4.0], "Ap2": [5.0]})
         return InputAdapterResult(frame, None, provenance, study_id=study_id)
 
-    def flags(study_id: str | None, **enabled: bool) -> dict:
+    def flags(
+        study_id: str | None,
+        offsets: tuple[float, float, float] = (0.0, 0.0, 0.0),
+        **enabled: bool,
+    ) -> dict:
+        d_lon, d_ver, d_lat = offsets
         return {
             "study_id": study_id,
             "swap_lat_lon": False,
@@ -182,6 +205,9 @@ def test_multi_study_reparse_only_preserves_matching_study_id_flags():
             "flip_tx": False,
             "flip_ty": False,
             "flip_tz": False,
+            "d_lon": d_lon,
+            "d_ver": d_ver,
+            "d_lat": d_lat,
             **enabled,
         }
 
@@ -189,14 +215,22 @@ def test_multi_study_reparse_only_preserves_matching_study_id_flags():
     _append_multi_study_exams(
         [exam("B"), exam(None), exam("A"), exam("new")], state, Path("reparse.csv"),
         0.0, 0.0, 0.0,
-        [flags(None, flip_ap2=True), flags("A", swap_lat_lon=True), flags("B", flip_ap1=True)],
+        [
+            flags(None, (1.0, 2.0, 3.0), flip_ap2=True),
+            flags("A", (4.0, 5.0, 6.0), swap_lat_lon=True),
+            flags("B", (7.0, 8.0, 9.0), flip_ap1=True),
+        ],
     )
 
     restored = {meta["study_id"]: meta for meta in state.loaded_exam_meta}
     assert restored["A"]["swap_lat_lon"] is True
+    assert (restored["A"]["d_lon"], restored["A"]["d_ver"], restored["A"]["d_lat"]) == (4.0, 5.0, 6.0)
     assert restored["B"]["flip_ap1"] is True
+    assert (restored["B"]["d_lon"], restored["B"]["d_ver"], restored["B"]["d_lat"]) == (7.0, 8.0, 9.0)
     assert restored[None]["flip_ap2"] is True
+    assert (restored[None]["d_lon"], restored[None]["d_ver"], restored[None]["d_lat"]) == (1.0, 2.0, 3.0)
     assert all(not restored["new"][name] for name in ("swap_lat_lon", "flip_ap1", "flip_ap2", "flip_tx", "flip_ty", "flip_tz"))
+    assert (restored["new"]["d_lon"], restored["new"]["d_ver"], restored["new"]["d_lat"]) == (0.0, 0.0, 0.0)
 
 
 def test_multi_study_reparse_blanks_idless_flags_when_cardinality_changes():
