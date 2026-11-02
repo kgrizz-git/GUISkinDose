@@ -64,22 +64,39 @@ def sync_global_patient_offset_to_single_exam_meta(app_state: AppState) -> None:
         m["d_lat"] = app_state.d_lat
 
 
+def offset_seeds_for_new_exams(
+    app_state: AppState, *, fresh_load: bool, from_staged_entry: bool
+) -> tuple[float, float, float]:
+    """Return the patient-offset seed for exams created by this load.
+
+    A file opened into an empty session starts every exam at ``(0, 0, 0)``,
+    whether the file contains one study or several. Numbers sitting in the
+    sliders before any exam existed are not a default. A staged run-config
+    entry supplies its own offsets at the append site, so this returns the
+    current globals and the caller ignores them. Appending a file onto exams
+    that are already loaded keeps those globals, so the new exam starts where
+    the session already is.
+    """
+    if fresh_load and not from_staged_entry:
+        return (0.0, 0.0, 0.0)
+    return (float(app_state.d_lon), float(app_state.d_ver), float(app_state.d_lat))
+
+
 def reconcile_single_exam_offsets_after_load(
     app_state: AppState, *, from_staged_entry: bool
 ) -> None:
     """Keep single-exam globals and ``meta[0]`` patient offsets in lockstep after load.
 
-    Loaders always seed ``meta[i].d_*`` from pre-reset globals (or a staged
-    pending entry). Fresh loads then zero the globals via
-    ``reset_global_offsets_on_new_load``. Without reconciliation, a lone exam
-    would calculate from globals (0) while retaining the pre-reset seed in
-    meta — and a later second-file append would suddenly apply that ghost
-    offset in multi-exam mode.
+    Fresh loads zero the globals via ``reset_global_offsets_on_new_load``.
+    ``offset_seeds_for_new_exams`` already starts an empty session at zero for
+    every exam in the file. This copy keeps a lone exam's meta equal to the
+    globals the calculation reads, including a staged pending slot (meta wins)
+    and a re-parse that preserved the current globals.
 
-    - Staged pending slot: meta wins → copy into globals (existing behavior).
-    - Ordinary single-exam load: globals win (reset or preserved) → copy into meta.
-    - Multi-exam loads (including one-shot multi-study files): no-op; each
-      exam keeps its seeded meta and multi-exam calculation reads meta.
+    - Staged pending slot: meta wins → copy into globals.
+    - Ordinary single-exam load: globals win → copy into meta.
+    - Multi-exam loads: no-op. Each exam keeps the seed from
+      ``offset_seeds_for_new_exams``, and multi-exam calculation reads meta.
     """
     if len(app_state.loaded_exam_meta) != 1:
         return

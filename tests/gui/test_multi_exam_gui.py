@@ -19,10 +19,10 @@ _FIXTURES = Path(__file__).resolve().parent.parent / "fixtures" / "tabular_input
 
 
 class TestGuiPerExamOffsets:
-    """The GUI seeds a per-exam patient offset into each loaded_exam_meta entry
-    (defaulting to the global offset) and run_calculation forwards them to
-    analyze_multiple_exams. These tests pin the loader/wiring contract without
-    needing the NiceGUI runtime."""
+    """The GUI stores a per-exam patient offset on each loaded_exam_meta entry
+    and run_calculation forwards them to analyze_multiple_exams. A file opened
+    into an empty session starts every exam at zero. These tests pin the
+    loader/wiring contract without needing the NiceGUI runtime."""
 
     def _fresh_state(self, d_lon=0.0, d_ver=0.0, d_lat=0.0):
         from guiskindose.gui.state import AppState
@@ -33,7 +33,8 @@ class TestGuiPerExamOffsets:
         st.input_source_type = "csv"
         return st
 
-    def test_loader_seeds_offset_defaults_from_global(self):
+    def test_fresh_multistudy_load_discards_pre_load_offsets(self):
+        """One file that splits into several exams starts at zero, like one exam."""
         from guiskindose.gui.helpers import load_tabular
 
         st = self._fresh_state(d_lon=3.0, d_ver=-2.0, d_lat=1.0)
@@ -41,10 +42,11 @@ class TestGuiPerExamOffsets:
         assert ok
         assert st.is_multi_exam
         assert len(st.loaded_exam_meta) == 2
+        assert (st.d_lon, st.d_ver, st.d_lat) == (0.0, 0.0, 0.0)
         for meta in st.loaded_exam_meta:
-            assert meta["d_lon"] == 3.0
-            assert meta["d_ver"] == -2.0
-            assert meta["d_lat"] == 1.0
+            assert meta["d_lon"] == 0.0
+            assert meta["d_ver"] == 0.0
+            assert meta["d_lat"] == 0.0
 
     def test_run_calculation_forwards_per_exam_offsets(self):
 

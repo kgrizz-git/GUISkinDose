@@ -39,6 +39,7 @@ from .exam_transforms import (
 )
 from .geometry_preview import on_exams_loaded
 from .offset_handlers import (
+    offset_seeds_for_new_exams,
     reconcile_single_exam_offsets_after_load,
     reset_global_offsets_on_new_load,
 )
@@ -142,10 +143,8 @@ def load_rdsr(file_path: Path, state: AppState) -> tuple[bool, str]:
     """
     from guiskindose.input_adapters.models import InputAdapterResult, InputProvenance
 
-    # T20: seed per-exam meta from globals before reset zeros them.
-    seed_d_lon = state.d_lon
-    seed_d_ver = state.d_ver
-    seed_d_lat = state.d_lat
+    # Empty session → (0, 0, 0) for the new exam. Append keeps current globals.
+    fresh_load = not state.loaded_exams
     try:
         work = _load_candidate(state)
         reset_global_offsets_on_new_load(work)
@@ -156,6 +155,9 @@ def load_rdsr(file_path: Path, state: AppState) -> tuple[bool, str]:
         # slot replays the recipe instead of resolving live; a null slot
         # loads with live behavior but seeds the document's flags.
         pending, entry, replay_capture = _peek_pending_entry(state, live)
+        seed_d_lon, seed_d_ver, seed_d_lat = offset_seeds_for_new_exams(
+            state, fresh_load=fresh_load, from_staged_entry=entry is not None
+        )
 
         # Pre-read exam ceiling: a fresh DICOM load always appends exactly
         # one exam, so 64 loaded already refuse before the file is touched.
@@ -248,9 +250,9 @@ def load_rdsr(file_path: Path, state: AppState) -> tuple[bool, str]:
                 "z": float(norm.trans_offset.z),
             },
             "table_origin_override": override_value,
-            # Per-exam patient offset (Phase 2.3): staged document offsets for
-            # pending consumption, else the pre-reset globals; editable per
-            # exam in the loaded-exam list. After a lone-exam load,
+            # Per-exam patient offset: staged document offsets when a pending
+            # slot is consumed, else the load seed (zero on an empty session,
+            # current globals when appending). After a lone-exam load,
             # reconcile_single_exam_offsets_after_load keeps globals and
             # meta[0] aligned (staged meta→globals; otherwise globals→meta).
             "d_lon": entry.d_lon if entry is not None else seed_d_lon,
@@ -374,10 +376,8 @@ def _parse_tabular(
     identical with no restore pass.
     """
 
-    # T20: capture globals before reset; on re-parse keep current globals.
-    seed_d_lon = state.d_lon
-    seed_d_ver = state.d_ver
-    seed_d_lat = state.d_lat
+    # Empty session → (0, 0, 0). Re-parse and append keep the current globals.
+    fresh_load = not state.loaded_exams
     work = _load_candidate(state)
     if not replace_existing:
         reset_global_offsets_on_new_load(work)
@@ -385,6 +385,9 @@ def _parse_tabular(
     schema = work.input_schema or "auto"
     live = _live_session(settings)
     pending, entry, replay_capture = _peek_pending_entry(state, live)
+    seed_d_lon, seed_d_ver, seed_d_lat = offset_seeds_for_new_exams(
+        state, fresh_load=fresh_load, from_staged_entry=entry is not None
+    )
     if (
         not replace_existing
         and len(work.loaded_exams) >= MAX_PROFILES

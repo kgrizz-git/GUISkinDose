@@ -21,20 +21,20 @@ That keeps SemVer and contributor history organized.
 
 ### Fixed
 
-- **Ghost pre-load patient offsets on 1→2 exam loads** — a fresh single-exam load still
-  resets global `d_lon`/`d_ver`/`d_lat` to 0, but used to keep the pre-reset values in
-  `loaded_exam_meta[0]`. Single-exam calculation correctly used the reset globals; adding
-  a second file then made multi-exam calculation apply the ghost meta offset to the first
-  exam (example Siemens RDSR: PSD ~1.09 mGy at 0 cm vs ~0.25 mGy at a leftover 12 cm lon
-  seed). Lone-exam loads now reconcile meta to the post-reset globals; staged run-config
-  pending slots still copy meta into globals.
+- **Ghost patient offsets from before any exam was loaded** — moving the patient-offset
+  sliders with nothing loaded, then opening a file, used to store those numbers on the
+  exam. A one-exam file calculated from the reset value (0) but kept the old numbers in
+  its exam record, so adding a second file applied them. A file that already contained
+  several exams applied them immediately. Either file now starts every exam at 0.
+  Adding another file onto exams that are already loaded still starts that new exam from
+  the current offset. A staged run-config entry still supplies its own offsets.
 
 - **Import Preview wiped staged tabular transform flags** — after a successful single-exam
   tabular upload, `ImportPreviewController.set_transform_defaults` forced
   `swap_lat_lon`/`flip_ap*` to false in globals and `meta[0]`, then re-derived the frame.
-  Staged run-config geometry flags (and preserved re-parse flags) were undone before
-  calculation, silently restoring raw coordinates. The hook now syncs toggles from meta
-  and leaves the loader-applied frame alone.
+  Staged run-config geometry flags were undone before calculation, silently restoring raw
+  coordinates. The hook now syncs toggles from the loaded exam and leaves the frame the
+  loader already built alone.
 
 ### Security
 
