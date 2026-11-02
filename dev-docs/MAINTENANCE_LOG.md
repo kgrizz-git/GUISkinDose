@@ -18,8 +18,10 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
   static writer in `plotting/create_dose_map_plot.py` stops too. The Export tab reaches PNG only through
   those functions, drops its PNG card in Light, and refuses a PNG download there with the Light notice.
   Rich reports keep the "image unavailable" path with Light wording. The new `gui/webview2.py` reads
-  the registry values pywebview's `_is_chromium()` reads, in HKCU and HKLM and both registry views, plus
-  the .NET Framework release. `run_gui(native=True)` stops before `ui.run` when no runtime is usable. A
+  the registry values pywebview's `_is_chromium()` reads, in HKCU and HKLM, using the EdgeUpdate view
+  pywebview 6.2.1 selects for the process architecture (native HKLM only when `platform.machine()` is
+  `x86`, otherwise HKLM `WOW6432Node`), plus the .NET Framework release. `run_gui(native=True)` stops
+  before `ui.run` when no runtime is usable. A
   missing clinical mesh raises `HumanMeshNotInstalledError`. The portable self-check reports the
   edition and the WebView2 probe, and `portable-spike.yml` builds both editions from the lists and
   asserts them. See [PORTABLE_APP_PLAN.md](plans/PORTABLE_APP_PLAN.md) Phase 1.

@@ -7,18 +7,23 @@ before ``ui.run(native=True)`` the app reads the same registry values that pyweb
 
 ``_is_chromium()`` is not called. It returns true as soon as a runtime path setting is
 non-empty, and it cannot be pointed at a test registry. This check reads both hives,
-HKCU and HKLM, and both the native and ``WOW6432Node`` views of each, where pywebview
-reads one view per hive. It also requires .NET Framework 4.6.2 or later, which
-pywebview's WinForms backend needs.
+HKCU and HKLM, but only the EdgeUpdate view pywebview 6.2.1 opens for the current
+process. ``edge_build`` uses the native ``SOFTWARE\\Microsoft\\EdgeUpdate\\Clients`` key
+for HKCU on every architecture, and for HKLM only when ``platform.machine()`` is
+``x86``. Every other architecture reads HKLM through ``WOW6432Node``. A ``pv`` that
+exists only on the other view does not count: pywebview would miss it and fall back
+to MSHTML. The check also requires .NET Framework 4.6.2 or later, which pywebview's
+WinForms backend needs.
 
 No installer is launched and MSHTML is never used. Off Windows, ``winreg`` does not
 import and the check passes, because the native window there is not WebView2. Tests
-inject a fake registry reader.
+inject a fake registry reader and the process machine name.
 """
 
 from __future__ import annotations
 
 import logging
+import platform
 import sys
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -50,7 +55,26 @@ WEBVIEW2_CLIENT_IDS = (
     "{65C35B14-6C1D-4122-AC46-7148CC9D6497}",
 )
 _HIVES = ("HKEY_CURRENT_USER", "HKEY_LOCAL_MACHINE")
-_VIEWS = (r"SOFTWARE\Microsoft\EdgeUpdate\Clients", r"SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients")
+# pywebview 6.2.1 ``edge_build`` (webview/platforms/winforms.py). HKCU is never redirected.
+_NATIVE_CLIENTS = r"SOFTWARE\Microsoft\EdgeUpdate\Clients"
+_WOW64_CLIENTS = r"SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients"
+
+
+def _process_machine() -> str:
+    """``platform.machine()``, the string pywebview compares with ``x86``."""
+    return platform.machine()
+
+
+def _clients_key(hive: str, machine_name: str) -> str:
+    """EdgeUpdate Clients key pywebview opens for *hive* on a process of *machine_name*.
+
+    HKCU always uses the native key. HKLM uses that native key when the process is
+    ``x86``, and ``WOW6432Node`` for every other architecture, including ``AMD64`` and
+    ``ARM64``.
+    """
+    if machine_name == "x86" or hive == "HKEY_CURRENT_USER":
+        return _NATIVE_CLIENTS
+    return _WOW64_CLIENTS
 
 
 @dataclass(frozen=True)
@@ -117,14 +141,19 @@ def _parse_version(raw: object) -> tuple[int, ...] | None:
 
 
 def _newest_runtime(reader: RegistryReader) -> tuple[int, ...] | None:
-    """Highest registered runtime version across every client id, hive, and view."""
-    found = [
-        version
-        for client in WEBVIEW2_CLIENT_IDS
-        for hive in _HIVES
-        for view in _VIEWS
-        if (version := _parse_version(reader(hive, rf"{view}\{client}", "pv"))) is not None
-    ]
+    """Highest ``pv`` pywebview would see for this process architecture.
+
+    The view is chosen before the value is parsed, so a qualifying version on the
+    other view cannot make the runtime look present.
+    """
+    machine_name = _process_machine()
+    found: list[tuple[int, ...]] = []
+    for client in WEBVIEW2_CLIENT_IDS:
+        for hive in _HIVES:
+            subkey = rf"{_clients_key(hive, machine_name)}\{client}"
+            version = _parse_version(reader(hive, subkey, "pv"))
+            if version is not None:
+                found.append(version)
     return max(found, default=None)
 
 

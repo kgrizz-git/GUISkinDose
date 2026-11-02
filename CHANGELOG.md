@@ -23,8 +23,10 @@ That keeps SemVer and contributor history organized.
 
 - On Windows, `--mode gui --native` now checks for the Microsoft Edge WebView2 Runtime and .NET Framework 4.6.2
   or later before it opens the window. When either is missing, the app shows a message that points at Microsoft's
-  Evergreen Bootstrapper and exits, instead of opening a broken window on the old MSHTML engine. Browser mode and
-  other operating systems are unchanged.
+  Evergreen Bootstrapper and exits, instead of opening a broken window on the old MSHTML engine. The lookup uses
+  the same registry view as pywebview 6.2.1 for this process: the native EdgeUpdate key for the current user, and
+  for the local machine the native key on a 32-bit process or the `WOW6432Node` key otherwise. A runtime registered
+  only on the other view does not count. Browser mode and other operating systems are unchanged.
 - A human phantom whose STL file is not installed is now refused with a message that names it, instead of a
   generic "Unknown human mesh stem" error. The Settings tab says when a saved mesh is not installed and which mesh
   it selected instead, and Calculate refuses that mesh before it starts.

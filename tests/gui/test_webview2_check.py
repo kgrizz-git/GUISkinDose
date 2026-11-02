@@ -38,28 +38,95 @@ def _pv(hive: str, view: str, client: str = _RUNTIME) -> tuple[str, str, str]:
     return (hive, rf"{view}\{client}", "pv")
 
 
+@pytest.fixture(autouse=True)
+def _amd64_process(monkeypatch: pytest.MonkeyPatch) -> None:
+    """pywebview's 64-bit HKLM view, independent of the machine running the tests."""
+    monkeypatch.setattr(webview2, "_process_machine", lambda: "AMD64")
+
+
+def _views_pywebview_reads(machine_name: str) -> set[tuple[str, str]]:
+    """(hive, subkey) pairs ``edge_build`` opens for *machine_name*."""
+    hklm = _NATIVE if machine_name == "x86" else _WOW
+    return {
+        (hive, rf"{view}\{client}")
+        for client in webview2.WEBVIEW2_CLIENT_IDS
+        for hive, view in (("HKEY_CURRENT_USER", _NATIVE), ("HKEY_LOCAL_MACHINE", hklm))
+    }
+
+
 @pytest.mark.parametrize(
-    "key",
+    ("machine_name", "key", "ready"),
     [
-        _pv("HKEY_CURRENT_USER", _NATIVE),
-        _pv("HKEY_CURRENT_USER", _WOW),
-        _pv("HKEY_LOCAL_MACHINE", _NATIVE),
-        _pv("HKEY_LOCAL_MACHINE", _WOW),
-        _pv("HKEY_CURRENT_USER", _NATIVE, _BETA),
+        ("AMD64", _pv("HKEY_CURRENT_USER", _NATIVE), True),
+        ("AMD64", _pv("HKEY_CURRENT_USER", _WOW), False),
+        ("AMD64", _pv("HKEY_LOCAL_MACHINE", _WOW), True),
+        ("x86", _pv("HKEY_CURRENT_USER", _NATIVE), True),
+        ("x86", _pv("HKEY_CURRENT_USER", _WOW), False),
+        ("x86", _pv("HKEY_LOCAL_MACHINE", _WOW), False),
+        ("ARM64", _pv("HKEY_LOCAL_MACHINE", _WOW), True),
+        ("ARM64", _pv("HKEY_LOCAL_MACHINE", _NATIVE), False),
+        ("AMD64", _pv("HKEY_CURRENT_USER", _NATIVE, _BETA), True),
     ],
 )
-def test_runtime_found_in_any_hive_and_view(key) -> None:
+def test_readiness_follows_pywebview_registry_view(
+    machine_name: str,
+    key: tuple[str, str, str],
+    ready: bool,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(webview2, "_process_machine", lambda: machine_name)
     status = webview2.probe_webview2(_reader({key: "130.0.2849.80"}))
     assert status is not None
-    assert status.usable
-    assert status.summary() == {"runtime_version": "130.0.2849.80", "runtime_ok": True, "dotnet_ok": True, "usable": True}
+    assert status.runtime_ok is ready
+    assert status.usable is ready
 
 
-def test_every_client_hive_and_view_is_read() -> None:
+def test_native_path_only_follows_process_architecture(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A qualifying ``pv`` on the native HKLM key alone is ready only for an x86 process.
+
+    pywebview 6.2.1 reads that key for HKLM when ``platform.machine()`` is ``x86``, and
+    reads ``WOW6432Node`` for every other architecture. Approving the native key on a
+    64-bit process lets startup continue into an MSHTML fallback.
+    """
+    reader_values = {_pv("HKEY_LOCAL_MACHINE", _NATIVE): "130.0.2849.80"}
+
+    monkeypatch.setattr(webview2, "_process_machine", lambda: "AMD64")
+    amd64 = webview2.probe_webview2(_reader(reader_values))
+    assert amd64 is not None
+    assert not amd64.runtime_ok
+    assert not amd64.usable
+
+    monkeypatch.setattr(webview2, "_process_machine", lambda: "ARM64")
+    arm64 = webview2.probe_webview2(_reader(reader_values))
+    assert arm64 is not None
+    assert not arm64.usable
+
+    monkeypatch.setattr(webview2, "_process_machine", lambda: "x86")
+    x86 = webview2.probe_webview2(_reader(reader_values))
+    assert x86 is not None
+    assert x86.usable
+    assert x86.summary()["runtime_version"] == "130.0.2849.80"
+
+
+@pytest.mark.parametrize("machine_name", ["AMD64", "x86", "ARM64"])
+def test_only_pywebview_views_are_read(machine_name: str, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(webview2, "_process_machine", lambda: machine_name)
     reader = _reader({})
     webview2.probe_webview2(reader)
     pv_reads = {(hive, subkey) for hive, subkey, name in reader.reads if name == "pv"}
-    assert len(pv_reads) == len(webview2.WEBVIEW2_CLIENT_IDS) * 2 * 2
+    assert pv_reads == _views_pywebview_reads(machine_name)
+
+
+def test_newer_pv_on_the_ignored_view_does_not_count() -> None:
+    reader = _reader(
+        {
+            _pv("HKEY_LOCAL_MACHINE", _NATIVE): "140.0.1.0",
+            _pv("HKEY_LOCAL_MACHINE", _WOW): "120.0.2210.91",
+        }
+    )
+    status = webview2.probe_webview2(reader)
+    assert status is not None
+    assert status.runtime_version == (120, 0, 2210, 91)
 
 
 @pytest.mark.parametrize("pv", [None, "", "0.0.0.0", "not.a.version", "85.0.564.40"])
