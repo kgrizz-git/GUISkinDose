@@ -249,45 +249,49 @@ if [[ "${GUISKINDOSE_SKIP_NOTARIZE:-0}" == "1" ]]; then
     exit 0
 fi
 
-# umask only affects new files, and a redirect follows a symlink. So each private
-# output is removed first, and the write uses noclobber, so it fails rather than
-# reuse a file or symlink that reappears in between.
-fresh_private_targets() {
-    local target
-    for target in "$@"; do
-        rm -f "$target"
-        if [[ -e "$target" || -L "$target" ]]; then
-            echo "cannot replace $(basename "$target") in the output directory" >&2
-            exit 1
-        fi
-    done
+# notarytool output can carry account identifiers. All notary intermediates live in a
+# fresh private directory (mktemp -d, mode 700) inside OUT, written under umask 077.
+# It is removed on success and kept on failure for diagnostics; only its name is printed.
+WORK="$(mktemp -d "$OUT/.notary-work.XXXXXX")"
+WORK_NAME="$(basename "$WORK")"
+if [[ -L "$WORK" || "$(stat -f %Lp "$WORK")" != 700 || "$(stat -f %u "$WORK")" != "$(id -u)" ]]; then
+    echo "private notary work directory is not a mode-700 directory owned by this user" >&2
+    exit 1
+fi
+NOTARY_DONE=0
+cleanup_work() {
+    if [[ "$NOTARY_DONE" == 1 ]]; then
+        rm -rf "$WORK"
+    else
+        echo "kept the private notary work directory $WORK_NAME in the output directory" >&2
+    fi
 }
+trap cleanup_work EXIT
 
-SUBMIT_ZIP="$OUT/notary-submit.zip"
-rm -f "$SUBMIT_ZIP"
-ditto -c -k --keepParent "$APP" "$SUBMIT_ZIP"
+SUBMIT_ZIP="$WORK/notary-submit.zip"
+RESULT="$WORK/notary-result.plist"
+SUBMIT_ERR="$WORK/notary-submit.stderr"
+LOG="$WORK/notary-log.json"
+LOG_OUT="$WORK/notary-log.stdout"
+LOG_ERR="$WORK/notary-log.stderr"
+
+( umask 077; ditto -c -k --keepParent "$APP" "$SUBMIT_ZIP" )
 start=$(date +%s)
-RESULT="$OUT/notary-result.plist"
-# notarytool output can carry account identifiers, so it goes to mode-600 files only.
-SUBMIT_ERR="$OUT/notary-submit.stderr"
-fresh_private_targets "$RESULT" "$SUBMIT_ERR"
-( umask 077; set -o noclobber; xcrun notarytool submit "$SUBMIT_ZIP" "${NOTARY_AUTH[@]}" --wait \
+( umask 077; xcrun notarytool submit "$SUBMIT_ZIP" "${NOTARY_AUTH[@]}" --wait \
     --output-format plist > "$RESULT" 2> "$SUBMIT_ERR" ) || true
 echo "notarization took $(( $(date +%s) - start )) s"
 STATUS="$(/usr/libexec/PlistBuddy -c 'Print :status' "$RESULT" 2>/dev/null || echo unknown)"
 SUB_ID="$(/usr/libexec/PlistBuddy -c 'Print :id' "$RESULT" 2>/dev/null || echo)"
 echo "notary status: $STATUS"
 if [[ "$STATUS" == unknown ]]; then
-    echo "notarytool submit failed; see notary-submit.stderr in the output directory" >&2
+    echo "notarytool submit failed; see notary-submit.stderr in the kept work directory" >&2
 fi
 rm -f "$SUBMIT_ZIP"
 if [[ "$STATUS" != "Accepted" ]]; then
     if [[ -n "$SUB_ID" ]]; then
-        LOG="$OUT/notary-log.json"
-        fresh_private_targets "$LOG" "$OUT/notary-log.stdout" "$OUT/notary-log.stderr"
-        ( umask 077; set -o noclobber; xcrun notarytool log "$SUB_ID" "${NOTARY_AUTH[@]}" "$LOG" \
-            > "$OUT/notary-log.stdout" 2> "$OUT/notary-log.stderr" ) \
-            || echo "notarytool log failed; see notary-log.stderr in the output directory" >&2
+        ( umask 077; xcrun notarytool log "$SUB_ID" "${NOTARY_AUTH[@]}" "$LOG" \
+            > "$LOG_OUT" 2> "$LOG_ERR" ) \
+            || echo "notarytool log failed; see notary-log.stderr in the kept work directory" >&2
         # Print bundle-relative paths only.
         /usr/bin/python3 -I -c '
 import json, sys
@@ -308,4 +312,5 @@ xcrun stapler validate "$APP"
 rm -f "$ZIP"
 ditto -c -k --keepParent "$APP" "$ZIP"
 spctl -a -t exec -vv "$APP"
+NOTARY_DONE=1
 echo "release zip: $ZIP"
