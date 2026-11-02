@@ -376,13 +376,20 @@ def materialize_head(root: Path, destination: Path) -> None:
         archive.extractall(destination, filter="data")
 
 
+def report_missing_tool_environment(root: Path, rule: ScannerRule) -> bool:
+    """Print the install command and return True when a privacy-scan scanner has no environment."""
+    if rule.scanner_id not in {"presidio", "image-ocr"} or not privacy_scan_tool.environment_missing(root):
+        return False
+    print(
+        f"The {rule.scanner_id} scanner needs the tools/privacy-scan environment. From the repository root, run:\n"
+        f"  {privacy_scan_tool.SYNC_COMMAND}",
+        file=sys.stderr,
+    )
+    return True
+
+
 def run_scanner(root: Path, snapshot: Path, rule: ScannerRule, input_paths: Sequence[str]) -> int:
-    if rule.scanner_id in {"presidio", "image-ocr"} and privacy_scan_tool.environment_missing(root):
-        print(
-            f"The {rule.scanner_id} scanner needs the tools/privacy-scan environment. From the repository root, run:\n"
-            f"  {privacy_scan_tool.SYNC_COMMAND}",
-            file=sys.stderr,
-        )
+    if report_missing_tool_environment(root, rule):
         return 1
     python = sys.executable
     environment = os.environ.copy()
