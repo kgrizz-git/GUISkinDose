@@ -207,6 +207,8 @@ jobs:
   gui-smoke:
     needs: [schedule-gate, privacy-gates]
     if: needs.schedule-gate.outputs.should_run == 'true'
+    # Usually ~1 min. A hung browser test fails here instead of at GitHub's 6 h limit.
+    timeout-minutes: 15
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -264,6 +266,8 @@ jobs:
 
   build:
     needs: [matrix-prep, privacy-gates]
+    # Usually 4-5 min per OS.
+    timeout-minutes: 30
     runs-on: ${{ matrix.os }}
     permissions:
       contents: read
@@ -309,6 +313,8 @@ jobs:
     if: >
       needs.schedule-gate.outputs.should_run == 'true' &&
       github.event_name == 'pull_request'
+    # Usually ~11 min; it runs the Playwright GUI tests too, which can hang.
+    timeout-minutes: 40
     runs-on: ubuntu-latest
     permissions:
       contents: read

@@ -8,6 +8,8 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ## [Unreleased]
 
+- **CI job timeouts** (2026-11-01) — `ci.yml` now sets `timeout-minutes` on `gui-smoke` (15), `build` (30) and `coverage-pr` (40), roughly 3-15x their normal run time. Dependabot PR #181 (pytest 9.1.1, playwright 1.64, pytest-playwright 0.10) hung both GUI-test jobs until GitHub's 6-hour cap.
+
 - **Portable app Phase 0b: signed and notarized macOS app** (2026-11-01) — `guiskindose.spec` now also
   writes `GUISkinDose.app` on macOS (`BUNDLE`). The `.icns` is rendered at build time from the committed
   SVG icon into `tmp/portable/icon` through AppKit. The result has alpha, art of 824 px on a 1024 px
