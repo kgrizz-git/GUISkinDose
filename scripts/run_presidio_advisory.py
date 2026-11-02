@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Run local Presidio over bounded, tracked repository text.
 
-Install with ``uv sync --group privacy-scan``. The optional dependency group
-includes Presidio's compact English model. This script never uploads source
+Install with ``uv sync --project tools/privacy-scan --locked``. That standalone
+project includes Presidio's compact English model. This script never uploads source
 material or writes a report. It prints only a path token, line, entity type,
 and score--never the matching value. Scheduled review can fail on findings or
 scan errors; noisy person-name detection requires a targeted local opt-in.

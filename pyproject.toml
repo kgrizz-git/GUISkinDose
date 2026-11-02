@@ -279,11 +279,3 @@ portable = [
     "pyinstaller>=6.15",
     "pywebview>=6.1",
 ]
-privacy-scan = [
-    # Declared explicitly so a later `uv sync` cannot remove Presidio's local NLP model.
-    "en-core-web-sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl",
-    "presidio-analyzer>=2.2.360,<3",
-    "spacy>=3.8,<4",
-    # setuptools is transitive via spacy/thinc. 84.1.0 closes GHSA-xmj3-9gf7-h52w.
-    "setuptools>=84.1.0",
-]

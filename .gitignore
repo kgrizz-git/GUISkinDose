@@ -44,6 +44,7 @@ __pycache__/
 .venv/
 # Semgrep's settings file for the isolated scanner (scripts/semgrep_tool.py).
 tools/semgrep/.semgrep-state/
+tools/privacy-scan/.venv/
 
 scratch*
 scripts/scratch_*

@@ -251,10 +251,31 @@ def _run_pip_audit_fallback(repo_root: Path, extra_args: list[str]) -> int:
         return 1
 
 
+def _split_tool_project(repo_root: Path, args: list[str]) -> tuple[Path, list[str]]:
+    """Pop ``--tool-project <dir>`` and return the directory ``uv audit`` should run in.
+
+    The directory must be a relative path under ``tools/`` holding a ``uv.lock``, so the
+    isolated tool lockfiles can be audited without widening the flag allowlist.
+    """
+    if "--tool-project" not in args:
+        return repo_root, args
+    index = args.index("--tool-project")
+    if index + 1 >= len(args):
+        raise ValueError("--tool-project needs a directory")
+    rel = Path(args[index + 1])
+    target = (repo_root / rel).resolve()
+    if rel.is_absolute() or rel.parts[:1] != ("tools",) or not (target / "uv.lock").is_file():
+        raise ValueError("--tool-project must be tools/<name> containing uv.lock")
+    if not target.is_relative_to((repo_root / "tools").resolve()):
+        raise ValueError("--tool-project must stay under tools/")
+    return target, args[:index] + args[index + 2 :]
+
+
 def main(argv: list[str] | None = None) -> int:
     repo_root = Path(__file__).resolve().parent.parent
-    uv_bin = _probe_uv_audit(repo_root)
     extra_args = sys.argv[1:] if argv is None else list(argv)
+    repo_root, extra_args = _split_tool_project(repo_root, extra_args)
+    uv_bin = _probe_uv_audit(repo_root)
 
     if uv_bin:
         code = _run_uv_audit(uv_bin, repo_root, extra_args)

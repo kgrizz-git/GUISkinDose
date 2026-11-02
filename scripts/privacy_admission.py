@@ -23,6 +23,12 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path, PurePosixPath
 from typing import Any, Literal, Sequence
 
+if __package__:
+    from . import privacy_scan_tool
+else:  # pragma: no cover - direct script execution (hooks, CI)
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import privacy_scan_tool
+
 POLICY_PATH = Path("dev-docs/privacy_admission_policy.json")
 Mode = Literal["staged", "range", "all"]
 # Keep the local NLP scanner responsive on repositories with many documentation
@@ -372,16 +378,17 @@ def materialize_head(root: Path, destination: Path) -> None:
 
 def run_scanner(root: Path, snapshot: Path, rule: ScannerRule, input_paths: Sequence[str]) -> int:
     python = sys.executable
-    project_args = ["--project", str(root)]
     environment = os.environ.copy()
     uv_cache = git_path_directory(root, "privacy-uv-cache")
     uv_cache.mkdir(parents=True, exist_ok=True, mode=0o700)
     environment.setdefault("UV_CACHE_DIR", str(uv_cache))
     if rule.scanner_id == "presidio":
-        command = [
-            "uv", "run", *project_args, "--no-sync", "python", str(snapshot / "scripts/run_presidio_advisory.py"),
-            "--scan-root", str(snapshot), "--fail-on-findings", "--max-displayed-findings", "100",
-        ]
+        environment = privacy_scan_tool.tool_environment(environment, root=root)
+        command = privacy_scan_tool.script_argv(
+            snapshot / "scripts/run_presidio_advisory.py",
+            ["--scan-root", str(snapshot), "--fail-on-findings", "--max-displayed-findings", "100"],
+            root=root,
+        )
         # Keep this in sync with ``run_presidio_advisory.PRESIDIO_EXCLUDED_PATHS``.
         # The policy receipt still binds pyproject.toml as scanner configuration,
         # while the advisory scanner deliberately excludes its author contacts.
@@ -427,10 +434,12 @@ def run_scanner(root: Path, snapshot: Path, rule: ScannerRule, input_paths: Sequ
             "--scan-root", str(snapshot), *input_paths,
         ]
     elif rule.scanner_id == "image-ocr":
-        command = [
-            "uv", "run", *project_args, "--no-sync", "python", str(snapshot / "scripts/run_image_privacy_advisory.py"),
-            "--scan-root", str(snapshot), *input_paths,
-        ]
+        environment = privacy_scan_tool.tool_environment(environment, root=root)
+        command = privacy_scan_tool.script_argv(
+            snapshot / "scripts/run_image_privacy_advisory.py",
+            ["--scan-root", str(snapshot), *input_paths],
+            root=root,
+        )
     else:
         raise RuntimeError("unknown_scanner")
     completed = subprocess.run(command, cwd=snapshot, env=environment, check=False)

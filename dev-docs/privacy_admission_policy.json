@@ -127,7 +127,7 @@
     },
     {
       "id": "presidio",
-      "version": "locked-privacy-scan-extra",
+      "version": "locked-privacy-scan-tool",
       "tool_ids": ["presidio", "spacy-english-model"],
       "trigger_extensions": [
         ".cfg", ".csv", ".html", ".ini", ".json", ".md", ".rst", ".svg", ".toml", ".tsv", ".txt",
@@ -139,7 +139,8 @@
       ],
       "scope": "all_matching",
       "config_paths": [
-        "scripts/run_presidio_advisory.py", "dev-docs/privacy_tool_inventory.json", "pyproject.toml", "uv.lock"
+        "scripts/run_presidio_advisory.py", "dev-docs/privacy_tool_inventory.json", "pyproject.toml", "uv.lock",
+        "tools/privacy-scan/pyproject.toml", "tools/privacy-scan/uv.lock"
       ]
     },
     {
@@ -181,7 +182,8 @@
       "scope": "changed",
       "config_paths": [
         "scripts/approved_asset_review.py", "scripts/run_image_privacy_advisory.py",
-        "dev-docs/approved_asset_inventory.json", "dev-docs/privacy_tool_inventory.json", "pyproject.toml", "uv.lock"
+        "dev-docs/approved_asset_inventory.json", "dev-docs/privacy_tool_inventory.json", "pyproject.toml", "uv.lock",
+        "tools/privacy-scan/pyproject.toml", "tools/privacy-scan/uv.lock"
       ]
     }
   ]

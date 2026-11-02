@@ -8,8 +8,9 @@
 #
 # Only uv + Python are needed: `uv audit` reads uv.lock directly, so no `uv sync`.
 # Action SHAs and uv/Python versions mirror ci.yml's static-analysis job.
-# Scope: root uv.lock only. tools/semgrep/uv.lock is not audited here (the wrapper has
-# no path argument); see the "audit the locked tool environments" item in dev-docs/TO_DO.md.
+# Scope: root uv.lock and tools/privacy-scan/uv.lock (via the wrapper's --tool-project flag).
+# tools/semgrep/uv.lock is not audited here yet; see the "audit the locked tool environments"
+# item in dev-docs/TO_DO.md.
 #
 # Second job (vulnerable-actions): zizmor's known-vulnerable-actions audit over every workflow.
 # This repo pins actions by commit SHA, and Dependabot raises alerts only for actions referenced
@@ -52,6 +53,8 @@ jobs:
     - name: Audit locked dependencies for known vulnerabilities
       # CI=true makes the wrapper pass --locked, so a stale uv.lock also fails.
       run: python scripts/audit_dependencies.py
+    - name: Audit locked privacy-scan tool environment
+      run: python scripts/audit_dependencies.py --tool-project tools/privacy-scan
 
   # Dependabot alerts are never raised for actions pinned by commit SHA (only
   # for semver tags), so check pinned actions against GitHub's advisory
