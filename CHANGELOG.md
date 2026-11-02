@@ -31,6 +31,12 @@ That keeps SemVer and contributor history organized.
   generic "Unknown human mesh stem" error. The Settings tab says when a saved mesh is not installed and which mesh
   it selected instead, and Calculate refuses that mesh before it starts.
 
+### Fixed
+
+- Loading a run configuration that names a human mesh this build does not ship now selects an installed mesh
+  and explains the change, including after a successful tabular re-parse. The Settings mesh list follows that
+  selection. An installed mesh is left as saved.
+
 ### Security
 
 - The PyPI release workflow now pins `pypa/gh-action-pypi-publish` v1.14.3 (was v1.14.2). Versions up to 1.14.2 bundled a `certifi` trust store that still trusted the compromised emSign root CA, which Sigstore relies on during Trusted Publishing and attestation ([GHSA-5xjx-3w67-w9x9](https://github.com/pypa/gh-action-pypi-publish/security/advisories/GHSA-5xjx-3w67-w9x9)).

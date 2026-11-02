@@ -109,6 +109,10 @@ def _select_installed_mesh(mesh_options: dict[str, str]) -> str | None:
 
     A saved stem that this build does not ship (a Light starter set) cannot stay in
     the selector, so the fallback is shown to the user instead of applied silently.
+    The phantom section calls this when the selector is built. Run-configuration
+    import calls it again after a successful load or re-parse, because that write
+    happens after the selector already exists and is bound to ``state.human_mesh``.
+    An installed stem is left unchanged and this returns ``None``.
     """
     saved = state.human_mesh
     state.human_mesh = canonicalize_human_mesh_selection(saved, mesh_options)

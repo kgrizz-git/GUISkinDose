@@ -84,6 +84,42 @@ def test_settings_stays_silent_for_an_installed_mesh(monkeypatch) -> None:
     assert state.human_mesh == "adult_male"
 
 
+def _starter_mesh_options() -> dict[str, str]:
+    return {"adult_male": "Adult Male"}
+
+
+def test_import_reports_a_mesh_that_is_not_installed(light, monkeypatch, notes) -> None:
+    """Import uses the Settings replacement and surfaces its explanation."""
+    from guiskindose.gui import helpers
+    from guiskindose.gui.tabs import _run_config
+    from guiskindose.gui.tabs import settings as settings_tab
+
+    monkeypatch.setattr(state, "human_mesh", "senior_male")
+    monkeypatch.setattr(helpers, "get_human_mesh_options", _starter_mesh_options)
+    monkeypatch.setattr(
+        settings_tab, "human_mesh_not_installed_message", lambda stem: "missing" if stem == "senior_male" else None
+    )
+
+    _run_config._notify_unavailable_imported_mesh()
+
+    assert state.human_mesh == "adult_male"
+    assert notes == [copy_text("settings.human_mesh.not_installed").format(label="Adult Male")]
+
+
+def test_import_stays_silent_for_an_installed_mesh(monkeypatch, notes) -> None:
+    """An installed imported mesh is not replaced and is not announced."""
+    from guiskindose.gui import helpers
+    from guiskindose.gui.tabs import _run_config
+
+    monkeypatch.setattr(state, "human_mesh", "adult_male")
+    monkeypatch.setattr(helpers, "get_human_mesh_options", _starter_mesh_options)
+
+    _run_config._notify_unavailable_imported_mesh()
+
+    assert state.human_mesh == "adult_male"
+    assert notes == []
+
+
 def test_calculate_refuses_a_mesh_that_is_not_installed(light, monkeypatch, notes) -> None:
     from guiskindose import phantom_mesh_names
     from guiskindose.gui.tabs import calculate as calc_tab

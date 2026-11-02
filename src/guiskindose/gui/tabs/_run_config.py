@@ -5,8 +5,10 @@
 source identifiers). "Load run configuration" parses an uploaded JSON
 document through `apply_run_state()`, re-parses tabular inputs when the
 schema/sheet changed (single-file sessions), then resets results and
-refreshes every tab. Warnings surface as notifications; `RunStateError`
-fails loudly without mutating anything user-visible beyond the notify.
+refreshes every tab. A mesh this build does not ship is replaced with an
+installed option after that succeeds, using the same rule as the Settings
+selector. Warnings surface as notifications; `RunStateError` fails loudly
+without mutating anything user-visible beyond the notify.
 """
 
 from __future__ import annotations
@@ -227,6 +229,9 @@ async def _do_load(e: Any, ctx: PageContext, status_label: ui.label) -> None:
         restore_app_state_snapshot(state, snapshot)
         _refresh_all(ctx)
         return
+    # After both the first apply and a successful re-parse re-apply. A failed
+    # re-parse already returned above, with the snapshot restored.
+    _notify_unavailable_imported_mesh()
     reset_results()
     _refresh_all(ctx)
     if state.equipment_pending:
@@ -237,6 +242,24 @@ async def _do_load(e: Any, ctx: PageContext, status_label: ui.label) -> None:
     else:
         status_label.set_text(f"Loaded run configuration ({result.applied_exams} exam(s)).")
     ui.notify(f"Run configuration loaded ({result.applied_exams} exam(s)).", color="positive")
+
+
+def _notify_unavailable_imported_mesh() -> None:
+    """Replace an imported mesh this build does not ship, and say so.
+
+    ``apply_run_state`` writes ``state.human_mesh`` after the Settings selector
+    exists. The selector is bound to that attribute, so the same replacement
+    used when the selector was built has to run here or the control keeps a
+    stem that is not one of its options. An installed mesh returns no note and
+    is left as the selector would leave it.
+    """
+    # Lazy import: settings imports this module while it is still loading.
+    from ..helpers import get_human_mesh_options
+    from .settings import _select_installed_mesh
+
+    note = _select_installed_mesh(get_human_mesh_options())
+    if note:
+        ui.notify(note, type="warning", timeout=8000)
 
 
 def _refresh_all(ctx: PageContext) -> None:
