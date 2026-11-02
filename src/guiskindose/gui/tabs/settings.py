@@ -105,20 +105,27 @@ def build(ctx: PageContext) -> None:
 
 
 def _select_installed_mesh(mesh_options: dict[str, str]) -> str | None:
-    """Point ``state.human_mesh`` at a selectable mesh; explain a not-installed one.
+    """Point ``state.human_mesh`` at a selectable mesh and explain a substitution.
 
-    A saved stem that this build does not ship (a Light starter set) cannot stay in
-    the selector, so the fallback is shown to the user instead of applied silently.
-    The phantom section calls this when the selector is built. Run-configuration
-    import calls it again after a successful load or re-parse, because that write
-    happens after the selector already exists and is bound to ``state.human_mesh``.
-    An installed stem is left unchanged and this returns ``None``.
+    A saved stem that is not one of ``mesh_options`` cannot stay in the selector.
+    The fallback is Hudfrid when that mesh is installed. The phantom section calls
+    this when the selector is built. Run-configuration import calls it again after
+    a successful load or re-parse, because that write happens after the selector
+    already exists and is bound to ``state.human_mesh``.
+
+    An installed stem, including a legacy alias that resolves to one, is left as
+    that canonical stem and this returns ``None``. A clinical mesh this build does
+    not ship uses the Light/Full explanation. Any other unavailable stem (unknown,
+    demo gated off, preview suffix) uses the shorter explanation.
     """
     saved = state.human_mesh
     state.human_mesh = canonicalize_human_mesh_selection(saved, mesh_options)
-    if state.human_mesh == resolve_human_mesh_stem(saved or "") or not human_mesh_not_installed_message(saved):
+    if state.human_mesh == resolve_human_mesh_stem(saved or ""):
         return None
-    return copy_text("settings.human_mesh.not_installed").format(label=mesh_options.get(state.human_mesh, state.human_mesh))
+    label = mesh_options.get(state.human_mesh, state.human_mesh)
+    if human_mesh_not_installed_message(saved):
+        return copy_text("settings.human_mesh.not_installed").format(label=label)
+    return copy_text("settings.human_mesh.unavailable").format(saved=saved or "none", label=label)
 
 
 def _build_phantom_section(ctx: PageContext, on_change: Callable[[], None]) -> None:

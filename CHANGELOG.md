@@ -33,9 +33,11 @@ That keeps SemVer and contributor history organized.
 
 ### Fixed
 
-- Loading a run configuration that names a human mesh this build does not ship now selects an installed mesh
-  and explains the change, including after a successful tabular re-parse. The Settings mesh list follows that
-  selection. An installed mesh is left as saved.
+- A saved human mesh that is not in the mesh list — missing from this build, unknown, a demo while demos are
+  off, or a preview-only name — is replaced with Hudfrid when that mesh is installed, otherwise the first
+  installed mesh, and the change is explained. This happens when Settings opens and after a run-configuration
+  import, including a successful tabular re-parse. The mesh list and the Settings phantom preview follow the
+  selection. An installed mesh, including a legacy alias for one, is left as saved and is not announced.
 
 ### Security
 

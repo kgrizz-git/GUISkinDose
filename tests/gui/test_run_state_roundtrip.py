@@ -128,6 +128,7 @@ def _stub_ctx(calls: list[str]) -> PageContext:
     ctx.refresh_import_preview = lambda: calls.append("import_preview")
     ctx.refresh_per_exam = lambda: calls.append("per_exam")
     ctx.refresh_geometry_tab = lambda: calls.append("geometry_tab")
+    ctx.refresh_phantom_preview = lambda: calls.append("phantom_preview")
     return ctx
 
 
@@ -178,7 +179,7 @@ async def test_import_restores_state_invokes_refresh_and_clears_results(user: Us
     assert state.input_schema == "dosetrack"
     assert state.loaded_exam_meta[0]["flip_tx"] is True
     assert state.kerma_meter_in_memory_table == {("Acme", "TubeA"): 1.02}
-    assert calls == ["event_table", "exams_table", "import_preview", "per_exam", "geometry_tab"]
+    assert calls == ["event_table", "exams_table", "import_preview", "per_exam", "geometry_tab", "phantom_preview"]
     assert state.calculation_done is False
     assert state.output is None
     assert "1 exam" in status.text
@@ -303,7 +304,7 @@ async def test_import_count_mismatch_rolls_back_and_keeps_results(user: User) ->
     assert state.d_lon == 0.0
     assert state.calculation_done is True  # pre-import results stay valid
     assert state.output == {"psd": 1.0}
-    assert calls == ["event_table", "exams_table", "import_preview", "per_exam", "geometry_tab"]
+    assert calls == ["event_table", "exams_table", "import_preview", "per_exam", "geometry_tab", "phantom_preview"]
     assert not user.notify.contains("Run configuration loaded")
 
 

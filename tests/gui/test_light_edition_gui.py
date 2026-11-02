@@ -72,8 +72,8 @@ def test_settings_reports_a_saved_mesh_that_is_not_installed(light, monkeypatch)
 
     note = settings_tab._select_installed_mesh(options)
 
-    assert state.human_mesh == "adult_male"
-    assert note == copy_text("settings.human_mesh.not_installed").format(label="Adult Male")
+    assert state.human_mesh == "hudfrid"
+    assert note == copy_text("settings.human_mesh.not_installed").format(label="Hudfrid")
 
 
 def test_settings_stays_silent_for_an_installed_mesh(monkeypatch) -> None:
@@ -82,6 +82,28 @@ def test_settings_stays_silent_for_an_installed_mesh(monkeypatch) -> None:
     monkeypatch.setattr(state, "human_mesh", "adult_male")
     assert settings_tab._select_installed_mesh({"adult_male": "Adult Male"}) is None
     assert state.human_mesh == "adult_male"
+
+
+def test_settings_stays_silent_for_an_installed_alias(monkeypatch) -> None:
+    """A legacy alias of an installed mesh is canonicalized without a notice."""
+    from guiskindose.gui.tabs import settings as settings_tab
+
+    monkeypatch.setattr(state, "human_mesh", "pediatric_5y_male")
+    note = settings_tab._select_installed_mesh({"ped_5y_male": "Pediatric 5y Male", "hudfrid": "Hudfrid"})
+
+    assert note is None
+    assert state.human_mesh == "ped_5y_male"
+
+
+def test_settings_explains_a_mesh_that_is_not_in_the_list(monkeypatch) -> None:
+    """An unknown stem is replaced with Hudfrid even when another mesh is listed first."""
+    from guiskindose.gui.tabs import settings as settings_tab
+
+    monkeypatch.setattr(state, "human_mesh", "definitely_not_a_mesh")
+    note = settings_tab._select_installed_mesh({"adult_male": "Adult Male", "hudfrid": "Hudfrid"})
+
+    assert state.human_mesh == "hudfrid"
+    assert note == copy_text("settings.human_mesh.unavailable").format(saved="definitely_not_a_mesh", label="Hudfrid")
 
 
 def _starter_mesh_options() -> dict[str, str]:

@@ -135,7 +135,7 @@ Plane and cylinder phantoms are generated in code. They are in every build and a
 
 ### Phantom library
 
-Today the mesh list comes from globbing the package directory, and at least four places compute that directory from `__file__` (`gui/helpers.py`, `gui/phantom_preview.py`, `package_phantom_data_dir`, and the package `__init__`). `resolve_human_mesh_stl_path` checks a safe-stem pattern and file existence. It is not an allow-list. The GUI selector also falls back to the first clinical mesh or `hudfrid` when a stem is not selectable (`canonicalize_human_mesh_selection`). Phase 2 replaces all of that with a canonical catalog constant and one resolution entry point, used by `Phantom`, the preview, mesh measurement, and the selector. It removes the silent fallback. A user mesh whose stem matches a shipped mesh is refused.
+Today the mesh list comes from globbing the package directory, and at least four places compute that directory from `__file__` (`gui/helpers.py`, `gui/phantom_preview.py`, `package_phantom_data_dir`, and the package `__init__`). `resolve_human_mesh_stl_path` checks a safe-stem pattern and file existence. It is not an allow-list. The GUI selector falls back to `hudfrid` when that mesh is installed, otherwise the first clinical mesh, and explains the change when a stem is not selectable (`canonicalize_human_mesh_selection`). Phase 2 replaces all of that with a canonical catalog constant and one resolution entry point, used by `Phantom`, the preview, mesh measurement, and the selector. It removes that replacement. A user mesh whose stem matches a shipped mesh is refused.
 
 Lookup order, confined to known roots and safe stems:
 

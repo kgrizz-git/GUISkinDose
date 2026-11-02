@@ -263,12 +263,17 @@ def _notify_unavailable_imported_mesh() -> None:
 
 
 def _refresh_all(ctx: PageContext) -> None:
-    """Repaint every tab bound to run state after an import or a rollback."""
+    """Repaint every tab bound to run state after an import or a rollback.
+
+    The phantom preview is included so a replaced mesh, orientation, or habitus
+    scale is what the Settings plot shows, not the pre-import body.
+    """
     ctx.refresh_event_table()
     ctx.refresh_exams_table()
     ctx.refresh_import_preview()
     ctx.refresh_per_exam()
     ctx.refresh_geometry_tab()
+    ctx.refresh_phantom_preview()
 
 
 def _notify_warnings(warnings: list[str]) -> None:
