@@ -249,6 +249,20 @@ if [[ "${GUISKINDOSE_SKIP_NOTARIZE:-0}" == "1" ]]; then
     exit 0
 fi
 
+# umask only affects new files, and a redirect follows a symlink. So each private
+# output is removed first, and the write uses noclobber, so it fails rather than
+# reuse a file or symlink that reappears in between.
+fresh_private_targets() {
+    local target
+    for target in "$@"; do
+        rm -f "$target"
+        if [[ -e "$target" || -L "$target" ]]; then
+            echo "cannot replace $(basename "$target") in the output directory" >&2
+            exit 1
+        fi
+    done
+}
+
 SUBMIT_ZIP="$OUT/notary-submit.zip"
 rm -f "$SUBMIT_ZIP"
 ditto -c -k --keepParent "$APP" "$SUBMIT_ZIP"
@@ -256,7 +270,8 @@ start=$(date +%s)
 RESULT="$OUT/notary-result.plist"
 # notarytool output can carry account identifiers, so it goes to mode-600 files only.
 SUBMIT_ERR="$OUT/notary-submit.stderr"
-( umask 077; xcrun notarytool submit "$SUBMIT_ZIP" "${NOTARY_AUTH[@]}" --wait \
+fresh_private_targets "$RESULT" "$SUBMIT_ERR"
+( umask 077; set -o noclobber; xcrun notarytool submit "$SUBMIT_ZIP" "${NOTARY_AUTH[@]}" --wait \
     --output-format plist > "$RESULT" 2> "$SUBMIT_ERR" ) || true
 echo "notarization took $(( $(date +%s) - start )) s"
 STATUS="$(/usr/libexec/PlistBuddy -c 'Print :status' "$RESULT" 2>/dev/null || echo unknown)"
@@ -269,7 +284,8 @@ rm -f "$SUBMIT_ZIP"
 if [[ "$STATUS" != "Accepted" ]]; then
     if [[ -n "$SUB_ID" ]]; then
         LOG="$OUT/notary-log.json"
-        ( umask 077; xcrun notarytool log "$SUB_ID" "${NOTARY_AUTH[@]}" "$LOG" \
+        fresh_private_targets "$LOG" "$OUT/notary-log.stdout" "$OUT/notary-log.stderr"
+        ( umask 077; set -o noclobber; xcrun notarytool log "$SUB_ID" "${NOTARY_AUTH[@]}" "$LOG" \
             > "$OUT/notary-log.stdout" 2> "$OUT/notary-log.stderr" ) \
             || echo "notarytool log failed; see notary-log.stderr in the output directory" >&2
         # Print bundle-relative paths only.
