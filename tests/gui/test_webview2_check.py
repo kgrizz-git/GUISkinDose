@@ -16,18 +16,22 @@ _WOW = r"SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients"
 _DOTNET = ("HKEY_LOCAL_MACHINE", r"SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full", "Release")
 
 
-def _reader(values: dict[tuple[str, str, str], object], *, dotnet: int | None = 528040):
-    table = dict(values)
-    if dotnet is not None:
-        table[_DOTNET] = dotnet
-    reads: list[tuple[str, str, str]] = []
+class _FakeRegistry:
+    """Registry reader backed by a dict; records every read."""
 
-    def read(hive: str, subkey: str, name: str) -> object:
-        reads.append((hive, subkey, name))
-        return table.get((hive, subkey, name))
+    def __init__(self, values: dict[tuple[str, str, str], object], dotnet: int | None) -> None:
+        self.table = dict(values)
+        if dotnet is not None:
+            self.table[_DOTNET] = dotnet
+        self.reads: list[tuple[str, str, str]] = []
 
-    read.reads = reads  # type: ignore[attr-defined]
-    return read
+    def __call__(self, hive: str, subkey: str, name: str) -> object:
+        self.reads.append((hive, subkey, name))
+        return self.table.get((hive, subkey, name))
+
+
+def _reader(values: dict[tuple[str, str, str], object], *, dotnet: int | None = 528040) -> _FakeRegistry:
+    return _FakeRegistry(values, dotnet)
 
 
 def _pv(hive: str, view: str, client: str = _RUNTIME) -> tuple[str, str, str]:

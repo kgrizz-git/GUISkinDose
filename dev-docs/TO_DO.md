@@ -28,7 +28,7 @@ be archived.
    next: close remaining Phase 2 acceptance and per-slice contracts; later activation/transmission/authoring work remains open.
 - [ ] **Geometry-driven support transmission** — See the correction-data roadmap in
   Active Work / [GEOMETRY_DRIVEN_SUPPORT_TRANSMISSION_PLAN.md](plans/GEOMETRY_DRIVEN_SUPPORT_TRANSMISSION_PLAN.md).
-- [ ] **Portable desktop app** — Light and Full double-click builds. Phase 0 Windows spike in progress:
+- [ ] **Portable desktop app** — Light and Full double-click builds. Phase 1 in progress (editions, PNG gate, WebView2 check done):
   [PORTABLE_APP_PLAN.md](plans/PORTABLE_APP_PLAN.md). Detail in Active Work.
 
 ## Active Work
@@ -56,7 +56,7 @@ be archived.
   - *Native window* — restore-from-maximize and multi-display OS smokes
     ([MAC_NATIVE_WINDOW_MAXIMIZE_PLAN.md](plans/archive/MAC_NATIVE_WINDOW_MAXIMIZE_PLAN.md),
     [NATIVE_WINDOW_GEOMETRY_PLAN.md](plans/archive/NATIVE_WINDOW_GEOMETRY_PLAN.md)).
-- [ ] **Portable desktop app (PyInstaller)** — Phase 0 Windows spike in progress (a full-mesh, no-browser build passes CI smoke; Light and Full sizes are still open):
+- [ ] **Portable desktop app (PyInstaller)** — Phase 1 in progress (Light/Full editions, the Light PNG gate, and the WebView2 pre-check are done; macOS/Linux CI, macOS release signing, and clean-VM checks remain):
   [PORTABLE_APP_PLAN.md](plans/PORTABLE_APP_PLAN.md). Light is a small phantom set with no PNG export
   and no bundled browser. Full is the clinical library plus Chromium for offline Kaleido PNG
   (not Chrome for Testing). Phase 0 is a Windows freeze spike. Light checks for
