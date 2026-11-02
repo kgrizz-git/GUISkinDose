@@ -76,6 +76,27 @@ def test_settings_reports_a_saved_mesh_that_is_not_installed(light, monkeypatch)
     assert note == copy_text("settings.human_mesh.not_installed").format(label="Hudfrid")
 
 
+def test_full_reports_a_missing_mesh_as_reinstall(monkeypatch) -> None:
+    """Full keeps the substitution sentence and tells the user to reinstall."""
+    from guiskindose import _edition
+    from guiskindose.edition import EDITION_FULL
+    from guiskindose.gui.tabs import settings as settings_tab
+
+    monkeypatch.setattr(_edition, "EDITION", EDITION_FULL)
+    monkeypatch.setattr(state, "human_mesh", "senior_male")
+    monkeypatch.setattr(
+        settings_tab, "human_mesh_not_installed_message", lambda stem: "missing" if stem == "senior_male" else None
+    )
+
+    note = settings_tab._select_installed_mesh({"adult_male": "Adult Male", "hudfrid": "Hudfrid"})
+
+    assert state.human_mesh == "hudfrid"
+    assert note == copy_text("settings.human_mesh.not_installed.reinstall").format(label="Hudfrid")
+    assert note is not None
+    assert "Reinstall GUISkinDose" in note
+    assert "Full download" not in note
+
+
 def test_settings_stays_silent_for_an_installed_mesh(monkeypatch) -> None:
     from guiskindose.gui.tabs import settings as settings_tab
 

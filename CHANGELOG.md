@@ -38,6 +38,8 @@ That keeps SemVer and contributor history organized.
   installed mesh, and the change is explained. This happens when Settings opens and after a run-configuration
   import, including a successful tabular re-parse. The mesh list and the Settings phantom preview follow the
   selection. An installed mesh, including a legacy alias for one, is left as saved and is not announced.
+  When the missing mesh is in the clinical catalog, Light says to download Full, and Full says to reinstall
+  GUISkinDose.
 
 ### Security
 

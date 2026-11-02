@@ -57,6 +57,10 @@
       "text": "The saved human mesh is not installed in this build, so {label} is selected instead. GUISkinDose Light ships a starter set of phantoms. The Full download has the whole clinical library.",
       "owner": "gui/tabs/settings.py"
     },
+    "settings.human_mesh.not_installed.reinstall": {
+      "text": "The saved human mesh is not installed in this build, so {label} is selected instead. Reinstall GUISkinDose to restore it.",
+      "owner": "gui/tabs/settings.py"
+    },
     "settings.human_mesh.unavailable": {
       "text": "The saved human mesh '{saved}' is not in the mesh list, so {label} is selected instead.",
       "owner": "gui/tabs/settings.py"

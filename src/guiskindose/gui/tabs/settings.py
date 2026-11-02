@@ -13,6 +13,7 @@ from collections.abc import Callable
 
 from nicegui import ui
 
+from guiskindose.edition import is_light
 from guiskindose.phantom_mesh_names import human_mesh_not_installed_message, resolve_human_mesh_stem
 
 from ..components import HelpButton
@@ -115,8 +116,9 @@ def _select_installed_mesh(mesh_options: dict[str, str]) -> str | None:
 
     An installed stem, including a legacy alias that resolves to one, is left as
     that canonical stem and this returns ``None``. A clinical mesh this build does
-    not ship uses the Light/Full explanation. Any other unavailable stem (unknown,
-    demo gated off, preview suffix) uses the shorter explanation.
+    not ship keeps the substitution sentence and then points at the Full download
+    on Light, or at reinstalling GUISkinDose on Full. Any other unavailable stem
+    (unknown, demo gated off, preview suffix) uses the shorter explanation.
     """
     saved = state.human_mesh
     state.human_mesh = canonicalize_human_mesh_selection(saved, mesh_options)
@@ -124,7 +126,11 @@ def _select_installed_mesh(mesh_options: dict[str, str]) -> str | None:
         return None
     label = mesh_options.get(state.human_mesh, state.human_mesh)
     if human_mesh_not_installed_message(saved):
-        return copy_text("settings.human_mesh.not_installed").format(label=label)
+        # Same ``{label}`` sentence either way. Light (and any unrecognized
+        # edition, which fails closed as Light) points at the Full download.
+        # Full already includes the mesh, so a missing file is a broken install.
+        key = "settings.human_mesh.not_installed" if is_light() else "settings.human_mesh.not_installed.reinstall"
+        return copy_text(key).format(label=label)
     return copy_text("settings.human_mesh.unavailable").format(saved=saved or "none", label=label)
 
 
