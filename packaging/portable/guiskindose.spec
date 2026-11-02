@@ -8,18 +8,23 @@
 # Onedir, windowed (no console), entry = packaging/portable/entry.py. Package data
 # is an explicit include list placed under guiskindose/ inside the bundle, so
 # importlib.resources and Path(__file__) lookups resolve exactly as in a wheel.
-# GUISKINDOSE_PORTABLE_SHAPE picks the phantom payload (PORTABLE_APP_PLAN.md Phase 0):
-#   spike (default)  every shipped STL, the original no-browser spike
-#   light            only the proposed Light set (7 bases, both poses, _reduced_3000t)
-#   full             every clinical STL except the legacy _reduced_1000t previews
+# GUISKINDOSE_PORTABLE_EDITION picks the edition (PORTABLE_APP_PLAN.md Phase 1):
+#   light   the Light starter phantoms (7 bases, both poses, _reduced_3000t), no PNG
+#   full    every clinical STL except the legacy _reduced_1000t previews (default)
+# The include lists live in src/guiskindose/edition.py, so the spec and the runtime
+# agree. The package is frozen from a gitignored staging copy under tmp/portable/stage/,
+# whose guiskindose/_edition.py is rewritten to the chosen edition. The source tree's
+# copy stays "full", so the pip wheel is unchanged. The staging copy comes first on
+# pathex, ahead of the editable install's src/ path, and the self-check reports the
+# frozen edition.
 # The spec never bundles a browser. The Full workflow job copies a pinned, sha256-
 # verified Chromium into the onedir after the freeze (see PORTABLE_CHROMIUM_ARTIFACT.md).
-# src/ is on pathex, so an editable install is fine.
 # On macOS the build also writes GUISkinDose.app (BUNDLE). Its .icns is generated at
 # build time from the committed SVG icon into tmp/portable/icon (AppKit via osascript,
 # sips, iconutil), so no binary icon is committed. Sign and notarize the .app afterwards with
 # packaging/portable/macos_sign_notarize.sh.
 # ruff: noqa
+import importlib.util
 import os
 import shutil
 import subprocess
@@ -92,41 +97,46 @@ def _macos_icns() -> str:
     return str(icns)
 
 
-SHAPE = os.environ.get("GUISKINDOSE_PORTABLE_SHAPE", "spike")
-# Proposed Light set: PORTABLE_APP_PLAN.md -> "Proposed Light set".
-LIGHT_BASES = (
-    "hudfrid",
-    "adult_male",
-    "adult_female",
-    "ped_5y_male",
-    "ped_5y_female",
-    "adult_bariatric_male_1",
-    "adult_bariatric_female_1",
-)
+# Load the include lists from edition.py alone, without importing the package.
+_lists_spec = importlib.util.spec_from_file_location("_guiskindose_edition_lists", PKG / "edition.py")
+_lists = importlib.util.module_from_spec(_lists_spec)
+_lists_spec.loader.exec_module(_lists)
+EDITIONS = _lists.EDITIONS
+edition_phantom_stl_names = _lists.edition_phantom_stl_names
+
+EDITION = os.environ.get("GUISKINDOSE_PORTABLE_EDITION", "full")
+if EDITION not in EDITIONS:
+    raise SystemExit(f"unknown GUISKINDOSE_PORTABLE_EDITION={EDITION!r}")
+STAGE = ROOT / "tmp" / "portable" / "stage" / EDITION
+
+
+def _stage_package() -> Path:
+    """Copy src/guiskindose (minus meshes and caches) to STAGE and stamp its edition."""
+    target = STAGE / "guiskindose"
+    shutil.rmtree(STAGE, ignore_errors=True)
+    shutil.copytree(PKG, target, ignore=shutil.ignore_patterns("__pycache__", "phantom_data", "*.pyc"))
+    edition_file = target / "_edition.py"
+    source = edition_file.read_text(encoding="utf-8")
+    committed = 'EDITION = "full"\n'
+    if source.count(committed) != 1:
+        raise SystemExit("guiskindose/_edition.py no longer holds the committed edition line")
+    edition_file.write_text(source.replace(committed, f'EDITION = "{EDITION}"\n'), encoding="utf-8")
+    return STAGE
+
+
+STAGE_SRC = _stage_package()
 
 
 def _phantom_stls() -> list[str]:
-    names = sorted(path.name for path in (PKG / "phantom_data").glob("*.stl"))
-    if SHAPE == "spike":
-        return names
-    if SHAPE == "full":
-        return [name for name in names if not name.endswith("_reduced_1000t.stl")]
-    if SHAPE == "light":
-        wanted = {
-            f"{base}{pose}{suffix}.stl"
-            for base in LIGHT_BASES
-            for pose in ("", "_arms_down")
-            for suffix in ("", "_reduced_3000t")
-        }
-        missing = wanted.difference(names)
-        if missing:
-            raise SystemExit(f"Light set STLs missing: {sorted(missing)}")
-        return sorted(wanted)
-    raise SystemExit(f"unknown GUISKINDOSE_PORTABLE_SHAPE={SHAPE!r}")
+    names = [path.name for path in (PKG / "phantom_data").glob("*.stl")]
+    try:
+        return edition_phantom_stl_names(EDITION, names)
+    except ValueError as exc:
+        raise SystemExit(str(exc)) from None
 
 
 # (glob under src/guiskindose, destination folder inside the bundle)
-# Mirrors MANIFEST.in, except that the phantom STLs depend on SHAPE.
+# Mirrors MANIFEST.in, except that the phantom STLs depend on EDITION.
 _PACKAGE_DATA = [(f"phantom_data/{name}", "phantom_data") for name in _phantom_stls()] + [
     ("table_data/*.csv", "table_data"),
     ("table_data/*.json", "table_data"),
@@ -165,7 +175,7 @@ for dist in ("guiskindose", "nicegui", "plotly", "kaleido", "pydicom", "pywebvie
 # table_data build scripts are maintainer tools with import-time side effects.
 hiddenimports = collect_submodules("guiskindose", filter=lambda name: ".table_data" not in name)
 hiddenimports += ["webview", "selfcheck", "pngcheck"]
-print(f"portable shape={SHAPE} phantom_stls={len(_phantom_stls())}")
+print(f"portable edition={EDITION} phantom_stls={len(_phantom_stls())}")
 
 excludes = [
     "pytest",
@@ -186,7 +196,7 @@ excludes = [
 
 a = Analysis(
     [str(Path(SPECPATH) / "entry.py")],
-    pathex=[str(ROOT / "src"), str(Path(SPECPATH))],
+    pathex=[str(STAGE_SRC), str(Path(SPECPATH))],
     binaries=[],
     datas=datas,
     hiddenimports=hiddenimports,

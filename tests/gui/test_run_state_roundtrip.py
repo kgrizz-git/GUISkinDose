@@ -128,6 +128,7 @@ def _stub_ctx(calls: list[str]) -> PageContext:
     ctx.refresh_import_preview = lambda: calls.append("import_preview")
     ctx.refresh_per_exam = lambda: calls.append("per_exam")
     ctx.refresh_geometry_tab = lambda: calls.append("geometry_tab")
+    ctx.refresh_phantom_preview = lambda: calls.append("phantom_preview")
     return ctx
 
 
@@ -141,6 +142,13 @@ def _number_by_label(user: User, label: str) -> Any:
         if isinstance(el, ui.number) and el._props.get("label") == label:
             return el
     raise AssertionError(f"ui.number with label {label!r} not found")
+
+
+def _select_by_label(user: User, label: str) -> Any:
+    for el in _client(user).elements.values():
+        if isinstance(el, ui.select) and el._props.get("label") == label:
+            return el
+    raise AssertionError(f"ui.select with label {label!r} not found")
 
 
 @pytest.mark.asyncio
@@ -171,7 +179,7 @@ async def test_import_restores_state_invokes_refresh_and_clears_results(user: Us
     assert state.input_schema == "dosetrack"
     assert state.loaded_exam_meta[0]["flip_tx"] is True
     assert state.kerma_meter_in_memory_table == {("Acme", "TubeA"): 1.02}
-    assert calls == ["event_table", "exams_table", "import_preview", "per_exam", "geometry_tab"]
+    assert calls == ["event_table", "exams_table", "import_preview", "per_exam", "geometry_tab", "phantom_preview"]
     assert state.calculation_done is False
     assert state.output is None
     assert "1 exam" in status.text
@@ -296,7 +304,7 @@ async def test_import_count_mismatch_rolls_back_and_keeps_results(user: User) ->
     assert state.d_lon == 0.0
     assert state.calculation_done is True  # pre-import results stay valid
     assert state.output == {"psd": 1.0}
-    assert calls == ["event_table", "exams_table", "import_preview", "per_exam", "geometry_tab"]
+    assert calls == ["event_table", "exams_table", "import_preview", "per_exam", "geometry_tab", "phantom_preview"]
     assert not user.notify.contains("Run configuration loaded")
 
 
@@ -394,6 +402,88 @@ async def test_import_rereparses_before_restoring_offsets(user: User, monkeypatc
     meta = state.loaded_exam_meta[0]
     assert (meta["d_lon"], meta["d_ver"], meta["d_lat"]) == (1.0, 2.0, 3.0)
     assert meta["sheet"] == "Other"
+
+
+def _unavailable_mesh_document() -> dict:
+    """A run configuration whose phantom stem is absent from a Light starter set."""
+    document = _make_document()
+    document["settings"]["phantom"]["human_mesh"] = "senior_male"
+    document["gui_state"]["input_sheet_name"] = "Other"
+    document["gui_state"]["exams"][0]["sheet"] = "Other"
+    return document
+
+
+def _patch_starter_mesh(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Treat only Adult Male as installed, and senior_male as a missing clinical mesh."""
+    from guiskindose.gui import helpers
+    from guiskindose.gui.tabs import settings as settings_tab
+
+    monkeypatch.setattr(helpers, "get_human_mesh_options", lambda **_k: {"adult_male": "Adult Male"})
+    monkeypatch.setattr(
+        settings_tab,
+        "human_mesh_not_installed_message",
+        lambda stem: "missing" if stem == "senior_male" else None,
+    )
+
+
+@pytest.mark.asyncio
+async def test_import_replaces_unavailable_mesh_after_reparse(user: User, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Re-parse re-applies the saved stem; replacement runs after that and updates the selector."""
+    await user.open("/")
+    _seed_single_exam()
+    state.human_mesh = "hudfrid"
+    user.find("3 · Settings").click()
+    await user.should_see("Human mesh")
+
+    def _fake_load_tabular(file_path: Path, app_state: AppState, _force: bool = True) -> tuple[bool, str]:
+        app_state.loaded_exam_meta = [
+            {
+                "file_name": "export.xlsx",
+                "file_path": Path("/data/inbox/export.xlsx"),
+                "study_id": "STUDY-1",
+                "input_manufacturer": "Acme",
+                "input_model": "X1000",
+                "source_type": "xlsx",
+                "schema": "dosetrack",
+                "sheet": "WrongSheet",
+                "normalization_method": "Matched",
+                "table_origin_detected": {"x": 1.0, "y": 2.0, "z": 3.0},
+            }
+        ]
+        return True, "ok"
+
+    monkeypatch.setattr(run_config_mod, "load_tabular", _fake_load_tabular)
+    _patch_starter_mesh(monkeypatch)
+    with _client(user):
+        status = ui.label("")
+    await run_config_mod._do_load(_upload_event(_unavailable_mesh_document()), _stub_ctx([]), status)
+    assert state.human_mesh == "adult_male"
+    assert user.notify.contains("not installed")
+    assert user.notify.contains("Adult Male")
+    for _ in range(50):
+        if _select_by_label(user, "Human mesh").value == "adult_male":
+            break
+        await asyncio.sleep(0.1)
+    assert _select_by_label(user, "Human mesh").value == "adult_male"
+
+
+@pytest.mark.asyncio
+async def test_failed_reparse_does_not_announce_a_mesh_replacement(user: User, monkeypatch: pytest.MonkeyPatch) -> None:
+    """A rolled-back import keeps the previous mesh and does not explain a replacement."""
+    await user.open("/")
+    _seed_single_exam()
+    state.human_mesh = "hudfrid"
+
+    def _fake_load_tabular(file_path: Path, app_state: AppState, _force: bool = True) -> tuple[bool, str]:
+        return False, "boom"
+
+    monkeypatch.setattr(run_config_mod, "load_tabular", _fake_load_tabular)
+    _patch_starter_mesh(monkeypatch)
+    with _client(user):
+        status = ui.label("")
+    await run_config_mod._do_load(_upload_event(_unavailable_mesh_document()), _stub_ctx([]), status)
+    assert state.human_mesh == "hudfrid"
+    assert not user.notify.contains("not installed")
 
 
 def test_legacy_kerma_mode_prompt_sets_ask_for_missing():

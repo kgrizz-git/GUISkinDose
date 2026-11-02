@@ -13,6 +13,9 @@ from collections.abc import Callable
 
 from nicegui import ui
 
+from guiskindose.edition import is_light
+from guiskindose.phantom_mesh_names import human_mesh_not_installed_message, resolve_human_mesh_stem
+
 from ..components import HelpButton
 from ..constants import (
     COLORSCALES,
@@ -102,6 +105,35 @@ def build(ctx: PageContext) -> None:
         _build_visual_section()
 
 
+def _select_installed_mesh(mesh_options: dict[str, str]) -> str | None:
+    """Point ``state.human_mesh`` at a selectable mesh and explain a substitution.
+
+    A saved stem that is not one of ``mesh_options`` cannot stay in the selector.
+    The fallback is Hudfrid when that mesh is installed. The phantom section calls
+    this when the selector is built. Run-configuration import calls it again after
+    a successful load or re-parse, because that write happens after the selector
+    already exists and is bound to ``state.human_mesh``.
+
+    An installed stem, including a legacy alias that resolves to one, is left as
+    that canonical stem and this returns ``None``. A clinical mesh this build does
+    not ship keeps the substitution sentence and then points at the Full download
+    on Light, or at reinstalling GUISkinDose on Full. Any other unavailable stem
+    (unknown, demo gated off, preview suffix) uses the shorter explanation.
+    """
+    saved = state.human_mesh
+    state.human_mesh = canonicalize_human_mesh_selection(saved, mesh_options)
+    if state.human_mesh == resolve_human_mesh_stem(saved or ""):
+        return None
+    label = mesh_options.get(state.human_mesh, state.human_mesh)
+    if human_mesh_not_installed_message(saved):
+        # Same ``{label}`` sentence either way. Light (and any unrecognized
+        # edition, which fails closed as Light) points at the Full download.
+        # Full already includes the mesh, so a missing file is a broken install.
+        key = "settings.human_mesh.not_installed" if is_light() else "settings.human_mesh.not_installed.reinstall"
+        return copy_text(key).format(label=label)
+    return copy_text("settings.human_mesh.unavailable").format(saved=saved or "none", label=label)
+
+
 def _build_phantom_section(ctx: PageContext, on_change: Callable[[], None]) -> None:
     """Phantom Settings expansion: model, mesh, offsets, and habitus scaling.
 
@@ -123,7 +155,7 @@ def _build_phantom_section(ctx: PageContext, on_change: Callable[[], None]) -> N
                 ).on(_MODEL_VALUE_EVENT, on_change).classes("grow")
 
                 mesh_options = get_human_mesh_options()
-                state.human_mesh = canonicalize_human_mesh_selection(state.human_mesh, mesh_options)
+                not_installed_note = _select_installed_mesh(mesh_options)
                 mesh_select = (
                     ui.select(mesh_options, label="Human mesh", value=state.human_mesh)
                     .bind_value(state, "human_mesh")
@@ -142,6 +174,8 @@ def _build_phantom_section(ctx: PageContext, on_change: Callable[[], None]) -> N
                     on_change()
 
                 mesh_select.on(_MODEL_VALUE_EVENT, _on_human_mesh_change)
+            if not_installed_note:
+                ui.label(not_installed_note).classes("text-caption text-warning")
 
             # show/hide mesh selector based on model
             def _update_mesh_visibility():

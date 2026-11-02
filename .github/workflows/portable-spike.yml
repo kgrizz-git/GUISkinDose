@@ -1,17 +1,19 @@
-# Portable app Phase 0 spike (dev-docs/plans/PORTABLE_APP_PLAN.md): Windows freezes
-# with PyInstaller in two shapes. Light ships only the proposed Light mesh set and no
-# browser. Full ships the clinical meshes plus a pinned, sha256-verified Chromium
+# Portable app Windows builds (dev-docs/plans/PORTABLE_APP_PLAN.md, Phases 0 and 1):
+# PyInstaller freezes the two editions. The include lists live in
+# src/guiskindose/edition.py, and the spec freezes a staging copy whose _edition.py
+# says which edition it is. Light ships the starter meshes and no browser; its
+# self-check must report edition=light, no bundled browser, and PNG off without a
+# to_image call. Full ships every clinical mesh plus a pinned, sha256-verified Chromium
 # (dev-docs/references/PORTABLE_CHROMIUM_ARTIFACT.md) and proves offline PNG export
 # from it. Each leg zips the onedir, records sizes, and runs the frozen self-check
 # with git removed from PATH and outbound network blocked for the app (and, in Full,
 # for the bundled browser). No release, no signing. The zip is a short-lived artifact.
-# Phase 1 replaces this workflow with the release build jobs, or deletes it.
 name: portable-spike
 
 on:
   workflow_dispatch:
   push:
-    branches: [ spike/portable-phase0-windows, spike/portable-chromium ]
+    branches: [ 'spike/portable-*', 'portable/**' ]
 
 permissions:
   contents: read
@@ -21,22 +23,22 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  windows-shape:
-    name: windows-${{ matrix.shape }}
+  windows-edition:
+    name: windows-${{ matrix.edition }}
     runs-on: windows-latest
     timeout-minutes: 75
     strategy:
       fail-fast: false
       matrix:
-        shape: [ light, full ]
+        edition: [ light, full ]
     defaults:
       run:
         shell: pwsh
     env:
       PYTHONUTF8: "1"
       APP_DIR: tmp/portable/dist/GUISkinDose
-      ZIP_NAME: GUISkinDose-spike-${{ matrix.shape }}-windows-x64.zip
-      GUISKINDOSE_PORTABLE_SHAPE: ${{ matrix.shape }}
+      ZIP_NAME: GUISkinDose-${{ matrix.edition }}-windows-x64.zip
+      GUISKINDOSE_PORTABLE_EDITION: ${{ matrix.edition }}
       # Pinned Full browser: ungoogled-chromium for Windows x64 (BSD-3-Clause).
       # Bumping it means editing all three values and PORTABLE_CHROMIUM_ARTIFACT.md.
       CHROMIUM_VERSION: 156.0.8078.73-1.1
@@ -66,7 +68,9 @@ jobs:
         if ($LASTEXITCODE -ne 0) { throw "unfrozen self-check failed" }
         $out = Join-Path $out $env:SC_SUB
         $report = Get-Content "$out/selfcheck_report.json" | ConvertFrom-Json
-        Write-Output "unfrozen psd_mGy=$($report.calculate_export.psd_mGy) passed=$($report.passed)"
+        Write-Output "unfrozen psd_mGy=$($report.calculate_export.psd_mGy) passed=$($report.passed) edition=$($report.edition.edition)"
+        # The source tree is always the committed Full edition.
+        if ($report.edition.edition -ne 'full') { throw "source tree edition is not full" }
         "UNFROZEN_PSD=$($report.calculate_export.psd_mGy)" >> $env:GITHUB_ENV
 
     - name: Freeze (PyInstaller onedir, windowed)
@@ -79,7 +83,7 @@ jobs:
         uv run --no-sync python -c "import PyInstaller; print('PyInstaller', PyInstaller.__version__)"
 
     - name: Bundle pinned Chromium into the onedir (Full only, fail closed on sha256)
-      if: matrix.shape == 'full'
+      if: matrix.edition == 'full'
       run: |
         $dl = Join-Path $env:RUNNER_TEMP "chromium-download"
         New-Item -ItemType Directory -Force $dl | Out-Null
@@ -168,7 +172,7 @@ jobs:
           throw "firewall rule not active"
         }
         if ($app.Program -ne $env:APP_EXE) { throw "firewall rule targets another program" }
-        if ($env:GUISKINDOSE_PORTABLE_SHAPE -eq 'full') {
+        if ($env:GUISKINDOSE_PORTABLE_EDITION -eq 'full') {
           # Kaleido's browser is a separate program, so it needs its own block rule.
           $chrome = Join-Path (Split-Path $env:APP_EXE) "chromium/chrome.exe"
           New-NetFirewallRule -DisplayName "guiskindose-spike-block-chromium" -Direction Outbound `
@@ -212,14 +216,31 @@ jobs:
           if ([double]$report.calculate_export.psd_mGy -ne [double]$env:UNFROZEN_PSD) {
             throw "frozen PSD $($report.calculate_export.psd_mGy) != unfrozen $env:UNFROZEN_PSD"
           }
+          $ed = $report.edition
+          if ($ed.edition -ne $env:GUISKINDOSE_PORTABLE_EDITION) { throw "frozen edition $($ed.edition) != $env:GUISKINDOSE_PORTABLE_EDITION" }
+          if ($ed.reduced_1000t_stl -ne 0) { throw "a _reduced_1000t preview was bundled" }
+          if (-not $ed.starter_mesh_loads) { throw "starter mesh does not load" }
+          if ($env:GUISKINDOSE_PORTABLE_EDITION -eq 'light') {
+            if ($ed.png_export_available) { throw "Light reports PNG export available" }
+            if ($ed.bundled_browser_present) { throw "Light bundles a browser" }
+            if ($ed.png_gate.to_image_calls -ne 0 -or $ed.png_gate.png_returned) { throw "Light reached to_image" }
+            if ($ed.non_starter_mesh -ne 'not_installed') { throw "Light did not report a non-starter mesh missing" }
+          } else {
+            if (-not $ed.png_export_available) { throw "Full reports PNG export off" }
+            if ($ed.non_starter_mesh -ne 'loads') { throw "Full is missing a clinical mesh" }
+          }
+          # The runner has WebView2, so the native-window pre-check must find it.
+          if (-not $report.webview2.applicable -or -not $report.webview2.usable) { throw "WebView2 pre-check found no usable runtime" }
         }
+        "WEBVIEW2_VERSION=$($report.webview2.runtime_version)" >> $env:GITHUB_ENV
+        "PHANTOM_STLS=$($report.package_data.phantom_data_stl)" >> $env:GITHUB_ENV
         Write-Output "frozen PSD matches unfrozen PSD ($env:UNFROZEN_PSD mGy)"
         "SELFCHECK_COLD_S=$($timings[0])" >> $env:GITHUB_ENV
         "SELFCHECK_WARM_S=$($timings[1])" >> $env:GITHUB_ENV
         Copy-Item (Join-Path $env:RUNNER_TEMP "selfcheck-1/$env:SC_SUB/selfcheck_report.json") out/
 
     - name: Frozen offline PNG from the bundled Chromium (Full only)
-      if: matrix.shape == 'full'
+      if: matrix.edition == 'full'
       run: |
         $env:PATH = ($env:PATH -split ';' | Where-Object { $_ -and -not (Test-Path (Join-Path $_ 'git.exe')) }) -join ';'
         # Decoy: point BROWSER_PATH at the runner's system Chrome. The app must still
@@ -290,15 +311,17 @@ jobs:
     - name: Summary
       if: always()
       run: |
-        $full = $env:GUISKINDOSE_PORTABLE_SHAPE -eq 'full'
+        $full = $env:GUISKINDOSE_PORTABLE_EDITION -eq 'full'
         $browserRow = if ($full) { "$env:CHROMIUM_VERSION ($env:BROWSER_MB MB, $env:BROWSER_FILES files, $env:CREDITS_PRODUCTS credits entries)" } else { "none" }
         $pngRow = if ($full) { "$env:PNG_WALL_S / $env:PNG_IMAGES / $env:PNG_FLAGS" } else { "n/a" }
         @"
-        ## Portable spike (Windows, $env:GUISKINDOSE_PORTABLE_SHAPE shape)
+        ## Portable build (Windows, $env:GUISKINDOSE_PORTABLE_EDITION edition)
         | Metric | Value |
         |---|---|
         | Build seconds | $env:BUILD_SECONDS |
         | Onedir size | $env:ONEDIR_MB MB ($env:ONEDIR_FILES files) |
+        | Phantom STLs | $env:PHANTOM_STLS |
+        | WebView2 runtime seen by the pre-check | $env:WEBVIEW2_VERSION |
         | Zip size | $env:ZIP_MB MB |
         | Unfrozen reference PSD (mGy) | $env:UNFROZEN_PSD |
         | Self-check cold / warm (s) | $env:SELFCHECK_COLD_S / $env:SELFCHECK_WARM_S |
@@ -311,7 +334,7 @@ jobs:
       if: always()
       uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
       with:
-        name: guiskindose-spike-${{ matrix.shape }}-windows-x64
+        name: guiskindose-${{ matrix.edition }}-windows-x64
         path: out/
         retention-days: 7
         if-no-files-found: warn

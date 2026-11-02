@@ -613,11 +613,15 @@ def canonicalize_human_mesh_selection(stem: str, mesh_options: dict[str, str]) -
     """Map a saved/legacy stem to a selectable canonical option key.
 
     Resolves aliases first. If the result is missing from ``mesh_options``
-    (e.g. demos gated off), fall back to the first clinical option or hudfrid.
+    (a Light starter set, demos gated off, a preview suffix, or an unknown
+    stem), prefer ``hudfrid`` when that mesh is installed. Otherwise use the
+    first clinical option, or ``hudfrid`` when the list is empty.
     """
     canonical = resolve_human_mesh_stem(stem or "")
     if canonical in mesh_options and canonical != DEMO_MESH_SECTION_KEY:
         return canonical
+    if "hudfrid" in mesh_options:
+        return "hudfrid"
     return next((k for k in mesh_options if k != DEMO_MESH_SECTION_KEY), "hudfrid")
 
 
