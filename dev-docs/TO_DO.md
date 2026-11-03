@@ -28,7 +28,7 @@ be archived.
    next: close remaining Phase 2 acceptance and per-slice contracts; later activation/transmission/authoring work remains open.
 - [ ] **Geometry-driven support transmission** — See the correction-data roadmap in
   Active Work / [GEOMETRY_DRIVEN_SUPPORT_TRANSMISSION_PLAN.md](plans/GEOMETRY_DRIVEN_SUPPORT_TRANSMISSION_PLAN.md).
-- [ ] **Portable desktop app** — Light and Full double-click builds. Phase 0 Windows spike in progress:
+- [ ] **Portable desktop app** — Light and Full double-click builds. Phase 1 partial (editions, Light PNG gate, WebView2 registry pre-check, Windows edition matrix):
   [PORTABLE_APP_PLAN.md](plans/PORTABLE_APP_PLAN.md). Detail in Active Work.
 
 ## Active Work
@@ -56,7 +56,7 @@ be archived.
   - *Native window* — restore-from-maximize and multi-display OS smokes
     ([MAC_NATIVE_WINDOW_MAXIMIZE_PLAN.md](plans/archive/MAC_NATIVE_WINDOW_MAXIMIZE_PLAN.md),
     [NATIVE_WINDOW_GEOMETRY_PLAN.md](plans/archive/NATIVE_WINDOW_GEOMETRY_PLAN.md)).
-- [ ] **Portable desktop app (PyInstaller)** — Phase 0 Windows spike in progress (a full-mesh, no-browser build passes CI smoke; Light and Full sizes are still open):
+- [ ] **Portable desktop app (PyInstaller)** — Phase 1 partial (the Light/Full editions, the Light PNG gate, the WebView2 registry pre-check, and the Windows edition matrix are in; macOS/Linux CI, macOS release signing, the Kaleido browser path in the app, and the clean-VM checks remain):
   [PORTABLE_APP_PLAN.md](plans/PORTABLE_APP_PLAN.md). Light is a small phantom set with no PNG export
   and no bundled browser. Full is the clinical library plus Chromium for offline Kaleido PNG
   (not Chrome for Testing). Phase 0 is a Windows freeze spike. Light checks for
@@ -158,10 +158,10 @@ be archived.
   `tools/semgrep/` is a standalone uv project whose `uv.lock` sha256-pins all ~68 transitive
   packages, and both gates run it via `uv run --locked` (`scripts/semgrep_tool.py`). `phi-scan`
   still runs via bare `uvx --from phi-scan==0.7.0`, which resolves from PyPI **without hash
-  verification**, so a same-version re-upload would be trusted. Separately, `uv audit` audits
-  neither tool environment. Only Dependabot sees `tools/semgrep/uv.lock` (see the note in
+  verification**, so a same-version re-upload would be trusted. Separately, `uv audit` does not yet audit
+  `tools/semgrep/uv.lock` (`tools/privacy-scan/uv.lock` is audited via `--tool-project`). Only Dependabot sees the semgrep lock (see the note in
   `[tool.uv.audit]`). **Acceptance:** a `tools/phi-scan/` project
-  mirroring `tools/semgrep/`; `scripts/audit_dependencies.py` also audits the tool locks, reporting
+  mirroring `tools/semgrep/`; `scripts/audit_dependencies.py` also audits `tools/semgrep/uv.lock` (and the phi-scan lock), reporting
   scanner-only advisories separately from application ones so the distinction stays explicit.
 - [ ] **Archive the older MAINTENANCE_LOG entries** — `dev-docs/MAINTENANCE_LOG.md` passed 800
   lines. It is deliberately exempt from the file-size cap (`APPEND_ONLY_HISTORY` in

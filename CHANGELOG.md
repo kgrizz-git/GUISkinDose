@@ -19,6 +19,42 @@ That keeps SemVer and contributor history organized.
 
 ## [Unreleased]
 
+### Changed
+
+- On Windows, `--mode gui --native` now checks for the Microsoft Edge WebView2 Runtime and .NET Framework 4.6.2
+  or later before it opens the window. When either is missing, the app shows a message that points at Microsoft's
+  Evergreen Bootstrapper and exits, instead of opening a broken window on the old MSHTML engine. The lookup uses
+  the same registry view as pywebview 6.2.1 for this process: the native EdgeUpdate key for the current user, and
+  for the local machine the native key on a 32-bit process or the `WOW6432Node` key otherwise. A runtime registered
+  only on the other view does not count. Browser mode and other operating systems are unchanged.
+- A human phantom whose STL file is not installed is now refused with a message that names it, instead of a
+  generic "Unknown human mesh stem" error. The Settings tab says when a saved mesh is not installed and which mesh
+  it selected instead, and Calculate refuses that mesh before it starts.
+
+### Fixed
+
+- A saved human mesh that is not in the mesh list — missing from this build, unknown, a demo while demos are
+  off, or a preview-only name — is replaced with Hudfrid when that mesh is installed, otherwise the first
+  installed mesh, and the change is explained. This happens when Settings opens and after a run-configuration
+  import, including a successful tabular re-parse. The mesh list and the Settings phantom preview follow the
+  selection. An installed mesh, including a legacy alias for one, is left as saved and is not announced.
+  When the missing mesh is in the clinical catalog, Light says to download Full, and Full says to reinstall
+  GUISkinDose.
+- **Ghost patient offsets from before any exam was loaded** — moving the patient-offset
+  sliders with nothing loaded, then opening a file, used to store those numbers on the
+  exam. A one-exam file calculated from the reset value (0) but kept the old numbers in
+  its exam record, so adding a second file applied them. A file that already contained
+  several exams applied them immediately. Either file now starts every exam at 0. Each exam keeps its own offset. A file
+  added later starts that new exam at 0 and leaves the exams already loaded alone.
+  Re-parsing a file keeps the offset stored on each exam it can match; a study that
+  cannot be matched starts at 0. A staged run-config entry still supplies its own offsets.
+- **Import Preview wiped staged tabular transform flags** — after a successful single-exam
+  tabular upload, `ImportPreviewController.set_transform_defaults` forced
+  `swap_lat_lon`/`flip_ap*` to false in globals and `meta[0]`, then re-derived the frame.
+  Staged run-config geometry flags were undone before calculation, silently restoring raw
+  coordinates. The hook now syncs toggles from the loaded exam and leaves the frame the
+  loader already built alone.
+
 ### Security
 
 - The PyPI release workflow now pins `pypa/gh-action-pypi-publish` v1.14.3 (was v1.14.2). Versions up to 1.14.2 bundled a `certifi` trust store that still trusted the compromised emSign root CA, which Sigstore relies on during Trusted Publishing and attestation ([GHSA-5xjx-3w67-w9x9](https://github.com/pypa/gh-action-pypi-publish/security/advisories/GHSA-5xjx-3w67-w9x9)).

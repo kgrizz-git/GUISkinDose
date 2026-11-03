@@ -13,7 +13,7 @@ import pytest
 pytest.importorskip("nicegui")
 
 from guiskindose import get_path_to_example_rdsr_files
-from guiskindose.gui.exam_loaders import _append_multi_study_exams
+from guiskindose.gui.exam_loaders import _append_multi_study_exams, _collect_preserved_flags
 from guiskindose.gui.helpers import (
     build_settings,
     commit_table_origin_transform,
@@ -29,6 +29,7 @@ from guiskindose.gui.helpers import (
     stage_table_origin_axis,
     sync_global_patient_offset_to_single_exam_meta,
 )
+from guiskindose.gui.offset_handlers import apply_patient_offset_slider_tick
 from guiskindose.gui.page_context import PageContext
 from guiskindose.gui.state import AppState
 from guiskindose.gui.tabs.geometry import geometry_vendor_notice
@@ -59,6 +60,11 @@ def test_load_rdsr_resets_global_patient_offset():
     assert st.d_lon == 0.0
     assert st.d_ver == 0.0
     assert st.d_lat == 0.0
+    # Lone-exam meta must match the reset globals; otherwise a later second-file
+    # append would apply the pre-load seed as a ghost multi-exam offset.
+    assert st.loaded_exam_meta[0]["d_lon"] == 0.0
+    assert st.loaded_exam_meta[0]["d_ver"] == 0.0
+    assert st.loaded_exam_meta[0]["d_lat"] == 0.0
 
 
 def test_load_tabular_resets_global_patient_offset():
@@ -68,6 +74,95 @@ def test_load_tabular_resets_global_patient_offset():
     ok, _ = load_tabular(_FIXTURES / "normalized_events.csv", st)
     assert ok
     assert st.d_lon == 0.0
+    assert st.loaded_exam_meta[0]["d_lon"] == 0.0
+
+
+def test_sequential_second_load_does_not_revive_pre_load_offset_seed():
+    """A fresh load starts at 0. A second file stays at 0 and does not revive the old sliders."""
+    st = AppState()
+    st.d_lon = 12.0
+    st.d_ver = 3.0
+    st.d_lat = -4.0
+    ok, _ = load_rdsr(_EXAMPLE_RDSR, st)
+    assert ok
+    assert st.d_lon == 0.0
+    assert st.loaded_exam_meta[0]["d_lon"] == 0.0
+
+    st.input_schema = "normalized"
+    ok, _ = load_tabular(_FIXTURES / "normalized_events.csv", st)
+    assert ok
+    assert st.is_multi_exam
+    assert st.loaded_exam_meta[0]["d_lon"] == 0.0
+    assert st.loaded_exam_meta[0]["d_ver"] == 0.0
+    assert st.loaded_exam_meta[0]["d_lat"] == 0.0
+    assert st.loaded_exam_meta[1]["d_lon"] == 0.0
+    assert st.loaded_exam_meta[1]["d_ver"] == 0.0
+    assert st.loaded_exam_meta[1]["d_lat"] == 0.0
+
+
+def test_appended_exam_starts_at_zero_and_keeps_existing_offset():
+    """A newly added exam starts at 0. The exam already loaded keeps its own offset."""
+    st = AppState()
+    st.input_schema = "normalized"
+    ok, _ = load_tabular(_FIXTURES / "normalized_events.csv", st)
+    assert ok
+    apply_patient_offset_slider_tick(st, "d_lon", 5.0)
+    apply_patient_offset_slider_tick(st, "d_ver", 6.0)
+    apply_patient_offset_slider_tick(st, "d_lat", 7.0)
+
+    ok, _ = load_rdsr(_EXAMPLE_RDSR, st)
+    assert ok
+    assert st.is_multi_exam
+    assert st.loaded_exam_meta[0]["d_lon"] == 5.0
+    assert st.loaded_exam_meta[0]["d_ver"] == 6.0
+    assert st.loaded_exam_meta[0]["d_lat"] == 7.0
+    assert st.loaded_exam_meta[1]["d_lon"] == 0.0
+    assert st.loaded_exam_meta[1]["d_ver"] == 0.0
+    assert st.loaded_exam_meta[1]["d_lat"] == 0.0
+
+
+def test_multi_exam_reparse_keeps_per_exam_offsets():
+    """Re-parse keeps each exam's offset. It does not copy the shared slider value."""
+    st = AppState()
+    st.input_schema = "normalized"
+    ok, _ = load_tabular(_FIXTURES / "normalized_events_multistudy.csv", st)
+    assert ok
+    assert len(st.loaded_exam_meta) == 2
+    st.loaded_exam_meta[0]["d_lon"] = 8.0
+    st.loaded_exam_meta[0]["d_ver"] = 1.0
+    st.loaded_exam_meta[0]["d_lat"] = 2.0
+    st.loaded_exam_meta[1]["d_lon"] = -3.0
+    st.loaded_exam_meta[1]["d_ver"] = 4.0
+    st.loaded_exam_meta[1]["d_lat"] = 0.5
+    st.d_lon = 99.0
+
+    ok, _ = load_tabular(_FIXTURES / "normalized_events_multistudy.csv", st, replace_existing=True)
+    assert ok
+    assert len(st.loaded_exam_meta) == 2
+    assert st.loaded_exam_meta[0]["d_lon"] == 8.0
+    assert st.loaded_exam_meta[0]["d_ver"] == 1.0
+    assert st.loaded_exam_meta[0]["d_lat"] == 2.0
+    assert st.loaded_exam_meta[1]["d_lon"] == -3.0
+    assert st.loaded_exam_meta[1]["d_ver"] == 4.0
+    assert st.loaded_exam_meta[1]["d_lat"] == 0.5
+
+
+def test_collect_preserved_flags_treats_null_offset_as_zero():
+    """A null stored offset is 0. Re-parse must not raise on it."""
+    st = AppState()
+    st.loaded_exam_meta = [
+        {
+            "file_path": Path("reparse.csv"),
+            "study_id": "A",
+            "d_lon": None,
+            "d_ver": None,
+            "d_lat": None,
+        }
+    ]
+    flags = _collect_preserved_flags(st, Path("reparse.csv"), True)
+    assert flags[0]["d_lon"] == 0.0
+    assert flags[0]["d_ver"] == 0.0
+    assert flags[0]["d_lat"] == 0.0
 
 
 def test_load_tabular_replace_existing_preserves_global_patient_offset():
@@ -96,7 +191,12 @@ def test_multi_study_reparse_only_preserves_matching_study_id_flags():
         frame = pd.DataFrame({"Tx": [1.0], "Ty": [2.0], "Tz": [3.0], "Ap1": [4.0], "Ap2": [5.0]})
         return InputAdapterResult(frame, None, provenance, study_id=study_id)
 
-    def flags(study_id: str | None, **enabled: bool) -> dict:
+    def flags(
+        study_id: str | None,
+        offsets: tuple[float, float, float] = (0.0, 0.0, 0.0),
+        **enabled: bool,
+    ) -> dict:
+        d_lon, d_ver, d_lat = offsets
         return {
             "study_id": study_id,
             "swap_lat_lon": False,
@@ -105,6 +205,9 @@ def test_multi_study_reparse_only_preserves_matching_study_id_flags():
             "flip_tx": False,
             "flip_ty": False,
             "flip_tz": False,
+            "d_lon": d_lon,
+            "d_ver": d_ver,
+            "d_lat": d_lat,
             **enabled,
         }
 
@@ -112,14 +215,22 @@ def test_multi_study_reparse_only_preserves_matching_study_id_flags():
     _append_multi_study_exams(
         [exam("B"), exam(None), exam("A"), exam("new")], state, Path("reparse.csv"),
         0.0, 0.0, 0.0,
-        [flags(None, flip_ap2=True), flags("A", swap_lat_lon=True), flags("B", flip_ap1=True)],
+        [
+            flags(None, (1.0, 2.0, 3.0), flip_ap2=True),
+            flags("A", (4.0, 5.0, 6.0), swap_lat_lon=True),
+            flags("B", (7.0, 8.0, 9.0), flip_ap1=True),
+        ],
     )
 
     restored = {meta["study_id"]: meta for meta in state.loaded_exam_meta}
     assert restored["A"]["swap_lat_lon"] is True
+    assert (restored["A"]["d_lon"], restored["A"]["d_ver"], restored["A"]["d_lat"]) == (4.0, 5.0, 6.0)
     assert restored["B"]["flip_ap1"] is True
+    assert (restored["B"]["d_lon"], restored["B"]["d_ver"], restored["B"]["d_lat"]) == (7.0, 8.0, 9.0)
     assert restored[None]["flip_ap2"] is True
+    assert (restored[None]["d_lon"], restored[None]["d_ver"], restored[None]["d_lat"]) == (1.0, 2.0, 3.0)
     assert all(not restored["new"][name] for name in ("swap_lat_lon", "flip_ap1", "flip_ap2", "flip_tx", "flip_ty", "flip_tz"))
+    assert (restored["new"]["d_lon"], restored["new"]["d_ver"], restored["new"]["d_lat"]) == (0.0, 0.0, 0.0)
 
 
 def test_multi_study_reparse_blanks_idless_flags_when_cardinality_changes():

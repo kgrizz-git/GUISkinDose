@@ -8,8 +8,9 @@
 #
 # Only uv + Python are needed: `uv audit` reads uv.lock directly, so no `uv sync`.
 # Action SHAs and uv/Python versions mirror ci.yml's static-analysis job.
-# Scope: root uv.lock only. tools/semgrep/uv.lock is not audited here (the wrapper has
-# no path argument); see the "audit the locked tool environments" item in dev-docs/TO_DO.md.
+# Scope: root uv.lock and tools/privacy-scan/uv.lock (via the wrapper's --tool-project flag).
+# tools/semgrep/uv.lock is not audited here yet; see the "audit the locked tool environments"
+# item in dev-docs/TO_DO.md (now narrowed to semgrep).
 #
 # Second job (vulnerable-actions): zizmor's known-vulnerable-actions audit over every workflow.
 # This repo pins actions by commit SHA, and Dependabot raises alerts only for actions referenced
@@ -42,16 +43,18 @@ jobs:
       with:
         persist-credentials: false
     - name: Install uv
-      uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884  # v10.3.0
+      uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e  # v10.3.2
       with:
         version: ">=0.11.19"
     - name: Set up Python
-      uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+      uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
       with:
         python-version: '3.12'
     - name: Audit locked dependencies for known vulnerabilities
       # CI=true makes the wrapper pass --locked, so a stale uv.lock also fails.
       run: python scripts/audit_dependencies.py
+    - name: Audit locked privacy-scan tool environment
+      run: python scripts/audit_dependencies.py --tool-project tools/privacy-scan
 
   # Dependabot alerts are never raised for actions pinned by commit SHA (only
   # for semver tags), so check pinned actions against GitHub's advisory
@@ -68,7 +71,7 @@ jobs:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
       with:
         persist-credentials: false
-    - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+    - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
       with:
         python-version: '3.12'
     - name: Install zizmor

@@ -69,6 +69,7 @@ from .offset_handlers import (
     on_global_patient_offset_change,
     on_global_patient_offset_scrub,
     read_patient_offset_value,
+    reconcile_single_exam_offsets_after_load,
     reset_global_offsets_on_new_load,
     reset_patient_offset_for_active,
     restore_globals_from_exam_meta,
@@ -145,6 +146,7 @@ __all__ = [
     "rdsr_df_for_geometry_preview",
     "read_patient_offset_value",
     "rebuild_rdsr_df",
+    "reconcile_single_exam_offsets_after_load",
     "refresh_normalization_warnings",
     "reset_global_offsets_on_new_load",
     "reset_patient_offset_for_active",
@@ -613,11 +615,15 @@ def canonicalize_human_mesh_selection(stem: str, mesh_options: dict[str, str]) -
     """Map a saved/legacy stem to a selectable canonical option key.
 
     Resolves aliases first. If the result is missing from ``mesh_options``
-    (e.g. demos gated off), fall back to the first clinical option or hudfrid.
+    (a Light starter set, demos gated off, a preview suffix, or an unknown
+    stem), prefer ``hudfrid`` when that mesh is installed. Otherwise use the
+    first clinical option, or ``hudfrid`` when the list is empty.
     """
     canonical = resolve_human_mesh_stem(stem or "")
     if canonical in mesh_options and canonical != DEMO_MESH_SECTION_KEY:
         return canonical
+    if "hudfrid" in mesh_options:
+        return "hudfrid"
     return next((k for k in mesh_options if k != DEMO_MESH_SECTION_KEY), "hudfrid")
 
 

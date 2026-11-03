@@ -1,0 +1,32 @@
+# Isolated, hash-locked environment for the local Presidio privacy scanner.
+#
+# This used to be the root `privacy-scan` dependency group. It moved here because the group
+# pinned the spaCy model by direct URL to a github.com release asset. Dependabot's proxy
+# attaches GitHub credentials to that download, the redirect target answers 401, and every
+# root lock refresh failed with a bogus "private package registry" error (dependabot/proxy#27).
+# Keeping the wheel out of the root lock lets the root `uv` job open pytest/Playwright bumps.
+#
+# Deliberately NOT a uv workspace member of the root project: joining the workspace would
+# merge these dependencies, including the github.com wheel, back into the root resolution.
+# Run the scanners through this project's own environment (tools/privacy-scan/.venv).
+[project]
+name = "guiskindose-privacy-scan-tool"
+version = "0"
+description = "Pinned Presidio privacy-scanner environment (not shipped, not importable)."
+requires-python = ">=3.11"
+dependencies = [
+    # Declared explicitly so a later `uv sync` cannot remove Presidio's local NLP model.
+    "en-core-web-sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl",
+    "presidio-analyzer>=2.2.360,<3",
+    "spacy>=3.8,<4",
+    # setuptools is transitive via spacy/thinc. 84.1.0 closes GHSA-xmj3-9gf7-h52w.
+    "setuptools>=84.1.0",
+    # Non-stdlib imports of run_image_privacy_advisory.py and check_sensitive_content.py.
+    "pillow>=13.0.0",
+    "pypdf>=6.21.4",
+    "pydicom>=2.3",
+]
+
+# Nothing here is built or installed as a package; this project only carries the lock.
+[tool.uv]
+package = false

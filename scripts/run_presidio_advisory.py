@@ -1,8 +1,13 @@
 #!/usr/bin/env python3
 """Run local Presidio over bounded, tracked repository text.
 
-Install with ``uv sync --group privacy-scan``. The optional dependency group
-includes Presidio's compact English model. This script never uploads source
+Install the standalone ``tools/privacy-scan`` project into its own environment. Under
+direnv, ``.envrc`` already does this. By hand, clear the root project's uv settings first::
+
+    env -u UV_PYTHON -u VIRTUAL_ENV UV_PROJECT_ENVIRONMENT="$PWD/tools/privacy-scan/.venv" \
+        uv sync --project tools/privacy-scan --locked
+
+That project includes Presidio's compact English model. This script never uploads source
 material or writes a report. It prints only a path token, line, entity type,
 and score--never the matching value. Scheduled review can fail on findings or
 scan errors; noisy person-name detection requires a targeted local opt-in.

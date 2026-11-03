@@ -84,22 +84,29 @@ class ImportPreviewController:
         return "ge manufacturer detected" in warnings_lower
 
     def set_transform_defaults(self) -> None:
-        """Set transform defaults."""
+        """Sync single-exam transform toggles to the loaded exam and set the GE hint.
+
+        The loader already applied the authoritative flags (fresh defaults,
+        preserved re-parse flags, or a staged run-config pending slot) to
+        ``meta[0]`` and the normalized frame. This must not force-clear those
+        flags or re-derive the frame — doing so wiped staged swap/flip
+        corrections after every successful tabular upload.
+        """
         if state.import_provenance is None:
             return
         if state.is_multi_exam:
             self.coord_auto_label.set_text("")
             return
         is_ge = self._is_ge()
-        state.swap_lat_lon = False
-        state.flip_ap1 = False
-        state.flip_ap2 = False
         if state.loaded_exam_meta:
             meta = state.loaded_exam_meta[0]
-            meta["swap_lat_lon"] = False
-            meta["flip_ap1"] = False
-            meta["flip_ap2"] = False
-            apply_exam_transforms(state, 0)
+            state.swap_lat_lon = bool(meta.get("swap_lat_lon", False))
+            state.flip_ap1 = bool(meta.get("flip_ap1", False))
+            state.flip_ap2 = bool(meta.get("flip_ap2", False))
+        else:
+            state.swap_lat_lon = False
+            state.flip_ap1 = False
+            state.flip_ap2 = False
         self.coord_auto_label.set_text("· GE lat/lon handled in normalization" if is_ge else "")
 
     def _single_exam_transform_active(self) -> bool:

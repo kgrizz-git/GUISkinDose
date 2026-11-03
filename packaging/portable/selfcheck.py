@@ -3,8 +3,11 @@
 Run as ``GUISkinDose.exe --self-check <output dir>``. It proves, from inside the
 freeze, that every packaged data root resolves through the installed package,
 that the GUI and native-window libraries import, and that a plane-phantom
-``calculate_dose`` on a bundled example RDSR exports HTML, JSON, and CSV. It
-needs no network and no ``git``.
+``calculate_dose`` on a bundled example RDSR exports HTML, JSON, and CSV. It also
+reports the frozen edition and proves what that edition ships: Light has no
+browser and starts no PNG render, and both editions drop ``_reduced_1000t``. On
+Windows it records the WebView2 pre-check's registry probe. It needs no network
+and no ``git``.
 
 The result is ``selfcheck_report.json`` in the output directory, plus the exit
 code (0 = every check passed). The report holds counts, booleans, and package
@@ -189,6 +192,86 @@ def _calculate_and_export(out_dir: Path) -> dict[str, Any]:
     }
 
 
+def _bundled_browser_present() -> bool:
+    """True when a ``chromium/`` folder sits beside the frozen executable."""
+    return (Path(sys.executable).resolve().parent / "chromium").exists()
+
+
+def _light_png_gate() -> dict[str, Any]:
+    """Render the dose-map PNG while counting ``to_image`` calls (Light only).
+
+    The Light PNG function must return no image before it builds a figure, so
+    Kaleido never looks for a browser and ``to_image`` is never reached.
+    """
+    import numpy as np
+    import plotly.graph_objects as go
+
+    from guiskindose.export.images import render_dosemap_png
+
+    calls: list[int] = []
+    original = go.Figure.to_image
+
+    def spy(self, *args, **kwargs):
+        calls.append(1)
+        return original(self, *args, **kwargs)
+
+    go.Figure.to_image = spy
+    try:
+        cells = {"x": [0.0, 1.0, 0.0], "y": [0.0, 0.0, 1.0], "z": [0.0, 0.0, 0.0]}
+        triangle = {"patient_skin_cells": cells, "triangle_vertex_indices": {"i": [0], "j": [1], "k": [2]}}
+        png = render_dosemap_png(np.zeros(3), triangle)
+    finally:
+        go.Figure.to_image = original
+    return {"to_image_calls": len(calls), "png_returned": png is not None}
+
+
+def _check_edition() -> dict[str, Any]:
+    """Report the frozen edition and prove what it ships and gates.
+
+    Light: no ``chromium/`` folder, PNG export off, and no ``to_image`` call. Both:
+    no ``_reduced_1000t`` preview, a starter mesh loads, and a non-starter mesh is
+    reported as not installed (Light) or loads (Full).
+    """
+    from guiskindose.edition import current_edition, png_export_available
+    from guiskindose.phantom_mesh_names import HumanMeshNotInstalledError, resolve_human_mesh_stl_path
+
+    edition = current_edition()
+    found: dict[str, Any] = {
+        "edition": edition,
+        "png_export_available": png_export_available(),
+        "bundled_browser_present": _bundled_browser_present(),
+        "reduced_1000t_stl": _count(("phantom_data",), "_reduced_1000t.stl"),
+        "starter_mesh_loads": resolve_human_mesh_stl_path("adult_male").is_file(),
+    }
+    try:
+        found["non_starter_mesh"] = "loads" if resolve_human_mesh_stl_path("senior_male").is_file() else "absent"
+    except HumanMeshNotInstalledError:
+        found["non_starter_mesh"] = "not_installed"
+    expected_mesh = "loads"
+    if edition == "light":
+        expected_mesh = "not_installed"
+        found["png_gate"] = gate = _light_png_gate()
+        if found["png_export_available"] or found["bundled_browser_present"] or gate["to_image_calls"]:
+            raise ValueError("light_edition_ships_png")
+    # An unfrozen run reads the source tree, which keeps the wheel's legacy previews.
+    frozen = bool(getattr(sys, "frozen", False))
+    if (frozen and found["reduced_1000t_stl"]) or not found["starter_mesh_loads"]:
+        raise ValueError("edition_phantom_payload_wrong")
+    if found["non_starter_mesh"] != expected_mesh:
+        raise ValueError("edition_phantom_payload_wrong")
+    return found
+
+
+def _check_webview2() -> dict[str, Any]:
+    """Run the native-window WebView2 pre-check's registry probe (Windows only)."""
+    from guiskindose.gui.webview2 import probe_webview2
+
+    status = probe_webview2()
+    if status is None:
+        return {"applicable": False}
+    return {"applicable": True, **status.summary()}
+
+
 def _log_sink_state() -> dict[str, Any]:
     from guiskindose.debug import default_native_log_path
 
@@ -239,6 +322,8 @@ def run_self_check(output_dir: str, *, process_start: float) -> int:
     ok = _run_step(report, "imports", _check_imports) and ok
     ok = _run_step(report, "repo_root_climbs", _check_repo_root_climbs) and ok
     ok = _run_step(report, "calculate_export", lambda: _calculate_and_export(out_dir)) and ok
+    ok = _run_step(report, "edition", _check_edition) and ok
+    ok = _run_step(report, "webview2", _check_webview2) and ok
     ok = _run_step(report, "log_sink", _log_sink_state) and ok
     report["passed"] = ok
     report["total_seconds"] = round(time.perf_counter() - process_start, 2)

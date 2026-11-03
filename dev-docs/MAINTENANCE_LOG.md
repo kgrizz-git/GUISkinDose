@@ -10,6 +10,37 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 - **CI job timeouts** (2026-11-01) — `ci.yml` now sets `timeout-minutes` on `gui-smoke` (15), `build` (30) and `coverage-pr` (40), roughly 3-15x their normal run time. Dependabot PR #181 (pytest 9.1.1, playwright 1.64, pytest-playwright 0.10) hung both GUI-test jobs until GitHub's 6-hour cap.
 
+- **Presidio scanner moved to its own uv project** (2026-11-02) — The root `privacy-scan` dependency group
+  pinned the spaCy model by a github.com release URL. Dependabot's proxy fails that download with a 401, so
+  every root uv refresh failed and no pytest or Playwright bumps could open. Presidio, spaCy, the model and the
+  image-advisory imports now live in `tools/privacy-scan` with their own lock and `.venv`. The project is not a
+  workspace member and has no Dependabot version entry. `scripts/privacy_scan_tool.py` redirects the `.envrc`
+  uv variables, and the commit hook, `presidio.yml` and the weekly `dependency-audit.yml` run against that
+  project. Install it with `env -u UV_PYTHON -u VIRTUAL_ENV UV_PROJECT_ENVIRONMENT="$PWD/tools/privacy-scan/.venv"
+  uv sync --project tools/privacy-scan --locked`.
+
+- **Portable app Phase 1: Light and Full editions, WebView2 pre-check** (2026-11-01) — The new
+  `guiskindose/_edition.py` holds `EDITION = "full"`, and `guiskindose/edition.py` reads it and holds the
+  Light and Full phantom include lists. `guiskindose.spec` now takes `GUISKINDOSE_PORTABLE_EDITION`
+  (`light` or `full`; the `spike` shape is gone), copies the package to `tmp/portable/stage/<edition>/`,
+  rewrites that copy's `_edition.py`, and freezes the copy. The source tree and the pip wheel stay
+  `full`. In Light, `export/images.render_dosemap_png` returns `None` and `gui/figures.make_dosemap_png`
+  raises `PngExportUnavailableError` before a figure is built, so Kaleido never looks for a browser. The
+  static writer in `plotting/create_dose_map_plot.py` stops too. The Export tab reaches PNG only through
+  those functions, drops its PNG card in Light, and refuses a PNG download there with the Light notice.
+  Rich reports keep the "image unavailable" path with Light wording. The new `gui/webview2.py` reads
+  the registry values pywebview's `_is_chromium()` reads, in HKCU and HKLM, using the EdgeUpdate view
+  pywebview 6.2.1 selects for the process architecture (native HKLM only when `platform.machine()` is
+  `x86`, otherwise HKLM `WOW6432Node`), plus the .NET Framework release. `run_gui(native=True)` stops
+  before `ui.run` when no runtime is usable. A
+  missing clinical mesh raises `HumanMeshNotInstalledError`. The portable self-check reports the
+  edition and the WebView2 probe, and `portable-spike.yml` builds both editions from the lists and
+  asserts them. `tests/gui/test_webview2_check.py` reads the installed pywebview WinForms
+  source, without importing the package, and fails if `edge_build` no longer uses the native
+  EdgeUpdate key for `x86` or HKCU and `WOW6432Node` otherwise; it skips when that file is
+  not installed. See
+  [PORTABLE_APP_PLAN.md](plans/PORTABLE_APP_PLAN.md) Phase 1.
+
 - **Portable app Phase 0b: signed and notarized macOS app** (2026-11-01) — `guiskindose.spec` now also
   writes `GUISkinDose.app` on macOS (`BUNDLE`). The `.icns` is rendered at build time from the committed
   SVG icon into `tmp/portable/icon` through AppKit. The result has alpha, art of 824 px on a 1024 px

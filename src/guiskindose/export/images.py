@@ -11,6 +11,7 @@ from typing import Any
 
 import numpy as np
 
+from guiskindose.edition import png_export_available
 from guiskindose.intended_use import stamp_figure
 
 # Camera eye presets (Plotly scene_camera.eye), oblique 3/4 views so the long
@@ -151,9 +152,14 @@ def render_dosemap_png(
     """Render a dose-map view to PNG bytes. Returns ``None`` if kaleido/plotly
     image export fails at runtime (caller omits the image + shows a notice).
 
+    The Light edition returns ``None`` before any figure is built, so Kaleido never
+    looks for a browser (``guiskindose.edition``).
+
     When ``zoom_to_dose`` is set, the scene is cropped to the irradiated region
     so a small localized dose patch is visible instead of the whole phantom.
     """
+    if not png_export_available():
+        return None
     try:
         ranges = dose_bbox(dose_map, patient_dict) if zoom_to_dose else None
         fig = render_dosemap_plotly_figure(dose_map, patient_dict, colorscale, dark=dark, ranges=ranges)
