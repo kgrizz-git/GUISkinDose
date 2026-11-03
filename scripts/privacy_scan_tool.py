@@ -40,9 +40,17 @@ def tool_environment(environ: Mapping[str, str] | None = None, *, root: Path | N
 
 
 def environment_missing(root: Path | None = None) -> bool:
-    """Return whether the tool project's venv has not been synced yet."""
+    """Return whether the tool project's venv is absent or lacks the spaCy model.
+
+    Checking for the model, not just ``pyvenv.cfg``, also catches the empty venv that a
+    ``uv run --no-sync`` against a missing environment leaves behind.
+    """
     base = repo_root() if root is None else root
-    return not (base / TOOL_PROJECT / _TOOL_ENV_DIRNAME / "pyvenv.cfg").is_file()
+    venv = base / TOOL_PROJECT / _TOOL_ENV_DIRNAME
+    if not (venv / "pyvenv.cfg").is_file():
+        return True
+    posix_model = any(venv.glob("lib/python*/site-packages/en_core_web_sm"))
+    return not (posix_model or (venv / "Lib/site-packages/en_core_web_sm").is_dir())
 
 
 SYNC_COMMAND: Final = (

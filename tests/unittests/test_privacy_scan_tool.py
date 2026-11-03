@@ -32,6 +32,13 @@ def test_script_argv_uses_tool_project(tmp_path: Path) -> None:
     ]
 
 
+def _fake_synced_env(root: Path) -> Path:
+    venv = root / "tools/privacy-scan/.venv"
+    (venv / "lib/python3.14/site-packages/en_core_web_sm").mkdir(parents=True)
+    (venv / "pyvenv.cfg").write_text("home = x\n", encoding="utf-8")
+    return venv
+
+
 def _run_scanner_capture(scanner_id: str, tmp_path: Path) -> mock.Mock:
     rule = privacy_admission.ScannerRule(
         scanner_id=scanner_id, version="v", trigger_extensions=frozenset(), trigger_prefixes=(),
@@ -39,8 +46,7 @@ def _run_scanner_capture(scanner_id: str, tmp_path: Path) -> mock.Mock:
         diff_regex=None,
     )
     completed = mock.Mock(returncode=0, stdout="", stderr="")
-    (tmp_path / "tools/privacy-scan/.venv").mkdir(parents=True)
-    (tmp_path / "tools/privacy-scan/.venv/pyvenv.cfg").write_text("home = x\n", encoding="utf-8")
+    _fake_synced_env(tmp_path)
     with (
         mock.patch.object(privacy_admission, "git_path_directory", return_value=tmp_path / "cache"),
         mock.patch.object(privacy_admission.subprocess, "run", return_value=completed) as run,
@@ -91,6 +97,13 @@ def test_environment_missing_reflects_pyvenv_cfg(tmp_path: Path) -> None:
     venv = tmp_path / "tools/privacy-scan/.venv"
     venv.mkdir(parents=True)
     (venv / "pyvenv.cfg").write_text("home = x\n", encoding="utf-8")
+    assert privacy_scan_tool.environment_missing(tmp_path)  # empty venv, no model
+    (venv / "Lib/site-packages/en_core_web_sm").mkdir(parents=True)
+    assert not privacy_scan_tool.environment_missing(tmp_path)
+
+
+def test_environment_missing_accepts_posix_layout(tmp_path: Path) -> None:
+    _fake_synced_env(tmp_path)
     assert not privacy_scan_tool.environment_missing(tmp_path)
 
 

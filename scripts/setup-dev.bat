@@ -25,4 +25,4 @@ if %ERRORLEVEL% NEQ 0 exit /b %ERRORLEVEL%
 echo Git hooks installed (pre-commit + pre-push + commit-msg).
 echo For routed privacy changes, run: python scripts/privacy_admission.py run --mode staged
 echo Optional: sync the tools/privacy-scan project if the privacy hook asks for a Presidio receipt:
-echo   uv sync --project tools/privacy-scan --locked
+echo   set "UV_PROJECT_ENVIRONMENT=" ^& set "UV_PYTHON=" ^& set "VIRTUAL_ENV=" ^& uv sync --project tools/privacy-scan --locked

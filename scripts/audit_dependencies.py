@@ -266,6 +266,8 @@ def _split_tool_project(repo_root: Path, args: list[str]) -> tuple[Path, list[st
     The directory must be a relative path under ``tools/`` holding a ``uv.lock``, so the
     isolated tool lockfiles can be audited without widening the flag allowlist.
     """
+    # Accept ``--tool-project=<dir>`` too, so it gets the same validation and usage error.
+    args = [part for arg in args for part in (arg.split("=", 1) if arg.startswith("--tool-project=") else [arg])]
     if "--tool-project" not in args:
         return repo_root, args
     if args.count("--tool-project") > 1:

@@ -230,6 +230,8 @@ model and the image-advisory imports. The model is a direct github.com wheel URL
 fails on that download, so the wheel cannot sit in the root lock. The project is not a workspace member.
 It has no Dependabot version entry. `dependency-audit.yml` audits its lock weekly. Its environment lives
 at `tools/privacy-scan/.venv`, and `scripts/privacy_scan_tool.py` redirects the `.envrc` uv variables.
+`.envrc` also syncs this project, so the first `direnv allow` downloads the spaCy model. When the environment
+is missing, the privacy hook prints the install command for macOS/Linux and for Windows PowerShell.
 
 The **semgrep** pre-push hook fetches `p/owasp-top-ten` from the Semgrep registry, so it
 needs network access (offline pushes will fail). On Windows, semgrep runs natively (beta)

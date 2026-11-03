@@ -521,6 +521,7 @@ def command_verify(root: Path, mode: Mode) -> int:
             reason = str(exc)
         if reason:
             print(f"ERROR: required {rule.scanner_id} receipt unavailable ({reason}).", file=sys.stderr)
+            report_missing_tool_environment(root, rule)
             failures += 1
     if failures:
         print(f"Run: python scripts/privacy_admission.py run --mode {mode}", file=sys.stderr)
