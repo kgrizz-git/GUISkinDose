@@ -8,6 +8,8 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ## [Unreleased]
 
+- **CI job timeouts** (2026-11-01) — `ci.yml` now sets `timeout-minutes` on `gui-smoke` (15), `build` (30) and `coverage-pr` (40), roughly 3-15x their normal run time. Dependabot PR #181 (pytest 9.1.1, playwright 1.64, pytest-playwright 0.10) hung both GUI-test jobs until GitHub's 6-hour cap.
+
 - **Presidio scanner moved to its own uv project** (2026-11-02) — The root `privacy-scan` dependency group
   pinned the spaCy model by a github.com release URL. Dependabot's proxy fails that download with a 401, so
   every root uv refresh failed and no pytest or Playwright bumps could open. Presidio, spaCy, the model and the
