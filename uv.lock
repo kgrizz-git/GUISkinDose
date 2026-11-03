@@ -2685,15 +2685,16 @@ wheels = [
 
 [[package]]
 name = "numpy-stl"
-version = "3.2.0"
+version = "4.1.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "numpy" },
     { name = "python-utils" },
+    { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/cb/80/96366d1b69223d4ca55fca30f158096df169b00aa6b4dd963025980e7ede/numpy_stl-3.2.0.tar.gz", hash = "sha256:5a20c3f79cddaa0abc6a4b99f5486aceed4f88152f29b19a57acc844e183fd4d", size = 824382, upload-time = "2024-11-25T17:15:43.227Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/65/a5/849415c12cf3883295209588faab29543ee590c1c047d0f6a94ad8dafe11/numpy_stl-4.1.1.tar.gz", hash = "sha256:437265584bdd3c0adea755adf21da469f35005c7d43018e24c4c0f1f91927d95", size = 35716, upload-time = "2026-10-19T03:37:13.181Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ea/2c/e17b8814050427929077639d35a42187a006922600d4840475bdc5f64ebb/numpy_stl-3.2.0-py3-none-any.whl", hash = "sha256:697c81b107231362460aaedf4647e81ba54f54f59c896772fea7904c9c439da5", size = 20775, upload-time = "2024-11-25T17:15:41.346Z" },
+    { url = "https://files.pythonhosted.org/packages/51/9d/e99af1e25d8ed9fcb896c4a1647620443c1c8d20a427f7d12d32ae8328a2/numpy_stl-4.1.1-py3-none-any.whl", hash = "sha256:4690417e2d4b4ee3ac89d9dec0fcad5e8a56b6665eaec10639d575dc895c474d", size = 37483, upload-time = "2026-10-19T03:37:11.557Z" },
 ]
 
 [[package]]
