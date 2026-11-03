@@ -63,7 +63,7 @@ def test_run_scanner_presidio_uses_tool_project(tmp_path: Path) -> None:
 def test_run_scanner_image_ocr_uses_tool_project(tmp_path: Path) -> None:
     run = _run_scanner_capture("image-ocr", tmp_path)
     assert str(tmp_path / "tools/privacy-scan") in run.call_args.args[0]
-    assert run.call_args.kwargs["env"]["UV_PROJECT_ENVIRONMENT"].endswith("tools/privacy-scan/.venv")
+    assert run.call_args.kwargs["env"]["UV_PROJECT_ENVIRONMENT"] == str(tmp_path / "tools/privacy-scan/.venv")
 
 
 def _floors(path: Path) -> dict[str, Version]:
