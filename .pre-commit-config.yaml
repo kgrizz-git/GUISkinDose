@@ -265,6 +265,14 @@ repos:
         always_run: true
         stages: [pre-push]
 
+      - id: pip-audit-privacy-scan
+        name: uv audit (tools/privacy-scan lock)
+        entry: python scripts/audit_dependencies.py --tool-project tools/privacy-scan
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]
+
       - id: basedpyright
         name: basedpyright (type check)
         entry: basedpyright

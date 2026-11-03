@@ -366,3 +366,18 @@ def test_main_pip_audit_missing_error(ad):
         code = ad.main([])
 
         assert code == 1
+
+
+def test_tool_project_usage_errors_exit_2(ad, capsys):
+    for bad in (["--tool-project"], ["--tool-project", "../x"], ["--tool-project", "tools/nope"],
+                ["--tool-project", "tools/privacy-scan", "--tool-project", "tools/privacy-scan"],
+                ["--tool-project=tools/nope"], ["--tool-project=tools/privacy-scan", "--tool-project", "tools/privacy-scan"]):
+        assert ad.main(bad) == 2
+        assert "usage error" in capsys.readouterr().err
+
+
+def test_tool_project_refuses_pip_audit_fallback(ad, capsys):
+    with patch.object(ad, "_probe_uv_audit", return_value=None), patch.object(ad, "_run_pip_audit_fallback") as fb:
+        assert ad.main(["--tool-project", "tools/privacy-scan"]) == 1
+    fb.assert_not_called()
+    assert "pip-audit cannot" in capsys.readouterr().err

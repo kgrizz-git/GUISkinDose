@@ -158,10 +158,10 @@ be archived.
   `tools/semgrep/` is a standalone uv project whose `uv.lock` sha256-pins all ~68 transitive
   packages, and both gates run it via `uv run --locked` (`scripts/semgrep_tool.py`). `phi-scan`
   still runs via bare `uvx --from phi-scan==0.7.0`, which resolves from PyPI **without hash
-  verification**, so a same-version re-upload would be trusted. Separately, `uv audit` audits
-  neither tool environment. Only Dependabot sees `tools/semgrep/uv.lock` (see the note in
+  verification**, so a same-version re-upload would be trusted. Separately, `uv audit` does not yet audit
+  `tools/semgrep/uv.lock` (`tools/privacy-scan/uv.lock` is audited via `--tool-project`). Only Dependabot sees the semgrep lock (see the note in
   `[tool.uv.audit]`). **Acceptance:** a `tools/phi-scan/` project
-  mirroring `tools/semgrep/`; `scripts/audit_dependencies.py` also audits the tool locks, reporting
+  mirroring `tools/semgrep/`; `scripts/audit_dependencies.py` also audits `tools/semgrep/uv.lock` (and the phi-scan lock), reporting
   scanner-only advisories separately from application ones so the distinction stays explicit.
 - [ ] **Archive the older MAINTENANCE_LOG entries** — `dev-docs/MAINTENANCE_LOG.md` passed 800
   lines. It is deliberately exempt from the file-size cap (`APPEND_ONLY_HISTORY` in

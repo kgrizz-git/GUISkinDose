@@ -192,7 +192,7 @@ def _probe_uv_audit(repo_root: Path) -> str | None:
     return uv_bin
 
 
-def _run_uv_audit(uv_bin: str, repo_root: Path, extra_args: list[str]) -> int:
+def _run_uv_audit(uv_bin: str, repo_root: Path, extra_args: list[str], *, allow_fallback: bool = True) -> int:
     """Build and run ``uv audit``; fall back to pip-audit on FileNotFoundError."""
     print("Using 'uv audit' to check locked dependencies...")
     sys.stdout.flush()
@@ -212,6 +212,8 @@ def _run_uv_audit(uv_bin: str, repo_root: Path, extra_args: list[str]) -> int:
         result = subprocess.run(audit_argv, cwd=repo_root, timeout=300.0)
         return result.returncode
     except FileNotFoundError:
+        if not allow_fallback:
+            return _refuse_tool_fallback()
         # Fallback if shutil.which returned a path that is not executable
         return _run_pip_audit_fallback(repo_root, extra_args)
 
@@ -251,13 +253,53 @@ def _run_pip_audit_fallback(repo_root: Path, extra_args: list[str]) -> int:
         return 1
 
 
+def _refuse_tool_fallback() -> int:
+    """pip-audit would audit the active root environment, not the tool lock, so refuse."""
+    print("ERROR: auditing a --tool-project lock needs 'uv audit' (uv >= 0.11.19); pip-audit cannot do it.",
+          file=sys.stderr)
+    return 1
+
+
+def _split_tool_project(repo_root: Path, args: list[str]) -> tuple[Path, list[str]]:
+    """Pop ``--tool-project <dir>`` and return the directory ``uv audit`` should run in.
+
+    The directory must be a relative path under ``tools/`` holding a ``uv.lock``, so the
+    isolated tool lockfiles can be audited without widening the flag allowlist.
+    """
+    # Accept ``--tool-project=<dir>`` too, so it gets the same validation and usage error.
+    args = [part for arg in args for part in (arg.split("=", 1) if arg.startswith("--tool-project=") else [arg])]
+    if "--tool-project" not in args:
+        return repo_root, args
+    if args.count("--tool-project") > 1:
+        raise ValueError("--tool-project may be given only once")
+    index = args.index("--tool-project")
+    if index + 1 >= len(args):
+        raise ValueError("--tool-project needs a directory")
+    rel = Path(args[index + 1])
+    target = (repo_root / rel).resolve()
+    if rel.is_absolute() or rel.parts[:1] != ("tools",) or not (target / "uv.lock").is_file():
+        raise ValueError("--tool-project must be tools/<name> containing uv.lock")
+    if not target.is_relative_to((repo_root / "tools").resolve()):
+        raise ValueError("--tool-project must stay under tools/")
+    return target, args[:index] + args[index + 2 :]
+
+
 def main(argv: list[str] | None = None) -> int:
     repo_root = Path(__file__).resolve().parent.parent
-    uv_bin = _probe_uv_audit(repo_root)
     extra_args = sys.argv[1:] if argv is None else list(argv)
+    try:
+        project_root, extra_args = _split_tool_project(repo_root, extra_args)
+    except ValueError as error:
+        print(f"usage error: {error}", file=sys.stderr)
+        return 2
+    is_tool = project_root != repo_root
+    repo_root = project_root
+    uv_bin = _probe_uv_audit(repo_root)
+    if is_tool and not uv_bin:
+        return _refuse_tool_fallback()
 
     if uv_bin:
-        code = _run_uv_audit(uv_bin, repo_root, extra_args)
+        code = _run_uv_audit(uv_bin, repo_root, extra_args, allow_fallback=not is_tool)
     else:
         code = _run_pip_audit_fallback(repo_root, extra_args)
     return code

@@ -8,6 +8,15 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ## [Unreleased]
 
+- **Presidio scanner moved to its own uv project** (2026-11-02) — The root `privacy-scan` dependency group
+  pinned the spaCy model by a github.com release URL. Dependabot's proxy fails that download with a 401, so
+  every root uv refresh failed and no pytest or Playwright bumps could open. Presidio, spaCy, the model and the
+  image-advisory imports now live in `tools/privacy-scan` with their own lock and `.venv`. The project is not a
+  workspace member and has no Dependabot version entry. `scripts/privacy_scan_tool.py` redirects the `.envrc`
+  uv variables, and the commit hook, `presidio.yml` and the weekly `dependency-audit.yml` run against that
+  project. Install it with `env -u UV_PYTHON -u VIRTUAL_ENV UV_PROJECT_ENVIRONMENT="$PWD/tools/privacy-scan/.venv"
+  uv sync --project tools/privacy-scan --locked`.
+
 - **Portable app Phase 1: Light and Full editions, WebView2 pre-check** (2026-11-01) — The new
   `guiskindose/_edition.py` holds `EDITION = "full"`, and `guiskindose/edition.py` reads it and holds the
   Light and Full phantom include lists. `guiskindose.spec` now takes `GUISKINDOSE_PORTABLE_EDITION`
