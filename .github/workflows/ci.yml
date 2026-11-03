@@ -167,6 +167,7 @@ jobs:
     - name: Audit dependencies for CVEs and check licenses
       run: |
         python scripts/audit_dependencies.py
+        python scripts/audit_dependencies.py --tool-project tools/privacy-scan
         python scripts/check_licenses.py
     - name: Bandit (Python SAST, medium+ severity)
       run: bandit -c pyproject.toml -r src/guiskindose scripts --severity-level medium
