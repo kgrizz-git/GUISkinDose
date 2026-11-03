@@ -54,6 +54,7 @@ def test_run_scanner_presidio_uses_tool_project(tmp_path: Path) -> None:
     run = _run_scanner_capture("presidio", tmp_path)
     argv = run.call_args.args[0]
     assert argv[:5] == ["uv", "run", "--project", str(tmp_path / "tools/privacy-scan"), "--no-sync"]
+    assert "--fail-on-findings" in argv
     env = run.call_args.kwargs["env"]
     assert env["UV_PROJECT_ENVIRONMENT"] == str(tmp_path / "tools/privacy-scan/.venv")
     assert "UV_PYTHON" not in env

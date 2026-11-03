@@ -369,7 +369,8 @@ def test_main_pip_audit_missing_error(ad):
 
 
 def test_tool_project_usage_errors_exit_2(ad, capsys):
-    for bad in (["--tool-project"], ["--tool-project", "../x"], ["--tool-project", "tools/nope"]):
+    for bad in (["--tool-project"], ["--tool-project", "../x"], ["--tool-project", "tools/nope"],
+                ["--tool-project", "tools/privacy-scan", "--tool-project", "tools/privacy-scan"]):
         assert ad.main(bad) == 2
         assert "usage error" in capsys.readouterr().err
 

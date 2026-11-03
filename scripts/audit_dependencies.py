@@ -268,6 +268,8 @@ def _split_tool_project(repo_root: Path, args: list[str]) -> tuple[Path, list[st
     """
     if "--tool-project" not in args:
         return repo_root, args
+    if args.count("--tool-project") > 1:
+        raise ValueError("--tool-project may be given only once")
     index = args.index("--tool-project")
     if index + 1 >= len(args):
         raise ValueError("--tool-project needs a directory")
