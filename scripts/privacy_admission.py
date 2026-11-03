@@ -383,7 +383,7 @@ def report_missing_tool_environment(root: Path, rule: ScannerRule) -> bool:
     print(
         f"The {rule.scanner_id} scanner needs the tools/privacy-scan environment. From the repository root, run:\n"
         f"  macOS/Linux: {privacy_scan_tool.SYNC_COMMAND}\n"
-        f"  Windows:     {privacy_scan_tool.WINDOWS_SYNC_COMMAND}",
+        f"  Windows (PowerShell): {privacy_scan_tool.WINDOWS_SYNC_COMMAND}",
         file=sys.stderr,
     )
     return True

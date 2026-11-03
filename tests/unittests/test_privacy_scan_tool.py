@@ -104,7 +104,7 @@ def test_run_scanner_refuses_missing_env_without_paths(tmp_path: Path, capsys: p
     err = capsys.readouterr().err
     assert code == 1
     run.assert_not_called()
-    assert privacy_scan_tool.SYNC_COMMAND in err
-    assert privacy_scan_tool.WINDOWS_SYNC_COMMAND in err
+    assert f"macOS/Linux: {privacy_scan_tool.SYNC_COMMAND}" in err
+    assert f"Windows (PowerShell): {privacy_scan_tool.WINDOWS_SYNC_COMMAND}" in err
     assert str(tmp_path) not in err
     assert not (tmp_path / "tools").exists()
