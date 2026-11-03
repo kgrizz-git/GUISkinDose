@@ -21,4 +21,4 @@ pre-commit install --hook-type commit-msg
 echo "Git hooks installed (pre-commit + pre-push + commit-msg)."
 echo "For routed privacy changes, run: python scripts/privacy_admission.py run --mode staged"
 echo "Optional: sync the tools/privacy-scan project if the privacy hook asks for a Presidio receipt:"
-echo "  uv sync --project tools/privacy-scan --locked"
+echo "  env -u UV_PYTHON -u VIRTUAL_ENV UV_PROJECT_ENVIRONMENT=\"\$PWD/tools/privacy-scan/.venv\" uv sync --project tools/privacy-scan --locked"

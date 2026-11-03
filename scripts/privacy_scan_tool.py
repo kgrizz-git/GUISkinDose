@@ -49,6 +49,9 @@ SYNC_COMMAND: Final = (
     'env -u UV_PYTHON -u VIRTUAL_ENV UV_PROJECT_ENVIRONMENT="$PWD/tools/privacy-scan/.venv" '
     "uv sync --project tools/privacy-scan --locked"
 )
+# cmd.exe and PowerShell cannot run the POSIX form. Without direnv nothing redirects
+# UV_PROJECT_ENVIRONMENT, so the plain sync lands in tools/privacy-scan/.venv.
+WINDOWS_SYNC_COMMAND: Final = "uv sync --project tools/privacy-scan --locked"
 
 
 def script_argv(script: str | Path, args: Sequence[str] = (), *, root: Path | None = None) -> list[str]:
