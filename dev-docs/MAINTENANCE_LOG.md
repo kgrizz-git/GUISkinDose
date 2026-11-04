@@ -8,6 +8,16 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ## [Unreleased]
 
+- **Portable Full renders PNG through the bundled Chromium** (2026-11-03) — The new
+  `guiskindose/export/png_browser.py` holds `figure_to_png`. Source and pip installs still call
+  `fig.to_image`. The frozen Full app calls `kaleido.calc_fig` with `kopts["path"]` on a fresh thread, so each image
+  gets its own browser and Kaleido's global sync server is never used. A missing or broken bundled browser raises
+  `BundledBrowserUnavailableError` with a fixed message and no path. `export/images.py`, `gui/figures.py`,
+  `plotting/create_dose_map_plot.py` and the Export tab use it. `--png-check` now renders through the app's own
+  path and samples the process list while each image renders. The portable entry holds the `choreographer` and
+  `kaleido` loggers at WARNING. Frozen macOS and Linux Full builds fail PNG closed until the choreographer wrapper
+  item lands. The plan is archived as `plans/archive/PORTABLE_PNG_BUNDLED_BROWSER_PLAN.md`.
+
 - **CI job timeouts** (2026-11-01) — `ci.yml` now sets `timeout-minutes` on `gui-smoke` (15), `build` (30) and `coverage-pr` (40), roughly 3-15x their normal run time. Dependabot PR #181 (pytest 9.1.1, playwright 1.64, pytest-playwright 0.10) hung both GUI-test jobs until GitHub's 6-hour cap.
 
 - **Presidio scanner moved to its own uv project** (2026-11-02) — The root `privacy-scan` dependency group

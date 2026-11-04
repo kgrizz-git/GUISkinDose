@@ -1,6 +1,6 @@
 """PNG rendering through the Chromium bundled in the frozen Full app.
 
-``PORTABLE_PNG_BUNDLED_BROWSER_PLAN.md``. Plain ``fig.to_image()`` lets choreographer pick a
+``dev-docs/plans/archive/PORTABLE_PNG_BUNDLED_BROWSER_PLAN.md``. Plain ``fig.to_image()`` lets choreographer pick a
 browser (a downloaded Chrome for Testing, then ``BROWSER_PATH``, then a system install).
 In the frozen Full app that would ignore the Chromium shipped under ``<onedir>/chromium/``.
 :func:`figure_to_png` therefore passes the bundled path to Kaleido explicitly.

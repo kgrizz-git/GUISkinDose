@@ -1,7 +1,9 @@
 # Portable Full: render PNG through the bundled Chromium
 
-_Status: planned (2026-11-03). Child of [PORTABLE_APP_PLAN.md](PORTABLE_APP_PLAN.md), Phase 1 item "The bundled
+_Status: shipped (2026-11-03). Every PNG render goes through `figure_to_png`, and the frozen Windows Full app renders with its bundled Chromium only. Still open: the manual Windows GUI offline PNG check, and recording the `--png-check` `render_seconds` after the next Windows Full CI run._
+_Child of [PORTABLE_APP_PLAN.md](../PORTABLE_APP_PLAN.md), Phase 1 item "The bundled
 browser path is passed to Kaleido explicitly inside the process that renders."_
+_Implementation note: review found that `kaleido.calc_fig_sync` drops `kopts` when a global sync server is running, so `figure_to_png` runs the async `kaleido.calc_fig` on a fresh thread instead. The text below is the original plan._
 
 ## Problem
 
