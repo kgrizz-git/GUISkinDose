@@ -137,6 +137,18 @@ def _configure_file_log() -> None:
     configure_logging(log_file=log_path)
 
 
+def _quiet_browser_loggers() -> None:
+    """Keep choreographer and kaleido at WARNING.
+
+    Their loggers (``choreographer.browsers.chromium`` and similar) propagate to the root
+    handlers that ``_configure_file_log`` installs, so the INFO record "Found chromium path: ..."
+    would write the absolute browser path to the file log. ``CHOREO_ENABLE_DEBUG`` also makes
+    choreographer call ``logistro.betterConfig(level=1)`` on import.
+    """
+    for name in ("choreographer", "kaleido"):
+        logging.getLogger(name).setLevel(logging.WARNING)
+
+
 def _native_window() -> bool:
     """Windows and macOS open the pywebview window; Linux v1 uses the browser."""
     return not sys.platform.startswith("linux")
@@ -148,6 +160,7 @@ _HEADLESS_FLAGS = ("--self-check", "--network-probe", "--png-check")
 def main(argv: list[str]) -> int:
     """Run the GUI, or the headless self-check when ``--self-check DIR`` is given."""
     _configure_file_log()
+    _quiet_browser_loggers()
     logger = logging.getLogger("guiskindose.portable")
     if argv and argv[0] in _HEADLESS_FLAGS and (len(argv) < 2 or not argv[1].strip()):
         # Fail closed: a missing or blank directory must never fall through to the GUI.

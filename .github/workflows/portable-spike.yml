@@ -243,8 +243,9 @@ jobs:
       if: matrix.edition == 'full'
       run: |
         $env:PATH = ($env:PATH -split ';' | Where-Object { $_ -and -not (Test-Path (Join-Path $_ 'git.exe')) }) -join ';'
-        # Decoy: point BROWSER_PATH at the runner's system Chrome. The app must still
-        # launch the bundled copy, because it passes that path explicitly.
+        # Decoy: point BROWSER_PATH at the runner's system Chrome. The app's own PNG
+        # renderer (figure_to_png) must still launch the bundled copy, because it passes
+        # that path to Kaleido explicitly.
         $system = @("$env:ProgramFiles\Google\Chrome\Application\chrome.exe",
           "${env:ProgramFiles(x86)}\Google\Chrome\Application\chrome.exe") |
           Where-Object { Test-Path $_ } | Select-Object -First 1
