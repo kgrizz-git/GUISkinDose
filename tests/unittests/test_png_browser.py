@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib
 import sys
 import types
 from pathlib import Path
@@ -10,7 +11,6 @@ from typing import Any
 import numpy as np
 import plotly.graph_objects as go
 import plotly.io as pio
-import plotly.io._kaleido  # noqa: F401 - bind the real kaleido now; tests below fake it in sys.modules
 import pytest
 
 from guiskindose.edition import PngExportUnavailableError
@@ -25,6 +25,8 @@ from guiskindose.export.png_browser import (
     figure_to_png,
     resolve_image_options,
 )
+
+importlib.import_module("plotly.io._kaleido")  # bind the real kaleido now; tests below fake it in sys.modules
 
 
 class _FakeFig:
@@ -312,3 +314,20 @@ def test_render_dosemap_png_returns_none_on_png_errors(monkeypatch, error) -> No
         "triangle_vertex_indices": {"i": [0], "j": [1], "k": [2]},
     }
     assert images.render_dosemap_png(np.zeros(3), triangle) is None
+
+
+def test_render_failure_is_logged_by_class_only(monkeypatch, tmp_path, kaleido_calls) -> None:
+    _frozen(monkeypatch, tmp_path, "win32", browser=True)
+    events: list[tuple[str, str]] = []
+    monkeypatch.setattr(
+        png_browser, "safe_error_event", lambda _logger, code, exc: events.append((code, type(exc).__name__))
+    )
+
+    async def boom(*_a: Any, **_k: Any) -> bytes:
+        raise ValueError(f"bad figure {tmp_path}")
+
+    monkeypatch.setattr(sys.modules["kaleido"], "calc_fig", boom)
+    fig = _FakeFig()
+    with pytest.raises(PngRenderError):
+        figure_to_png(fig)
+    assert events == [("bundled_browser_png_render", "ValueError")]

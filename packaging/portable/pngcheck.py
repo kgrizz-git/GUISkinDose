@@ -250,10 +250,12 @@ def _render_pngs(captured_pages: list[str]) -> dict[str, Any]:
         "render_seconds": round(time.perf_counter() - started, 2),
         **launch,
     }
+    if errors:  # any failed image fails the check; surface the real cause
+        raise errors[0]
     if not result["png_images"]:
-        if errors:  # surface the real cause (for example BundledBrowserUnavailableError)
-            raise errors[0]
         raise ValueError("no_png_rendered")
+    if not sampler.samples:
+        raise ValueError("process_sampling_failed")
     if not launch["launched_from_onedir"] or launch["launched_outside_onedir"]:
         raise ValueError("browser_not_bundled_copy")
     return result

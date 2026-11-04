@@ -318,3 +318,49 @@ def test_list_processes_parses_every_powershell_shape(pngcheck, monkeypatch, std
     rows = pngcheck._list_processes()
     assert [row["pid"] for row in rows] == expected
     assert all(isinstance(row["exe"], str) for row in rows)
+
+
+def test_render_pngs_fails_when_every_process_probe_failed(pngcheck, monkeypatch, tmp_path):
+    from guiskindose.export import images
+
+    monkeypatch.setattr(images, "figure_to_png", lambda *_a, **_k: b"\x89PNG\r\n\x1a\nxx")
+
+    def fake_payload(_source, *, with_images):
+        png = images.figure_to_png("fig")
+        return type("P", (), {"images": [type("I", (), {"png_bytes": png})()]})()
+
+    def probe():
+        raise OSError("probe failed")
+
+    _stub_render_environment(monkeypatch, pngcheck, tmp_path, fake_payload)
+    monkeypatch.setattr(pngcheck, "_list_processes", probe)
+    with pytest.raises(ValueError, match="process_sampling_failed"):
+        pngcheck._render_pngs([])
+
+
+def test_render_pngs_fails_when_any_image_failed(pngcheck, monkeypatch, tmp_path):
+    from guiskindose.export import images
+    from guiskindose.export.png_browser import PngRenderError
+
+    results = iter([b"\x89PNG\r\n\x1a\nxx", None])
+
+    def flaky_png(*_a, **_k):
+        value = next(results)
+        if value is None:
+            raise PngRenderError()
+        return value
+
+    monkeypatch.setattr(images, "figure_to_png", flaky_png)
+
+    def fake_payload(_source, *, with_images):
+        pngs = []
+        for _ in range(2):
+            try:
+                pngs.append(images.figure_to_png("fig"))
+            except PngRenderError:
+                pngs.append(None)
+        return type("P", (), {"images": [type("I", (), {"png_bytes": png})() for png in pngs]})()
+
+    _stub_render_environment(monkeypatch, pngcheck, tmp_path, fake_payload)
+    with pytest.raises(PngRenderError):
+        pngcheck._render_pngs([])

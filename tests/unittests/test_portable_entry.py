@@ -332,7 +332,6 @@ def test_quiet_browser_loggers_silence_info_records(entry_module):
 
 
 def test_main_quiets_browser_loggers_before_dispatch(entry_module, fake_dispatch, monkeypatch):
-    calls: list[str] = []
-    monkeypatch.setattr(entry_module, "_quiet_browser_loggers", lambda: calls.append("quiet"))
+    monkeypatch.setattr(entry_module, "_quiet_browser_loggers", lambda: fake_dispatch.append(("quiet",)))
     entry_module.main([])
-    assert calls == ["quiet"]
+    assert [call[0] for call in fake_dispatch] == ["log", "quiet", "gui"]

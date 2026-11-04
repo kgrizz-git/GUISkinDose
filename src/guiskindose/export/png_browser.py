@@ -16,6 +16,7 @@ running event loop. It never starts or stops a global server.
 from __future__ import annotations
 
 import asyncio
+import logging
 import sys
 from collections.abc import Callable
 from pathlib import Path
@@ -24,6 +25,9 @@ from threading import Thread
 from typing import Any
 
 from guiskindose.edition import PngExportUnavailableError, png_export_available
+from guiskindose.privacy import safe_error_event
+
+logger = logging.getLogger(__name__)
 
 BROWSER_DIR = "chromium"
 
@@ -166,7 +170,8 @@ def _render_with_bundled_browser(
             lambda: kaleido.calc_fig(fig_dict, opts=opts, topojson=defaults.topojson, kopts=kopts)
         )
     except Exception as caught:
-        # Kaleido's error text can embed the absolute browser path; show none of it.
+        # Kaleido's error text can embed the absolute browser path; record the class only.
+        safe_error_event(logger, "bundled_browser_png_render", caught)
         unavailable = _is_browser_failure(caught)
     if unavailable:
         raise BundledBrowserUnavailableError() from None

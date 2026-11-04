@@ -164,6 +164,7 @@ def _write_and_show_static_dose_maps(fig: go.Figure, settings: PyskindoseSetting
             atomic_write_private(names[i], image_bytes, allow_ignored_checkout=True)
     except Exception as exc:
         safe_error_event(logger, "static_dosemap_write", exc)
+        print("Could not write the static dose-map images. Check the log for details.")
         return
 
     print("Saved static dose-map plots.")

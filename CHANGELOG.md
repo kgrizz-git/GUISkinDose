@@ -21,9 +21,10 @@ That keeps SemVer and contributor history organized.
 
 ### Changed
 
-- The portable Full app now renders PNG dose maps with the Chromium bundled in the download, never a browser
-  installed on the computer. When the bundled browser is missing or cannot start, the Export tab says so and
-  suggests re-extracting the download. The pip install is unchanged.
+- On Windows, the portable Full app now renders PNG dose maps with the Chromium bundled in the download, never a
+  browser installed on the computer. When the bundled browser is missing or cannot start, the Export tab says so
+  and suggests re-extracting the download. Portable Full builds for macOS and Linux do not export PNG yet; they
+  show the same message. The pip install is unchanged.
 - On Windows, `--mode gui --native` now checks for the Microsoft Edge WebView2 Runtime and .NET Framework 4.6.2
   or later before it opens the window. When either is missing, the app shows a message that points at Microsoft's
   Evergreen Bootstrapper and exits, instead of opening a broken window on the old MSHTML engine. The lookup uses
