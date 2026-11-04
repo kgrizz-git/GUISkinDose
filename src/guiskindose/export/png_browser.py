@@ -98,24 +98,25 @@ def resolve_image_options(
 
 def _run_in_fresh_thread(make_coro: Callable[[], Any]) -> Any:
     """Run a coroutine with ``asyncio.run`` on a new thread; return its result or re-raise its error."""
-    q: Queue[Any] = Queue(maxsize=1)
+    # Each entry is (succeeded, value): the result, or the exception to re-raise here.
+    q: Queue[tuple[bool, Any]] = Queue(maxsize=1)
 
     def run() -> None:
         try:
-            q.put(asyncio.run(make_coro()))
+            q.put((True, asyncio.run(make_coro())))
         except Exception as exc:
-            q.put(exc)
+            q.put((False, exc))
 
     thread = Thread(target=run)
     thread.start()
     thread.join()
     try:
-        result = q.get_nowait()
+        succeeded, value = q.get_nowait()
     except Empty:  # the worker died with a non-Exception before it could report
         raise RuntimeError("render thread ended without a result") from None
-    if isinstance(result, Exception):
-        raise result
-    return result
+    if not succeeded:
+        raise value
+    return value
 
 
 def _render_with_bundled_browser(
