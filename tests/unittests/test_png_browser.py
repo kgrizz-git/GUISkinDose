@@ -78,7 +78,8 @@ def test_not_frozen_uses_to_image_and_never_kaleido(monkeypatch, kaleido_calls) 
     fig = _FakeFig()
     assert figure_to_png(fig, width=10, scale=2) == b"pip"
     assert fig.to_image_calls == [{"format": "png", "width": 10, "height": None, "scale": 2}]
-    assert kaleido_calls["calc"] == [] and kaleido_calls["server"] == []
+    assert kaleido_calls["calc"] == []
+    assert kaleido_calls["server"] == []
 
 
 def test_frozen_windows_passes_bundled_path(monkeypatch, tmp_path, kaleido_calls) -> None:
@@ -87,7 +88,8 @@ def test_frozen_windows_passes_bundled_path(monkeypatch, tmp_path, kaleido_calls
     ((_args, kwargs),) = kaleido_calls["calc"]
     assert Path(kwargs["kopts"]["path"]) == chrome
     assert kwargs["kopts"]["mathjax"] is False
-    assert kwargs["opts"]["width"] == 800 and kwargs["opts"]["scale"] == 1.5
+    assert kwargs["opts"]["width"] == 800
+    assert kwargs["opts"]["scale"] == 1.5
     assert kaleido_calls["server"] == []
 
 
@@ -103,8 +105,9 @@ def test_plotlyjs_passed_only_when_set(monkeypatch, tmp_path, kaleido_calls) -> 
 
 def test_frozen_browser_missing_fails_closed(monkeypatch, tmp_path, kaleido_calls) -> None:
     _frozen(monkeypatch, tmp_path, "win32", browser=False)
+    fig = _FakeFig()
     with pytest.raises(BundledBrowserUnavailableError) as info:
-        figure_to_png(_FakeFig())
+        figure_to_png(fig)
     assert str(info.value) == BUNDLED_BROWSER_MESSAGE
     assert kaleido_calls["calc"] == []
 
@@ -116,18 +119,21 @@ def test_kaleido_error_message_is_scrubbed(monkeypatch, tmp_path, kaleido_calls)
         raise RuntimeError(f"cannot start {tmp_path}")
 
     monkeypatch.setattr(sys.modules["kaleido"], "calc_fig", boom)
+    fig = _FakeFig()
     with pytest.raises(BundledBrowserUnavailableError) as info:
-        figure_to_png(_FakeFig())
+        figure_to_png(fig)
     assert str(tmp_path) not in str(info.value)
-    assert info.value.__cause__ is None and info.value.__suppress_context__
+    assert info.value.__cause__ is None
+    assert info.value.__suppress_context__
 
 
 @pytest.mark.parametrize("platform", ["darwin", "linux"])
 def test_frozen_unix_fails_closed_but_path_resolves(monkeypatch, tmp_path, kaleido_calls, platform) -> None:
     chrome = _frozen(monkeypatch, tmp_path, platform, browser=True)
     assert bundled_browser_for_render() is None
+    fig = _FakeFig()
     with pytest.raises(BundledBrowserUnavailableError):
-        figure_to_png(_FakeFig())
+        figure_to_png(fig)
     assert kaleido_calls["calc"] == []
     assert bundled_browser() == chrome.resolve() or bundled_browser() == chrome
 
@@ -151,8 +157,9 @@ def test_light_raises_before_kaleido(monkeypatch, tmp_path, frozen) -> None:
     if frozen:
         _frozen(monkeypatch, tmp_path, "win32", browser=True)
     monkeypatch.setattr(png_browser, "png_export_available", lambda: False)
+    fig = _FakeFig()
     with pytest.raises(PngExportUnavailableError):
-        figure_to_png(_FakeFig())
+        figure_to_png(fig)
 
 
 def test_resolve_matches_plotly_order() -> None:
@@ -198,7 +205,9 @@ def test_runs_inside_a_running_event_loop_and_ignores_global_server(monkeypatch,
     import asyncio
 
     chrome = _frozen(monkeypatch, tmp_path, "win32", browser=True)
-    monkeypatch.setattr(sys.modules["kaleido"], "is_running", lambda: True, raising=False)  # a "running" global server must not matter
+    monkeypatch.setattr(
+        sys.modules["kaleido"], "is_running", lambda: True, raising=False
+    )  # a "running" global server must not matter
 
     async def caller() -> bytes:
         return figure_to_png(_FakeFig())
@@ -223,6 +232,20 @@ def test_bad_figure_becomes_unavailable_error(monkeypatch, tmp_path, kaleido_cal
         def to_dict(self) -> dict[str, Any]:
             raise ValueError(str(tmp_path))
 
+    bad = Bad()
     with pytest.raises(BundledBrowserUnavailableError) as info:
-        figure_to_png(Bad())
+        figure_to_png(bad)
     assert str(tmp_path) not in str(info.value)
+
+
+@pytest.mark.filterwarnings("ignore::pytest.PytestUnhandledThreadExceptionWarning")
+def test_worker_dying_without_a_result_does_not_hang(monkeypatch, tmp_path, kaleido_calls) -> None:
+    _frozen(monkeypatch, tmp_path, "win32", browser=True)
+
+    async def die(*_a: Any, **_k: Any) -> bytes:
+        raise SystemExit  # not an Exception: the worker cannot report it
+
+    monkeypatch.setattr(sys.modules["kaleido"], "calc_fig", die)
+    fig = _FakeFig()
+    with pytest.raises(BundledBrowserUnavailableError):
+        figure_to_png(fig)

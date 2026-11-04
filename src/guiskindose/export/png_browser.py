@@ -19,7 +19,7 @@ import asyncio
 import sys
 from collections.abc import Callable
 from pathlib import Path
-from queue import Queue
+from queue import Empty, Queue
 from threading import Thread
 from typing import Any
 
@@ -103,14 +103,17 @@ def _run_in_fresh_thread(make_coro: Callable[[], Any]) -> Any:
     def run() -> None:
         try:
             q.put(asyncio.run(make_coro()))
-        except BaseException as exc:
+        except Exception as exc:
             q.put(exc)
 
     thread = Thread(target=run)
     thread.start()
     thread.join()
-    result = q.get()
-    if isinstance(result, BaseException):
+    try:
+        result = q.get_nowait()
+    except Empty:  # the worker died with a non-Exception before it could report
+        raise RuntimeError("render thread ended without a result") from None
+    if isinstance(result, Exception):
         raise result
     return result
 
