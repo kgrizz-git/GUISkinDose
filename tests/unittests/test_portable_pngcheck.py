@@ -5,6 +5,7 @@ from __future__ import annotations
 import contextlib
 import importlib
 import sys
+import time
 from pathlib import Path
 
 import pytest
@@ -160,6 +161,18 @@ def _stub_render_environment(monkeypatch, pngcheck, tmp_path, images):
     import guiskindose.export as export_pkg
 
     monkeypatch.setattr(export_pkg, "collect_export_payload", images)
+
+    # A fake render finishes at once, so let the sampler take its first sample before the
+    # payload runs (bounded, so a probe that always fails still proceeds).
+    real_start = pngcheck._ProcessSampler.start
+
+    def start_and_wait_for_first_probe(self):
+        real_start(self)
+        deadline = time.monotonic() + 0.5
+        while not self.samples and time.monotonic() < deadline:
+            time.sleep(0.005)
+
+    monkeypatch.setattr(pngcheck._ProcessSampler, "start", start_and_wait_for_first_probe)
     return _page_generator
 
 
