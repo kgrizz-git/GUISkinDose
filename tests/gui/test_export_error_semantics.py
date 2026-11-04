@@ -24,6 +24,12 @@ pytest.importorskip("nicegui")
 
 from nicegui import run, ui
 
+from guiskindose.export.png_browser import (
+    BUNDLED_BROWSER_MESSAGE,
+    PNG_RENDER_MESSAGE,
+    BundledBrowserUnavailableError,
+    PngRenderError,
+)
 from guiskindose.gui.state import state
 from guiskindose.gui.tabs import export as export_tab
 
@@ -160,3 +166,37 @@ async def test_download_png_builder_runtime_error_shows_actionable_notify_not_ca
     assert any("png_export" in m or "png dose map" in m.lower() for m in messages), messages
     negative_calls = [(a, k) for a, k in _capture_notify if k.get("type") == "negative"]
     assert negative_calls, "expected at least one negative-type notify"
+
+
+@pytest.mark.asyncio
+async def test_download_png_bundled_browser_missing_shows_bundled_message_not_kaleido(monkeypatch, _capture_notify):
+    state.calculation_done = True
+
+    def _boom(*a, **k):
+        raise BundledBrowserUnavailableError()
+
+    monkeypatch.setattr(export_tab, "make_dosemap_png", _boom)
+    controller = export_tab.ExportTabController()
+
+    await controller.download_png()
+
+    messages = _messages(_capture_notify)
+    assert BUNDLED_BROWSER_MESSAGE in messages, messages
+    assert not any("kaleido" in m for m in messages), messages
+
+
+@pytest.mark.asyncio
+async def test_download_png_render_error_shows_render_message_not_kaleido(monkeypatch, _capture_notify):
+    state.calculation_done = True
+
+    def _boom(*a, **k):
+        raise PngRenderError()
+
+    monkeypatch.setattr(export_tab, "make_dosemap_png", _boom)
+    controller = export_tab.ExportTabController()
+
+    await controller.download_png()
+
+    messages = _messages(_capture_notify)
+    assert PNG_RENDER_MESSAGE in messages, messages
+    assert not any("kaleido" in m for m in messages), messages

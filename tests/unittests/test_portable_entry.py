@@ -314,3 +314,24 @@ def test_launch_token_is_redacted_in_the_file_log(entry_module, tmp_path):
 def test_redact_launch_token_leaves_other_text_alone(entry_module):
     line = "NiceGUI ready to go on http://127.0.0.1:8765"
     assert entry_module.redact_launch_token(line) == line
+
+
+def test_quiet_browser_loggers_silence_info_records(entry_module):
+    names = ("choreographer", "kaleido", "logistro")
+    saved = {name: logging.getLogger(name).level for name in names}
+    try:
+        entry_module._quiet_browser_loggers()
+        child = logging.getLogger("choreographer.browsers.chromium")
+        assert not child.isEnabledFor(logging.INFO)
+        assert child.isEnabledFor(logging.WARNING)
+        assert not logging.getLogger("kaleido.kaleido").isEnabledFor(logging.INFO)
+        assert not logging.getLogger("logistro").isEnabledFor(logging.INFO)
+    finally:
+        for name, level in saved.items():
+            logging.getLogger(name).setLevel(level)
+
+
+def test_main_quiets_browser_loggers_before_dispatch(entry_module, fake_dispatch, monkeypatch):
+    monkeypatch.setattr(entry_module, "_quiet_browser_loggers", lambda: fake_dispatch.append(("quiet",)))
+    entry_module.main([])
+    assert [call[0] for call in fake_dispatch] == ["log", "quiet", "gui"]

@@ -137,6 +137,20 @@ def _configure_file_log() -> None:
     configure_logging(log_file=log_path)
 
 
+def _quiet_browser_loggers() -> None:
+    """Keep choreographer, kaleido and logistro at WARNING.
+
+    Defense in depth. ``configure_logging`` attaches its handlers to the ``guiskindose`` logger only
+    and sets ``propagate = False`` there, so browser records do not reach the file log today. The
+    guard matters if something configures the root logger: choreographer calls
+    ``logistro.betterConfig(level=1)`` when ``CHOREO_ENABLE_DEBUG`` is set, which puts a root handler
+    on ``sys.stderr``. In a windowed build that stream feeds the file log, and the INFO record
+    "Found chromium path: ..." would write the absolute browser path there.
+    """
+    for name in ("choreographer", "kaleido", "logistro"):
+        logging.getLogger(name).setLevel(logging.WARNING)
+
+
 def _native_window() -> bool:
     """Windows and macOS open the pywebview window; Linux v1 uses the browser."""
     return not sys.platform.startswith("linux")
@@ -148,6 +162,7 @@ _HEADLESS_FLAGS = ("--self-check", "--network-probe", "--png-check")
 def main(argv: list[str]) -> int:
     """Run the GUI, or the headless self-check when ``--self-check DIR`` is given."""
     _configure_file_log()
+    _quiet_browser_loggers()
     logger = logging.getLogger("guiskindose.portable")
     if argv and argv[0] in _HEADLESS_FLAGS and (len(argv) < 2 or not argv[1].strip()):
         # Fail closed: a missing or blank directory must never fall through to the GUI.

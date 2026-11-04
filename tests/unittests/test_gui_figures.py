@@ -66,6 +66,18 @@ def test_make_dosemap_png_raises_when_fig_unavailable(monkeypatch):
         figures.make_dosemap_png(explicit_dose_map=[1.0], explicit_patient={"patient": {}})
 
 
+def test_make_dosemap_png_reraises_bundled_browser_error(monkeypatch):
+    from guiskindose.export.png_browser import BundledBrowserUnavailableError
+    from guiskindose.gui import figures
+
+    def _unavailable(*_a, **_k):
+        raise BundledBrowserUnavailableError()
+
+    monkeypatch.setattr(figures, "figure_to_png", _unavailable)
+    with pytest.raises(BundledBrowserUnavailableError):
+        figures.make_dosemap_png(explicit_dose_map=[1.0, 2.0, 3.0], explicit_patient=_PATIENT_FOR_EXPORT_TESTS)
+
+
 def _assert_logs_operation_code(monkeypatch, caplog, render_fn, operation_code: str) -> None:
     """Run ``render_fn`` and assert it both raises and logs ``operation_code``.
 

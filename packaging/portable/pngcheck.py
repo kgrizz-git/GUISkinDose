@@ -2,9 +2,11 @@
 
 Run as ``GUISkinDose.exe --png-check <output dir>``. It renders the dose-map PNGs of
 the bundled example RDSR through Kaleido, using only the Chromium copied into the
-onedir under ``chromium/``. Its path is passed to ``kaleido.start_sync_server``
-explicitly, because choreographer would otherwise prefer a Chrome for Testing it
-downloaded earlier, then ``BROWSER_PATH``, then a system install.
+onedir under ``chromium/``. The render goes through the app's own PNG path,
+``guiskindose.export.png_browser.figure_to_png``, which passes the bundled browser path to
+Kaleido explicitly (choreographer would otherwise prefer a Chrome for Testing it downloaded
+earlier, then ``BROWSER_PATH``, then a system install). Each image starts its own one-shot
+browser, so one sampler thread polls the process list for the whole export.
 
 It fails unless:
 
@@ -19,17 +21,20 @@ relative to the onedir only: no absolute paths and no exam values.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import re
 import subprocess  # nosec B404 - fixed argv, used only to list this process's children
 import sys
+import threading
 import time
 from pathlib import Path
 from typing import Any
 
 from selfcheck import _EXAMPLE_RDSR, OWNED_SUBDIR, _pkg, _run_step, _write_atomic
 
-BROWSER_DIR = "chromium"
+from guiskindose.export.png_browser import bundled_browser
+
 # Notices that must sit beside the bundled browser (PORTABLE_CHROMIUM_ARTIFACT.md).
 NOTICE_FILES = ("LICENSE.chromium.txt", "LICENSE.ungoogled-chromium-windows.txt", "CREDITS.html")
 _MIN_CREDITS_BYTES = 100_000
@@ -41,13 +46,8 @@ def app_dir() -> Path:
     return Path(sys.executable).resolve().parent
 
 
-def bundled_browser() -> Path:
-    name = "chrome.exe" if sys.platform == "win32" else "chrome"
-    return app_dir() / BROWSER_DIR / name
-
-
 def _check_bundle() -> dict[str, Any]:
-    browser = bundled_browser()
+    browser = bundled_browser(app_dir())
     notices = {name: (browser.parent / name).is_file() for name in NOTICE_FILES}
     credits_path = browser.parent / "CREDITS.html"
     found = {
@@ -65,9 +65,12 @@ def _check_bundle() -> dict[str, Any]:
 def _list_processes() -> list[dict[str, Any]]:
     """Every process as ``{pid, ppid, exe, cmd}``; Windows via CIM, else ``ps``."""
     if sys.platform == "win32":
+        # Browser processes only (every Chromium child is also chrome.exe), so a sample is quick.
+        # InputObject with @() keeps zero or one match a JSON array.
         script = (
-            "Get-CimInstance Win32_Process | Select-Object ProcessId,ParentProcessId,ExecutablePath,CommandLine"
-            " | ConvertTo-Json -Compress"
+            "$p = @(Get-CimInstance Win32_Process -Filter \"Name='chrome.exe'\""
+            " | Select-Object ProcessId,ParentProcessId,ExecutablePath,CommandLine);"
+            " ConvertTo-Json -InputObject $p -Compress"
         )
         raw = subprocess.run(  # nosec B603 B607 - fixed argv, no user input
             ["powershell", "-NoProfile", "-NonInteractive", "-Command", script],
@@ -76,6 +79,8 @@ def _list_processes() -> list[dict[str, Any]]:
             check=True,
             timeout=60,
         ).stdout
+        parsed = json.loads(raw.strip() or "[]")
+        items = [parsed] if isinstance(parsed, dict) else (parsed or [])
         return [
             {
                 "pid": p["ProcessId"],
@@ -83,7 +88,8 @@ def _list_processes() -> list[dict[str, Any]]:
                 "exe": p["ExecutablePath"] or "",
                 "cmd": p["CommandLine"] or "",
             }
-            for p in json.loads(raw)
+            for p in items
+            if isinstance(p, dict)
         ]
     raw = subprocess.run(  # nosec B603 B607 - fixed argv, no user input
         ["ps", "-axo", "pid=,ppid=,command="], capture_output=True, text=True, check=True, timeout=60
@@ -147,15 +153,74 @@ def _describe_launch(rows: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+_SAMPLE_INTERVAL_S = 0.1
+_SAMPLER_STOP_TIMEOUT_S = 30.0
+
+
+class _ProcessSampler:
+    """Poll ``_list_processes`` on one thread until stopped and keep every sample.
+
+    One-shot browsers live only while an image renders, and a Windows CIM query is slow, so
+    one continuous sampler runs for the whole export instead of one probe per image.
+    """
+
+    def __init__(self) -> None:
+        self.samples: list[list[dict[str, Any]]] = []
+        self._stop = threading.Event()
+        self._thread = threading.Thread(target=self._run, daemon=True)
+
+    def _run(self) -> None:
+        while not self._stop.is_set():
+            with contextlib.suppress(Exception):  # a failed probe loses one sample, never the render
+                self.samples.append(_list_processes())
+            self._stop.wait(_SAMPLE_INTERVAL_S)
+
+    def start(self) -> None:
+        self._thread.start()
+
+    def stop(self) -> None:
+        self._stop.set()
+        if self._thread.is_alive():  # never started if the payload failed before start()
+            self._thread.join(_SAMPLER_STOP_TIMEOUT_S)
+
+
+def _recording_figure_to_png(real: Any, errors: list[Exception]) -> Any:
+    """Wrap *real* so a render error is kept and re-raised.
+
+    The export payload turns a failed image into a notice, so without this the report would
+    only say that no PNG was rendered, not why (for example a missing bundled browser).
+    """
+
+    def wrapped(*args: Any, **kwargs: Any) -> Any:
+        try:
+            return real(*args, **kwargs)
+        except Exception as exc:
+            errors.append(exc)
+            raise
+
+    return wrapped
+
+
+def _merge_samples(samples: list[list[dict[str, Any]]]) -> list[dict[str, Any]]:
+    """Union of every sampled process row, keyed by pid and executable."""
+    merged: dict[tuple[Any, Any], dict[str, Any]] = {}
+    for rows in samples:
+        for row in rows:
+            merged.setdefault((row["pid"], row["exe"]), row)
+    return list(merged.values())
+
+
 def _render_pngs(captured_pages: list[str]) -> dict[str, Any]:
-    import kaleido
     from kaleido import _page_generator
 
     from guiskindose import PyskindoseSettings, load_settings_example_json
-    from guiskindose.export import collect_export_payload
+    from guiskindose.export import collect_export_payload, images
     from guiskindose.main import build_cli_export_source
 
     original = _page_generator.PageGenerator.generate_index
+    original_render = images.figure_to_png
+    sampler = _ProcessSampler()
+    errors: list[Exception] = []
 
     def capture(self):  # record exactly the page Kaleido writes to its temp dir
         html = original(self)
@@ -163,18 +228,20 @@ def _render_pngs(captured_pages: list[str]) -> dict[str, Any]:
         return html
 
     _page_generator.PageGenerator.generate_index = capture
+    images.figure_to_png = _recording_figure_to_png(original_render, errors)
     settings = PyskindoseSettings(settings=load_settings_example_json())
     settings.mode = "calculate_dose"
     settings.phantom.model = "plane"
     started = time.perf_counter()
-    kaleido.start_sync_server(path=str(bundled_browser()), mathjax=False, silence_warnings=True)
     try:
         source = build_cli_export_source([str(_pkg("example_data", "RDSR", _EXAMPLE_RDSR))], settings)
+        sampler.start()
         payload = collect_export_payload(source, with_images=True)
-        launch = _describe_launch(_list_processes())
     finally:
-        kaleido.stop_sync_server(silence_warnings=True)
+        sampler.stop()
+        images.figure_to_png = original_render
         _page_generator.PageGenerator.generate_index = original
+    launch = _describe_launch(_merge_samples(sampler.samples))
     pngs = [image.png_bytes for image in payload.images if image.png_bytes]
     result = {
         "images": len(payload.images),
@@ -183,8 +250,12 @@ def _render_pngs(captured_pages: list[str]) -> dict[str, Any]:
         "render_seconds": round(time.perf_counter() - started, 2),
         **launch,
     }
+    if errors:  # any failed image fails the check; surface the real cause
+        raise errors[0]
     if not result["png_images"]:
         raise ValueError("no_png_rendered")
+    if not sampler.samples:
+        raise ValueError("process_sampling_failed")
     if not launch["launched_from_onedir"] or launch["launched_outside_onedir"]:
         raise ValueError("browser_not_bundled_copy")
     return result

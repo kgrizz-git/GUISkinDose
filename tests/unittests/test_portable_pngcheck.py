@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
+import contextlib
 import importlib
 import sys
+import time
 from pathlib import Path
 
 import pytest
+
+from guiskindose.export.png_browser import BROWSER_DIR
 
 _PORTABLE = Path(__file__).resolve().parents[2] / "packaging" / "portable"
 
@@ -89,3 +93,287 @@ def test_failed_render_skips_page_step(pngcheck, monkeypatch, tmp_path):
     assert report["render"]["error_type"] == "RuntimeError"
     assert "page" not in report
     assert report["passed"] is False
+
+
+def test_bundled_browser_honors_patched_app_dir(pngcheck, monkeypatch, tmp_path):
+    monkeypatch.setattr(pngcheck, "app_dir", lambda: tmp_path)
+    monkeypatch.setattr(sys, "platform", "win32")
+    (tmp_path / BROWSER_DIR).mkdir()
+    (tmp_path / BROWSER_DIR / "chrome.exe").write_bytes(b"x")
+    with pytest.raises(FileNotFoundError, match="browser_notices_missing"):
+        pngcheck._check_bundle()
+
+
+def test_check_bundle_fails_closed_without_browser(pngcheck, monkeypatch, tmp_path):
+    monkeypatch.setattr(pngcheck, "app_dir", lambda: tmp_path)
+    with pytest.raises(FileNotFoundError, match="bundled_browser_missing"):
+        pngcheck._check_bundle()
+
+
+def test_sampler_polls_until_stopped_and_survives_a_failed_probe(pngcheck, monkeypatch):
+    import time
+
+    calls: list[int] = []
+
+    def probe():
+        calls.append(1)
+        if len(calls) == 1:
+            raise OSError("probe failed")
+        return [{"pid": len(calls), "exe": "x"}]
+
+    monkeypatch.setattr(pngcheck, "_list_processes", probe)
+    monkeypatch.setattr(pngcheck, "_SAMPLE_INTERVAL_S", 0.01)
+    sampler = pngcheck._ProcessSampler()
+    sampler.start()
+    time.sleep(0.1)
+    sampler.stop()
+    taken = len(sampler.samples)
+    assert taken >= 2
+    time.sleep(0.05)
+    assert len(sampler.samples) == taken  # stopped
+    assert len(pngcheck._merge_samples(sampler.samples)) == taken
+
+
+def test_recording_wrapper_reraises_and_records_error(pngcheck):
+    def real(*_a, **_k):
+        raise KeyError("boom")
+
+    errors: list = []
+    wrapped = pngcheck._recording_figure_to_png(real, errors)
+    with pytest.raises(KeyError):
+        wrapped("fig")
+    assert len(errors) == 1
+    assert pngcheck._recording_figure_to_png(lambda *_a: b"png", errors)("fig") == b"png"
+
+
+def _stub_render_environment(monkeypatch, pngcheck, tmp_path, images):
+    """Fake the heavy pieces of ``_render_pngs`` so no browser or calculation runs."""
+    import types
+
+    from kaleido import _page_generator
+
+    monkeypatch.setattr(pngcheck, "app_dir", lambda: tmp_path.resolve())
+    monkeypatch.setattr(pngcheck, "_pkg", lambda *_a: "rdsr.dcm")
+    monkeypatch.setattr(pngcheck, "_list_processes", lambda: [])
+    fake_main = types.ModuleType("guiskindose.main")
+    fake_main.build_cli_export_source = lambda *_a: object()  # type: ignore[attr-defined]
+    monkeypatch.setitem(sys.modules, "guiskindose.main", fake_main)
+    import guiskindose.export as export_pkg
+
+    monkeypatch.setattr(export_pkg, "collect_export_payload", images)
+
+    # A fake render finishes at once, so let the sampler take its first sample before the
+    # payload runs (bounded, so a probe that always fails still proceeds).
+    real_start = pngcheck._ProcessSampler.start
+
+    def start_and_wait_for_first_probe(self):
+        real_start(self)
+        deadline = time.monotonic() + 0.5
+        while not self.samples and time.monotonic() < deadline:
+            time.sleep(0.005)
+
+    monkeypatch.setattr(pngcheck._ProcessSampler, "start", start_and_wait_for_first_probe)
+    return _page_generator
+
+
+def test_render_pngs_uses_figure_to_png_and_restores_it(pngcheck, monkeypatch, tmp_path):
+    import kaleido
+
+    from guiskindose.export import images
+    from guiskindose.export.png_browser import BundledBrowserUnavailableError
+
+    start_calls: list = []
+    monkeypatch.setattr(kaleido, "start_sync_server", lambda *a, **k: start_calls.append(a), raising=False)
+    seen_wrapped: list = []
+
+    def failing_png(*_a, **_k):
+        raise BundledBrowserUnavailableError()
+
+    monkeypatch.setattr(images, "figure_to_png", failing_png)
+
+    def fake_payload(_source, *, with_images):
+        seen_wrapped.append(images.figure_to_png is not failing_png)
+        with contextlib.suppress(BundledBrowserUnavailableError):  # the payload swallows it too
+            images.figure_to_png("fig")
+        return type("P", (), {"images": []})()
+
+    page_gen = _stub_render_environment(monkeypatch, pngcheck, tmp_path, fake_payload)
+    original_index = page_gen.PageGenerator.generate_index
+    with pytest.raises(BundledBrowserUnavailableError):
+        pngcheck._render_pngs([])
+    assert seen_wrapped == [True]  # the payload saw the sampling wrapper
+    assert images.figure_to_png is failing_png  # restored
+    assert page_gen.PageGenerator.generate_index is original_index
+    assert start_calls == []
+
+
+def test_render_pngs_restores_figure_to_png_on_error(pngcheck, monkeypatch, tmp_path):
+    from guiskindose.export import images
+
+    marker = lambda *_a, **_k: b"png"  # noqa: E731
+    monkeypatch.setattr(images, "figure_to_png", marker)
+
+    def boom(_source, *, with_images):
+        raise RuntimeError("payload failed")
+
+    _stub_render_environment(monkeypatch, pngcheck, tmp_path, boom)
+    with pytest.raises(RuntimeError, match="payload failed"):
+        pngcheck._render_pngs([])
+    assert images.figure_to_png is marker
+
+
+def test_render_pngs_describes_processes_sampled_during_render(pngcheck, monkeypatch, tmp_path):
+    import os
+
+    from guiskindose.export import images
+
+    inside = tmp_path.resolve() / "chromium" / "chrome.exe"
+    live = [{"pid": 10, "ppid": os.getpid(), "exe": str(inside), "cmd": f"{inside} --headless"}]
+    state = {"running": False}
+
+    def real_png(*_a, **_k):
+        state["running"] = True
+        import time
+
+        time.sleep(0.1)  # let the sampler observe the live browser
+        state["running"] = False
+        return b"\x89PNG\r\n\x1a\nxx"
+
+    monkeypatch.setattr(images, "figure_to_png", real_png)
+
+    def fake_payload(_source, *, with_images):
+        png = images.figure_to_png("fig")  # the browser has exited by the time this returns
+        return type("P", (), {"images": [type("I", (), {"png_bytes": png})()]})()
+
+    _stub_render_environment(monkeypatch, pngcheck, tmp_path, fake_payload)
+    monkeypatch.setattr(pngcheck, "_list_processes", lambda: live if state["running"] else [])
+    monkeypatch.setattr(pngcheck, "_SAMPLE_INTERVAL_S", 0.01)
+    result = pngcheck._render_pngs([])
+    assert result["launched_from_onedir"] == ["chromium/chrome.exe"]
+    assert result["launched_outside_onedir"] == 0
+    assert result["png_images"] == 1
+
+
+def test_render_pngs_fails_when_no_sample_saw_a_browser(pngcheck, monkeypatch, tmp_path):
+    from guiskindose.export import images
+
+    monkeypatch.setattr(images, "figure_to_png", lambda *_a, **_k: b"\x89PNG\r\n\x1a\nxx")
+
+    def fake_payload(_source, *, with_images):
+        png = images.figure_to_png("fig")
+        return type("P", (), {"images": [type("I", (), {"png_bytes": png})()]})()
+
+    _stub_render_environment(monkeypatch, pngcheck, tmp_path, fake_payload)
+    with pytest.raises(ValueError, match="browser_not_bundled_copy"):
+        pngcheck._render_pngs([])
+
+
+def test_render_pngs_fails_when_a_browser_ran_outside_the_onedir(pngcheck, monkeypatch, tmp_path):
+    import os
+
+    from guiskindose.export import images
+
+    outside = tmp_path.parent / "chrome.exe"
+    inside = tmp_path.resolve() / "chromium" / "chrome.exe"
+    rows = [
+        {"pid": 10, "ppid": os.getpid(), "exe": str(inside), "cmd": "c --headless"},
+        {"pid": 11, "ppid": os.getpid(), "exe": str(outside), "cmd": "c --headless"},
+    ]
+    monkeypatch.setattr(images, "figure_to_png", lambda *_a, **_k: b"\x89PNG\r\n\x1a\nxx")
+
+    def fake_payload(_source, *, with_images):
+        png = images.figure_to_png("fig")
+        return type("P", (), {"images": [type("I", (), {"png_bytes": png})()]})()
+
+    _stub_render_environment(monkeypatch, pngcheck, tmp_path, fake_payload)
+    monkeypatch.setattr(pngcheck, "_list_processes", lambda: rows)
+    monkeypatch.setattr(pngcheck, "_SAMPLE_INTERVAL_S", 0.01)
+    with pytest.raises(ValueError, match="browser_not_bundled_copy"):
+        pngcheck._render_pngs([])
+
+
+def test_run_png_check_records_bundled_browser_error_type(pngcheck, monkeypatch, tmp_path):
+    import json
+
+    from guiskindose.export.png_browser import BundledBrowserUnavailableError
+
+    monkeypatch.setattr(pngcheck, "_check_bundle", lambda: {"browser_present": True})
+
+    def fail_render(_pages):
+        raise BundledBrowserUnavailableError()
+
+    monkeypatch.setattr(pngcheck, "_render_pngs", fail_render)
+    assert pngcheck.run_png_check(str(tmp_path), process_start=0.0) == 1
+    report = json.loads((tmp_path / pngcheck.OWNED_SUBDIR / "pngcheck_report.json").read_text(encoding="utf-8"))
+    assert report["render"]["error_type"] == "BundledBrowserUnavailableError"
+    assert "page" not in report
+
+
+def test_sampler_stop_before_start_does_not_raise(pngcheck):
+    pngcheck._ProcessSampler().stop()
+
+
+@pytest.mark.parametrize(
+    ("stdout", "expected"),
+    [
+        ("", []),
+        ("\r\n", []),
+        ("null", []),
+        ("[]", []),
+        ('{"ProcessId": 1, "ParentProcessId": 0, "ExecutablePath": null, "CommandLine": null}', [1]),
+        ('[{"ProcessId": 1, "ParentProcessId": 0, "ExecutablePath": "a", "CommandLine": "b"}, '
+         '{"ProcessId": 2, "ParentProcessId": 1, "ExecutablePath": "a", "CommandLine": "c"}]\r\n', [1, 2]),
+    ],
+)
+def test_list_processes_parses_every_powershell_shape(pngcheck, monkeypatch, stdout, expected):
+    monkeypatch.setattr(pngcheck.sys, "platform", "win32")
+    monkeypatch.setattr(pngcheck.subprocess, "run", lambda *a, **k: type("R", (), {"stdout": stdout})())
+    rows = pngcheck._list_processes()
+    assert [row["pid"] for row in rows] == expected
+    assert all(isinstance(row["exe"], str) for row in rows)
+
+
+def test_render_pngs_fails_when_every_process_probe_failed(pngcheck, monkeypatch, tmp_path):
+    from guiskindose.export import images
+
+    monkeypatch.setattr(images, "figure_to_png", lambda *_a, **_k: b"\x89PNG\r\n\x1a\nxx")
+
+    def fake_payload(_source, *, with_images):
+        png = images.figure_to_png("fig")
+        return type("P", (), {"images": [type("I", (), {"png_bytes": png})()]})()
+
+    def probe():
+        raise OSError("probe failed")
+
+    _stub_render_environment(monkeypatch, pngcheck, tmp_path, fake_payload)
+    monkeypatch.setattr(pngcheck, "_list_processes", probe)
+    with pytest.raises(ValueError, match="process_sampling_failed"):
+        pngcheck._render_pngs([])
+
+
+def test_render_pngs_fails_when_any_image_failed(pngcheck, monkeypatch, tmp_path):
+    from guiskindose.export import images
+    from guiskindose.export.png_browser import PngRenderError
+
+    results = iter([b"\x89PNG\r\n\x1a\nxx", None])
+
+    def flaky_png(*_a, **_k):
+        value = next(results)
+        if value is None:
+            raise PngRenderError()
+        return value
+
+    monkeypatch.setattr(images, "figure_to_png", flaky_png)
+
+    def fake_payload(_source, *, with_images):
+        pngs = []
+        for _ in range(2):
+            try:
+                pngs.append(images.figure_to_png("fig"))
+            except PngRenderError:
+                pngs.append(None)
+        return type("P", (), {"images": [type("I", (), {"png_bytes": png})() for png in pngs]})()
+
+    _stub_render_environment(monkeypatch, pngcheck, tmp_path, fake_payload)
+    with pytest.raises(PngRenderError):
+        pngcheck._render_pngs([])

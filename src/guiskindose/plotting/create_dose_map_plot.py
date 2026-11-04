@@ -7,6 +7,7 @@ import plotly.graph_objects as go
 from PIL import Image
 
 from guiskindose.edition import PNG_UNAVAILABLE_MESSAGE, png_export_available
+from guiskindose.export.png_browser import figure_to_png
 from guiskindose.intended_use import stamp_figure
 from guiskindose.phantom_class import Phantom
 from guiskindose.plotting.create_layout_for_dose_map_plots import (
@@ -159,10 +160,11 @@ def _write_and_show_static_dose_maps(fig: go.Figure, settings: PyskindoseSetting
     try:
         for i in pbar(range(len(eyes)), desc="saving static dosemaps: "):
             fig["layout"]["scene"]["camera"] = eyes[i]
-            image_bytes = fig.to_image(format="png")
+            image_bytes = figure_to_png(fig)
             atomic_write_private(names[i], image_bytes, allow_ignored_checkout=True)
     except Exception as exc:
         safe_error_event(logger, "static_dosemap_write", exc)
+        print("Could not write the static dose-map images. Check the log for details.")
         return
 
     print("Saved static dose-map plots.")
