@@ -317,7 +317,7 @@ def test_redact_launch_token_leaves_other_text_alone(entry_module):
 
 
 def test_quiet_browser_loggers_silence_info_records(entry_module):
-    names = ("choreographer", "kaleido")
+    names = ("choreographer", "kaleido", "logistro")
     saved = {name: logging.getLogger(name).level for name in names}
     try:
         entry_module._quiet_browser_loggers()
@@ -325,6 +325,7 @@ def test_quiet_browser_loggers_silence_info_records(entry_module):
         assert not child.isEnabledFor(logging.INFO)
         assert child.isEnabledFor(logging.WARNING)
         assert not logging.getLogger("kaleido.kaleido").isEnabledFor(logging.INFO)
+        assert not logging.getLogger("logistro").isEnabledFor(logging.INFO)
     finally:
         for name, level in saved.items():
             logging.getLogger(name).setLevel(level)

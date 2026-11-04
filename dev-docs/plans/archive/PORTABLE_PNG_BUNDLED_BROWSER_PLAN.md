@@ -3,7 +3,7 @@
 _Status: shipped (2026-11-03). Every PNG render goes through `figure_to_png`, and the frozen Windows Full app renders with its bundled Chromium only. Still open: the manual Windows GUI offline PNG check, and recording the `--png-check` `render_seconds` after the next Windows Full CI run._
 _Child of [PORTABLE_APP_PLAN.md](../PORTABLE_APP_PLAN.md), Phase 1 item "The bundled
 browser path is passed to Kaleido explicitly inside the process that renders."_
-_Implementation note: review found that `kaleido.calc_fig_sync` drops `kopts` when a global sync server is running, so `figure_to_png` runs the async `kaleido.calc_fig` on a fresh thread instead. The text below is the original plan._
+_Implementation note: review found that `kaleido.calc_fig_sync` drops `kopts` when a global sync server is running. The sections below describe the shipped design: `figure_to_png` runs the async `kaleido.calc_fig` on a fresh daemon thread with a timeout, and classifies errors._
 
 ## Problem
 
@@ -47,10 +47,12 @@ kaleido 1.5.0 (`kaleido/_sync_server.py`) found three problems with that, and al
 - The server needs a shutdown hook. The GUI's only shutdown handler is registered when `not native`, and
   Windows Full is native.
 
-Use Kaleido's one-shot path instead. With no server running, `kaleido.calc_fig_sync(...)` runs
-`oneshot_async_run`, which starts a fresh `Kaleido` (and browser) in a new thread, returns the bytes, closes the
-browser, and re-raises any exception in the caller. Each call is isolated, so there is no shared queue, no
-stale state after a failure, and nothing to stop at exit. The cost is one browser start per image. See
+Use a one-shot render instead. `kaleido.calc_fig_sync` cannot be used for this: when a global sync server is
+running, it routes to that server and drops `kopts`, so the bundled path would be ignored. The shipped code runs
+the public async `kaleido.calc_fig(...)` through `asyncio.run` on a fresh daemon thread. That starts a fresh
+`Kaleido` (and browser), returns the bytes, and closes the browser. Each call is isolated, so there is no shared
+queue, no stale state after a failure, and nothing to stop at exit. It also works when the caller already has a
+running event loop. The cost is one browser start per image. See
 "Performance" below.
 
 ### `bundled_browser()` and `bundled_browser_for_render()`
@@ -77,13 +79,17 @@ stale state after a failure, and nothing to stop at exit. The cost is one browse
    - Fill width, height and scale the way plotly 6.8 does (`plotly/io/_kaleido.py`, `to_image`: argument,
      then `fig.layout`, then the layout template, then `plotly.io.defaults`). Factor that into a small helper
      and test it against `fig.to_image`'s defaults so the frozen and pip images keep the same size.
-   - Call `kaleido.calc_fig_sync(fig.to_dict(), opts={"format": "png", "width": ..., "height": ...,
-     "scale": ...}, kopts={"path": str(browser), "mathjax": False})`. Pass plotly's `defaults.plotlyjs` in
+   - Call `kaleido.calc_fig(fig.to_dict(), opts={"format": "png", "width": ..., "height": ...,
+     "scale": ...}, topojson=defaults.topojson, kopts={"path": str(browser), "mathjax": False})` on the fresh
+     thread. Pass plotly's `defaults.plotlyjs` in
      `kopts` only if it is set, as plotly does. Confirm in the implementation that `calc_fig` passes
      `kopts` to `Kaleido(**kopts)` (kaleido 1.5.0 `__init__.py`, `calc_fig`), so `path` reaches choreographer.
    - Leave Kaleido's `timeout` at its default of 90 seconds. It bounds a browser that starts but never answers.
-   - Catch every exception from Kaleido and re-raise it as `BundledBrowserUnavailableError` with a fixed
-     message, `from None`. Kaleido's `ChromeNotFoundError` text embeds the absolute browser path
+     The caller also joins the thread for at most 120 seconds and treats expiry as a browser failure.
+   - Catch every exception and re-raise it with a fixed message, `from None`. Browser launch and availability
+     failures (Kaleido and choreographer `ChromeNotFoundError`, `BrowserFailedError`, `BrowserClosedError`,
+     `ChannelClosedError`, `OSError`, timeouts) become `BundledBrowserUnavailableError`. Any other failure becomes
+     `PngRenderError` (also a `RuntimeError`), so a plain bug does not tell the user to re-extract the download. Kaleido's `ChromeNotFoundError` text embeds the absolute browser path
      (`kaleido/kaleido.py`, around line 195), and the export tab and logs must not show it.
 4. A module `threading.Lock` around the Kaleido call is optional. Each one-shot call has its own browser, so it
    is correct without one. Add the lock only if the measurement below shows two concurrent Chromium starts
@@ -124,10 +130,11 @@ to batch all views of one export into one `Kaleido` session. Do not batch in thi
 export payload, which now reaches `figure_to_png`, so the check proves the app's own path. Keep the
 `generate_index` capture, the process-list assertions, and the http-script page check. The process list is
 read while the payload renders today; with one-shot browsers, each browser has exited by the time
-`collect_export_payload` returns. Move the process sampling into a wrapper around `figure_to_png` (patch
-`guiskindose.export.images.figure_to_png` inside `_render_pngs` with a function that calls the real one on a
-worker thread and samples `_list_processes()` while it runs), so at least one sample sees the live browser.
-Restore the original in `finally`.
+`collect_export_payload` returns. Shipped design: one sampler thread polls `_list_processes()` (browser processes
+only, about every 0.1 s) for the whole `collect_export_payload` call, and the union of samples feeds
+`_describe_launch`. A small wrapper around `guiskindose.export.images.figure_to_png`, patched in
+`_render_pngs`, keeps any render error so the report names the real cause even though the payload turns a failed
+image into a notice. Restore the original in `finally`.
 
 In `.github/workflows/portable-spike.yml`, reword the decoy comment that says the check passes the path
 explicitly; the app now does.
@@ -137,11 +144,14 @@ explicitly; the app now does.
 Unit tests in `tests/unittests/test_png_browser.py`. None of them launch a browser.
 
 - Not frozen: `figure_to_png` calls `fig.to_image` and never calls `kaleido.calc_fig_sync` directly.
-- Frozen Windows with `sys.executable` faked into `tmp_path` and a fake `chromium/chrome.exe`: `calc_fig_sync`
+- Frozen Windows with `sys.executable` faked into `tmp_path` and a fake `chromium/chrome.exe`: `calc_fig`
   gets `kopts["path"]` equal to that file and `mathjax=False`, and `kaleido.start_sync_server` is never called.
 - Width, height and scale defaults match plotly's resolution order for an argument, a layout value, and neither.
 - Frozen Full with the browser missing: raises `BundledBrowserUnavailableError`; Kaleido is not called.
-- Kaleido raising an error whose text contains `str(tmp_path)`: the re-raised message does not contain it.
+- Kaleido raising an error whose text contains `str(tmp_path)`: the re-raised message does not contain it. A
+  browser-failure class gives `BundledBrowserUnavailableError`, any other class gives `PngRenderError`, and a hung
+  render thread times out as unavailable.
+- A running global sync server does not change the path that reaches `calc_fig`.
 - Frozen on `darwin` and `linux`: raises `BundledBrowserUnavailableError` without calling Kaleido.
   `bundled_browser()` still returns a `Path` on both.
 - Light: raises `PngExportUnavailableError` without importing or calling Kaleido, frozen or not.

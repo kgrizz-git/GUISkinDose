@@ -109,40 +109,40 @@ def test_check_bundle_fails_closed_without_browser(pngcheck, monkeypatch, tmp_pa
         pngcheck._check_bundle()
 
 
-def test_sampler_records_processes_while_render_runs(pngcheck, monkeypatch):
-    import threading
+def test_sampler_polls_until_stopped_and_survives_a_failed_probe(pngcheck, monkeypatch):
+    import time
 
-    release = threading.Event()
-    seen: list[int] = []
-    monkeypatch.setattr(pngcheck, "_list_processes", lambda: seen.append(1) or [{"pid": len(seen), "exe": "x"}])
+    calls: list[int] = []
+
+    def probe():
+        calls.append(1)
+        if len(calls) == 1:
+            raise OSError("probe failed")
+        return [{"pid": len(calls), "exe": "x"}]
+
+    monkeypatch.setattr(pngcheck, "_list_processes", probe)
     monkeypatch.setattr(pngcheck, "_SAMPLE_INTERVAL_S", 0.01)
-
-    def real(*_a, **_k):
-        release.wait(0.2)
-        return b"png"
-
-    samples: list = []
-    errors: list = []
-    wrapped = pngcheck._sampling_figure_to_png(real, samples, errors)
-    assert wrapped("fig") == b"png"
-    assert len(samples) >= 2
-    assert errors == []
-    merged = pngcheck._merge_samples(samples)
-    assert len(merged) == len(samples)
+    sampler = pngcheck._ProcessSampler()
+    sampler.start()
+    time.sleep(0.1)
+    sampler.stop()
+    taken = len(sampler.samples)
+    assert taken >= 2
+    time.sleep(0.05)
+    assert len(sampler.samples) == taken  # stopped
+    assert len(pngcheck._merge_samples(sampler.samples)) == taken
 
 
-def test_sampler_reraises_and_records_error(pngcheck, monkeypatch):
-    monkeypatch.setattr(pngcheck, "_list_processes", lambda: [])
-
+def test_recording_wrapper_reraises_and_records_error(pngcheck):
     def real(*_a, **_k):
         raise KeyError("boom")
 
-    samples: list = []
     errors: list = []
-    wrapped = pngcheck._sampling_figure_to_png(real, samples, errors)
+    wrapped = pngcheck._recording_figure_to_png(real, errors)
     with pytest.raises(KeyError):
         wrapped("fig")
     assert len(errors) == 1
+    assert pngcheck._recording_figure_to_png(lambda *_a: b"png", errors)("fig") == b"png"
 
 
 def _stub_render_environment(monkeypatch, pngcheck, tmp_path, images):
@@ -294,3 +294,27 @@ def test_run_png_check_records_bundled_browser_error_type(pngcheck, monkeypatch,
     report = json.loads((tmp_path / pngcheck.OWNED_SUBDIR / "pngcheck_report.json").read_text(encoding="utf-8"))
     assert report["render"]["error_type"] == "BundledBrowserUnavailableError"
     assert "page" not in report
+
+
+def test_sampler_stop_before_start_does_not_raise(pngcheck):
+    pngcheck._ProcessSampler().stop()
+
+
+@pytest.mark.parametrize(
+    ("stdout", "expected"),
+    [
+        ("", []),
+        ("\r\n", []),
+        ("null", []),
+        ("[]", []),
+        ('{"ProcessId": 1, "ParentProcessId": 0, "ExecutablePath": null, "CommandLine": null}', [1]),
+        ('[{"ProcessId": 1, "ParentProcessId": 0, "ExecutablePath": "a", "CommandLine": "b"}, '
+         '{"ProcessId": 2, "ParentProcessId": 1, "ExecutablePath": "a", "CommandLine": "c"}]\r\n', [1, 2]),
+    ],
+)
+def test_list_processes_parses_every_powershell_shape(pngcheck, monkeypatch, stdout, expected):
+    monkeypatch.setattr(pngcheck.sys, "platform", "win32")
+    monkeypatch.setattr(pngcheck.subprocess, "run", lambda *a, **k: type("R", (), {"stdout": stdout})())
+    rows = pngcheck._list_processes()
+    assert [row["pid"] for row in rows] == expected
+    assert all(isinstance(row["exe"], str) for row in rows)

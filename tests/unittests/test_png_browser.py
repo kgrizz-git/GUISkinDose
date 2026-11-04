@@ -17,7 +17,9 @@ from guiskindose.edition import PngExportUnavailableError
 from guiskindose.export import png_browser
 from guiskindose.export.png_browser import (
     BUNDLED_BROWSER_MESSAGE,
+    PNG_RENDER_MESSAGE,
     BundledBrowserUnavailableError,
+    PngRenderError,
     bundled_browser,
     bundled_browser_for_render,
     figure_to_png,
@@ -114,11 +116,32 @@ def test_frozen_browser_missing_fails_closed(monkeypatch, tmp_path, kaleido_call
     assert kaleido_calls["calc"] == []
 
 
-def test_kaleido_error_message_is_scrubbed(monkeypatch, tmp_path, kaleido_calls) -> None:
+def test_non_browser_error_becomes_generic_render_error_and_is_scrubbed(monkeypatch, tmp_path, kaleido_calls) -> None:
     _frozen(monkeypatch, tmp_path, "win32", browser=True)
 
     async def boom(*_a: Any, **_k: Any) -> bytes:
-        raise RuntimeError(f"cannot start {tmp_path}")
+        raise ValueError(f"bad figure {tmp_path}")
+
+    monkeypatch.setattr(sys.modules["kaleido"], "calc_fig", boom)
+    fig = _FakeFig()
+    with pytest.raises(PngRenderError) as info:
+        figure_to_png(fig)
+    assert str(info.value) == PNG_RENDER_MESSAGE
+    assert str(tmp_path) not in str(info.value)
+    assert info.value.__cause__ is None
+    assert info.value.__suppress_context__
+    assert not isinstance(info.value, BundledBrowserUnavailableError)
+
+
+@pytest.mark.parametrize(
+    "failure", ["ChromeNotFoundError", "BrowserFailedError", "BrowserClosedError", "OSError", "TimeoutError"]
+)
+def test_browser_launch_failure_is_unavailable_and_scrubbed(monkeypatch, tmp_path, kaleido_calls, failure) -> None:
+    _frozen(monkeypatch, tmp_path, "win32", browser=True)
+    exc_type = {"OSError": OSError, "TimeoutError": TimeoutError}.get(failure) or type(failure, (RuntimeError,), {})
+
+    async def boom(*_a: Any, **_k: Any) -> bytes:
+        raise exc_type(f"cannot start {tmp_path}")
 
     monkeypatch.setattr(sys.modules["kaleido"], "calc_fig", boom)
     fig = _FakeFig()
@@ -129,6 +152,28 @@ def test_kaleido_error_message_is_scrubbed(monkeypatch, tmp_path, kaleido_calls)
     assert info.value.__suppress_context__
 
 
+def test_render_thread_timeout_is_unavailable(monkeypatch, tmp_path, kaleido_calls) -> None:
+    import asyncio
+    import threading
+
+    _frozen(monkeypatch, tmp_path, "win32", browser=True)
+    monkeypatch.setattr(png_browser, "_RENDER_TIMEOUT_S", 0.05)
+    release = threading.Event()
+
+    async def hang(*_a: Any, **_k: Any) -> bytes:
+        while not release.is_set():
+            await asyncio.sleep(0.01)
+        return b""
+
+    monkeypatch.setattr(sys.modules["kaleido"], "calc_fig", hang)
+    fig = _FakeFig()
+    try:
+        with pytest.raises(BundledBrowserUnavailableError):
+            figure_to_png(fig)
+    finally:
+        release.set()
+
+
 @pytest.mark.parametrize("platform", ["darwin", "linux"])
 def test_frozen_unix_fails_closed_but_path_resolves(monkeypatch, tmp_path, kaleido_calls, platform) -> None:
     chrome = _frozen(monkeypatch, tmp_path, platform, browser=True)
@@ -137,7 +182,7 @@ def test_frozen_unix_fails_closed_but_path_resolves(monkeypatch, tmp_path, kalei
     with pytest.raises(BundledBrowserUnavailableError):
         figure_to_png(fig)
     assert kaleido_calls["calc"] == []
-    assert bundled_browser() == chrome.resolve() or bundled_browser() == chrome
+    assert bundled_browser() == chrome.resolve()
 
 
 def test_bundled_browser_honors_base_and_platform(monkeypatch, tmp_path) -> None:
@@ -235,7 +280,7 @@ def test_bad_figure_becomes_unavailable_error(monkeypatch, tmp_path, kaleido_cal
             raise ValueError(str(tmp_path))
 
     bad = Bad()
-    with pytest.raises(BundledBrowserUnavailableError) as info:
+    with pytest.raises(PngRenderError) as info:
         figure_to_png(bad)
     assert str(tmp_path) not in str(info.value)
 
@@ -249,15 +294,16 @@ def test_worker_dying_without_a_result_does_not_hang(monkeypatch, tmp_path, kale
 
     monkeypatch.setattr(sys.modules["kaleido"], "calc_fig", die)
     fig = _FakeFig()
-    with pytest.raises(BundledBrowserUnavailableError):
+    with pytest.raises(PngRenderError):
         figure_to_png(fig)
 
 
-def test_render_dosemap_png_returns_none_when_bundled_browser_unavailable(monkeypatch) -> None:
+@pytest.mark.parametrize("error", [BundledBrowserUnavailableError, PngRenderError])
+def test_render_dosemap_png_returns_none_on_png_errors(monkeypatch, error) -> None:
     from guiskindose.export import images
 
     def _unavailable(*_a: Any, **_k: Any) -> bytes:
-        raise BundledBrowserUnavailableError()
+        raise error()
 
     monkeypatch.setattr(images, "png_export_available", lambda: True)
     monkeypatch.setattr(images, "figure_to_png", _unavailable)

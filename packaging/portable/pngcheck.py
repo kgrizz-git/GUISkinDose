@@ -6,7 +6,7 @@ onedir under ``chromium/``. The render goes through the app's own PNG path,
 ``guiskindose.export.png_browser.figure_to_png``, which passes the bundled browser path to
 Kaleido explicitly (choreographer would otherwise prefer a Chrome for Testing it downloaded
 earlier, then ``BROWSER_PATH``, then a system install). Each image starts its own one-shot
-browser, so the process list is sampled while ``figure_to_png`` runs.
+browser, so one sampler thread polls the process list for the whole export.
 
 It fails unless:
 
@@ -21,6 +21,7 @@ relative to the onedir only: no absolute paths and no exam values.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import re
 import subprocess  # nosec B404 - fixed argv, used only to list this process's children
@@ -64,9 +65,12 @@ def _check_bundle() -> dict[str, Any]:
 def _list_processes() -> list[dict[str, Any]]:
     """Every process as ``{pid, ppid, exe, cmd}``; Windows via CIM, else ``ps``."""
     if sys.platform == "win32":
+        # Browser processes only (every Chromium child is also chrome.exe), so a sample is quick.
+        # InputObject with @() keeps zero or one match a JSON array.
         script = (
-            "Get-CimInstance Win32_Process | Select-Object ProcessId,ParentProcessId,ExecutablePath,CommandLine"
-            " | ConvertTo-Json -Compress"
+            "$p = @(Get-CimInstance Win32_Process -Filter \"Name='chrome.exe'\""
+            " | Select-Object ProcessId,ParentProcessId,ExecutablePath,CommandLine);"
+            " ConvertTo-Json -InputObject $p -Compress"
         )
         raw = subprocess.run(  # nosec B603 B607 - fixed argv, no user input
             ["powershell", "-NoProfile", "-NonInteractive", "-Command", script],
@@ -75,6 +79,8 @@ def _list_processes() -> list[dict[str, Any]]:
             check=True,
             timeout=60,
         ).stdout
+        parsed = json.loads(raw.strip() or "[]")
+        items = [parsed] if isinstance(parsed, dict) else (parsed or [])
         return [
             {
                 "pid": p["ProcessId"],
@@ -82,7 +88,8 @@ def _list_processes() -> list[dict[str, Any]]:
                 "exe": p["ExecutablePath"] or "",
                 "cmd": p["CommandLine"] or "",
             }
-            for p in json.loads(raw)
+            for p in items
+            if isinstance(p, dict)
         ]
     raw = subprocess.run(  # nosec B603 B607 - fixed argv, no user input
         ["ps", "-axo", "pid=,ppid=,command="], capture_output=True, text=True, check=True, timeout=60
@@ -146,41 +153,50 @@ def _describe_launch(rows: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
-_SAMPLE_INTERVAL_S = 0.25
-_RENDER_JOIN_TIMEOUT_S = 150.0  # Kaleido's own timeout is 90 s per image
+_SAMPLE_INTERVAL_S = 0.1
+_SAMPLER_STOP_TIMEOUT_S = 30.0
 
 
-def _sampling_figure_to_png(real: Any, samples: list[list[dict[str, Any]]], errors: list[Exception]) -> Any:
-    """Wrap *real* so the process list is sampled while it runs on a worker thread.
+class _ProcessSampler:
+    """Poll ``_list_processes`` on one thread until stopped and keep every sample.
 
-    One-shot browsers exit before the export payload returns, so the only chance to see
-    them is during the render itself. Errors from *real* are re-raised in the caller and also
-    appended to *errors*, because the export payload turns a failed image into a notice.
+    One-shot browsers live only while an image renders, and a Windows CIM query is slow, so
+    one continuous sampler runs for the whole export instead of one probe per image.
+    """
+
+    def __init__(self) -> None:
+        self.samples: list[list[dict[str, Any]]] = []
+        self._stop = threading.Event()
+        self._thread = threading.Thread(target=self._run, daemon=True)
+
+    def _run(self) -> None:
+        while not self._stop.is_set():
+            with contextlib.suppress(Exception):  # a failed probe loses one sample, never the render
+                self.samples.append(_list_processes())
+            self._stop.wait(_SAMPLE_INTERVAL_S)
+
+    def start(self) -> None:
+        self._thread.start()
+
+    def stop(self) -> None:
+        self._stop.set()
+        if self._thread.is_alive():  # never started if the payload failed before start()
+            self._thread.join(_SAMPLER_STOP_TIMEOUT_S)
+
+
+def _recording_figure_to_png(real: Any, errors: list[Exception]) -> Any:
+    """Wrap *real* so a render error is kept and re-raised.
+
+    The export payload turns a failed image into a notice, so without this the report would
+    only say that no PNG was rendered, not why (for example a missing bundled browser).
     """
 
     def wrapped(*args: Any, **kwargs: Any) -> Any:
-        box: dict[str, Any] = {}
-
-        def work() -> None:
-            try:
-                box["value"] = real(*args, **kwargs)
-            except Exception as exc:  # re-raised on the calling thread below
-                box["error"] = exc
-
-        worker = threading.Thread(target=work, daemon=True)
-        worker.start()
-        deadline = time.monotonic() + _RENDER_JOIN_TIMEOUT_S
-        while worker.is_alive() and time.monotonic() < deadline:
-            samples.append(_list_processes())
-            worker.join(_SAMPLE_INTERVAL_S)
-        if worker.is_alive():
-            raise TimeoutError("render_thread_timeout")
-        if "error" in box:
-            errors.append(box["error"])
-            raise box["error"]
-        if "value" not in box:
-            raise RuntimeError("render_thread_died")
-        return box["value"]
+        try:
+            return real(*args, **kwargs)
+        except Exception as exc:
+            errors.append(exc)
+            raise
 
     return wrapped
 
@@ -203,7 +219,7 @@ def _render_pngs(captured_pages: list[str]) -> dict[str, Any]:
 
     original = _page_generator.PageGenerator.generate_index
     original_render = images.figure_to_png
-    samples: list[list[dict[str, Any]]] = []
+    sampler = _ProcessSampler()
     errors: list[Exception] = []
 
     def capture(self):  # record exactly the page Kaleido writes to its temp dir
@@ -212,18 +228,20 @@ def _render_pngs(captured_pages: list[str]) -> dict[str, Any]:
         return html
 
     _page_generator.PageGenerator.generate_index = capture
-    images.figure_to_png = _sampling_figure_to_png(original_render, samples, errors)
+    images.figure_to_png = _recording_figure_to_png(original_render, errors)
     settings = PyskindoseSettings(settings=load_settings_example_json())
     settings.mode = "calculate_dose"
     settings.phantom.model = "plane"
     started = time.perf_counter()
     try:
         source = build_cli_export_source([str(_pkg("example_data", "RDSR", _EXAMPLE_RDSR))], settings)
+        sampler.start()
         payload = collect_export_payload(source, with_images=True)
     finally:
+        sampler.stop()
         images.figure_to_png = original_render
         _page_generator.PageGenerator.generate_index = original
-    launch = _describe_launch(_merge_samples(samples))
+    launch = _describe_launch(_merge_samples(sampler.samples))
     pngs = [image.png_bytes for image in payload.images if image.png_bytes]
     result = {
         "images": len(payload.images),

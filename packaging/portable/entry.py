@@ -138,14 +138,16 @@ def _configure_file_log() -> None:
 
 
 def _quiet_browser_loggers() -> None:
-    """Keep choreographer and kaleido at WARNING.
+    """Keep choreographer, kaleido and logistro at WARNING.
 
-    Their loggers (``choreographer.browsers.chromium`` and similar) propagate to the root
-    handlers that ``_configure_file_log`` installs, so the INFO record "Found chromium path: ..."
-    would write the absolute browser path to the file log. ``CHOREO_ENABLE_DEBUG`` also makes
-    choreographer call ``logistro.betterConfig(level=1)`` on import.
+    Defense in depth. ``configure_logging`` attaches its handlers to the ``guiskindose`` logger only
+    and sets ``propagate = False`` there, so browser records do not reach the file log today. The
+    guard matters if something configures the root logger: choreographer calls
+    ``logistro.betterConfig(level=1)`` when ``CHOREO_ENABLE_DEBUG`` is set, which puts a root handler
+    on ``sys.stderr``. In a windowed build that stream feeds the file log, and the INFO record
+    "Found chromium path: ..." would write the absolute browser path there.
     """
-    for name in ("choreographer", "kaleido"):
+    for name in ("choreographer", "kaleido", "logistro"):
         logging.getLogger(name).setLevel(logging.WARNING)
 
 

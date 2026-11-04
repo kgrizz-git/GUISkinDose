@@ -33,11 +33,30 @@ BUNDLED_BROWSER_MESSAGE = (
 )
 
 
+PNG_RENDER_MESSAGE = "The PNG image could not be rendered. Check the log for details."
+
+# Kaleido's own per-image timeout is 90 s; the margin covers browser start and shutdown.
+_RENDER_TIMEOUT_S = 120.0
+
+# Exception class names (anywhere in the MRO) that mean the browser could not start or died.
+# Matched by name so this module needs no import of kaleido or choreographer to classify.
+_BROWSER_FAILURE_NAMES = frozenset(
+    {"ChromeNotFoundError", "BrowserFailedError", "BrowserClosedError", "ChannelClosedError"}
+)
+
+
 class BundledBrowserUnavailableError(RuntimeError):
     """The frozen Full app cannot render PNG with its bundled browser."""
 
     def __init__(self) -> None:
         super().__init__(BUNDLED_BROWSER_MESSAGE)
+
+
+class PngRenderError(RuntimeError):
+    """The bundled browser started, but the image could not be rendered (not a browser failure)."""
+
+    def __init__(self) -> None:
+        super().__init__(PNG_RENDER_MESSAGE)
 
 
 def bundled_browser(base: Path | None = None) -> Path:
@@ -96,8 +115,18 @@ def resolve_image_options(
     }
 
 
+def _is_browser_failure(exc: BaseException) -> bool:
+    """True for errors that mean the browser is missing, would not launch, or timed out."""
+    if isinstance(exc, (OSError, TimeoutError)):
+        return True
+    return any(cls.__name__ in _BROWSER_FAILURE_NAMES for cls in type(exc).__mro__)
+
+
 def _run_in_fresh_thread(make_coro: Callable[[], Any]) -> Any:
-    """Run a coroutine with ``asyncio.run`` on a new thread; return its result or re-raise its error."""
+    """Run a coroutine with ``asyncio.run`` on a daemon thread; return its result or re-raise its error.
+
+    Raises :class:`TimeoutError` if the thread does not finish within ``_RENDER_TIMEOUT_S``.
+    """
     # Each entry is (succeeded, value): the result, or the exception to re-raise here.
     q: Queue[tuple[bool, Any]] = Queue(maxsize=1)
 
@@ -107,9 +136,11 @@ def _run_in_fresh_thread(make_coro: Callable[[], Any]) -> Any:
         except Exception as exc:
             q.put((False, exc))
 
-    thread = Thread(target=run)
+    thread = Thread(target=run, daemon=True)
     thread.start()
-    thread.join()
+    thread.join(timeout=_RENDER_TIMEOUT_S)
+    if thread.is_alive():
+        raise TimeoutError("render thread timed out")
     try:
         succeeded, value = q.get_nowait()
     except Empty:  # the worker died with a non-Exception before it could report
@@ -134,9 +165,12 @@ def _render_with_bundled_browser(
         return _run_in_fresh_thread(
             lambda: kaleido.calc_fig(fig_dict, opts=opts, topojson=defaults.topojson, kopts=kopts)
         )
-    except Exception:
-        # Kaleido's ChromeNotFoundError text embeds the absolute browser path; show none of it.
+    except Exception as caught:
+        # Kaleido's error text can embed the absolute browser path; show none of it.
+        unavailable = _is_browser_failure(caught)
+    if unavailable:
         raise BundledBrowserUnavailableError() from None
+    raise PngRenderError() from None
 
 
 def figure_to_png(
@@ -146,8 +180,9 @@ def figure_to_png(
 
     Light raises :class:`~guiskindose.edition.PngExportUnavailableError` before Kaleido is imported.
     A source or pip install calls ``fig.to_image`` unchanged. The frozen Full app renders with its
-    bundled browser only and raises :class:`BundledBrowserUnavailableError` rather than fall back
-    to any other browser.
+    bundled browser only. It raises :class:`BundledBrowserUnavailableError` when that browser is
+    missing, will not start, or times out (it never falls back to another browser), and
+    :class:`PngRenderError` for any other render failure. Neither message carries exception text.
     """
     if not png_export_available():
         raise PngExportUnavailableError()

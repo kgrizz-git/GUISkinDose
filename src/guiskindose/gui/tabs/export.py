@@ -21,7 +21,12 @@ from nicegui import run, ui
 
 from guiskindose.edition import png_export_available
 from guiskindose.export import MissingExportDependencyError
-from guiskindose.export.png_browser import BUNDLED_BROWSER_MESSAGE, BundledBrowserUnavailableError
+from guiskindose.export.png_browser import (
+    BUNDLED_BROWSER_MESSAGE,
+    PNG_RENDER_MESSAGE,
+    BundledBrowserUnavailableError,
+    PngRenderError,
+)
 from guiskindose.intended_use import INTENDED_USE_NOTICE
 from guiskindose.privacy import safe_error_event, safe_user_error
 from guiskindose.safe_output import atomic_write_private
@@ -277,6 +282,9 @@ class ExportTabController:
             )
         except BundledBrowserUnavailableError as exc:
             _notify_export_failure("png_export", exc, BUNDLED_BROWSER_MESSAGE)
+            return
+        except PngRenderError as exc:
+            _notify_export_failure("png_export", exc, PNG_RENDER_MESSAGE)
             return
         except RuntimeError as exc:
             if "Background task was cancelled" in str(exc):
