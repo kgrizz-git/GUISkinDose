@@ -26,101 +26,131 @@ Three call sites render PNG:
 Add one module, `src/guiskindose/export/png_browser.py`, and route all three call sites through it.
 
 ```python
-def bundled_browser_path() -> Path | None: ...
-def figure_to_png(fig, **to_image_kwargs) -> bytes: ...
-def stop_png_browser() -> None: ...
+def bundled_browser() -> Path: ...              # platform-general, moved from pngcheck.py
+def bundled_browser_for_render() -> Path | None: ...
+def figure_to_png(fig, *, width=None, height=None, scale=None) -> bytes: ...
 class BundledBrowserUnavailableError(RuntimeError): ...
 ```
 
-### `bundled_browser_path()`
+### Do not use Kaleido's global sync server
 
-- Returns `None` when the process is not frozen (`getattr(sys, "frozen", False)` is false). Pip installs keep
-  today's behavior.
-- When frozen on Windows, returns `Path(sys.executable).resolve().parent / "chromium" / "chrome.exe"`.
-- When frozen on macOS or Linux, returns `None` for now. choreographer launches Chromium there through
-  `[sys.executable, _unix_pipe_chromium_wrapper.py, ...]`, and `sys.executable` is the PyInstaller bootloader,
-  so the right path alone does not work (PORTABLE_APP_PLAN.md, "Freeze"). The macOS and Linux Full builds are
-  separate Phase 1 items. Leave a comment that names that blocker.
-- `pngcheck.bundled_browser()` and `BROWSER_DIR` move here. `pngcheck.py` imports them, so the check and the app
-  resolve the same file.
+An earlier draft started `kaleido.start_sync_server(path=...)` once and let `fig.to_image()` use it. Review of
+kaleido 1.5.0 (`kaleido/_sync_server.py`) found three problems with that, and all three are verified:
 
-### `figure_to_png(fig, **kwargs)`
+- `call_function` is not safe for concurrent callers. Every result goes into one shared `_return_queue`, so
+  two GUI exports at once can receive each other's bytes or exceptions.
+- `open()` sets `_initialized = True` right after `thread.start()`. The browser launches inside that thread.
+  If the launch fails, the thread dies, `is_running()` stays true, and the next `call_function` blocks forever
+  on `_task_queue.join()`. A damaged or quarantined `chrome.exe` would hang the export with no message.
+- The server needs a shutdown hook. The GUI's only shutdown handler is registered when `not native`, and
+  Windows Full is native.
 
-1. If `png_export_available()` is false (Light), raise `PngExportUnavailableError` before touching Kaleido.
-   Callers already check this first. The guard here keeps the Light invariant if a new caller forgets.
-2. If not frozen, return `fig.to_image(format="png", **kwargs)`. No change for pip users.
+Use Kaleido's one-shot path instead. With no server running, `kaleido.calc_fig_sync(...)` runs
+`oneshot_async_run`, which starts a fresh `Kaleido` (and browser) in a new thread, returns the bytes, closes the
+browser, and re-raises any exception in the caller. Each call is isolated, so there is no shared queue, no
+stale state after a failure, and nothing to stop at exit. The cost is one browser start per image. See
+"Performance" below.
+
+### `bundled_browser()` and `bundled_browser_for_render()`
+
+- `bundled_browser()` moves from `pngcheck.py` unchanged in behavior: `<exe dir>/chromium/chrome.exe` on
+  Windows, `<exe dir>/chromium/chrome` elsewhere. Move `BROWSER_DIR` with it. It always returns a `Path`, so
+  `pngcheck._check_bundle()` keeps working on every OS. Keep `pngcheck.app_dir()` where it is, because
+  `test_portable_pngcheck.py` patches it; `bundled_browser()` may take an optional `base: Path` so pngcheck can
+  pass `app_dir()`.
+- `bundled_browser_for_render()` returns `None` when not frozen. When frozen on Windows, it returns
+  `bundled_browser()`. When frozen on macOS or Linux it returns `None`: choreographer launches Chromium there
+  through `[sys.executable, _unix_pipe_chromium_wrapper.py, ...]`, and `sys.executable` is the PyInstaller
+  bootloader (PORTABLE_APP_PLAN.md, "Freeze"). Name that blocker in a comment. **Consequence:** a frozen
+  macOS or Linux Full build fails PNG closed until the Phase 1 wrapper item lands. Say this in the parent plan.
+
+### `figure_to_png(fig, *, width=None, height=None, scale=None)`
+
+1. If `png_export_available()` is false (Light), raise `PngExportUnavailableError` before importing Kaleido.
+2. If not frozen, return `fig.to_image(format="png", width=width, height=height, scale=scale)`. Pip users see
+   no change.
 3. If frozen Full:
-   - Resolve `bundled_browser_path()`. If it is `None` or not a file, raise `BundledBrowserUnavailableError`.
-     **Do not fall back** to a system or downloaded browser. Full's claim is offline PNG from the shipped
-     binary, and `--png-check` already fails when a browser outside the onedir launches.
-   - Start Kaleido's global sync server once, lazily, under a module `threading.Lock`:
-     `kaleido.start_sync_server(path=str(browser), mathjax=False, silence_warnings=True)`. These are the
-     arguments `pngcheck.py` already proved offline. Skip the start when `kaleido._global_server.is_running()`
-     would be true; keep that check behind a tiny helper so tests can fake it, or track a module flag set
-     only after a successful start.
-   - Return `fig.to_image(format="png", **kwargs)`. With the server running, plotly 6.8 routes through
-     `kaleido.calc_fig_sync`, which calls the running server (`kaleido/__init__.py`).
-4. Start lazily, not at app startup. A user who never exports PNG never spawns Chromium.
+   - If `bundled_browser_for_render()` is `None` or not a file, raise `BundledBrowserUnavailableError`.
+     **Do not fall back** to a system or downloaded browser.
+   - Fill width, height and scale the way plotly 6.8 does (`plotly/io/_kaleido.py`, `to_image`: argument,
+     then `fig.layout`, then the layout template, then `plotly.io.defaults`). Factor that into a small helper
+     and test it against `fig.to_image`'s defaults so the frozen and pip images keep the same size.
+   - Call `kaleido.calc_fig_sync(fig.to_dict(), opts={"format": "png", "width": ..., "height": ...,
+     "scale": ...}, kopts={"path": str(browser), "mathjax": False})`. Pass plotly's `defaults.plotlyjs` in
+     `kopts` only if it is set, as plotly does. Confirm in the implementation that `calc_fig` passes
+     `kopts` to `Kaleido(**kopts)` (kaleido 1.5.0 `__init__.py`, `calc_fig`), so `path` reaches choreographer.
+   - Leave Kaleido's `timeout` at its default of 90 seconds. It bounds a browser that starts but never answers.
+   - Catch every exception from Kaleido and re-raise it as `BundledBrowserUnavailableError` with a fixed
+     message, `from None`. Kaleido's `ChromeNotFoundError` text embeds the absolute browser path
+     (`kaleido/kaleido.py`, around line 195), and the export tab and logs must not show it.
+4. A module `threading.Lock` around the Kaleido call is optional. Each one-shot call has its own browser, so it
+   is correct without one. Add the lock only if the measurement below shows two concurrent Chromium starts
+   cause trouble.
 
-The error messages hold no paths. Use a fixed string such as
-"The bundled browser for PNG export is missing from this GUISkinDose Full copy." Callers log through the
-existing `safe_error_event` path, which records the exception type only.
+Fixed message: "The bundled browser for PNG export is missing or could not start in this GUISkinDose Full
+copy. Re-extract the download and try again." Callers log through `safe_error_event`, which records the
+exception type only.
 
-### `stop_png_browser()`
+choreographer logs `Found chromium path: ...` through logistro (`choreographer/browsers/chromium.py`). Confirm
+those records do not reach the portable file log sink set up in `packaging/portable/entry.py`
+(`_configure_file_log`). If they do, raise the `choreographer` and `kaleido` loggers to `WARNING` in the frozen
+entry, and add a test.
 
-Calls `kaleido.stop_sync_server(silence_warnings=True)` if this module started it. Kaleido registers an
-`atexit` close itself. Also call `stop_png_browser()` from the GUI shutdown path in `gui/app.py` (the
-`app.on_shutdown` hook, or next to the existing shutdown handler), so a windowed exit does not leave a
-Chromium child behind. It must be safe to call when nothing was started.
+### Performance
+
+A rich export renders several views per exam (`export/payload.py`, `_render_images`), so it starts Chromium
+several times. `--png-check` already records `render_seconds`. Record the new figure in PORTABLE_APP_PLAN.md
+next to the Phase 0 number. If the export is more than about twice as slow as with the server, open a follow-up
+to batch all views of one export into one `Kaleido` session. Do not batch in this change.
 
 ### Call sites
 
 - `export/images.py`: replace `fig.to_image(...)` with `figure_to_png(fig, width=..., height=..., scale=...)`.
-  It keeps its `except Exception: return None`, so a missing bundled browser becomes the existing
-  "image unavailable" notice.
+  Its `except Exception: return None` turns a missing bundled browser into the existing "image unavailable"
+  notice.
 - `gui/figures.py`: replace `fig.to_image(format="png")` with `figure_to_png(fig)`. It already logs and
-  re-raises. In `gui/tabs/export.py`, the PNG failure notify currently blames a missing `kaleido` package.
-  Add a branch for `BundledBrowserUnavailableError` that says the bundled browser is missing and suggests
-  re-extracting the zip. Put the text in `dev-docs/ui_copy.json` and run `scripts/sync_ui_copy.py`.
-- `plotting/create_dose_map_plot.py`: replace `fig.to_image(format="png")` with `figure_to_png(fig)`. The
-  frozen app does not reach this path today; routing it keeps one rule for every PNG.
-
-### Thread safety
-
-GUI exports run off the event loop. Two exports can start at once. The start lock covers the first-start
-race. The implementer must confirm that `GlobalKaleidoServer.call_function` is safe to call from several
-threads (it queues tasks to one server thread) and note the finding in a code comment. If it is not, wrap the
-`to_image` call in the same lock.
+  re-raises.
+- `gui/tabs/export.py`: add `except BundledBrowserUnavailableError` **before** `except RuntimeError`, because
+  it subclasses `RuntimeError`. Show the fixed message. The neighbouring PNG messages are string literals today;
+  keep the new one a literal too, and do not add `ui_copy.json` plumbing in this change.
+- `plotting/create_dose_map_plot.py`: replace `fig.to_image(format="png")` with `figure_to_png(fig)`, so every
+  PNG follows one rule.
 
 ### `--png-check`
 
-Change `_render_pngs` to stop calling `kaleido.start_sync_server` itself. It should render through the normal
-export payload, which now goes through `figure_to_png`, and call `stop_png_browser()` in `finally`. The check
-then proves the app's own path instead of a parallel one. Keep its process-list assertions, the
-`BROWSER_PATH` decoy in `portable-spike.yml`, and the http-script page check.
+`_render_pngs` stops calling `kaleido.start_sync_server` and `stop_sync_server`. It renders through the normal
+export payload, which now reaches `figure_to_png`, so the check proves the app's own path. Keep the
+`generate_index` capture, the process-list assertions, and the http-script page check. The process list is
+read while the payload renders today; with one-shot browsers, each browser has exited by the time
+`collect_export_payload` returns. Move the process sampling into a wrapper around `figure_to_png` (patch
+`guiskindose.export.images.figure_to_png` inside `_render_pngs` with a function that calls the real one on a
+worker thread and samples `_list_processes()` while it runs), so at least one sample sees the live browser.
+Restore the original in `finally`.
 
-`run_png_check` sets nothing extra: `sys.frozen` is already true in the onedir, and the edition is Full.
+In `.github/workflows/portable-spike.yml`, reword the decoy comment that says the check passes the path
+explicitly; the app now does.
 
 ## Tests
 
 Unit tests in `tests/unittests/test_png_browser.py`. None of them launch a browser.
 
-- Not frozen: `figure_to_png` calls `fig.to_image` and never calls `kaleido.start_sync_server`.
-- Frozen Windows with a fake `sys.executable` in `tmp_path` and a fake `chromium/chrome.exe`: the first call
-  starts the server with that exact path and `mathjax=False`. A second call does not start it again.
-- Frozen Full with the browser missing: raises `BundledBrowserUnavailableError`, and neither `to_image` nor
-  `start_sync_server` is called. The message does not contain `str(tmp_path)`.
+- Not frozen: `figure_to_png` calls `fig.to_image` and never calls `kaleido.calc_fig_sync` directly.
+- Frozen Windows with `sys.executable` faked into `tmp_path` and a fake `chromium/chrome.exe`: `calc_fig_sync`
+  gets `kopts["path"]` equal to that file and `mathjax=False`, and `kaleido.start_sync_server` is never called.
+- Width, height and scale defaults match plotly's resolution order for an argument, a layout value, and neither.
+- Frozen Full with the browser missing: raises `BundledBrowserUnavailableError`; Kaleido is not called.
+- Kaleido raising an error whose text contains `str(tmp_path)`: the re-raised message does not contain it.
 - Frozen on `darwin` and `linux`: raises `BundledBrowserUnavailableError` without calling Kaleido.
-- Light: raises `PngExportUnavailableError` without calling Kaleido, frozen or not.
-- `stop_png_browser()` is a no-op when nothing started, and stops once after a start.
-- Two threads calling `figure_to_png` at once start the server exactly once.
-- Each call site: `images.render_dosemap_png` returns `None` on `BundledBrowserUnavailableError`;
-  `figures.make_dosemap_png` re-raises it. Patch `figure_to_png` where the call site imports it.
-- Update `tests/unittests/test_portable_pngcheck.py` for the moved `bundled_browser` helper and the removed
-  direct `start_sync_server` call.
-- Keep the Light tests in `test_edition.py` passing unchanged. They already refuse `start_sync_server`.
-
-The export-tab notify branch is GUI code; its test goes under `tests/gui/`.
+  `bundled_browser()` still returns a `Path` on both.
+- Light: raises `PngExportUnavailableError` without importing or calling Kaleido, frozen or not.
+- `images.render_dosemap_png` returns `None` on `BundledBrowserUnavailableError`; `figures.make_dosemap_png`
+  re-raises it. Patch `figure_to_png` where each call site imports it.
+- `tests/unittests/test_portable_pngcheck.py`: `_render_pngs` calls `figure_to_png` and never
+  `start_sync_server`; the report records `render.error_type == "BundledBrowserUnavailableError"` and skips the
+  page step when rendering fails; the moved `bundled_browser` still honors a patched `app_dir`.
+- `tests/gui/test_export_error_semantics.py`: the export tab shows the bundled-browser message for
+  `BundledBrowserUnavailableError`, not the "kaleido package" message.
+- `test_edition.py` Light tests pass unchanged.
 
 ## Acceptance
 
@@ -143,5 +173,6 @@ The export-tab notify branch is GUI code; its test goes under `tests/gui/`.
 ## Out of scope
 
 - The macOS and Linux Full builds and the choreographer wrapper replacement.
+- Batching several images into one Kaleido session (see Performance).
 - Turning Chromium's sandbox on (`enable_sandbox`). Record today's `--no-sandbox` default only.
 - The WebView2 Fixed Version runtime (Phase 4).
