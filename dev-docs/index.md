@@ -90,6 +90,7 @@ Long-lived topic source-of-truth plans. Convention: [HARNESS_ENGINEERING.md](HAR
 
 | File | Purpose |
 |---|---|
+| [plans/PORTABLE_PNG_BUNDLED_BROWSER_PLAN.md](plans/PORTABLE_PNG_BUNDLED_BROWSER_PLAN.md) | **Planned** — route every PNG render through the bundled Chromium in the frozen Full app (child of [plans/PORTABLE_APP_PLAN.md](plans/PORTABLE_APP_PLAN.md), Phase 1). |
 | [plans/GUI_PLAN.md](plans/GUI_PLAN.md) | **Source of truth** — current UI state (§0) and NiceGUI implementation plan. |
 | [plans/CORRECTION_DATA_AND_SUPPORT_TRANSMISSION_PLAN.md](plans/CORRECTION_DATA_AND_SUPPORT_TRANSMISSION_PLAN.md) | **Umbrella roadmap/current-state reference** — correction semantics, tube identification, coordinate origins, data locations, existing customization, and links to four independently delivered child plans. |
 | [plans/PRIVACY_HARDENING_PLAN.md](plans/PRIVACY_HARDENING_PLAN.md) | **Source of truth** — phased runtime, export, test, asset, scanner, GUI-network, history-audit, and release privacy hardening plan. |
