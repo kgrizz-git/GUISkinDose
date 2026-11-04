@@ -7,8 +7,10 @@ import types
 from pathlib import Path
 from typing import Any
 
+import numpy as np
 import plotly.graph_objects as go
 import plotly.io as pio
+import plotly.io._kaleido  # noqa: F401 - bind the real kaleido now; tests below fake it in sys.modules
 import pytest
 
 from guiskindose.edition import PngExportUnavailableError
@@ -249,3 +251,18 @@ def test_worker_dying_without_a_result_does_not_hang(monkeypatch, tmp_path, kale
     fig = _FakeFig()
     with pytest.raises(BundledBrowserUnavailableError):
         figure_to_png(fig)
+
+
+def test_render_dosemap_png_returns_none_when_bundled_browser_unavailable(monkeypatch) -> None:
+    from guiskindose.export import images
+
+    def _unavailable(*_a: Any, **_k: Any) -> bytes:
+        raise BundledBrowserUnavailableError()
+
+    monkeypatch.setattr(images, "png_export_available", lambda: True)
+    monkeypatch.setattr(images, "figure_to_png", _unavailable)
+    triangle = {
+        "patient_skin_cells": {"x": [0.0, 1.0, 0.0], "y": [0.0, 0.0, 1.0], "z": [0.0, 0.0, 0.0]},
+        "triangle_vertex_indices": {"i": [0], "j": [1], "k": [2]},
+    }
+    assert images.render_dosemap_png(np.zeros(3), triangle) is None

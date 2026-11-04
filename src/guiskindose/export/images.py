@@ -12,6 +12,7 @@ from typing import Any
 import numpy as np
 
 from guiskindose.edition import png_export_available
+from guiskindose.export.png_browser import figure_to_png
 from guiskindose.intended_use import stamp_figure
 
 # Camera eye presets (Plotly scene_camera.eye), oblique 3/4 views so the long
@@ -164,6 +165,6 @@ def render_dosemap_png(
         ranges = dose_bbox(dose_map, patient_dict) if zoom_to_dose else None
         fig = render_dosemap_plotly_figure(dose_map, patient_dict, colorscale, dark=dark, ranges=ranges)
         fig.update_layout(scene_camera={"eye": camera_eye})
-        return fig.to_image(format="png", width=width, height=height, scale=scale)
+        return figure_to_png(fig, width=width, height=height, scale=scale)
     except Exception:
         return None

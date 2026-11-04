@@ -15,6 +15,7 @@ import logging
 from typing import Any
 
 from guiskindose.edition import PngExportUnavailableError, png_export_available
+from guiskindose.export.png_browser import figure_to_png
 from guiskindose.privacy import safe_error_event
 
 from .geometry_preview import effective_patient_offset_for_preview, rdsr_df_for_geometry_preview
@@ -193,7 +194,7 @@ def make_dosemap_png(explicit_dose_map=None, explicit_patient=None) -> bytes:
 
         fig = go.Figure(fig_dict)
         fig.update_layout(scene_camera={"eye": {"x": -2.5, "y": 1.5, "z": 0}})
-        return fig.to_image(format="png")
+        return figure_to_png(fig)
     except Exception as exc:
         safe_error_event(logger, "dosemap_png_render", exc)
         raise
