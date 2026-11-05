@@ -18,9 +18,10 @@ It fails unless:
 - the page Kaleido generated references no ``http(s)`` script URL.
 
 The report ``pngcheck_report.json`` holds booleans, counts, flag names, and paths
-relative to the onedir only: no absolute paths and no exam values. A failed render also
-stores a stable ``code`` (``browser_not_seen`` or ``browser_outside``) and integer
-``counts``. Those counts are sample and process totals, never paths.
+relative to the onedir only: no absolute paths and no exam values. A passing render
+includes ``samples`` and ``rows``. A failed render also stores a stable ``code``
+(``browser_not_seen`` or ``browser_outside``) and integer ``counts``. Those counts
+are sample and process totals, never paths.
 """
 
 from __future__ import annotations
@@ -87,15 +88,16 @@ def _parse_cim_chrome_json(raw: str) -> list[dict[str, Any]]:
     ]
 
 
-# One process for the whole export. A new powershell.exe per sample spends longer starting
-# than a one-shot Chrome stays up, so the snapshot can land while no browser is alive and
-# still count as a sample. AutoFlush pushes each JSON line to the pipe before the next query.
+# One process for the whole export. On the Windows Full runner the spawn-plus-query
+# interval exceeded a one-shot browser's lifetime. OperationTimeoutSec stops one hung
+# CIM call from stalling the loop. AutoFlush pushes each JSON line out before the next query.
 _CHROME_WATCH = (
     "$ProgressPreference='SilentlyContinue';"
     "$ErrorActionPreference='SilentlyContinue';"
+    "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8;"
     "if ([Console]::Out -is [System.IO.StreamWriter]) { [Console]::Out.AutoFlush = $true };"
     "while ($true) {"
-    " $p = @(Get-CimInstance Win32_Process -Filter \"Name='chrome.exe'\""
+    " $p = @(Get-CimInstance Win32_Process -Filter \"Name='chrome.exe'\" -OperationTimeoutSec 5"
     " | Select-Object ProcessId,ParentProcessId,ExecutablePath,CommandLine);"
     " $json = ConvertTo-Json -InputObject $p -Compress;"
     " if ([string]::IsNullOrEmpty($json)) { $json = '[]' };"
@@ -123,6 +125,8 @@ def _spawn_chrome_watch() -> subprocess.Popen[str]:
         stderr=subprocess.DEVNULL,
         stdin=subprocess.DEVNULL,
         text=True,
+        encoding="utf-8",
+        errors="replace",
         bufsize=1,
         creationflags=flags,
     )
@@ -388,6 +392,8 @@ def _render_pngs(captured_pages: list[str]) -> dict[str, Any]:
         "png_bytes_total": sum(len(png) for png in pngs),
         "render_seconds": round(time.perf_counter() - started, 2),
         **launch,
+        "samples": len(sampler.samples),
+        "rows": len(merged),
     }
     if errors:  # any failed image fails the check; surface the real cause
         raise errors[0]

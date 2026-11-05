@@ -256,6 +256,8 @@ def test_render_pngs_describes_processes_sampled_during_render(pngcheck, monkeyp
     assert result["launched_from_onedir"] == ["chromium/chrome.exe"]
     assert result["launched_outside_onedir"] == 0
     assert result["png_images"] == 1
+    assert result["samples"] >= 1
+    assert result["rows"] >= 1
 
 
 def test_render_pngs_fails_when_no_sample_saw_a_browser(pngcheck, monkeypatch, tmp_path):
@@ -428,6 +430,132 @@ def test_windows_watch_records_a_browser_line_and_stops(pngcheck, monkeypatch):
     finally:
         sampler.stop()
     assert watch.returncode == 1
+
+
+class _StubbornWatch:
+    """terminate() leaves the child running; kill() is what ends it."""
+
+    def __init__(self) -> None:
+        import threading
+
+        self._release = threading.Event()
+        self.stdout = self
+        self.returncode: int | None = None
+        self.terminated = False
+        self.killed = False
+
+    def __iter__(self):
+        return self
+
+    def __next__(self) -> str:
+        self._release.wait()
+        raise StopIteration
+
+    def poll(self) -> int | None:
+        return self.returncode
+
+    def terminate(self) -> None:
+        self.terminated = True
+
+    def kill(self) -> None:
+        self.killed = True
+        self.returncode = -9
+        self._release.set()
+
+    def wait(self, timeout: float | None = None) -> int | None:
+        return self.returncode
+
+
+def test_stop_kills_the_watch_when_terminate_does_not(pngcheck, monkeypatch):
+    import time
+
+    watch = _StubbornWatch()
+    monkeypatch.setattr(pngcheck, "_windows_sampler", lambda: True)
+    monkeypatch.setattr(pngcheck, "_spawn_chrome_watch", lambda: watch)
+    monkeypatch.setattr(pngcheck, "_SAMPLER_STOP_TIMEOUT_S", 0.05)
+    sampler = pngcheck._ProcessSampler()
+    sampler.start()
+    deadline = time.monotonic() + 1
+    while not sampler._thread.is_alive() and time.monotonic() < deadline:
+        time.sleep(0.01)
+    sampler.stop()
+    sampler._thread.join(1)
+    assert watch.terminated
+    assert watch.killed
+    assert watch.returncode == -9
+    assert not sampler._thread.is_alive()
+
+
+def test_render_stops_cleanly_when_the_watch_fails_to_spawn(pngcheck, monkeypatch, tmp_path):
+    from guiskindose.export import images
+
+    marker = lambda *_a, **_k: b"png"  # noqa: E731
+
+    monkeypatch.setattr(images, "figure_to_png", marker)
+
+    def unused(_source, *, with_images):
+        raise AssertionError("payload ran")
+
+    def boom():
+        raise OSError("watch failed")
+
+    _stub_render_environment(monkeypatch, pngcheck, tmp_path, unused)
+    monkeypatch.setattr(pngcheck, "_windows_sampler", lambda: True)
+    monkeypatch.setattr(pngcheck, "_spawn_chrome_watch", boom)
+    with pytest.raises(OSError, match="watch failed"):
+        pngcheck._render_pngs([])
+    assert images.figure_to_png is marker
+
+
+class _NoStdoutWatch:
+    """A watch process whose stdout pipe was not created."""
+
+    def __init__(self) -> None:
+        self.stdout = None
+        self.returncode: int | None = None
+
+    def poll(self) -> int | None:
+        return self.returncode
+
+    def terminate(self) -> None:
+        self.returncode = 1
+
+    def kill(self) -> None:
+        self.returncode = -9
+
+    def wait(self, timeout: float | None = None) -> int | None:
+        return self.returncode
+
+
+def test_watch_with_no_stdout_records_nothing(pngcheck, monkeypatch):
+    watch = _NoStdoutWatch()
+    monkeypatch.setattr(pngcheck, "_windows_sampler", lambda: True)
+    monkeypatch.setattr(pngcheck, "_spawn_chrome_watch", lambda: watch)
+    sampler = pngcheck._ProcessSampler()
+    sampler.start()
+    sampler._thread.join(1)
+    assert sampler.samples == []
+    assert not sampler._thread.is_alive()
+    sampler.stop()
+    assert watch.returncode == 1
+
+
+def test_chrome_watch_bounds_each_query_and_decodes_utf8(pngcheck, monkeypatch):
+    seen: dict = {}
+
+    def fake_popen(argv, **kwargs):
+        seen["argv"] = argv
+        seen["kwargs"] = kwargs
+        raise OSError("do not launch")
+
+    monkeypatch.setattr(pngcheck.subprocess, "Popen", fake_popen)
+    with pytest.raises(OSError, match="do not launch"):
+        pngcheck._spawn_chrome_watch()
+    command = seen["argv"][-1]
+    assert "-OperationTimeoutSec 5" in command
+    assert "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8" in command
+    assert seen["kwargs"]["encoding"] == "utf-8"
+    assert seen["kwargs"]["errors"] == "replace"
 
 
 def test_sampler_stop_before_start_does_not_raise(pngcheck):

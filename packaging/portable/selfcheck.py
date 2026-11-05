@@ -31,7 +31,7 @@ import time
 from collections.abc import Callable
 from importlib.resources import files
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeGuard
 
 _EXAMPLE_RDSR = "siemens_axiom_example_procedure.dcm"
 # Every file the checks write goes in this subfolder of the directory the caller names,
@@ -308,11 +308,11 @@ def _write_atomic(path: Path, text: str) -> None:
     temporary.replace(path)
 
 
-def _counts_are_safe(counts: Any) -> bool:
+def _counts_are_safe(counts: Any) -> TypeGuard[dict[str, int]]:
     """True when *counts* is a non-empty map of identifier keys to ints.
 
     Booleans are ints in Python and are rejected. Strings are rejected so a path
-    cannot ride along in the report.
+    cannot ride along in the report. The TypeGuard narrows *counts* for the report copy.
     """
     if not isinstance(counts, dict) or not counts:
         return False
