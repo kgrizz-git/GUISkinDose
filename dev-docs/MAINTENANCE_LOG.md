@@ -8,6 +8,10 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ## [Unreleased]
 
+- **pywebview floor on gui-native extra** (2026-11-05) — The published `gui-native` extra requires
+  `pywebview>=6.1`, matching the `portable` dependency group. The lock already resolves 6.2.1. Added
+  `tests/unittests/test_pywebview_floor.py`.
+
 - **Portable Full renders PNG through the bundled Chromium** (2026-11-03) — The new
   `guiskindose/export/png_browser.py` holds `figure_to_png`. Source and pip installs still call
   `fig.to_image`. The frozen Full app calls `kaleido.calc_fig` with `kopts["path"]` on a fresh daemon thread with a 120 s
