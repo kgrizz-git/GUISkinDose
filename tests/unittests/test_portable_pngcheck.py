@@ -122,6 +122,7 @@ def test_sampler_polls_until_stopped_and_survives_a_failed_probe(pngcheck, monke
             raise OSError("probe failed")
         return [{"pid": len(calls), "exe": "x"}]
 
+    monkeypatch.setattr(pngcheck, "_windows_sampler", lambda: False)
     monkeypatch.setattr(pngcheck, "_list_processes", probe)
     monkeypatch.setattr(pngcheck, "_SAMPLE_INTERVAL_S", 0.01)
     sampler = pngcheck._ProcessSampler()
@@ -163,6 +164,8 @@ def _stub_render_environment(monkeypatch, pngcheck, tmp_path, images):
 
     monkeypatch.setattr(export_pkg, "collect_export_payload", images)
 
+    # Unit tests drive ``_list_processes`` directly. The Windows watch is covered on its own.
+    monkeypatch.setattr(pngcheck, "_windows_sampler", lambda: False)
     # A fake render finishes at once, so let the sampler take its first sample before the
     # payload runs (bounded, so a probe that always fails still proceeds).
     real_start = pngcheck._ProcessSampler.start
@@ -265,8 +268,12 @@ def test_render_pngs_fails_when_no_sample_saw_a_browser(pngcheck, monkeypatch, t
         return type("P", (), {"images": [type("I", (), {"png_bytes": png})()]})()
 
     _stub_render_environment(monkeypatch, pngcheck, tmp_path, fake_payload)
-    with pytest.raises(ValueError, match="browser_not_bundled_copy"):
+    with pytest.raises(pngcheck.RenderCheckError, match="browser_not_seen") as caught:
         pngcheck._render_pngs([])
+    assert caught.value.counts["launched_outside"] == 0
+    assert caught.value.counts["launched_inside"] == 0
+    assert caught.value.counts["browser_processes"] == 0
+    assert caught.value.counts["samples"] >= 1
 
 
 def test_render_pngs_fails_when_a_browser_ran_outside_the_onedir(pngcheck, monkeypatch, tmp_path):
@@ -289,8 +296,10 @@ def test_render_pngs_fails_when_a_browser_ran_outside_the_onedir(pngcheck, monke
     _stub_render_environment(monkeypatch, pngcheck, tmp_path, fake_payload)
     monkeypatch.setattr(pngcheck, "_list_processes", lambda: rows)
     monkeypatch.setattr(pngcheck, "_SAMPLE_INTERVAL_S", 0.01)
-    with pytest.raises(ValueError, match="browser_not_bundled_copy"):
+    with pytest.raises(pngcheck.RenderCheckError, match="browser_outside") as caught:
         pngcheck._render_pngs([])
+    assert caught.value.counts["launched_outside"] == 1
+    assert caught.value.counts["launched_inside"] == 1
 
 
 def test_run_png_check_records_bundled_browser_error_type(pngcheck, monkeypatch, tmp_path):
@@ -307,7 +316,118 @@ def test_run_png_check_records_bundled_browser_error_type(pngcheck, monkeypatch,
     assert pngcheck.run_png_check(str(tmp_path), process_start=0.0) == 1
     report = json.loads((tmp_path / pngcheck.OWNED_SUBDIR / "pngcheck_report.json").read_text(encoding="utf-8"))
     assert report["render"]["error_type"] == "BundledBrowserUnavailableError"
+    assert "code" not in report["render"]
+    assert "counts" not in report["render"]
     assert "page" not in report
+
+
+def test_render_failure_records_which_condition_failed(pngcheck, monkeypatch, tmp_path):
+    import json
+
+    monkeypatch.setattr(pngcheck, "_check_bundle", lambda: {"browser_present": True})
+
+    def fail_render(_pages):
+        raise pngcheck.RenderCheckError(
+            "browser_not_seen",
+            samples=4,
+            rows=0,
+            empty_exe_rows=0,
+            browser_processes=0,
+            launched_inside=0,
+            launched_outside=0,
+            system_chrome=0,
+        )
+
+    monkeypatch.setattr(pngcheck, "_render_pngs", fail_render)
+    assert pngcheck.run_png_check(str(tmp_path), process_start=0.0) == 1
+    report = json.loads((tmp_path / pngcheck.OWNED_SUBDIR / "pngcheck_report.json").read_text(encoding="utf-8"))
+    assert report["render"]["code"] == "browser_not_seen"
+    assert report["render"]["counts"] == {
+        "samples": 4,
+        "rows": 0,
+        "empty_exe_rows": 0,
+        "browser_processes": 0,
+        "launched_inside": 0,
+        "launched_outside": 0,
+        "system_chrome": 0,
+    }
+    assert "page" not in report
+
+
+def test_failure_record_drops_a_path_in_counts(pngcheck):
+    class _Leaky(ValueError):
+        def __init__(self) -> None:
+            super().__init__("browser_not_seen")
+            self.code = "browser_not_seen"
+            self.counts = {"samples": 1, "exe": "C:/secret/chrome.exe"}
+
+    report: dict = {}
+
+    def fail():
+        raise _Leaky()
+
+    assert pngcheck._run_step(report, "render", fail) is False
+    assert report["render"]["code"] == "browser_not_seen"
+    assert "counts" not in report["render"]
+
+
+class _FakeWatch:
+    """A stand-in for the PowerShell watch: queued lines, then block until terminate."""
+
+    def __init__(self, lines: list[str]) -> None:
+        import threading
+
+        self._pending = list(lines)
+        self._released = threading.Event()
+        self.stdout = self
+        self.returncode: int | None = None
+
+    def __iter__(self):
+        return self
+
+    def __next__(self) -> str:
+        if self._pending:
+            return self._pending.pop(0)
+        self._released.wait(timeout=2)
+        if self.returncode is not None or not self._pending:
+            raise StopIteration
+        return self._pending.pop(0)
+
+    def poll(self) -> int | None:
+        return self.returncode
+
+    def terminate(self) -> None:
+        self.returncode = 1
+        self._released.set()
+
+    def kill(self) -> None:
+        self.terminate()
+
+    def wait(self, timeout: float | None = None) -> int | None:
+        return self.returncode
+
+
+def test_windows_watch_records_a_browser_line_and_stops(pngcheck, monkeypatch):
+    import time
+
+    payload = (
+        '[{"ProcessId": 4, "ParentProcessId": 1, "ExecutablePath": "C:\\\\chromium\\\\chrome.exe",'
+        ' "CommandLine": "chrome.exe --headless"}]'
+    )
+    watch = _FakeWatch(["not-json\n", payload + "\n"])
+    monkeypatch.setattr(pngcheck, "_windows_sampler", lambda: True)
+    monkeypatch.setattr(pngcheck, "_spawn_chrome_watch", lambda: watch)
+    sampler = pngcheck._ProcessSampler()
+    try:
+        sampler.start()
+        deadline = time.monotonic() + 1
+        while not sampler.samples and time.monotonic() < deadline:
+            time.sleep(0.01)
+        assert [row["pid"] for row in sampler.samples[0]] == [4]
+        assert sampler.samples[0][0]["exe"].endswith("chrome.exe")
+    finally:
+        sampler.stop()
+    assert watch.returncode == 1
 
 
 def test_sampler_stop_before_start_does_not_raise(pngcheck):

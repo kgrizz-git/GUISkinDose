@@ -8,6 +8,14 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ## [Unreleased]
 
+- **Full PNG sampler stays on one PowerShell watch** (2026-11-05) — `--png-check` on Windows
+  was starting a new `powershell.exe` for every process sample. That startup is slower than
+  the one-shot browser, so a sample could be taken while Chrome was not running and still
+  count. The render then raised `browser_not_bundled_copy` with no way to see whether the
+  browser was missed or an outside browser launched. One CIM loop now covers the whole
+  export, and a failed render records `browser_not_seen` or `browser_outside` plus integer
+  counts only. The gate still requires a browser inside the onedir and none outside it.
+
 - **Phase 1 portable payload cleanup** (2026-11-05) — `gui-native` requires `pywebview>=6.1`;
   `--self-check` requires the `adult_male` preview stem `adult_male_reduced_3000t`; the packaging
   note matches the freeze; the Full PNG job gates `png_images`, `png_bytes_total`, and bundled

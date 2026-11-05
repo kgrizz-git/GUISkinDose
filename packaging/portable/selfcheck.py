@@ -308,15 +308,43 @@ def _write_atomic(path: Path, text: str) -> None:
     temporary.replace(path)
 
 
+def _counts_are_safe(counts: Any) -> bool:
+    """True when *counts* is a non-empty map of identifier keys to ints.
+
+    Booleans are ints in Python and are rejected. Strings are rejected so a path
+    cannot ride along in the report.
+    """
+    if not isinstance(counts, dict) or not counts:
+        return False
+    return all(
+        isinstance(key, str) and key.isidentifier() and isinstance(value, int) and not isinstance(value, bool)
+        for key, value in counts.items()
+    )
+
+
+def _failure_record(exc: BaseException) -> dict[str, Any]:
+    """Error class and location, plus an optional stable code and integer counts."""
+    from guiskindose.privacy import exception_class_name, innermost_location
+
+    record: dict[str, Any] = {"error_type": exception_class_name(exc), "at": innermost_location(exc)}
+    code = getattr(exc, "code", None)
+    if isinstance(code, str) and code.isidentifier():
+        record["code"] = code
+    counts = getattr(exc, "counts", None)
+    if _counts_are_safe(counts):
+        record["counts"] = dict(counts)
+    return record
+
+
 def _run_step(report: dict[str, Any], name: str, step: Callable[[], dict[str, Any]]) -> bool:
     try:
         report[name] = step()
         return True
     except Exception as exc:  # every step failure is reported, not raised
-        from guiskindose.privacy import exception_class_name, innermost_location, safe_error_event
+        from guiskindose.privacy import safe_error_event
 
         safe_error_event(_logger, f"selfcheck_{name}", exc)
-        report[name] = {"error_type": exception_class_name(exc), "at": innermost_location(exc)}
+        report[name] = _failure_record(exc)
         return False
 
 
