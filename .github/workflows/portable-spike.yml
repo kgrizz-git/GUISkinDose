@@ -246,6 +246,7 @@ jobs:
         $env:PATH = ($env:PATH -split ';' | Where-Object { $_ -and -not (Test-Path (Join-Path $_ 'git.exe')) }) -join ';'
         $decoy = Join-Path $env:RUNNER_TEMP "no-such-chrome\chrome.exe"
         $env:BROWSER_PATH = $decoy
+        # A missing BROWSER_PATH is a valid decoy because figure_to_png always passes kopts["path"] (src/guiskindose/export/png_browser.py).
         if ($env:BROWSER_PATH -ne $decoy) { throw "BROWSER_PATH decoy was not set" }
         if (Test-Path $env:BROWSER_PATH) { throw "BROWSER_PATH decoy exists on disk" }
         $out = Join-Path $env:RUNNER_TEMP "pngcheck"

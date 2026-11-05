@@ -48,7 +48,7 @@ Release process lives in the parent hub and [PUBLISHING.md](../../PUBLISHING.md)
 5. **CI:** `.github/workflows/portable-spike.yml` builds Windows Light and Full onedir zips. macOS
    and Linux CI builds remain open in the parent plan. Artifacts expire and are not committed.
 6. **Smoke & checks:** Windows Full smokes offline PNG with `GUISkinDose.exe --png-check`
-   (`portable-spike.yml` lines 243–270). Light proves PNG never starts: `to_image` call count stays 0
+   (`portable-spike.yml` lines 243–272). Light proves PNG never starts: `to_image` call count stays 0
    (`selfcheck.py` lines 201–226, workflow lines 224–228). Frozen macOS and Linux Full fail PNG closed
    until the choreographer wrapper (`PORTABLE_APP_PLAN.md` line 304). Do not write a per-OS PNG smoke
    for those builds.

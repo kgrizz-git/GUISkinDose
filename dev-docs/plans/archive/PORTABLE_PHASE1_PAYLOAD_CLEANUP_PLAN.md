@@ -320,7 +320,7 @@ Full, frozen `--png-check` (`pngcheck.py` lines 213–261 and 277–289):
   names are kept.
 - The report field `launched_from_onedir` holds onedir-relative paths.
   `launched_outside_onedir` counts the rest.
-- The workflow sets `BROWSER_PATH` to the runner's system Chrome when that file
+- Before this slice: the workflow sets `BROWSER_PATH` to the runner's system Chrome when that file
   exists, then throws if any browser started outside the onedir, and throws
   unless `launched_from_onedir` contains `chromium/chrome.exe`
   (`portable-spike.yml` lines 246–265).
