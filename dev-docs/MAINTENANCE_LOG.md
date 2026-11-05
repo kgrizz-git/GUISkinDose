@@ -17,10 +17,10 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 - **Third-party notices refreshed** (2026-11-05) — The pre-commit license-notices hook regenerated
   `dev-docs/THIRD_PARTY_NOTICES.md` because `main`'s copy was stale.
 
-- **PNG browser tests pin the host asyncio loop** (2026-11-05) — `tests/unittests/test_png_browser.py`
-  chooses this machine's event-loop policy before it patches `sys.platform` to `win32`. The CI unit
-  job does not install pytest-asyncio, so the first `asyncio.run` under that patch imported the
-  Windows loop and raised `ModuleNotFoundError: _overlapped`.
+- **PNG browser tests stop patching sys.platform** (2026-11-05) — `figure_to_png` reads the host OS
+  through `_host_platform()`. The tests patch that function instead of `sys.platform`. The old patch
+  made the first asyncio use in each xdist worker import the Windows loop, so the failure was
+  ordering-dependent and raised `ModuleNotFoundError: _overlapped`.
 
 - **Portable Full renders PNG through the bundled Chromium** (2026-11-03) — The new
   `guiskindose/export/png_browser.py` holds `figure_to_png`. Source and pip installs still call

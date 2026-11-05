@@ -64,26 +64,12 @@ def kaleido_calls(monkeypatch: pytest.MonkeyPatch) -> dict[str, list[Any]]:
     return calls
 
 
-def _pin_host_event_loop_policy() -> None:
-    """Choose this machine's asyncio loop before a test pretends to be Windows.
-
-    The loop policy is created once, from ``sys.platform``. The CI unit job does
-    not install pytest-asyncio, so nothing has chosen a loop yet. Patching
-    ``sys.platform`` to ``win32`` and then calling ``asyncio.run`` would import
-    ``asyncio.windows_events`` and fail with ``ModuleNotFoundError: _overlapped``.
-    """
-    import asyncio
-
-    asyncio.new_event_loop().close()
-
-
 def _frozen(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, platform: str, *, browser: bool) -> Path:
-    _pin_host_event_loop_policy()
     exe = tmp_path / ("GUISkinDose.exe" if platform == "win32" else "GUISkinDose")
     exe.write_bytes(b"")
     monkeypatch.setattr(sys, "frozen", True, raising=False)
     monkeypatch.setattr(sys, "executable", str(exe))
-    monkeypatch.setattr(sys, "platform", platform)
+    monkeypatch.setattr(png_browser, "_host_platform", lambda: platform)
     monkeypatch.setattr(png_browser, "png_export_available", lambda: True)
     chrome = tmp_path / "chromium" / ("chrome.exe" if platform == "win32" else "chrome")
     if browser:
@@ -202,15 +188,15 @@ def test_frozen_unix_fails_closed_but_path_resolves(monkeypatch, tmp_path, kalei
 
 
 def test_bundled_browser_honors_base_and_platform(monkeypatch, tmp_path) -> None:
-    monkeypatch.setattr(sys, "platform", "win32")
+    monkeypatch.setattr(png_browser, "_host_platform", lambda: "win32")
     assert bundled_browser(tmp_path) == tmp_path / "chromium" / "chrome.exe"
-    monkeypatch.setattr(sys, "platform", "linux")
+    monkeypatch.setattr(png_browser, "_host_platform", lambda: "linux")
     assert bundled_browser(tmp_path) == tmp_path / "chromium" / "chrome"
 
 
 def test_not_frozen_has_no_render_browser(monkeypatch) -> None:
     monkeypatch.delattr(sys, "frozen", raising=False)
-    monkeypatch.setattr(sys, "platform", "win32")
+    monkeypatch.setattr(png_browser, "_host_platform", lambda: "win32")
     assert bundled_browser_for_render() is None
 
 

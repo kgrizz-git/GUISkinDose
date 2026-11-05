@@ -10,6 +10,7 @@ from pathlib import Path
 
 import pytest
 
+from guiskindose.export import png_browser
 from guiskindose.export.png_browser import BROWSER_DIR
 
 _PORTABLE = Path(__file__).resolve().parents[2] / "packaging" / "portable"
@@ -97,7 +98,7 @@ def test_failed_render_skips_page_step(pngcheck, monkeypatch, tmp_path):
 
 def test_bundled_browser_honors_patched_app_dir(pngcheck, monkeypatch, tmp_path):
     monkeypatch.setattr(pngcheck, "app_dir", lambda: tmp_path)
-    monkeypatch.setattr(sys, "platform", "win32")
+    monkeypatch.setattr(png_browser, "_host_platform", lambda: "win32")
     (tmp_path / BROWSER_DIR).mkdir()
     (tmp_path / BROWSER_DIR / "chrome.exe").write_bytes(b"x")
     with pytest.raises(FileNotFoundError, match="browser_notices_missing"):
