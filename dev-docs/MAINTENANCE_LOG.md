@@ -12,6 +12,10 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
   `pywebview>=6.1`, matching the `portable` dependency group. The lock already resolves 6.2.1. Added
   `tests/unittests/test_pywebview_floor.py`.
 
+- **Preview stem in portable self-check** (2026-11-05) — `--self-check` requires the `adult_male`
+  preview stem `adult_male_reduced_3000t`, and the Windows spike job gates that field. Unit tests
+  cover a tree that has the 3000t file and lacks the 1000t file.
+
 - **Portable Full renders PNG through the bundled Chromium** (2026-11-03) — The new
   `guiskindose/export/png_browser.py` holds `figure_to_png`. Source and pip installs still call
   `fig.to_image`. The frozen Full app calls `kaleido.calc_fig` with `kopts["path"]` on a fresh daemon thread with a 120 s

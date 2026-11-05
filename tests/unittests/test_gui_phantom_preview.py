@@ -75,6 +75,17 @@ def test_resolve_preview_mesh_returns_stem_when_reduced_absent(tmp_path, monkeyp
     assert resolve_preview_mesh("only_full") == "only_full"
 
 
+def test_resolve_preview_mesh_uses_3000t_when_1000t_is_absent(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        phantom_preview_mod,
+        "_PHANTOM_DATA_DIR",
+        tmp_path,
+    )
+    (tmp_path / "adult_male.stl").write_bytes(b"solid empty\nendsolid empty\n")
+    (tmp_path / "adult_male_reduced_3000t.stl").write_bytes(b"solid empty\nendsolid empty\n")
+    assert resolve_preview_mesh("adult_male") == "adult_male_reduced_3000t"
+
+
 def test_resolve_preview_mesh_never_double_appends_reduced_suffix():
     assert resolve_preview_mesh("hudfrid_reduced_1000t") == "hudfrid_reduced_1000t"
     assert resolve_preview_mesh("hudfrid_reduced_3000t") == "hudfrid_reduced_3000t"

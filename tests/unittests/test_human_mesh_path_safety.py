@@ -79,3 +79,10 @@ def test_legacy_alias_still_resolves_safely() -> None:
     assert resolve_human_mesh_stem("pediatric_5y_male") == "ped_5y_male"
     path = resolve_human_mesh_stl_path("pediatric_5y_male")
     assert path.name == "ped_5y_male.stl"
+
+
+def test_preview_uses_3000t_when_1000t_is_absent(tmp_path: Path) -> None:
+    (tmp_path / "adult_male.stl").write_bytes(b"")
+    (tmp_path / "adult_male_reduced_3000t.stl").write_bytes(b"")
+    assert prefer_reduced_preview_stem("adult_male", phantom_data_dir=tmp_path) == "adult_male_reduced_3000t"
+    assert resolve_human_mesh_stl_path("adult_male", phantom_data_dir=tmp_path).name == "adult_male.stl"

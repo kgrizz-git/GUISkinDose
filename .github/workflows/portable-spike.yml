@@ -219,6 +219,7 @@ jobs:
           $ed = $report.edition
           if ($ed.edition -ne $env:GUISKINDOSE_PORTABLE_EDITION) { throw "frozen edition $($ed.edition) != $env:GUISKINDOSE_PORTABLE_EDITION" }
           if ($ed.reduced_1000t_stl -ne 0) { throw "a _reduced_1000t preview was bundled" }
+          if ($ed.preview_stem -ne 'adult_male_reduced_3000t') { throw "preview did not resolve to adult_male_reduced_3000t" }
           if (-not $ed.starter_mesh_loads) { throw "starter mesh does not load" }
           if ($env:GUISKINDOSE_PORTABLE_EDITION -eq 'light') {
             if ($ed.png_export_available) { throw "Light reports PNG export available" }
