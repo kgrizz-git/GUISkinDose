@@ -1,6 +1,6 @@
 # Portable executable packaging (research note)
 
-_Status: research note. Execution plan: [plans/PORTABLE_APP_PLAN.md](../plans/PORTABLE_APP_PLAN.md) (in progress; payload cleanup plan: [plans/PORTABLE_PHASE1_PAYLOAD_CLEANUP_PLAN.md](../plans/PORTABLE_PHASE1_PAYLOAD_CLEANUP_PLAN.md))._
+_Status: research note. Execution plan: [plans/PORTABLE_APP_PLAN.md](../plans/PORTABLE_APP_PLAN.md) (in progress; payload cleanup plan: [plans/archive/PORTABLE_PHASE1_PAYLOAD_CLEANUP_PLAN.md](../plans/archive/PORTABLE_PHASE1_PAYLOAD_CLEANUP_PLAN.md))._
 _Created: 2026-07-30. Updated: 2026-11-05._
 _Parent hub: [RELEASES_AND_DISTRIBUTION.md](../RELEASES_AND_DISTRIBUTION.md)._
 _Related backlog: Active Work item in [TO_DO.md](../TO_DO.md) (in progress, tracked in [plans/PORTABLE_APP_PLAN.md](../plans/PORTABLE_APP_PLAN.md))._
@@ -76,7 +76,7 @@ Windows AV false positives, and ongoing rebuild cost when dependencies change.
 ## Pointers
 
 - Execution plan: [plans/PORTABLE_APP_PLAN.md](../plans/PORTABLE_APP_PLAN.md)
-- Payload cleanup plan: [plans/PORTABLE_PHASE1_PAYLOAD_CLEANUP_PLAN.md](../plans/PORTABLE_PHASE1_PAYLOAD_CLEANUP_PLAN.md)
+- Payload cleanup plan: [plans/archive/PORTABLE_PHASE1_PAYLOAD_CLEANUP_PLAN.md](../plans/archive/PORTABLE_PHASE1_PAYLOAD_CLEANUP_PLAN.md)
 - NiceGUI: [Package for Installation](https://nicegui.io/documentation/section_configuration_deployment)
 - Current GUI launch: `run_gui.sh` / `run_gui.bat`, `python -m guiskindose --mode gui [--native]`
 - GUI goals: [plans/GUI_PLAN.md](../plans/GUI_PLAN.md)

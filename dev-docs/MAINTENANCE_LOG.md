@@ -8,18 +8,11 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ## [Unreleased]
 
-- **pywebview floor on gui-native extra** (2026-11-05) — The published `gui-native` extra requires
-  `pywebview>=6.1`, matching the `portable` dependency group. The lock already resolves 6.2.1. Added
-  `tests/unittests/test_pywebview_floor.py`.
-
-- **Portable packaging research note updated** (2026-11-05) — `dev-docs/references/PORTABLE_EXECUTABLE_PACKAGING.md`
-  describes the Windows PyInstaller onedir, `entry.py`, the edition STL lists, and packaged CSV tables.
-  A default `corrections.db` path is packaged data, not a shipped database file. Windows Full smokes
-  offline PNG. The note no longer says the freeze is not started.
-
-- **Preview stem in portable self-check** (2026-11-05) — `--self-check` requires the `adult_male`
-  preview stem `adult_male_reduced_3000t`, and the Windows spike job gates that field. Unit tests
-  cover a tree that has the 3000t file and lacks the 1000t file.
+- **Phase 1 portable payload cleanup** (2026-11-05) — `gui-native` requires `pywebview>=6.1`;
+  `--self-check` requires the `adult_male` preview stem `adult_male_reduced_3000t`; the packaging
+  note matches the freeze; the Full PNG job gates `png_images`, `png_bytes_total`, and bundled
+  `chromium/*` binaries with `BROWSER_PATH` set to a missing `chrome.exe` before the render;
+  run 42107015732 took 9.92 s against the Phase 0 9.9 s, so no batching follow-up was opened.
 
 - **Portable Full renders PNG through the bundled Chromium** (2026-11-03) — The new
   `guiskindose/export/png_browser.py` holds `figure_to_png`. Source and pip installs still call

@@ -1,10 +1,10 @@
 # Phase 1 portable payload cleanup
 
-_Status: active. Implementation plan for the open Phase 1 payload items in
-[PORTABLE_APP_PLAN.md](PORTABLE_APP_PLAN.md)._
+_Status: complete (2026-11-05). Implementation plan for the open Phase 1 payload items in
+[../PORTABLE_APP_PLAN.md](../PORTABLE_APP_PLAN.md)._
 _Parent checklist: Phase 1 lines for the pywebview pin, the `_reduced_1000t` payload,
 the packaging note, the Light/Full build proofs, and the first one-shot `--png-check` timing._
-_Branch: `portable/phase1-payload-cleanup`. Do not commit, push, or re-lock until a chunk says to._
+_Branch: `portable/phase1-payload-cleanup`._
 
 This slice closes five open Phase 1 items. macOS and Linux CI builds, signing, the
 choreographer wrapper, and clean-VM or manual checks stay in the parent plan.
