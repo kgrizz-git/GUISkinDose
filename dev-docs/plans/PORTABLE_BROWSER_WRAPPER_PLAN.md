@@ -32,7 +32,7 @@ Chromium's `--remote-debugging-pipe` reads fd 3 and writes fd 4. The GUI process
 | 39 | `cli = sys.argv[1:]` |
 | 41 | `print` the CLI to stderr (absolute browser path; do not copy this) |
 | 43 | `subprocess.Popen(cli, pass_fds=(3, 4))` |
-| 46–53 | SIGTERM and SIGINT call `terminate()`, then `wait(5)`, then `kill()`. `wait(5)` raises `subprocess.TimeoutExpired` on expiry, so `kill()` never runs. The gate catches that and then `kill()`s and `wait()`s. |
+| 46–53 | SIGTERM and SIGINT call `terminate()`, then `wait(5)`, then `kill()`. `wait(5)` raises `subprocess.TimeoutExpired` on expiry, so `kill()` never runs. The gate does no waiting in the handler at all: the main wait loop kills Chromium 5 s after the signal. |
 | 60–66 | `process.wait()`, then `print("{bye}")` |
 
 `{bye}` is required. The wrapper keeps fd 1 open, so Chromium exiting does not EOF the pipe choreographer reads. `channels/pipe.py` line 195 treats `b"{bye}\n"` as channel close. `os.execv` of Chromium would drop that write. The reimplementation must `Popen`, wait, then write the sentinel to fd 1.
@@ -48,9 +48,9 @@ On `sys.platform != "win32"`, and only when `len(sys.argv) >= 3`, the entry chec
 1. Runs before `_route_missing_streams()` and before `multiprocessing.freeze_support()` (`entry.py`, lines 128–129). A later gate is too late: `freeze_support` must not run in this child, and nothing may write fd 1. The debugging pipe is fd 1.
 2. Treats `sys.argv[2:]` as the Chromium argument vector. Before any `dup2`, the first token must resolve inside `<exe dir>/chromium/` (`Path.resolve` plus `os.path.commonpath`, same idea as `pngcheck._inside`). Any other target, including a path that does not resolve, exits 1 with no write to stdout or stderr and without calling `dup2` or `Popen`. stderr is choreographer's logger pipe (`browser_async.py`, lines 145–149); a message there can carry a path into logistro.
 3. Only after that check passes, `dup2`s stdin/stdout onto fds 3 and 4 and marks them inheritable.
-4. `Popen`s that vector with `pass_fds=(3, 4)` and no shell. On SIGTERM and SIGINT, `terminate()`, then `wait(5)`. Catch `subprocess.TimeoutExpired`, then `kill()` and `wait()`. Do not copy the wrapper's bare `wait(5)` (`_unix_pipe_chromium_wrapper.py`, lines 51–53): a timeout there raises and skips `kill()`.
+4. Installs the SIGTERM and SIGINT handlers, then `Popen`s that vector with `pass_fds=(3, 4)` and no shell. A handler takes a one-item claim with `list.pop`, records the time, and calls `terminate()`; it never waits, so a nested signal is a no-op and the `{bye}` write is still reached. A signal that lands before launch is recorded, and Chromium is terminated right after `Popen`. The main flow polls `wait(timeout=0.2)` and kills Chromium 5 s after a signal; the wait after `kill()` is bounded too. A `finally` kills any Chromium still running and writes `{bye}`, whatever went wrong. Do not copy the wrapper's bare `wait(5)` (`_unix_pipe_chromium_wrapper.py`, lines 51–53): a timeout there raises and skips `kill()`. Signals are not blocked with `pthread_sigmask` instead, because Chromium would inherit the blocked mask.
 5. After `wait`, `os.write(1, b"{bye}\n")` and `SystemExit` with the child return code. `os.write` on fd 1, not `print`, so a replaced `sys.stdout` cannot swallow the sentinel or send it somewhere else.
-6. Does not import `guiskindose`, kaleido, or choreographer on this path. The stdlib imports already at the top of `entry.py` stay above the gate; they must not write stdout. Do not add a project import above the gate.
+6. Does not import `guiskindose`, kaleido, or choreographer on this path. The stdlib imports already at the top of `entry.py` stay above the gate; they must not write stdout. Do not add a project import above the gate. The one exception is `_entry_platform`, a stdlib-only module beside `entry.py` that exists so tests can set the host platform without patching `sys.platform`; it is in the spec's `pathex` and `hiddenimports`.
 
 Windows never enters the gate, including when a test or a stray argv contains the suffix. choreographer does not build this argv on Windows (`get_cli`, lines 241–250). `pass_fds` is not called there.
 
@@ -142,7 +142,7 @@ Unit tests run unfrozen. They must not `dup2` the pytest process's real fds 3 an
 | Gate, matching argv | `Popen` receives `argv[2:]` and `pass_fds=(3, 4)`. Sentinel write is `b"{bye}\n"` on fd 1. No log record contains the temp path. |
 | Gate, `len(sys.argv) < 3` | No read of `argv[1]` or `argv[2]`, no `dup2`, no `Popen`, and the import does not exit. |
 | Gate, Chromium path outside `<exe>/chromium` | `SystemExit(1)` before `dup2`. `dup2` and `Popen` are not called, and nothing is written. |
-| Gate, signal timeout | The handler's `wait(5)` raising `subprocess.TimeoutExpired` is caught; `kill()` and a follow-up `wait()` still run. |
+| Gate, signals | The handler only terminates and claims the shutdown once, including for a nested signal. The wait loop kills Chromium after the grace period, and the post-kill wait is bounded. A signal before launch still terminates Chromium. A wait error still kills Chromium and writes `{bye}`. |
 | Gate, `win32` | Even with the suffix in argv, no `dup2` and no `Popen`. |
 | Gate, normal argv | Import of `entry.py` (existing `test_portable_entry.py` fixture) does not exit. `freeze_support` still runs for a non-wrapper import. |
 | `bundled_browser` | Windows `chrome.exe`, Linux `chrome`, macOS `Chromium.app/Contents/MacOS/Chromium`, including an explicit `base`. |
@@ -170,6 +170,8 @@ This plan does not add a macOS or Linux workflow leg. Those builds download a br
 
 When either checkbox is implemented, its `--png-check` is the one specified above. No second proof.
 
+The gate refuses to start Chromium when fd 3 or 4 is already open, so a frozen build that holds one of them would fail PNG as a plain `BundledBrowserUnavailableError`. The first frozen run on each OS should therefore record whether fds 3 and 4 were free at entry, as a boolean only. If one is held, the fallback is to `os.dup` the held descriptor to a high number and close the original before the handoff, instead of failing.
+
 ## Commits
 
 Chunk 1 before chunk 2. Chunk 2 without the gate makes a frozen macOS or Linux render `Popen` the bootloader, which then falls through into `run_gui` with the DevTools pipe on stdout. That is worse than today's fail-closed `None`. Chunk 1 alone is inert: nothing passes the wrapper argv until render is enabled. Chunk 3 can land with chunk 2 or after it. Chunk 4 is the doc closeout of the code chunks and can share chunk 2's commit or follow it. Do not squash 2 in front of 1.
@@ -183,7 +185,7 @@ Each function stays at Ruff C901 ≤ 10. `png_browser.py` is under `src/` and is
 **Steps:**
 
 1. Add a stdlib-only gate at import time, after the existing stdlib imports and before `_route_missing_streams()`.
-2. Match the wrapper suffix only off `win32`, and only when `len(sys.argv) >= 3`. Confine `argv[2]` to `<exe dir>/chromium/` and `SystemExit(1)` silently on failure before any `dup2`. Then `dup2`, `Popen`, signals (catch `subprocess.TimeoutExpired` from `wait(5)`, then `kill()` and `wait()`), `{bye}`.
+2. Match the wrapper suffix only off `win32`, and only when `len(sys.argv) >= 3`. Confine `argv[2]` to `<exe dir>/chromium/` and `SystemExit(1)` silently on failure before any `dup2`. Refuse (exit 1) when fd 3 or 4 is already open. Then `dup2`, signal handlers, `Popen`, the bounded wait loop, and `{bye}` in a `finally`. Resolution, confinement and the run sit in one `try`, so any error exits 1 with no traceback.
 3. Confirm in the PyInstaller 6.22.3 sources (portable group, not the default `.venv`) that the windowed subprocess hook does not replace an explicit stdin, stdout, or stderr. Note the file and the condition in the commit message. If it does replace them, stop. Do not ship the gate.
 4. Add the drift test and the gate tests in the table above. The existing entry-module fixture must still import.
 

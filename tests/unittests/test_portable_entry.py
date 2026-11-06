@@ -409,6 +409,9 @@ def test_unix_wrapper_gate_dup2_popen_and_bye(unix_host, monkeypatch, tmp_path, 
         returncode = 0
         terminated = 0
 
+        def poll(self) -> int:
+            return 0
+
         def terminate(self) -> None:
             self.terminated += 1
 
@@ -534,32 +537,86 @@ class _SlowProcess:
 def test_signal_handler_only_terminates(entry_module):
     proc = _SlowProcess()
     requested: list[float] = []
-    entry_module._terminate_chromium_on_signal([proc], requested, signal.SIGTERM, None)
+    entry_module._terminate_chromium_on_signal([proc], [True], requested, signal.SIGTERM, None)
     assert proc.terminated
     assert not proc.killed
     assert len(requested) == 1
-    assert requested[0] != float("inf")
 
 
 def test_signal_handler_claims_shutdown_before_terminating(entry_module):
     """A signal that lands inside the handler, during terminate(), must not terminate again."""
+    claim = [True]
     requested: list[float] = []
     calls: list[int] = []
 
     class _Reentrant:
         def terminate(self) -> None:
             calls.append(1)
-            entry_module._terminate_chromium_on_signal([self], requested, signal.SIGINT, None)
+            entry_module._terminate_chromium_on_signal([self], claim, requested, signal.SIGINT, None)
 
-    entry_module._terminate_chromium_on_signal([_Reentrant()], requested, signal.SIGTERM, None)
+    entry_module._terminate_chromium_on_signal([_Reentrant()], claim, requested, signal.SIGTERM, None)
     assert calls == [1]
     assert len(requested) == 1
 
 
 def test_signal_before_launch_is_recorded_without_a_process(entry_module):
     requested: list[float] = []
-    entry_module._terminate_chromium_on_signal([], requested, signal.SIGTERM, None)
+    entry_module._terminate_chromium_on_signal([], [True], requested, signal.SIGTERM, None)
     assert len(requested) == 1
+
+
+def test_signal_after_the_claim_but_before_the_timestamp_does_nothing(entry_module):
+    """The window between taking the claim and recording the time: a nested handler is a no-op."""
+    proc = _SlowProcess()
+    claim: list[bool] = []  # already taken by the outer handler
+    requested: list[float] = []
+    entry_module._terminate_chromium_on_signal([proc], claim, requested, signal.SIGINT, None)
+    assert requested == []
+    assert not proc.terminated
+
+
+def test_kill_wait_is_bounded(entry_module, monkeypatch):
+    monkeypatch.setattr(entry_module, "_TERMINATE_GRACE_S", 0.01)
+
+    class _Unkillable:
+        def kill(self) -> None:
+            return
+
+        def wait(self, timeout: float | None = None) -> int:
+            assert timeout is not None, "post-kill wait must be bounded"
+            raise subprocess.TimeoutExpired(cmd=["chrome"], timeout=timeout)
+
+    assert entry_module._kill_chromium(_Unkillable()) == 1
+
+
+def test_wait_error_still_kills_chromium_and_writes_bye(entry_module, monkeypatch):
+    writes: list[bytes] = []
+
+    class _Broken:
+        killed = False
+
+        def wait(self, timeout: float | None = None) -> int:
+            if self.killed:
+                return -9
+            raise ChildProcessError("lost child")
+
+        def poll(self) -> int | None:
+            return -9 if self.killed else None
+
+        def kill(self) -> None:
+            self.killed = True
+
+    proc = _Broken()
+    monkeypatch.setattr(entry_module, "_debugging_pipe_fds_free", lambda: True)
+    monkeypatch.setattr(os, "dup2", lambda *_a: None)
+    monkeypatch.setattr(os, "set_inheritable", lambda *_a: None)
+    monkeypatch.setattr(os, "write", lambda _fd, data: writes.append(data) or len(data))
+    monkeypatch.setattr(signal, "signal", lambda *_a: None)
+    monkeypatch.setattr(subprocess, "Popen", lambda *_a, **_k: proc)
+    with pytest.raises(ChildProcessError):
+        entry_module._run_unix_pipe_chromium_wrapper(["chrome"])
+    assert proc.killed
+    assert writes == [b"{bye}\n"]
 
 
 def test_wait_kills_chromium_after_the_grace_period(entry_module, monkeypatch):
@@ -691,6 +748,9 @@ def test_signal_during_launch_terminates_chromium_once_it_exists(unix_host, monk
 
     class _Proc:
         terminated = 0
+
+        def poll(self) -> int:
+            return 0
 
         def terminate(self) -> None:
             self.terminated += 1

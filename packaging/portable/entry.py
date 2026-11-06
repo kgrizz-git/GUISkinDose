@@ -31,7 +31,6 @@ from __future__ import annotations
 import contextlib
 import io
 import logging
-import math
 import multiprocessing
 import os
 import re
@@ -153,22 +152,24 @@ _WAIT_POLL_S = 0.2
 
 def _terminate_chromium_on_signal(
     launched: list[subprocess.Popen[bytes]],
+    claim: list[bool],
     requested: list[float],
     _sig_num: int,
     _frame: FrameType | None,
 ) -> None:
     """Ask Chromium to exit and note when. :func:`_wait_for_chromium` kills it after the grace period.
 
-    The handler does no waiting itself, so the wrapper still reaches the ``{bye}`` write. It claims
-    the shutdown before anything else, so a signal that arrives inside this handler returns at once.
-    The placeholder is never seen by :func:`_wait_for_chromium`, because a handler runs to the end
-    before the main flow resumes. A signal that lands before Chromium starts is only recorded;
-    :func:`_run_unix_pipe_chromium_wrapper` terminates Chromium right after launch.
+    The handler does no waiting itself, so the wrapper still reaches the ``{bye}`` write. ``claim``
+    starts with one item, and ``list.pop`` is a single C call, so exactly one handler takes it: a
+    signal that lands anywhere inside this handler returns at once. A signal that lands before
+    Chromium starts is only recorded; :func:`_run_unix_pipe_chromium_wrapper` terminates Chromium
+    right after launch.
     """
-    if requested:
+    try:
+        claim.pop()
+    except IndexError:
         return
-    requested.append(math.inf)
-    requested[0] = time.monotonic()
+    requested.append(time.monotonic())
     if launched:
         with contextlib.suppress(OSError):
             launched[0].terminate()
@@ -181,9 +182,17 @@ def _wait_for_chromium(process: subprocess.Popen[bytes], requested: list[float])
             return process.wait(timeout=_WAIT_POLL_S)
         except subprocess.TimeoutExpired:
             if requested and time.monotonic() - requested[0] >= _TERMINATE_GRACE_S:
-                with contextlib.suppress(OSError):
-                    process.kill()
-                return process.wait()
+                return _kill_chromium(process)
+
+
+def _kill_chromium(process: subprocess.Popen[bytes]) -> int:
+    """Kill Chromium and wait a bounded time; ``1`` when it still has not exited."""
+    with contextlib.suppress(OSError):
+        process.kill()
+    try:
+        return process.wait(timeout=_TERMINATE_GRACE_S)
+    except subprocess.TimeoutExpired:
+        return 1
 
 
 def _debugging_pipe_fds_free() -> bool:
@@ -211,8 +220,9 @@ def _run_unix_pipe_chromium_wrapper(cli: list[str]) -> int:
     # would end this wrapper and orphan Chromium. Blocking the signals instead would leave
     # them blocked in Chromium too, because a child inherits the signal mask.
     launched: list[subprocess.Popen[bytes]] = []
+    claim = [True]
     requested: list[float] = []
-    handler = partial(_terminate_chromium_on_signal, launched, requested)
+    handler = partial(_terminate_chromium_on_signal, launched, claim, requested)
     signal.signal(signal.SIGTERM, handler)
     signal.signal(signal.SIGINT, handler)
     process = subprocess.Popen(cli, pass_fds=(3, 4))
@@ -221,9 +231,15 @@ def _run_unix_pipe_chromium_wrapper(cli: list[str]) -> int:
         with contextlib.suppress(OSError):
             process.terminate()
 
-    code = _wait_for_chromium(process, requested)
-    with contextlib.suppress(OSError):
-        os.write(1, _BYE_SENTINEL)
+    code = 1
+    try:
+        code = _wait_for_chromium(process, requested)
+    finally:
+        # Whatever went wrong, leave no Chromium holding fds 3 and 4, and tell choreographer.
+        if process.poll() is None:
+            _kill_chromium(process)
+        with contextlib.suppress(OSError):
+            os.write(1, _BYE_SENTINEL)
     return code
 
 
