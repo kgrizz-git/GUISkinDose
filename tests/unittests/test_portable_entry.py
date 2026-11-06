@@ -10,7 +10,10 @@ from __future__ import annotations
 
 import importlib.util
 import logging
+import multiprocessing
 import os
+import signal
+import subprocess
 import sys
 import types
 from pathlib import Path
@@ -20,16 +23,25 @@ import pytest
 from guiskindose import debug as dbg
 
 _ENTRY = Path(__file__).resolve().parents[2] / "packaging" / "portable" / "entry.py"
+_ENTRY_MODULE_NAME = "guiskindose_portable_entry"
 
 
-@pytest.fixture(scope="module")
-def entry_module():
-    spec = importlib.util.spec_from_file_location("guiskindose_portable_entry", _ENTRY)
+def _load_entry_module(*, argv: list[str] | None = None) -> types.ModuleType:
+    """Import ``entry.py`` fresh so import-time gates see the given ``argv``."""
+    if argv is not None:
+        sys.argv = argv
+    sys.modules.pop(_ENTRY_MODULE_NAME, None)
+    spec = importlib.util.spec_from_file_location(_ENTRY_MODULE_NAME, _ENTRY)
     assert spec is not None
     assert spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+@pytest.fixture(scope="module")
+def entry_module():
+    return _load_entry_module(argv=[str(_ENTRY)])
 
 
 @pytest.fixture
@@ -335,3 +347,179 @@ def test_main_quiets_browser_loggers_before_dispatch(entry_module, fake_dispatch
     monkeypatch.setattr(entry_module, "_quiet_browser_loggers", lambda: fake_dispatch.append(("quiet",)))
     entry_module.main([])
     assert [call[0] for call in fake_dispatch] == ["log", "quiet", "gui"]
+
+
+def test_choreographer_unix_pipe_wrapper_drift() -> None:
+    """Installed choreographer must still match the bootloader gate protocol."""
+    import choreographer
+
+    root = Path(choreographer.__file__).resolve().parent
+    wrapper = (root / "browsers" / "_unix_pipe_chromium_wrapper.py").read_text(encoding="utf-8")
+    assert "os.dup2(0, 3)" in wrapper
+    assert "os.dup2(1, 4)" in wrapper
+    assert "pass_fds=(3, 4)" in wrapper
+    assert 'print("{bye}")' in wrapper
+
+    pipe_source = (root / "channels" / "pipe.py").read_text(encoding="utf-8")
+    assert 'b"{bye}\\n"' in pipe_source
+
+    chromium_source = (root / "browsers" / "chromium.py").read_text(encoding="utf-8")
+    assert "sys.executable" in chromium_source
+    assert "_unix_pipe_chromium_wrapper.py" in chromium_source
+    off_windows = chromium_source.split('if platform.system() != "Windows":', 1)[1].split("else:", 1)[0]
+    assert "sys.executable" in off_windows
+    assert "_chromium_wrapper_path" in off_windows
+
+
+def _wrapper_argv(tmp_path: Path, *, browser_name: str = "chrome") -> list[str]:
+    exe = tmp_path / "GUISkinDose"
+    exe.write_text("", encoding="utf-8")
+    wrapper = tmp_path / "_unix_pipe_chromium_wrapper.py"
+    wrapper.write_text("", encoding="utf-8")
+    browser = tmp_path / "chromium" / browser_name
+    browser.parent.mkdir(parents=True, exist_ok=True)
+    browser.write_text("", encoding="utf-8")
+    return [str(exe), str(wrapper), str(browser), "--headless"]
+
+
+def test_unix_wrapper_gate_dup2_popen_and_bye(monkeypatch, tmp_path, captured_root):
+    dup2_calls: list[tuple[int, int]] = []
+    inheritable: list[tuple[int, bool]] = []
+    popen_calls: dict[str, object] = {}
+    write_calls: list[tuple[int, bytes]] = []
+
+    class _FakeProcess:
+        returncode = 0
+
+        def terminate(self) -> None:
+            return
+
+        def wait(self, timeout: float | None = None) -> int:
+            if timeout is not None:
+                return 0
+            return 0
+
+        def kill(self) -> None:
+            return
+
+    def _fake_popen(cli: list[str], **kwargs: object) -> _FakeProcess:
+        popen_calls["cli"] = cli
+        popen_calls["kwargs"] = kwargs
+        return _FakeProcess()
+
+    monkeypatch.setattr(os, "dup2", lambda src, dst: dup2_calls.append((src, dst)))
+    monkeypatch.setattr(os, "set_inheritable", lambda fd, val: inheritable.append((fd, val)))
+    monkeypatch.setattr(subprocess, "Popen", _fake_popen)
+    monkeypatch.setattr(os, "write", lambda fd, data: write_calls.append((fd, data)) or len(data))
+    monkeypatch.setattr(signal, "signal", lambda *_args: None)
+
+    argv = _wrapper_argv(tmp_path)
+    monkeypatch.setattr(sys, "executable", argv[0])
+    with pytest.raises(SystemExit) as exc:
+        _load_entry_module(argv=argv)
+    assert exc.value.code == 0
+    assert dup2_calls == [(0, 3), (1, 4)]
+    assert set(inheritable) == {(3, True), (4, True)}
+    assert popen_calls["cli"] == [argv[2], "--headless"]
+    assert popen_calls["kwargs"] == {"pass_fds": (3, 4)}
+    assert write_calls == [(1, b"{bye}\n")]
+    assert not any(argv[2] in r.getMessage() for r in captured_root.records)
+
+
+def test_unix_wrapper_gate_short_argv_does_not_touch_argv_or_dup2(monkeypatch, tmp_path):
+    dup2_called = False
+    popen_called = False
+
+    def _dup2(*_args: object) -> None:
+        nonlocal dup2_called
+        dup2_called = True
+
+    def _popen(*_args: object, **_kwargs: object) -> object:
+        nonlocal popen_called
+        popen_called = True
+        raise AssertionError("Popen must not run")
+
+    monkeypatch.setattr(os, "dup2", _dup2)
+    monkeypatch.setattr(subprocess, "Popen", _popen)
+    monkeypatch.setattr(sys, "executable", str(tmp_path / "exe"))
+    monkeypatch.setattr(sys, "argv", [str(tmp_path / "exe"), "only-two"])  # argv[2] would raise IndexError
+    module = _load_entry_module()
+    assert module is not None
+    assert not dup2_called
+    assert not popen_called
+
+
+def test_unix_wrapper_gate_rejects_browser_outside_chromium(monkeypatch, tmp_path):
+    dup2_called = False
+    popen_called = False
+    outside = tmp_path / "evil-chrome"
+    outside.write_text("", encoding="utf-8")
+    argv = _wrapper_argv(tmp_path)
+    argv[2] = str(outside)
+
+    def _dup2(*_args: object) -> None:
+        nonlocal dup2_called
+        dup2_called = True
+
+    def _popen(*_args: object, **_kwargs: object) -> object:
+        nonlocal popen_called
+        popen_called = True
+        raise AssertionError("Popen must not run")
+
+    monkeypatch.setattr(os, "dup2", _dup2)
+    monkeypatch.setattr(subprocess, "Popen", _popen)
+    monkeypatch.setattr(sys, "executable", argv[0])
+    with pytest.raises(SystemExit) as exc:
+        _load_entry_module(argv=argv)
+    assert exc.value.code == 1
+    assert not dup2_called
+    assert not popen_called
+
+
+def test_unix_wrapper_gate_signal_timeout_still_kills(monkeypatch, entry_module):
+    class _TimeoutProcess:
+        killed = False
+        waited_after_kill = False
+
+        returncode = 1
+
+        def terminate(self) -> None:
+            return
+
+        def wait(self, timeout: float | None = None) -> int:
+            if timeout == 5:
+                raise subprocess.TimeoutExpired(cmd=["chrome"], timeout=timeout)
+            self.waited_after_kill = True
+            return 0
+
+        def kill(self) -> None:
+            self.killed = True
+
+    proc = _TimeoutProcess()
+    entry_module._terminate_chromium_on_signal(proc, signal.SIGTERM, None)
+    assert proc.killed
+    assert proc.waited_after_kill
+
+
+def test_wrapper_gate_is_no_op_on_win32(monkeypatch, tmp_path):
+    dup2_called = False
+
+    def _dup2(*_args: object) -> None:
+        nonlocal dup2_called
+        dup2_called = True
+
+    monkeypatch.setattr(sys, "platform", "win32")
+    monkeypatch.setattr(os, "dup2", _dup2)
+    monkeypatch.setattr(subprocess, "Popen", lambda *_a, **_k: pytest.fail("Popen must not run"))
+    argv = _wrapper_argv(tmp_path)
+    monkeypatch.setattr(sys, "executable", argv[0])
+    module = _load_entry_module(argv=argv)
+    assert module is not None
+    assert not dup2_called
+
+
+def test_normal_import_still_calls_freeze_support(monkeypatch):
+    calls: list[bool] = []
+    monkeypatch.setattr(multiprocessing, "freeze_support", lambda: calls.append(True))
+    _load_entry_module(argv=[str(_ENTRY)])
+    assert calls == [True]

@@ -6,6 +6,10 @@ CLI entry (``guiskindose.__main__:cli``).
 
 Order matters (see ``dev-docs/plans/PORTABLE_APP_PLAN.md`` -> Freeze):
 
+0. On Unix, choreographer re-execs the frozen bootloader with
+   ``_unix_pipe_chromium_wrapper.py`` in ``argv[1]``. The entry performs that
+   wrapper body before anything touches fd 1 (see
+   ``dev-docs/plans/PORTABLE_BROWSER_WRAPPER_PLAN.md``).
 1. A windowed build has no console, so ``sys.stdout`` / ``sys.stderr`` can be
    ``None``. They are pointed at the log sink first, using only the standard
    library, so nothing below writes to ``None``.
@@ -29,9 +33,14 @@ import logging
 import multiprocessing
 import os
 import re
+import signal
+import subprocess
 import sys
 import threading
 import time
+from functools import partial
+from pathlib import Path
+from types import FrameType
 
 _PROCESS_START = time.perf_counter()
 
@@ -110,6 +119,73 @@ class _LogStream(io.TextIOBase):
             self._emit(pending)
         finally:
             local.busy = False
+
+
+_WRAPPER_SCRIPT_SUFFIX = "_unix_pipe_chromium_wrapper.py"
+_BYE_SENTINEL = b"{bye}\n"
+
+
+def _chromium_path_allowed(exe_path: str, chromium_root: Path) -> bool:
+    """True when *exe_path* resolves under *chromium_root* (same idea as ``pngcheck._inside``)."""
+    if not exe_path:
+        return False
+    target = os.path.normcase(str(Path(exe_path).resolve()))
+    root = os.path.normcase(str(chromium_root.resolve()))
+    try:
+        return os.path.commonpath([target, root]) == root
+    except ValueError:
+        return False
+
+
+def _terminate_chromium_on_signal(
+    process: subprocess.Popen[bytes],
+    _sig_num: int,
+    _frame: FrameType | None,
+) -> None:
+    process.terminate()
+    try:
+        process.wait(5)
+    except subprocess.TimeoutExpired:
+        process.kill()
+        process.wait()
+
+
+def _run_unix_pipe_chromium_wrapper(cli: list[str]) -> int:
+    """Hand stdin/stdout to Chromium on fds 3 and 4, wait, then write the pipe close sentinel."""
+    os.dup2(0, 3)
+    os.dup2(1, 4)
+    os.set_inheritable(3, True)
+    os.set_inheritable(4, True)
+
+    process = subprocess.Popen(cli, pass_fds=(3, 4))
+    handler = partial(_terminate_chromium_on_signal, process)
+    signal.signal(signal.SIGTERM, handler)
+    signal.signal(signal.SIGINT, handler)
+
+    process.wait()
+    os.write(1, _BYE_SENTINEL)
+    return process.returncode if process.returncode is not None else 0
+
+
+def _maybe_run_unix_pipe_chromium_wrapper() -> None:
+    """Perform choreographer's Unix pipe-wrapper re-exec when ``argv`` matches."""
+    if sys.platform == "win32" or len(sys.argv) < 3:
+        return
+    if not sys.argv[1].endswith(_WRAPPER_SCRIPT_SUFFIX):
+        return
+
+    cli = sys.argv[2:]
+    if not cli:
+        raise SystemExit(1)
+
+    chromium_root = Path(sys.executable).resolve().parent / "chromium"
+    if not _chromium_path_allowed(cli[0], chromium_root):
+        raise SystemExit(1)
+
+    raise SystemExit(_run_unix_pipe_chromium_wrapper(cli))
+
+
+_maybe_run_unix_pipe_chromium_wrapper()
 
 
 def _route_missing_streams() -> None:
