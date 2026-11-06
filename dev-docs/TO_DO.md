@@ -29,7 +29,7 @@ be archived.
 - [ ] **Geometry-driven support transmission** — See the correction-data roadmap in
   Active Work / [GEOMETRY_DRIVEN_SUPPORT_TRANSMISSION_PLAN.md](plans/GEOMETRY_DRIVEN_SUPPORT_TRANSMISSION_PLAN.md).
 - [ ] **Portable desktop app** — Light and Full double-click builds. Phase 1 partial (editions, pywebview floor, Light PNG gate, WebView2 registry pre-check, preview proof, packaging note, Windows edition matrix, PNG timing):
-  [PORTABLE_APP_PLAN.md](plans/PORTABLE_APP_PLAN.md). Detail in Active Work.
+  [PORTABLE_APP_PLAN.md](plans/PORTABLE_APP_PLAN.md). Unix Chromium pipe wrapper: [PORTABLE_BROWSER_WRAPPER_PLAN.md](plans/PORTABLE_BROWSER_WRAPPER_PLAN.md). Detail in Active Work.
 
 ## Active Work
 
@@ -56,7 +56,7 @@ be archived.
   - *Native window* — restore-from-maximize and multi-display OS smokes
     ([MAC_NATIVE_WINDOW_MAXIMIZE_PLAN.md](plans/archive/MAC_NATIVE_WINDOW_MAXIMIZE_PLAN.md),
     [NATIVE_WINDOW_GEOMETRY_PLAN.md](plans/archive/NATIVE_WINDOW_GEOMETRY_PLAN.md)).
-- [ ] **Portable desktop app (PyInstaller)** — Phase 1 partial (the Light/Full editions, the pywebview floor, the Light PNG gate, the WebView2 registry pre-check, the preview proof, the packaging note, the Windows edition matrix, and the PNG timing are in; macOS/Linux CI, macOS release signing, the choreographer wrapper, the manual offline PNG check, and the clean-VM checks remain):
+- [ ] **Portable desktop app (PyInstaller)** — Phase 1 partial (the Light/Full editions, the pywebview floor, the Light PNG gate, the WebView2 registry pre-check, the preview proof, the packaging note, the Windows edition matrix, and the PNG timing are in; macOS/Linux CI, macOS release signing, the choreographer wrapper ([PORTABLE_BROWSER_WRAPPER_PLAN.md](plans/PORTABLE_BROWSER_WRAPPER_PLAN.md)), the manual offline PNG check, and the clean-VM checks remain):
   [PORTABLE_APP_PLAN.md](plans/PORTABLE_APP_PLAN.md). Light is a small phantom set with no PNG export
   and no bundled browser. Full is the clinical library plus Chromium for offline Kaleido PNG
   (not Chrome for Testing). Phase 0 is a Windows freeze spike. Light checks for
