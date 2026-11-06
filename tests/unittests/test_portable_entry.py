@@ -381,6 +381,13 @@ def test_choreographer_unix_pipe_wrapper_drift() -> None:
     assert "_chromium_wrapper_path" in off_windows
 
 
+@pytest.fixture
+def unix_host(monkeypatch):
+    """Run the gate as on macOS or Linux, also on the Windows CI leg."""
+    monkeypatch.syspath_prepend(str(_ENTRY))
+    monkeypatch.setattr(importlib.import_module("_entry_platform"), "_override", "linux")
+
+
 def _wrapper_argv(tmp_path: Path, *, browser_name: str = "chrome") -> list[str]:
     exe = tmp_path / "GUISkinDose"
     exe.write_text("", encoding="utf-8")
@@ -392,7 +399,7 @@ def _wrapper_argv(tmp_path: Path, *, browser_name: str = "chrome") -> list[str]:
     return [str(exe), str(wrapper), str(browser), "--headless"]
 
 
-def test_unix_wrapper_gate_dup2_popen_and_bye(monkeypatch, tmp_path, captured_root):
+def test_unix_wrapper_gate_dup2_popen_and_bye(unix_host, monkeypatch, tmp_path, captured_root):
     dup2_calls: list[tuple[int, int]] = []
     inheritable: list[tuple[int, bool]] = []
     popen_calls: dict[str, object] = {}
@@ -467,7 +474,7 @@ def test_unix_wrapper_gate_short_argv_does_not_touch_argv_or_dup2(monkeypatch, t
     assert not popen_called
 
 
-def test_unix_wrapper_gate_rejects_browser_outside_chromium(monkeypatch, tmp_path):
+def test_unix_wrapper_gate_rejects_browser_outside_chromium(unix_host, monkeypatch, tmp_path):
     dup2_called = False
     popen_called = False
     outside = tmp_path / "evil-chrome"
@@ -528,6 +535,7 @@ def test_wrapper_gate_is_no_op_on_win32(monkeypatch, tmp_path):
         nonlocal dup2_called
         dup2_called = True
 
+    monkeypatch.syspath_prepend(str(_ENTRY))
     entry_platform = importlib.import_module("_entry_platform")
     monkeypatch.setattr(entry_platform, "_override", "win32")
     monkeypatch.setattr(os, "dup2", _dup2)
@@ -539,7 +547,7 @@ def test_wrapper_gate_is_no_op_on_win32(monkeypatch, tmp_path):
     assert not dup2_called
 
 
-def test_unix_wrapper_gate_rejects_open_debugging_fds(monkeypatch, tmp_path):
+def test_unix_wrapper_gate_rejects_open_debugging_fds(unix_host, monkeypatch, tmp_path):
     dup2_called = False
     fstat_calls: list[int] = []
 
@@ -567,7 +575,7 @@ def test_unix_wrapper_gate_rejects_open_debugging_fds(monkeypatch, tmp_path):
     assert not dup2_called
 
 
-def test_unix_wrapper_gate_suppresses_traceback_on_popen_failure(monkeypatch, tmp_path):
+def test_unix_wrapper_gate_suppresses_traceback_on_popen_failure(unix_host, monkeypatch, tmp_path):
     stderr = io.StringIO()
     monkeypatch.setattr(sys, "stderr", stderr)
 
