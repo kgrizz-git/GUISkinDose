@@ -31,6 +31,7 @@ from __future__ import annotations
 import contextlib
 import io
 import logging
+import math
 import multiprocessing
 import os
 import re
@@ -151,19 +152,26 @@ _WAIT_POLL_S = 0.2
 
 
 def _terminate_chromium_on_signal(
-    process: subprocess.Popen[bytes],
+    launched: list[subprocess.Popen[bytes]],
     requested: list[float],
     _sig_num: int,
     _frame: FrameType | None,
 ) -> None:
     """Ask Chromium to exit and note when. :func:`_wait_for_chromium` kills it after the grace period.
 
-    The handler does no waiting itself, so the wrapper still reaches the ``{bye}`` write.
+    The handler does no waiting itself, so the wrapper still reaches the ``{bye}`` write. It claims
+    the shutdown before anything else, so a signal that arrives inside this handler returns at once.
+    The placeholder is never seen by :func:`_wait_for_chromium`, because a handler runs to the end
+    before the main flow resumes. A signal that lands before Chromium starts is only recorded;
+    :func:`_run_unix_pipe_chromium_wrapper` terminates Chromium right after launch.
     """
-    if not requested:
-        requested.append(time.monotonic())
+    if requested:
+        return
+    requested.append(math.inf)
+    requested[0] = time.monotonic()
+    if launched:
         with contextlib.suppress(OSError):
-            process.terminate()
+            launched[0].terminate()
 
 
 def _wait_for_chromium(process: subprocess.Popen[bytes], requested: list[float]) -> int:
@@ -199,11 +207,19 @@ def _run_unix_pipe_chromium_wrapper(cli: list[str]) -> int:
     os.set_inheritable(3, True)
     os.set_inheritable(4, True)
 
-    process = subprocess.Popen(cli, pass_fds=(3, 4))
+    # Handlers go in before the launch, so no signal can arrive while the default action
+    # would end this wrapper and orphan Chromium. Blocking the signals instead would leave
+    # them blocked in Chromium too, because a child inherits the signal mask.
+    launched: list[subprocess.Popen[bytes]] = []
     requested: list[float] = []
-    handler = partial(_terminate_chromium_on_signal, process, requested)
+    handler = partial(_terminate_chromium_on_signal, launched, requested)
     signal.signal(signal.SIGTERM, handler)
     signal.signal(signal.SIGINT, handler)
+    process = subprocess.Popen(cli, pass_fds=(3, 4))
+    launched.append(process)
+    if requested:  # a signal arrived before Chromium existed
+        with contextlib.suppress(OSError):
+            process.terminate()
 
     code = _wait_for_chromium(process, requested)
     with contextlib.suppress(OSError):

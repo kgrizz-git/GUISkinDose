@@ -534,9 +534,31 @@ class _SlowProcess:
 def test_signal_handler_only_terminates(entry_module):
     proc = _SlowProcess()
     requested: list[float] = []
-    entry_module._terminate_chromium_on_signal(proc, requested, signal.SIGTERM, None)
+    entry_module._terminate_chromium_on_signal([proc], requested, signal.SIGTERM, None)
     assert proc.terminated
     assert not proc.killed
+    assert len(requested) == 1
+    assert requested[0] != float("inf")
+
+
+def test_signal_handler_claims_shutdown_before_terminating(entry_module):
+    """A signal that lands inside the handler, during terminate(), must not terminate again."""
+    requested: list[float] = []
+    calls: list[int] = []
+
+    class _Reentrant:
+        def terminate(self) -> None:
+            calls.append(1)
+            entry_module._terminate_chromium_on_signal([self], requested, signal.SIGINT, None)
+
+    entry_module._terminate_chromium_on_signal([_Reentrant()], requested, signal.SIGTERM, None)
+    assert calls == [1]
+    assert len(requested) == 1
+
+
+def test_signal_before_launch_is_recorded_without_a_process(entry_module):
+    requested: list[float] = []
+    entry_module._terminate_chromium_on_signal([], requested, signal.SIGTERM, None)
     assert len(requested) == 1
 
 
@@ -661,3 +683,45 @@ def test_normal_import_still_calls_freeze_support(monkeypatch):
     monkeypatch.setattr(multiprocessing, "freeze_support", lambda: calls.append(True))
     _load_entry_module(argv=[str(_ENTRY_FILE)])
     assert calls == [True]
+
+
+def test_signal_during_launch_terminates_chromium_once_it_exists(unix_host, monkeypatch, tmp_path):
+    """Handlers are installed before Popen; a signal that lands first still ends Chromium."""
+    handlers: dict[int, object] = {}
+
+    class _Proc:
+        terminated = 0
+
+        def terminate(self) -> None:
+            self.terminated += 1
+
+        def wait(self, timeout: float | None = None) -> int:
+            return 0
+
+    procs: list[_Proc] = []
+
+    def _popen(*_a: object, **_k: object) -> _Proc:
+        assert set(handlers) == {signal.SIGTERM, signal.SIGINT}  # installed before the launch
+        handlers[signal.SIGTERM](signal.SIGTERM, None)  # type: ignore[operator]
+        procs.append(_Proc())
+        return procs[-1]
+
+    real_fstat = os.fstat
+
+    def _free_debug_fds(fd: int) -> object:
+        if fd in (3, 4):
+            raise OSError
+        return real_fstat(fd)
+
+    monkeypatch.setattr(os, "fstat", _free_debug_fds)
+    monkeypatch.setattr(os, "dup2", lambda *_a: None)
+    monkeypatch.setattr(os, "set_inheritable", lambda *_a: None)
+    monkeypatch.setattr(os, "write", lambda _fd, data: len(data))
+    monkeypatch.setattr(signal, "signal", lambda sig, handler: handlers.__setitem__(sig, handler))
+    monkeypatch.setattr(subprocess, "Popen", _popen)
+    argv = _wrapper_argv(tmp_path)
+    monkeypatch.setattr(sys, "executable", argv[0])
+    with pytest.raises(SystemExit) as exc:
+        _load_entry_module(argv=argv)
+    assert exc.value.code == 0
+    assert procs[0].terminated == 1
