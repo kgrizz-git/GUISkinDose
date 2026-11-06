@@ -63,10 +63,20 @@ class PngRenderError(RuntimeError):
         super().__init__(PNG_RENDER_MESSAGE)
 
 
+def _host_platform() -> str:
+    """Return ``sys.platform``. Tests patch this so they do not change the process platform.
+
+    asyncio chooses its event-loop policy once from ``sys.platform``. A test that
+    sets that to ``win32`` makes the first ``asyncio.run`` in an xdist worker
+    import the Windows loop.
+    """
+    return sys.platform
+
+
 def bundled_browser(base: Path | None = None) -> Path:
     """Path of the bundled Chromium: ``<base>/chromium/chrome[.exe]``; *base* defaults to the exe dir."""
     root = base if base is not None else Path(sys.executable).resolve().parent
-    name = "chrome.exe" if sys.platform == "win32" else "chrome"
+    name = "chrome.exe" if _host_platform() == "win32" else "chrome"
     return root / BROWSER_DIR / name
 
 
@@ -83,7 +93,7 @@ def bundled_browser_for_render() -> Path | None:
     ``sys.executable`` is the PyInstaller bootloader (PORTABLE_APP_PLAN.md, "Freeze").
     Until that wrapper item lands, frozen macOS and Linux Full builds fail PNG closed.
     """
-    if not _is_frozen() or sys.platform != "win32":
+    if not _is_frozen() or _host_platform() != "win32":
         return None
     return bundled_browser()
 

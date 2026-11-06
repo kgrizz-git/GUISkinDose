@@ -5,8 +5,9 @@ freeze, that every packaged data root resolves through the installed package,
 that the GUI and native-window libraries import, and that a plane-phantom
 ``calculate_dose`` on a bundled example RDSR exports HTML, JSON, and CSV. It also
 reports the frozen edition and proves what that edition ships: Light has no
-browser and starts no PNG render, and both editions drop ``_reduced_1000t``. On
-Windows it records the WebView2 pre-check's registry probe. It needs no network
+browser and starts no PNG render, both editions drop ``_reduced_1000t``, and the
+``adult_male`` preview stem is ``adult_male_reduced_3000t``. On Windows it records
+the WebView2 pre-check's registry probe. It needs no network
 and no ``git``.
 
 The result is ``selfcheck_report.json`` in the output directory, plus the exit
@@ -30,7 +31,7 @@ import time
 from collections.abc import Callable
 from importlib.resources import files
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeGuard
 
 _EXAMPLE_RDSR = "siemens_axiom_example_procedure.dcm"
 # Every file the checks write goes in this subfolder of the directory the caller names,
@@ -225,15 +226,26 @@ def _light_png_gate() -> dict[str, Any]:
     return {"to_image_calls": len(calls), "png_returned": png is not None}
 
 
+def _require_preview_stem(stem: str) -> None:
+    """Fail unless the adult-male preview resolved to the 3000t stem."""
+    if stem != "adult_male_reduced_3000t":
+        raise ValueError("edition_phantom_payload_wrong")
+
+
 def _check_edition() -> dict[str, Any]:
     """Report the frozen edition and prove what it ships and gates.
 
     Light: no ``chromium/`` folder, PNG export off, and no ``to_image`` call. Both:
-    no ``_reduced_1000t`` preview, a starter mesh loads, and a non-starter mesh is
+    no ``_reduced_1000t`` preview, the ``adult_male`` preview stem is
+    ``adult_male_reduced_3000t``, a starter mesh loads, and a non-starter mesh is
     reported as not installed (Light) or loads (Full).
     """
     from guiskindose.edition import current_edition, png_export_available
-    from guiskindose.phantom_mesh_names import HumanMeshNotInstalledError, resolve_human_mesh_stl_path
+    from guiskindose.phantom_mesh_names import (
+        HumanMeshNotInstalledError,
+        prefer_reduced_preview_stem,
+        resolve_human_mesh_stl_path,
+    )
 
     edition = current_edition()
     found: dict[str, Any] = {
@@ -242,7 +254,9 @@ def _check_edition() -> dict[str, Any]:
         "bundled_browser_present": _bundled_browser_present(),
         "reduced_1000t_stl": _count(("phantom_data",), "_reduced_1000t.stl"),
         "starter_mesh_loads": resolve_human_mesh_stl_path("adult_male").is_file(),
+        "preview_stem": prefer_reduced_preview_stem("adult_male"),
     }
+    _require_preview_stem(found["preview_stem"])
     try:
         found["non_starter_mesh"] = "loads" if resolve_human_mesh_stl_path("senior_male").is_file() else "absent"
     except HumanMeshNotInstalledError:
@@ -294,15 +308,43 @@ def _write_atomic(path: Path, text: str) -> None:
     temporary.replace(path)
 
 
+def _counts_are_safe(counts: Any) -> TypeGuard[dict[str, int]]:
+    """True when *counts* is a non-empty map of identifier keys to ints.
+
+    Booleans are ints in Python and are rejected. Strings are rejected so a path
+    cannot ride along in the report. The TypeGuard narrows *counts* for the report copy.
+    """
+    if not isinstance(counts, dict) or not counts:
+        return False
+    return all(
+        isinstance(key, str) and key.isidentifier() and isinstance(value, int) and not isinstance(value, bool)
+        for key, value in counts.items()
+    )
+
+
+def _failure_record(exc: BaseException) -> dict[str, Any]:
+    """Error class and location, plus an optional stable code and integer counts."""
+    from guiskindose.privacy import exception_class_name, innermost_location
+
+    record: dict[str, Any] = {"error_type": exception_class_name(exc), "at": innermost_location(exc)}
+    code = getattr(exc, "code", None)
+    if isinstance(code, str) and code.isidentifier():
+        record["code"] = code
+    counts = getattr(exc, "counts", None)
+    if _counts_are_safe(counts):
+        record["counts"] = dict(counts)
+    return record
+
+
 def _run_step(report: dict[str, Any], name: str, step: Callable[[], dict[str, Any]]) -> bool:
     try:
         report[name] = step()
         return True
     except Exception as exc:  # every step failure is reported, not raised
-        from guiskindose.privacy import exception_class_name, innermost_location, safe_error_event
+        from guiskindose.privacy import safe_error_event
 
         safe_error_event(_logger, f"selfcheck_{name}", exc)
-        report[name] = {"error_type": exception_class_name(exc), "at": innermost_location(exc)}
+        report[name] = _failure_record(exc)
         return False
 
 

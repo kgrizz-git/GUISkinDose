@@ -69,7 +69,7 @@ def _frozen(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, platform: str, *, b
     exe.write_bytes(b"")
     monkeypatch.setattr(sys, "frozen", True, raising=False)
     monkeypatch.setattr(sys, "executable", str(exe))
-    monkeypatch.setattr(sys, "platform", platform)
+    monkeypatch.setattr(png_browser, "_host_platform", lambda: platform)
     monkeypatch.setattr(png_browser, "png_export_available", lambda: True)
     chrome = tmp_path / "chromium" / ("chrome.exe" if platform == "win32" else "chrome")
     if browser:
@@ -188,15 +188,15 @@ def test_frozen_unix_fails_closed_but_path_resolves(monkeypatch, tmp_path, kalei
 
 
 def test_bundled_browser_honors_base_and_platform(monkeypatch, tmp_path) -> None:
-    monkeypatch.setattr(sys, "platform", "win32")
+    monkeypatch.setattr(png_browser, "_host_platform", lambda: "win32")
     assert bundled_browser(tmp_path) == tmp_path / "chromium" / "chrome.exe"
-    monkeypatch.setattr(sys, "platform", "linux")
+    monkeypatch.setattr(png_browser, "_host_platform", lambda: "linux")
     assert bundled_browser(tmp_path) == tmp_path / "chromium" / "chrome"
 
 
 def test_not_frozen_has_no_render_browser(monkeypatch) -> None:
     monkeypatch.delattr(sys, "frozen", raising=False)
-    monkeypatch.setattr(sys, "platform", "win32")
+    monkeypatch.setattr(png_browser, "_host_platform", lambda: "win32")
     assert bundled_browser_for_render() is None
 
 

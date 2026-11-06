@@ -7,7 +7,7 @@ static-analysis environment (`dev` + `gui` extras):
 uv run --extra dev --extra gui --locked python scripts/check_licenses.py --write-notices
 ```
 
-Regenerate with `uv run --extra dev --extra gui --locked python scripts/check_licenses.py --write-notices` (last updated: 2026-10-30).
+Regenerate with `uv run --extra dev --extra gui --locked python scripts/check_licenses.py --write-notices` (last updated: 2026-11-05).
 
 Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIANCE.md`](LICENSE_COMPLIANCE.md).
 
@@ -35,7 +35,7 @@ Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIAN
 | bleach | 6.4.0 | Apache-2.0 | https://github.com/mozilla/bleach |
 | boolean.py | 5.0 | BSD-2-Clause | https://github.com/bastikr/boolean.py |
 | CacheControl | 0.14.4 | Apache-2.0 | Homepage, https://pypi.org/project/CacheControl/ |
-| certifi | 2026.10.19 | MPL-2.0 | https://github.com/certifi/python-certifi |
+| certifi | 2026.10.23 | MPL-2.0 | https://github.com/certifi/python-certifi |
 | cffi | 2.0.0 | MIT | Documentation, https://cffi.readthedocs.io/ |
 | cfgv | 3.5.0 | MIT | https://github.com/asottile/cfgv |
 | chardet | 7.4.3 | 0BSD | Homepage, https://github.com/chardet/chardet |
@@ -48,7 +48,7 @@ Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIAN
 | debugpy | 1.8.21 | MIT | https://aka.ms/debugpy |
 | decorator | 5.3.1 | BSD-2-Clause | BSD-2-Clause |
 | defusedxml | 0.7.1 | PSF-2.0 | https://github.com/tiran/defusedxml |
-| diff_cover | 10.6.0 | Apache-2.0 | Homepage, https://github.com/Bachmann1234/diff-cover |
+| diff_cover | 11.0.0 | Apache-2.0 | Homepage, https://github.com/Bachmann1234/diff-cover |
 | distlib | 0.4.4 | PSF-2.0 | https://github.com/pypa/distlib |
 | docutils | 0.22.4 | BSD-3-Clause, GPL-2.0-or-later | Changelog, https://docutils.sourceforge.io/HISTORY.html |
 | et_xmlfile | 2.0.0 | MIT | https://foss.heptapod.net/openpyxl/et_xmlfile |
@@ -98,7 +98,7 @@ Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIAN
 | matplotlib-inline | 0.2.2 | BSD-3-Clause | Homepage, https://github.com/ipython/matplotlib-inline |
 | mdurl | 0.1.2 | MIT | Homepage, https://github.com/executablebooks/mdurl |
 | mistune | 3.3.3 | BSD-3-Clause | Documentation, https://mistune.lepture.com/ |
-| msgpack | 1.2.3 | Apache-2.0 | Homepage, https://msgpack.org/ |
+| msgpack | 1.2.4 | Apache-2.0 | Homepage, https://msgpack.org/ |
 | multidict | 6.9.1 | Apache-2.0 | https://github.com/aio-libs/multidict |
 | narwhals | 2.22.1 | MIT | Homepage, https://github.com/narwhals-dev/narwhals |
 | nbclient | 0.11.0 | BSD-3-Clause | Documentation, https://nbclient.readthedocs.io |
@@ -111,12 +111,12 @@ Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIAN
 | nodejs-wheel-binaries | 24.16.0 | MIT | repository, https://github.com/njzjz/nodejs-wheel |
 | notebook_shim | 0.2.4 | BSD-3-Clause | BSD 3-Clause License  Copyright (c) 2022 Project Jupyter Contributors All rights reserved.  Redistribution and use in so |
 | numpy | 2.4.6 | BSD-3-Clause, 0BSD, MIT, Zlib, CC0-1.0 | homepage, https://numpy.org |
-| numpy-stl | 3.2.0 | BSD-3-Clause | https://github.com/WoLpH/numpy-stl/ |
+| numpy-stl | 4.1.1 | BSD-3-Clause | Homepage, https://github.com/WoLpH/numpy-stl/ |
 | openpyxl | 3.1.5 | MIT | https://openpyxl.readthedocs.io |
 | orjson | 3.11.9 | Apache-2.0, MIT | changelog, https://github.com/ijl/orjson/blob/master/CHANGELOG.md |
 | packageurl-python | 0.17.6 | MIT | https://github.com/package-url/packageurl-python |
 | packaging | 26.3 | Apache-2.0, BSD-2-Clause | Documentation, https://packaging.pypa.io/ |
-| pandas | 3.0.6 | BSD-3-Clause | homepage, https://pandas.pydata.org |
+| pandas | 3.1.0 | BSD-3-Clause | homepage, https://pandas.pydata.org |
 | pandas-stubs | 3.0.5.260914 | BSD-3-Clause | Bug Tracker, https://github.com/pandas-dev/pandas-stubs/issues |
 | pandocfilters | 1.5.1 | BSD-3-Clause | http://github.com/jgm/pandocfilters |
 | parso | 0.8.7 | MIT | https://github.com/davidhalter/parso |
@@ -126,7 +126,7 @@ Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIAN
 | pip-requirements-parser | 32.0.1 | MIT | https://github.com/nexB/pip-requirements-parser |
 | pip_audit | 2.10.1 | Apache-2.0 | Homepage, https://pypi.org/project/pip-audit/ |
 | platformdirs | 4.10.0 | MIT | Changelog, https://platformdirs.readthedocs.io/en/latest/changelog.html |
-| playwright | 1.63.0 | Apache-2.0 | homepage, https://github.com/Microsoft/playwright-python |
+| playwright | 1.64.1 | Apache-2.0 | homepage, https://github.com/Microsoft/playwright-python |
 | plotly | 6.8.0 | MIT | Homepage, https://plotly.com/python/ |
 | pluggy | 1.6.0 | MIT | MIT |
 | pre_commit | 4.7.0 | MIT | https://github.com/pre-commit/pre-commit |
@@ -146,10 +146,9 @@ Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIAN
 | pyparsing | 3.3.2 | MIT | Documentation, https://pyparsing-docs.readthedocs.io/en/latest/ |
 | pypdf | 6.21.4 | BSD-3-Clause | Bug Reports, https://github.com/py-pdf/pypdf/issues |
 | pytest | 9.1.1 | MIT | Changelog, https://docs.pytest.org/en/stable/changelog.html |
-| pytest-asyncio | 1.4.0 | Apache-2.0 | Bug Tracker, https://github.com/pytest-dev/pytest-asyncio/issues |
-| pytest-base-url | 2.1.0 | MPL-2.0 | Homepage, https://github.com/pytest-dev/pytest-base-url |
+| pytest-asyncio | 1.4.1 | Apache-2.0 | Bug Tracker, https://github.com/pytest-dev/pytest-asyncio/issues |
 | pytest-cov | 7.1.0 | MIT | Sources, https://github.com/pytest-dev/pytest-cov |
-| pytest-playwright | 0.9.0 | Apache-2.0 | homepage, https://github.com/microsoft/playwright-pytest |
+| pytest-playwright | 0.10.0 | Apache-2.0 | homepage, https://github.com/microsoft/playwright-pytest |
 | pytest-xdist | 3.8.0 | MIT | Homepage, https://github.com/pytest-dev/pytest-xdist |
 | python-dateutil | 2.9.0.post0 | BSD-3-Clause, Apache-2.0 | https://github.com/dateutil/dateutil |
 | python-discovery | 1.6.1 | MIT | Changelog, https://github.com/tox-dev/python-discovery/releases |
@@ -164,14 +163,14 @@ Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIAN
 | PyYAML | 6.0.3 | MIT | https://pyyaml.org/ |
 | pyzmq | 27.1.0 | BSD-3-Clause | Homepage, https://pyzmq.readthedocs.org |
 | referencing | 0.37.0 | MIT | Documentation, https://referencing.readthedocs.io/ |
-| reportlab | 5.0.1 | BSD-3-Clause | https://www.reportlab.com/ |
+| reportlab | 5.1.0 | BSD-3-Clause | https://www.reportlab.com/ |
 | requests | 2.34.2 | Apache-2.0 | Documentation, https://requests.readthedocs.io |
 | rfc3339-validator | 0.1.4 | MIT | https://github.com/naimetti/rfc3339-validator |
 | rfc3986-validator | 0.1.1 | MIT | https://github.com/naimetti/rfc3986-validator |
 | rich | 15.0.0 | MIT | Documentation, https://rich.readthedocs.io/en/latest/ |
 | roman-numerals | 4.1.0 | 0BSD, CC0-1.0 | Changelog, https://github.com/AA-Turner/roman-numerals/blob/master/CHANGES.rst |
 | rpds-py | 2026.5.1 | MIT | Documentation, https://rpds.readthedocs.io/ |
-| ruff | 0.17.0 | MIT | https://docs.astral.sh/ruff |
+| ruff | 0.17.3 | MIT | https://docs.astral.sh/ruff |
 | scikit-image | 0.26.0 | BSD-3-Clause | homepage, https://scikit-image.org |
 | scipy | 1.17.1 | BSD-3-Clause | homepage, https://scipy.org/ |
 | Send2Trash | 2.1.0 | BSD-3-Clause | Homepage, https://github.com/arsenetar/send2trash |

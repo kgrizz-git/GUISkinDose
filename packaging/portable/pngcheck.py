@@ -6,7 +6,9 @@ onedir under ``chromium/``. The render goes through the app's own PNG path,
 ``guiskindose.export.png_browser.figure_to_png``, which passes the bundled browser path to
 Kaleido explicitly (choreographer would otherwise prefer a Chrome for Testing it downloaded
 earlier, then ``BROWSER_PATH``, then a system install). Each image starts its own one-shot
-browser, so one sampler thread polls the process list for the whole export.
+browser, so one sampler thread watches process launches for the whole export. On Windows
+that watch is one PowerShell process: starting a new one for every sample is slower than the
+browser, and an empty sample still counted as a successful probe.
 
 It fails unless:
 
@@ -16,7 +18,14 @@ It fails unless:
 - the page Kaleido generated references no ``http(s)`` script URL.
 
 The report ``pngcheck_report.json`` holds booleans, counts, flag names, and paths
-relative to the onedir only: no absolute paths and no exam values.
+relative to the onedir only: no absolute paths and no exam values. A passing render
+includes ``samples``, ``rows``, and ``uninspectable``. A failed render also stores
+a stable ``code`` (``browser_not_seen``, ``browser_outside``,
+``browser_uninspectable``, ``sampler_did_not_stop``, or ``sampler_not_ready``)
+and integer ``counts`` when it has them. ``browser_uninspectable`` is the verdict
+only when no inside browser was seen; a null path beside an inside browser stays
+the ``uninspectable`` count. The two sampler codes carry no counts. Those counts
+are sample and process totals, never paths.
 """
 
 from __future__ import annotations
@@ -62,8 +71,79 @@ def _check_bundle() -> dict[str, Any]:
     return found
 
 
+def _parse_cim_chrome_json(raw: str) -> list[dict[str, Any]]:
+    """One CIM JSON document as ``{pid, ppid, exe, cmd}`` rows.
+
+    PowerShell emits an array, one object, ``null``, or nothing. A null path or
+    command line becomes an empty string so later checks can count it without
+    storing a path in the failure report.
+    """
+    parsed = json.loads(raw.strip().lstrip("\ufeff") or "[]")
+    items = [parsed] if isinstance(parsed, dict) else (parsed or [])
+    return [
+        {
+            "pid": item["ProcessId"],
+            "ppid": item["ParentProcessId"],
+            "exe": item["ExecutablePath"] or "",
+            "cmd": item["CommandLine"] or "",
+        }
+        for item in items
+        if isinstance(item, dict)
+    ]
+
+
+# One process for the whole export. On the Windows Full runner the spawn-plus-query
+# interval exceeded a one-shot browser's lifetime. OperationTimeoutSec stops one hung
+# CIM call from stalling the loop. AutoFlush pushes each JSON line out before the next query.
+# CREATE_NO_WINDOW has no console, so the encoding assignment can throw a .NET exception
+# that SilentlyContinue does not suppress. The try/catch keeps that from ending the watch.
+_CHROME_WATCH = (
+    "$ProgressPreference='SilentlyContinue';"
+    "$ErrorActionPreference='SilentlyContinue';"
+    "try { [Console]::OutputEncoding = [Text.Encoding]::UTF8 } catch { };"
+    "if ([Console]::Out -is [System.IO.StreamWriter]) { [Console]::Out.AutoFlush = $true };"
+    "while ($true) {"
+    " $p = @(Get-CimInstance Win32_Process -Filter \"Name='chrome.exe'\" -OperationTimeoutSec 5"
+    " | Select-Object ProcessId,ParentProcessId,ExecutablePath,CommandLine);"
+    " $json = ConvertTo-Json -InputObject $p -Compress;"
+    " if ([string]::IsNullOrEmpty($json)) { $json = '[]' };"
+    " [Console]::Out.WriteLine($json);"
+    " [Console]::Out.Flush();"
+    " Start-Sleep -Milliseconds 100"
+    " }"
+)
+
+
+def _windows_sampler() -> bool:
+    """True when samples come from :func:`_spawn_chrome_watch` instead of a fresh process each poll.
+
+    Tests replace this. Production follows ``sys.platform`` so a test never has to patch that.
+    """
+    return sys.platform == "win32"
+
+
+def _spawn_chrome_watch() -> subprocess.Popen[str]:
+    """Start the CIM loop. The caller reads stdout and must terminate the process."""
+    flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+    return subprocess.Popen(  # nosec B603 B607 - fixed argv, no user input
+        ["powershell", "-NoProfile", "-NonInteractive", "-Command", _CHROME_WATCH],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        stdin=subprocess.DEVNULL,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        bufsize=1,
+        creationflags=flags,
+    )
+
+
 def _list_processes() -> list[dict[str, Any]]:
-    """Every process as ``{pid, ppid, exe, cmd}``; Windows via CIM, else ``ps``."""
+    """Every process as ``{pid, ppid, exe, cmd}``; Windows via CIM, else ``ps``.
+
+    The Windows branch is one shot. The export sampler does not use it: a cold
+    PowerShell start per sample missed the browser on the Full PNG gate.
+    """
     if sys.platform == "win32":
         # Browser processes only (every Chromium child is also chrome.exe), so a sample is quick.
         # InputObject with @() keeps zero or one match a JSON array.
@@ -79,18 +159,7 @@ def _list_processes() -> list[dict[str, Any]]:
             check=True,
             timeout=60,
         ).stdout
-        parsed = json.loads(raw.strip() or "[]")
-        items = [parsed] if isinstance(parsed, dict) else (parsed or [])
-        return [
-            {
-                "pid": p["ProcessId"],
-                "ppid": p["ParentProcessId"],
-                "exe": p["ExecutablePath"] or "",
-                "cmd": p["CommandLine"] or "",
-            }
-            for p in items
-            if isinstance(p, dict)
-        ]
+        return _parse_cim_chrome_json(raw)
     raw = subprocess.run(  # nosec B603 B607 - fixed argv, no user input
         ["ps", "-axo", "pid=,ppid=,command="], capture_output=True, text=True, check=True, timeout=60
     ).stdout
@@ -155,31 +224,109 @@ def _describe_launch(rows: list[dict[str, Any]]) -> dict[str, Any]:
 
 _SAMPLE_INTERVAL_S = 0.1
 _SAMPLER_STOP_TIMEOUT_S = 30.0
+_WATCH_READY_TIMEOUT_S = 10.0
+
+
+def _signal_process(proc: subprocess.Popen[str] | None, *, kill: bool) -> None:
+    """End *proc* if it is still running. ``kill`` also waits for it to exit."""
+    if proc is None or proc.poll() is not None:
+        return
+    with contextlib.suppress(OSError):
+        if kill:
+            proc.kill()
+        else:
+            proc.terminate()
+    if kill:
+        with contextlib.suppress(subprocess.TimeoutExpired):
+            proc.wait(timeout=5)
+
+
+def _uninspectable_descendants(rows: list[dict[str, Any]]) -> int:
+    """Descendants of this process whose executable path is null."""
+    import os
+
+    return sum(1 for row in _descendants(rows, os.getpid()) if not row.get("exe"))
 
 
 class _ProcessSampler:
-    """Poll ``_list_processes`` on one thread until stopped and keep every sample.
+    """Collect process samples until stopped.
 
-    One-shot browsers live only while an image renders, and a Windows CIM query is slow, so
-    one continuous sampler runs for the whole export instead of one probe per image.
+    On Windows one PowerShell process queries CIM in a loop for the whole export.
+    Elsewhere each poll is a fresh ``_list_processes`` call. A failed line or probe
+    drops that sample and leaves the render running.
     """
 
     def __init__(self) -> None:
         self.samples: list[list[dict[str, Any]]] = []
+        self.did_not_stop = False
         self._stop = threading.Event()
+        self._ready = threading.Event()
+        self._proc: subprocess.Popen[str] | None = None
         self._thread = threading.Thread(target=self._run, daemon=True)
 
     def _run(self) -> None:
+        if self._proc is not None:
+            self._read_watch()
+            return
         while not self._stop.is_set():
             with contextlib.suppress(Exception):  # a failed probe loses one sample, never the render
                 self.samples.append(_list_processes())
             self._stop.wait(_SAMPLE_INTERVAL_S)
 
+    def _read_watch(self) -> None:
+        """Record each stdout line until EOF.
+
+        Reading the pipe line by line already returns a trailing fragment when the
+        pipe closes, and that fragment is parsed too. ``stop`` therefore drains
+        every buffered line through EOF without a second timeout. A bad line is
+        skipped and is not logged: the text can contain an executable path.
+        """
+        proc = self._proc
+        if proc is None or proc.stdout is None:
+            return
+        try:
+            for line in proc.stdout:
+                self._record_line(str(line))
+        except Exception:
+            return
+
+    def _record_line(self, line: str) -> None:
+        if not line.strip():
+            return
+        with contextlib.suppress(Exception):
+            self.samples.append(_parse_cim_chrome_json(line))
+            self._ready.set()
+
     def start(self) -> None:
+        if _windows_sampler():
+            self._proc = _spawn_chrome_watch()
         self._thread.start()
 
+    def wait_until_ready(self, timeout: float) -> bool:
+        """True once the watcher has parsed a line, or immediately when there is no watcher."""
+        if self._proc is None:
+            return True
+        return self._ready.wait(timeout)
+
     def stop(self) -> None:
+        """End the watch and drain stdout through EOF, then make sure the reader exited.
+
+        ``terminate`` lets the child flush and close the pipe. The reader keeps
+        parsing until that EOF, so a line already buffered is recorded, including
+        one the kill fallback releases. If the reader is still alive after the
+        kill, it is flagged, not detached.
+        """
         self._stop.set()
+        proc = self._proc
+        _signal_process(proc, kill=False)
+        self._join_reader()
+        if self._thread.is_alive() or (proc is not None and proc.poll() is None):
+            _signal_process(proc, kill=True)
+            self._join_reader()
+        if self._thread.is_alive():
+            self.did_not_stop = True
+
+    def _join_reader(self) -> None:
         if self._thread.is_alive():  # never started if the payload failed before start()
             self._thread.join(_SAMPLER_STOP_TIMEOUT_S)
 
@@ -210,6 +357,55 @@ def _merge_samples(samples: list[list[dict[str, Any]]]) -> list[dict[str, Any]]:
     return list(merged.values())
 
 
+class RenderCheckError(ValueError):
+    """A PNG check failure with a stable ``code`` and optional integer ``counts``.
+
+    Launch codes are ``browser_not_seen``, ``browser_outside``, and
+    ``browser_uninspectable`` (only when no inside browser was seen). Sampler
+    codes are ``sampler_not_ready`` and ``sampler_did_not_stop``; those carry no
+    counts. Launch ``counts`` are integers only: samples, rows, empty executable
+    rows, descendant browsers, distinct inside binaries, outside launches, and
+    ``chrome.exe`` rows outside the onedir. No paths.
+    """
+
+    def __init__(self, code: str, **counts: int) -> None:
+        super().__init__(code)
+        self.code = code
+        self.counts = counts
+
+
+def _launch_counts(launch: dict[str, Any], rows: list[dict[str, Any]], sample_count: int) -> dict[str, int]:
+    """Integer totals for a failed launch check. Paths stay out of this dict."""
+    return {
+        "samples": sample_count,
+        "rows": len(rows),
+        "empty_exe_rows": sum(1 for row in rows if not row.get("exe")),
+        "browser_processes": int(launch["browser_processes"]),
+        "launched_inside": len(launch["launched_from_onedir"]),
+        "launched_outside": int(launch["launched_outside_onedir"]),
+        "system_chrome": int(launch["system_chrome_processes_running"]),
+        "uninspectable": _uninspectable_descendants(rows),
+    }
+
+
+def _require_bundled_launch(launch: dict[str, Any], rows: list[dict[str, Any]], sample_count: int) -> None:
+    """Pass when a watched browser is inside the onedir and none ran outside it.
+
+    A known outside path fails as ``browser_outside``. When no inside browser was
+    seen, a descendant with a null path fails as ``browser_uninspectable`` and
+    every other miss fails as ``browser_not_seen``. A null path next to an inside
+    browser is not a verdict; the passing report keeps it as ``uninspectable``.
+    """
+    counts = _launch_counts(launch, rows, sample_count)
+    if counts["launched_outside"]:
+        raise RenderCheckError("browser_outside", **counts)
+    if launch["launched_from_onedir"]:
+        return
+    if counts["uninspectable"]:
+        raise RenderCheckError("browser_uninspectable", **counts)
+    raise RenderCheckError("browser_not_seen", **counts)
+
+
 def _render_pngs(captured_pages: list[str]) -> dict[str, Any]:
     from kaleido import _page_generator
 
@@ -234,14 +430,20 @@ def _render_pngs(captured_pages: list[str]) -> dict[str, Any]:
     settings.phantom.model = "plane"
     started = time.perf_counter()
     try:
-        source = build_cli_export_source([str(_pkg("example_data", "RDSR", _EXAMPLE_RDSR))], settings)
+        # The watch starts during source load. The payload waits until one line has parsed.
         sampler.start()
+        source = build_cli_export_source([str(_pkg("example_data", "RDSR", _EXAMPLE_RDSR))], settings)
+        if not sampler.wait_until_ready(_WATCH_READY_TIMEOUT_S):
+            raise RenderCheckError("sampler_not_ready")
         payload = collect_export_payload(source, with_images=True)
     finally:
         sampler.stop()
         images.figure_to_png = original_render
         _page_generator.PageGenerator.generate_index = original
-    launch = _describe_launch(_merge_samples(sampler.samples))
+    if sampler.did_not_stop:
+        raise RenderCheckError("sampler_did_not_stop")
+    merged = _merge_samples(sampler.samples)
+    launch = _describe_launch(merged)
     pngs = [image.png_bytes for image in payload.images if image.png_bytes]
     result = {
         "images": len(payload.images),
@@ -249,6 +451,9 @@ def _render_pngs(captured_pages: list[str]) -> dict[str, Any]:
         "png_bytes_total": sum(len(png) for png in pngs),
         "render_seconds": round(time.perf_counter() - started, 2),
         **launch,
+        "samples": len(sampler.samples),
+        "rows": len(merged),
+        "uninspectable": _uninspectable_descendants(merged),
     }
     if errors:  # any failed image fails the check; surface the real cause
         raise errors[0]
@@ -256,8 +461,7 @@ def _render_pngs(captured_pages: list[str]) -> dict[str, Any]:
         raise ValueError("no_png_rendered")
     if not sampler.samples:
         raise ValueError("process_sampling_failed")
-    if not launch["launched_from_onedir"] or launch["launched_outside_onedir"]:
-        raise ValueError("browser_not_bundled_copy")
+    _require_bundled_launch(launch, merged, len(sampler.samples))
     return result
 
 

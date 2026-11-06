@@ -21,6 +21,8 @@ That keeps SemVer and contributor history organized.
 
 ### Changed
 
+- Installing the optional `gui-native` extra requires `pywebview>=6.1`. The lock already resolves 6.2.1.
+  The `portable` dependency group already had the same floor.
 - On Windows, the portable Full app now renders PNG dose maps with the Chromium bundled in the download, never a
   browser installed on the computer. When the bundled browser is missing or cannot start, the Export tab says so
   and suggests re-extracting the download. Portable Full builds for macOS and Linux do not export PNG yet; they

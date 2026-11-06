@@ -219,6 +219,7 @@ jobs:
           $ed = $report.edition
           if ($ed.edition -ne $env:GUISKINDOSE_PORTABLE_EDITION) { throw "frozen edition $($ed.edition) != $env:GUISKINDOSE_PORTABLE_EDITION" }
           if ($ed.reduced_1000t_stl -ne 0) { throw "a _reduced_1000t preview was bundled" }
+          if ($ed.preview_stem -ne 'adult_male_reduced_3000t') { throw "preview did not resolve to adult_male_reduced_3000t" }
           if (-not $ed.starter_mesh_loads) { throw "starter mesh does not load" }
           if ($env:GUISKINDOSE_PORTABLE_EDITION -eq 'light') {
             if ($ed.png_export_available) { throw "Light reports PNG export available" }
@@ -243,14 +244,11 @@ jobs:
       if: matrix.edition == 'full'
       run: |
         $env:PATH = ($env:PATH -split ';' | Where-Object { $_ -and -not (Test-Path (Join-Path $_ 'git.exe')) }) -join ';'
-        # Decoy: point BROWSER_PATH at the runner's system Chrome. The app's own PNG
-        # renderer (figure_to_png) must still launch the bundled copy, because it passes
-        # that path to Kaleido explicitly.
-        $system = @("$env:ProgramFiles\Google\Chrome\Application\chrome.exe",
-          "${env:ProgramFiles(x86)}\Google\Chrome\Application\chrome.exe") |
-          Where-Object { Test-Path $_ } | Select-Object -First 1
-        Write-Output "system Chrome present on runner: $([bool]$system)"
-        if ($system) { $env:BROWSER_PATH = $system }
+        $decoy = Join-Path $env:RUNNER_TEMP "no-such-chrome\chrome.exe"
+        $env:BROWSER_PATH = $decoy
+        # A missing BROWSER_PATH is a valid decoy because figure_to_png always passes kopts["path"] (src/guiskindose/export/png_browser.py).
+        if ($env:BROWSER_PATH -ne $decoy) { throw "BROWSER_PATH decoy was not set" }
+        if (Test-Path $env:BROWSER_PATH) { throw "BROWSER_PATH decoy exists on disk" }
         $out = Join-Path $env:RUNNER_TEMP "pngcheck"
         $sw = [Diagnostics.Stopwatch]::StartNew()
         $proc = Start-Process -FilePath $env:APP_EXE -ArgumentList '--png-check', "`"$out`"" -Wait -PassThru
@@ -262,7 +260,14 @@ jobs:
         $r = Get-Content $report | ConvertFrom-Json
         if ($r.page.http_script_refs -ne 0) { throw "Kaleido page references an http script" }
         if ($r.render.launched_outside_onedir -ne 0) { throw "a browser outside the onedir launched" }
-        if (-not ($r.render.launched_from_onedir -contains 'chromium/chrome.exe')) { throw "bundled chrome.exe not seen" }
+        # The example export writes the whole-body map and the irradiated-region map.
+        if ([int]$r.render.png_images -lt 2) { throw "png-check returned fewer than two PNGs" }
+        if ([int]$r.render.png_images -ne [int]$r.render.images) { throw "png-check png count does not match its image count" }
+        if ([int]$r.render.png_bytes_total -le 0) { throw "png-check returned empty PNG bytes" }
+        $bins = @($r.render.launched_from_onedir)
+        if ($bins -notcontains 'chromium/chrome.exe') { throw "bundled chrome.exe not seen" }
+        $outsideChromium = @($bins | Where-Object { $_ -notlike 'chromium/*' })
+        if ($outsideChromium.Count -ne 0) { throw "png-check browser was $($outsideChromium -join ', ')" }
         "PNG_WALL_S=$wall" >> $env:GITHUB_ENV
         "PNG_IMAGES=$($r.render.png_images)" >> $env:GITHUB_ENV
         "PNG_FLAGS=$($r.render.flags -join ' ')" >> $env:GITHUB_ENV

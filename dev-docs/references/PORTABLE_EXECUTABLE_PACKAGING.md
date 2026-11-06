@@ -1,23 +1,23 @@
 # Portable executable packaging (research note)
 
-_Status: research note. Execution plan: [plans/PORTABLE_APP_PLAN.md](../plans/PORTABLE_APP_PLAN.md) (not started)._
-_Created: 2026-07-30. Pointed at the execution plan: 2026-10-17._
+_Status: research note. Execution plan: [plans/PORTABLE_APP_PLAN.md](../plans/PORTABLE_APP_PLAN.md) (in progress; payload cleanup plan: [plans/archive/PORTABLE_PHASE1_PAYLOAD_CLEANUP_PLAN.md](../plans/archive/PORTABLE_PHASE1_PAYLOAD_CLEANUP_PLAN.md))._
+_Created: 2026-07-30. Updated: 2026-11-05._
 _Parent hub: [RELEASES_AND_DISTRIBUTION.md](../RELEASES_AND_DISTRIBUTION.md)._
-_Related backlog: Active Work item in [TO_DO.md](../TO_DO.md) (not started)._
+_Related backlog: Active Work item in [TO_DO.md](../TO_DO.md) (in progress, tracked in [plans/PORTABLE_APP_PLAN.md](../plans/PORTABLE_APP_PLAN.md))._
 
 ## Summary
 
-GUISkinDose today ships as a **Python package**: `pip install`, then
+GUISkinDose ships as a **Python package**: `pip install`, then
 `python -m guiskindose --mode gui` (optional `--native` / `gui-native` via pywebview).
-There is **no** frozen-app or installer pipeline in this repository. PyPI / GitHub
+A **portable desktop application** is in progress under
+[plans/PORTABLE_APP_PLAN.md](../plans/PORTABLE_APP_PLAN.md).
+
+A Windows PyInstaller onedir exists. The spec is `packaging/portable/guiskindose.spec`.
+The workflow is `.github/workflows/portable-spike.yml`. There is still no installer.
+macOS and Linux release zips remain open in the parent plan. PyPI / GitHub
 Release process lives in the parent hub and [PUBLISHING.md](../../PUBLISHING.md).
 
-A **portable desktop executable** is feasible in principle via NiceGUI’s
-[`nicegui-pack`](https://nicegui.io/documentation/section_configuration_deployment)
-(PyInstaller wrapper), but it is a non-trivial productization project for this
-codebase — not a one-afternoon packaging tweak.
-
-## What “portable” would mean here
+## What “portable” means here
 
 | Goal | Realistic shape |
 |------|-----------------|
@@ -26,24 +26,34 @@ codebase — not a one-afternoon packaging tweak.
 | One binary for all OSes | **No** — rebuild on each target OS/arch |
 | JVM / “wrapped for Java” | **No** — see below |
 
-## Recommended approach (if prioritized)
+## Frozen packaging implementation
 
-1. **Tooling:** `nicegui-pack` / PyInstaller; call `ui.run(reload=False, …)`; use `native=True` only with
-   `--windowed` when a console-less window is desired (see NiceGUI packaging tips).
-2. **Entry:** freeze the existing GUI entry (`python -m guiskindose --mode gui` path / `run_gui`), not a
-   separate toy script.
-3. **Must bundle as data:**
-   - `src/guiskindose/phantom_data/` STLs (full + reduced previews)
-   - `corrections.db` (or CSV seed path used on first run)
-   - GUI help under package `gui/help/`
-   - `settings_example.json` / normalization settings JSON as used at runtime
-4. **Extras:** decide whether `[export]` / kaleido / reportlab are in the default freeze or optional
-   “full” builds (size vs features).
-5. **CI:** build on Windows + macOS + Linux runners; upload artifacts privately or as GitHub Release
-   assets only after privacy/release gates. Do not commit binaries to the tree.
-6. **Smoke:** launch, load example RDSR, calculate, export HTML/PNG on each OS.
+1. **Tooling:** PyInstaller onedir builds via `packaging/portable/guiskindose.spec`.
+2. **Entry:** The frozen program is `packaging/portable/entry.py`. It is outside the wheel,
+   so `guiskindose.__main__:cli` stays the console script (`entry.py` lines 1–5).
+   Windows and macOS call `run_gui(native=True)`. Linux v1 calls `run_gui(native=False)`
+   (`entry.py` lines 154–156 for `_native_window`, and line 191 for the `run_gui` call).
+3. **Bundled package data:**
+   - Phantom files come from `edition.py`: Light is the 28-file starter set; Full is
+     every clinical STL except `_reduced_1000t` (92 files).
+   - `table_data/*.csv` (spec line 141) and `table_data/*.json` (spec line 142). `resolve_corrections_source`
+     (`src/guiskindose/correction_data.py` lines 192–215) only classifies the setting: the default
+     (empty or the exact string `corrections.db`) returns `("packaged", None)`. It does not open
+     a database file. Later readers use the packaged CSV tables. The spec does not list `corrections.db`.
+   - GUI help under package `gui/help/`.
+   - `settings_example.json` / normalization settings JSON as used at runtime.
+4. **Editions:** Light does not bundle Chromium and disables PNG export. Its native window uses the
+   WebView2 runtime already installed on the PC. Full bundles Chromium and the clinical STL set in
+   item 3. Neither frozen edition bundles the Fixed Version WebView2 runtime yet.
+5. **CI:** `.github/workflows/portable-spike.yml` builds Windows Light and Full onedir zips. macOS
+   and Linux CI builds remain open in the parent plan. Artifacts expire and are not committed.
+6. **Smoke & checks:** Windows Full smokes offline PNG with `GUISkinDose.exe --png-check`
+   (`portable-spike.yml` lines 243–272). Light proves PNG never starts: `to_image` call count stays 0
+   (`selfcheck.py` lines 201–226, workflow lines 224–228). Frozen macOS and Linux Full fail PNG closed
+   until the choreographer wrapper (`PORTABLE_APP_PLAN.md` line 304). Do not write a per-OS PNG smoke
+   for those builds.
 
-Expect **large** artifacts (hundreds of MB+ with scientific stack + phantoms), slower cold start,
+Expect **large** artifacts (hundreds of MB with scientific stack + phantoms), slower cold start,
 Windows AV false positives, and ongoing rebuild cost when dependencies change.
 
 ## Out of scope / not recommended
@@ -56,16 +66,17 @@ Windows AV false positives, and ongoing rebuild cost when dependencies change.
   weak ROI versus subprocess/API.
 - Committing built executables or bundling PHI-bearing fixtures into release zips.
 
-## Preconditions before implementation
+## Current open items before general release
 
-- Product decision: who needs double-click installs, and which OS first?
-- Size/privacy policy for shipped phantoms and example data in the bundle.
-- Maintainer bandwidth for per-OS smoke on each release.
-- Spike PR: minimal freeze of GUI on one OS with package-data inclusion proven; document failure
-  modes (missing static/NiceGUI data, missing `corrections.db`, path resolution under `_MEIPASS`).
+- The Windows spike and package-data proof are done (`--self-check` opens data through `importlib.resources`).
+  A default corrections path resolves to packaged data, and a file named `corrections.db` in the working directory is ignored.
+- Per-OS release smoke is still open. That includes a zip downloaded through a browser, so Mark of the Web and macOS quarantine are present.
+- macOS and Linux CI builds, macOS Developer ID signing/notarization, and the Linux runtime library verification.
 
 ## Pointers
 
+- Execution plan: [plans/PORTABLE_APP_PLAN.md](../plans/PORTABLE_APP_PLAN.md)
+- Payload cleanup plan: [plans/archive/PORTABLE_PHASE1_PAYLOAD_CLEANUP_PLAN.md](../plans/archive/PORTABLE_PHASE1_PAYLOAD_CLEANUP_PLAN.md)
 - NiceGUI: [Package for Installation](https://nicegui.io/documentation/section_configuration_deployment)
 - Current GUI launch: `run_gui.sh` / `run_gui.bat`, `python -m guiskindose --mode gui [--native]`
-- GUI goals (non-Python users, still Python install today): [plans/GUI_PLAN.md](../plans/GUI_PLAN.md)
+- GUI goals: [plans/GUI_PLAN.md](../plans/GUI_PLAN.md)

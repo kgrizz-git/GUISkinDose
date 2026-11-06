@@ -8,6 +8,41 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ## [Unreleased]
 
+- **PNG watcher follow-up** (2026-11-05) — `browser_uninspectable` now fails the render
+  only when no inside browser was seen. A null executable path beside an inside browser
+  stays the integer `uninspectable` count. The CIM watch sets UTF-8 output inside
+  try/catch, because under `CREATE_NO_WINDOW` the assignment can throw a .NET exception
+  that SilentlyContinue does not suppress. `stop()` no longer waits on a half-read line;
+  the reader still drains stdout through EOF. A watcher that parses no line fails as
+  `sampler_not_ready`. That code and `sampler_did_not_stop` are stored with no counts.
+
+- **PNG check waits for the watcher and rejects a null browser path** (2026-11-05) —
+  `--png-check` now waits up to 10 seconds for the first parsed process line before it
+  renders, and `stop()` joins the reader again after the kill fallback. A descendant
+  with a null executable path fails as `browser_uninspectable`. The Windows Full job
+  requires both example PNGs.
+
+- **Full PNG sampler stays on one PowerShell watch** (2026-11-05) — On the Windows Full
+  runner, the spawn-plus-query interval exceeded a one-shot browser's lifetime, and the
+  failed report stored only `ValueError`. `--png-check` now uses one CIM loop for the whole
+  export, and each query gives up after 5 seconds. A passing render records `samples` and
+  `rows`. A failed render records `browser_not_seen` or `browser_outside` plus integer
+  counts only. The gate still requires a browser inside the onedir and none outside it.
+
+- **Phase 1 portable payload cleanup** (2026-11-05) — `gui-native` requires `pywebview>=6.1`;
+  `--self-check` requires the `adult_male` preview stem `adult_male_reduced_3000t`; the packaging
+  note matches the freeze; the Full PNG job gates `png_images`, `png_bytes_total`, and bundled
+  `chromium/*` binaries with `BROWSER_PATH` set to a missing `chrome.exe` before the render;
+  run 42107015732 took 9.92 s against the Phase 0 9.9 s, so no batching follow-up was opened.
+
+- **Third-party notices refreshed** (2026-11-05) — The pre-commit license-notices hook regenerated
+  `dev-docs/THIRD_PARTY_NOTICES.md` because `main`'s copy was stale.
+
+- **PNG browser tests stop patching sys.platform** (2026-11-05) — `figure_to_png` reads the host OS
+  through `_host_platform()`. The tests patch that function instead of `sys.platform`. The old patch
+  made the first asyncio use in each xdist worker import the Windows loop, so the failure was
+  ordering-dependent and raised `ModuleNotFoundError: _overlapped`.
+
 - **Portable Full renders PNG through the bundled Chromium** (2026-11-03) — The new
   `guiskindose/export/png_browser.py` holds `figure_to_png`. Source and pip installs still call
   `fig.to_image`. The frozen Full app calls `kaleido.calc_fig` with `kopts["path"]` on a fresh daemon thread with a 120 s
