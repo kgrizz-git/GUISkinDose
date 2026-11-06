@@ -28,6 +28,7 @@ Order matters (see ``dev-docs/plans/PORTABLE_APP_PLAN.md`` -> Freeze):
 
 from __future__ import annotations
 
+import contextlib
 import io
 import logging
 import multiprocessing
@@ -43,6 +44,14 @@ from pathlib import Path
 from types import FrameType
 
 _PROCESS_START = time.perf_counter()
+
+# Beside this script, so it is on sys.path unfrozen and in the spec's pathex frozen.
+import _entry_platform  # noqa: E402
+
+
+def _host_platform() -> str:
+    return _entry_platform.host_platform()
+
 
 # Opt-out for shared machines: no diagnostic file is written when this is set.
 NO_FILE_LOG_ENV = "GUISKINDOSE_NO_FILE_LOG"
@@ -150,8 +159,22 @@ def _terminate_chromium_on_signal(
         process.wait()
 
 
+def _debugging_pipe_fds_free() -> bool:
+    """True when fds 3 and 4 are not already open (choreographer expects to dup2 onto them)."""
+    for fd in (3, 4):
+        try:
+            os.fstat(fd)
+        except OSError:
+            continue
+        return False
+    return True
+
+
 def _run_unix_pipe_chromium_wrapper(cli: list[str]) -> int:
     """Hand stdin/stdout to Chromium on fds 3 and 4, wait, then write the pipe close sentinel."""
+    if not _debugging_pipe_fds_free():
+        raise SystemExit(1)
+
     os.dup2(0, 3)
     os.dup2(1, 4)
     os.set_inheritable(3, True)
@@ -163,13 +186,14 @@ def _run_unix_pipe_chromium_wrapper(cli: list[str]) -> int:
     signal.signal(signal.SIGINT, handler)
 
     process.wait()
-    os.write(1, _BYE_SENTINEL)
+    with contextlib.suppress(OSError):
+        os.write(1, _BYE_SENTINEL)
     return process.returncode if process.returncode is not None else 0
 
 
 def _maybe_run_unix_pipe_chromium_wrapper() -> None:
     """Perform choreographer's Unix pipe-wrapper re-exec when ``argv`` matches."""
-    if sys.platform == "win32" or len(sys.argv) < 3:
+    if _host_platform() == "win32" or len(sys.argv) < 3:
         return
     if not sys.argv[1].endswith(_WRAPPER_SCRIPT_SUFFIX):
         return
@@ -182,7 +206,13 @@ def _maybe_run_unix_pipe_chromium_wrapper() -> None:
     if not _chromium_path_allowed(cli[0], chromium_root):
         raise SystemExit(1)
 
-    raise SystemExit(_run_unix_pipe_chromium_wrapper(cli))
+    try:
+        code = _run_unix_pipe_chromium_wrapper(cli)
+    except SystemExit:
+        raise
+    except BaseException:
+        raise SystemExit(1) from None
+    raise SystemExit(code)
 
 
 _maybe_run_unix_pipe_chromium_wrapper()

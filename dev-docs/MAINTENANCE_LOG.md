@@ -11,12 +11,20 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 - **Frozen Unix Chromium pipe wrapper (code)** (2026-11-05) — `packaging/portable/entry.py`
   now performs choreographer's Unix pipe-wrapper re-exec before stream routing or
   `freeze_support`. Frozen macOS and Linux Full builds resolve bundled browser paths
-  (`Chromium.app/Contents/MacOS/Chromium` and `chromium/chrome`) through
-  `guiskindose.export.png_browser`, and `--png-check` reads license notices from the
-  `chromium/` ancestor. No user-facing release yet: Full macOS and Linux zips are not
-  shipped, and frozen `--png-check` on those OSes is still open in
-  [PORTABLE_BROWSER_WRAPPER_PLAN.md](plans/PORTABLE_BROWSER_WRAPPER_PLAN.md). No
-  `CHANGELOG.md` entry until Phase 1 acceptance in the parent portable plan.
+  (`Chromium.app/Contents/MacOS/Chromium` under `Contents/MacOS/chromium/` and
+  `chromium/chrome` on Linux) through `guiskindose.export.png_browser`, and `--png-check`
+  reads license notices from the `chromium/` ancestor. No portable macOS or Linux zip is
+  shipped yet; frozen `--png-check` on those OSes is still open in
+  [PORTABLE_BROWSER_WRAPPER_PLAN.md](plans/PORTABLE_BROWSER_WRAPPER_PLAN.md). A brief
+  [CHANGELOG.md](../CHANGELOG.md) Unreleased note records the in-tree work for the pre-push
+  changelog hook; user-facing release wording waits for Phase 1 acceptance when those zips exist.
+
+- **PyInstaller 6.22.3 gate evidence (Chunk 1)** (2026-11-05) — Checked tag `v6.22.3`:
+  `bootloader/src/pyi_main.c` does not `freopen` stdio in the onedir child (debug only on
+  stderr when bootloader debug is on). `PyInstaller/hooks/rthooks.dat` has no
+  `pyi_rth_subprocess.py` entry (PR 6364's Windows hook is not in this release), so Unix
+  inherits explicit pipes from choreographer's `Popen`. Archive reads are per open:
+  `PyInstaller/loader/pyimod01_archive.py` lines 59 and 119 (`open(..., "rb")` per read).
 
 - **PNG watcher follow-up** (2026-11-05) — `browser_uninspectable` now fails the render
   only when no inside browser was seen. A null executable path beside an inside browser

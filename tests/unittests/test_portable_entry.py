@@ -8,7 +8,9 @@ not import nicegui at module level.
 
 from __future__ import annotations
 
+import contextlib
 import importlib.util
+import io
 import logging
 import multiprocessing
 import os
@@ -22,26 +24,34 @@ import pytest
 
 from guiskindose import debug as dbg
 
-_ENTRY = Path(__file__).resolve().parents[2] / "packaging" / "portable" / "entry.py"
+_ENTRY = Path(__file__).resolve().parents[2] / "packaging" / "portable"
+_ENTRY_FILE = _ENTRY / "entry.py"
 _ENTRY_MODULE_NAME = "guiskindose_portable_entry"
 
 
 def _load_entry_module(*, argv: list[str] | None = None) -> types.ModuleType:
     """Import ``entry.py`` fresh so import-time gates see the given ``argv``."""
-    if argv is not None:
-        sys.argv = argv
-    sys.modules.pop(_ENTRY_MODULE_NAME, None)
-    spec = importlib.util.spec_from_file_location(_ENTRY_MODULE_NAME, _ENTRY)
-    assert spec is not None
-    assert spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    saved_argv = sys.argv[:]
+    sys.path.insert(0, str(_ENTRY))
+    try:
+        if argv is not None:
+            sys.argv = argv
+        sys.modules.pop(_ENTRY_MODULE_NAME, None)
+        spec = importlib.util.spec_from_file_location(_ENTRY_MODULE_NAME, _ENTRY_FILE)
+        assert spec is not None
+        assert spec.loader is not None
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+    finally:
+        sys.argv = saved_argv
+        with contextlib.suppress(ValueError):
+            sys.path.remove(str(_ENTRY))
 
 
 @pytest.fixture(scope="module")
 def entry_module():
-    return _load_entry_module(argv=[str(_ENTRY)])
+    return _load_entry_module(argv=[str(_ENTRY_FILE)])
 
 
 @pytest.fixture
@@ -267,7 +277,7 @@ def test_no_arguments_start_the_gui(entry_module, fake_dispatch):
 
 def test_calculate_and_export_overwrites_its_own_files_on_rerun(tmp_path, monkeypatch):
     """A second self-check in the same directory replaces the files it wrote."""
-    monkeypatch.syspath_prepend(str(_ENTRY.parent))
+    monkeypatch.syspath_prepend(str(_ENTRY))
     selfcheck = importlib.import_module("selfcheck")
     owned = tmp_path / selfcheck.OWNED_SUBDIR
     owned.mkdir()
@@ -282,7 +292,7 @@ def test_outputs_stay_inside_the_owned_subfolder(tmp_path, monkeypatch):
     """A same-named file already in the named directory is left alone."""
     import urllib.request
 
-    monkeypatch.syspath_prepend(str(_ENTRY.parent))
+    monkeypatch.syspath_prepend(str(_ENTRY))
     selfcheck = importlib.import_module("selfcheck")
 
     def _refuse(*_args, **_kwargs):
@@ -407,8 +417,16 @@ def test_unix_wrapper_gate_dup2_popen_and_bye(monkeypatch, tmp_path, captured_ro
         popen_calls["kwargs"] = kwargs
         return _FakeProcess()
 
+    real_fstat = os.fstat
+
+    def _free_debug_fds(fd: int) -> object:
+        if fd in (3, 4):
+            raise OSError
+        return real_fstat(fd)
+
     monkeypatch.setattr(os, "dup2", lambda src, dst: dup2_calls.append((src, dst)))
     monkeypatch.setattr(os, "set_inheritable", lambda fd, val: inheritable.append((fd, val)))
+    monkeypatch.setattr(os, "fstat", _free_debug_fds)
     monkeypatch.setattr(subprocess, "Popen", _fake_popen)
     monkeypatch.setattr(os, "write", lambda fd, data: write_calls.append((fd, data)) or len(data))
     monkeypatch.setattr(signal, "signal", lambda *_args: None)
@@ -502,13 +520,16 @@ def test_unix_wrapper_gate_signal_timeout_still_kills(monkeypatch, entry_module)
 
 
 def test_wrapper_gate_is_no_op_on_win32(monkeypatch, tmp_path):
+    import importlib
+
     dup2_called = False
 
     def _dup2(*_args: object) -> None:
         nonlocal dup2_called
         dup2_called = True
 
-    monkeypatch.setattr(sys, "platform", "win32")
+    entry_platform = importlib.import_module("_entry_platform")
+    monkeypatch.setattr(entry_platform, "_override", "win32")
     monkeypatch.setattr(os, "dup2", _dup2)
     monkeypatch.setattr(subprocess, "Popen", lambda *_a, **_k: pytest.fail("Popen must not run"))
     argv = _wrapper_argv(tmp_path)
@@ -518,8 +539,63 @@ def test_wrapper_gate_is_no_op_on_win32(monkeypatch, tmp_path):
     assert not dup2_called
 
 
+def test_unix_wrapper_gate_rejects_open_debugging_fds(monkeypatch, tmp_path):
+    dup2_called = False
+    fstat_calls: list[int] = []
+
+    def _dup2(*_args: object) -> None:
+        nonlocal dup2_called
+        dup2_called = True
+
+    real_fstat = os.fstat
+
+    def _fstat(fd: int) -> object:
+        fstat_calls.append(fd)
+        if fd == 3:
+            return real_fstat(0)
+        raise OSError
+
+    monkeypatch.setattr(os, "fstat", _fstat)
+    monkeypatch.setattr(os, "dup2", _dup2)
+    monkeypatch.setattr(subprocess, "Popen", lambda *_a, **_k: pytest.fail("Popen must not run"))
+    argv = _wrapper_argv(tmp_path)
+    monkeypatch.setattr(sys, "executable", argv[0])
+    with pytest.raises(SystemExit) as exc:
+        _load_entry_module(argv=argv)
+    assert exc.value.code == 1
+    assert 3 in fstat_calls
+    assert not dup2_called
+
+
+def test_unix_wrapper_gate_suppresses_traceback_on_popen_failure(monkeypatch, tmp_path):
+    stderr = io.StringIO()
+    monkeypatch.setattr(sys, "stderr", stderr)
+
+    def _boom(*_a: object, **_k: object) -> object:
+        raise RuntimeError("must not reach choreographer")
+
+    real_fstat = os.fstat
+
+    def _free_debug_fds(fd: int) -> object:
+        if fd in (3, 4):
+            raise OSError
+        return real_fstat(fd)
+
+    monkeypatch.setattr(subprocess, "Popen", _boom)
+    monkeypatch.setattr(os, "fstat", _free_debug_fds)
+    monkeypatch.setattr(os, "dup2", lambda *_a: None)
+    monkeypatch.setattr(os, "set_inheritable", lambda *_a: None)
+    monkeypatch.setattr(signal, "signal", lambda *_a: None)
+    argv = _wrapper_argv(tmp_path)
+    monkeypatch.setattr(sys, "executable", argv[0])
+    with pytest.raises(SystemExit) as exc:
+        _load_entry_module(argv=argv)
+    assert exc.value.code == 1
+    assert stderr.getvalue() == ""
+
+
 def test_normal_import_still_calls_freeze_support(monkeypatch):
     calls: list[bool] = []
     monkeypatch.setattr(multiprocessing, "freeze_support", lambda: calls.append(True))
-    _load_entry_module(argv=[str(_ENTRY)])
+    _load_entry_module(argv=[str(_ENTRY_FILE)])
     assert calls == [True]

@@ -21,14 +21,14 @@ That keeps SemVer and contributor history organized.
 
 ### Changed
 
-- Frozen portable Full builds for macOS and Linux can now launch their bundled Chromium for PNG export. No macOS
-  or Linux portable download ships yet, so this has no effect on any release; Windows is unchanged.
+- Portable Full builds for macOS and Linux can now hand PNG export to their bundled Chromium. No macOS or Linux
+  portable download is published yet, so users see no change, and the frozen PNG check on those systems is still
+  pending. Windows is unchanged.
 - Installing the optional `gui-native` extra requires `pywebview>=6.1`. The lock already resolves 6.2.1.
   The `portable` dependency group already had the same floor.
 - On Windows, the portable Full app now renders PNG dose maps with the Chromium bundled in the download, never a
   browser installed on the computer. When the bundled browser is missing or cannot start, the Export tab says so
-  and suggests re-extracting the download. Portable Full builds for macOS and Linux do not export PNG yet; they
-  show the same message. The pip install is unchanged.
+  and suggests re-extracting the download. The pip install is unchanged.
 - On Windows, `--mode gui --native` now checks for the Microsoft Edge WebView2 Runtime and .NET Framework 4.6.2
   or later before it opens the window. When either is missing, the app shows a message that points at Microsoft's
   Evergreen Bootstrapper and exits, instead of opening a broken window on the old MSHTML engine. The lookup uses

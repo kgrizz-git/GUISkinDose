@@ -167,7 +167,7 @@ def test_list_processes_parses_macos_chromium_command_line(pngcheck, monkeypatch
 
     browser = tmp_path / "chromium" / "Chromium.app" / "Contents" / "MacOS" / "Chromium"
     line = f"  42  {os.getpid()}  {browser} --headless --no-sandbox\n"
-    monkeypatch.setattr(pngcheck.sys, "platform", "linux")
+    monkeypatch.setattr(pngcheck, "_host_platform", lambda: "linux")
     monkeypatch.setattr(pngcheck.subprocess, "run", lambda *a, **k: type("R", (), {"stdout": line})())
     (row,) = pngcheck._list_processes()
     assert row["exe"] == str(browser)
@@ -871,12 +871,15 @@ def test_sampler_stop_before_start_does_not_raise(pngcheck):
         ("null", []),
         ("[]", []),
         ('{"ProcessId": 1, "ParentProcessId": 0, "ExecutablePath": null, "CommandLine": null}', [1]),
-        ('[{"ProcessId": 1, "ParentProcessId": 0, "ExecutablePath": "a", "CommandLine": "b"}, '
-         '{"ProcessId": 2, "ParentProcessId": 1, "ExecutablePath": "a", "CommandLine": "c"}]\r\n', [1, 2]),
+        (
+            '[{"ProcessId": 1, "ParentProcessId": 0, "ExecutablePath": "a", "CommandLine": "b"}, '
+            '{"ProcessId": 2, "ParentProcessId": 1, "ExecutablePath": "a", "CommandLine": "c"}]\r\n',
+            [1, 2],
+        ),
     ],
 )
 def test_list_processes_parses_every_powershell_shape(pngcheck, monkeypatch, stdout, expected):
-    monkeypatch.setattr(pngcheck.sys, "platform", "win32")
+    monkeypatch.setattr(pngcheck, "_host_platform", lambda: "win32")
     monkeypatch.setattr(pngcheck.subprocess, "run", lambda *a, **k: type("R", (), {"stdout": stdout})())
     rows = pngcheck._list_processes()
     assert [row["pid"] for row in rows] == expected

@@ -55,6 +55,10 @@ def app_dir() -> Path:
     return Path(sys.executable).resolve().parent
 
 
+def _host_platform() -> str:
+    return sys.platform
+
+
 def _chromium_notice_dir(base: Path | None = None) -> Path:
     """The ``chromium/`` folder that holds the license notices, above any nested macOS ``Chromium.app``."""
     return (base if base is not None else app_dir()) / BROWSER_DIR
@@ -125,7 +129,7 @@ def _windows_sampler() -> bool:
 
     Tests replace this. Production follows ``sys.platform`` so a test never has to patch that.
     """
-    return sys.platform == "win32"
+    return _host_platform() == "win32"
 
 
 def _spawn_chrome_watch() -> subprocess.Popen[str]:
@@ -150,7 +154,7 @@ def _list_processes() -> list[dict[str, Any]]:
     The Windows branch is one shot. The export sampler does not use it: a cold
     PowerShell start per sample missed the browser on the Full PNG gate.
     """
-    if sys.platform == "win32":
+    if _host_platform() == "win32":
         # Browser processes only (every Chromium child is also chrome.exe), so a sample is quick.
         # InputObject with @() keeps zero or one match a JSON array.
         script = (

@@ -88,6 +88,10 @@ The develop `pyi_main.c` does not `freopen` stdout in the onedir child. Debug li
 
 The gate still has to be first. A write to fd 1 before `dup2` corrupts the DevTools stream, and `--png-check` then fails closed. That failure is the signal to stop and re-plan. It is not a reason to fall back to a system browser.
 
+#### PyInstaller 6.22.3 evidence (Chunk 1, recorded 2026-11-05)
+
+Against tag `v6.22.3`: `bootloader/src/pyi_main.c` does not `freopen` stdout or stdin in the onedir child. `PyInstaller/hooks/rthooks.dat` lists no `pyi_rth_subprocess.py` (PR 6364's Windows-only hook is absent in this release), so Unix child processes inherit explicit stdin/stdout/stderr from choreographer's `Popen`. Frozen archive reads open the file per read (`PyInstaller/loader/pyimod01_archive.py`, lines 59 and 119).
+
 ## Browser path
 
 `bundled_browser()` today is `<base>/chromium/chrome.exe` on Windows and `<base>/chromium/chrome` elsewhere (`png_browser.py`, lines 76–80). `base` defaults to `Path(sys.executable).resolve().parent`. On a macOS `.app` that parent is `Contents/MacOS`.
@@ -98,7 +102,7 @@ Those names match Windows and Linux. They do not match the macOS build.
 |----|----------|-----------------------------------------------|
 | Windows | ungoogled-chromium zip, already pinned | `<exe dir>/chromium/chrome.exe` (unchanged) |
 | Linux | ungoogled-chromium-portablelinux `.tar.xz`, not the AppImage | `<exe dir>/chromium/chrome`. The unpack is a directory whose main binary is `chrome`, with the shared libraries beside it (portablelinux packaging; a distro ebuild `doexe`s `chrome`). Copy the directory contents into `chromium/`, not the `chrome` file alone. |
-| macOS | ungoogled-chromium-macos `.dmg` | `<exe dir>/chromium/Chromium.app/Contents/MacOS/Chromium`. The dmg contains `Chromium.app`; the Mach-O is `Contents/MacOS/Chromium` (the same path choreographer searches under `/Applications`, `_chrome_constants.py` line 83). `ditto` the whole `.app` into `Contents/MacOS/chromium/Chromium.app` so Frameworks and Helpers stay in place. |
+| macOS | ungoogled-chromium-macos `.dmg` | `<exe dir>/chromium/Chromium.app/Contents/MacOS/Chromium`. The dmg contains `Chromium.app`; the Mach-O is `Contents/MacOS/Chromium` (the same path choreographer searches under `/Applications`, `_chrome_constants.py` line 83). **Record-only layout today:** copy with `ditto` into `GUISkinDose.app/Contents/MacOS/chromium/Chromium.app` (sibling of the GUISkinDose Mach-O). Before the first signed Full build, decide whether that stays under `Contents/MacOS/chromium/` or moves to `Contents/Frameworks/chromium/`, then verify with `codesign --verify --deep --strict`, `spctl -a -t exec -vv`, and the notary log. Do not change code paths until that decision is recorded. |
 
 `bundled_browser_for_render()` returns `bundled_browser()` whenever the process is frozen, on every OS. It returns `None` only when not frozen. The macOS and Linux `None` branch and its comment go away in the same change as the gate (chunk 1 lands first; see commits).
 
@@ -237,7 +241,7 @@ uv run --extra dev --extra gui --locked python -m pytest tests/unittests/test_po
 **Steps:**
 
 1. From the Phase 1 wrapper sentence and the Freeze bullet, link this plan. Leave the offline-PNG checkbox open until a frozen `--png-check` is recorded.
-2. Maintenance-log entry: the bootloader now performs the Unix pipe-wrapper handoff, and frozen macOS and Linux resolve a bundled browser path. No `CHANGELOG.md` line. No Full macOS or Linux zip ships in these commits, so there is no user-facing download change yet. The release note belongs with the parent plan's Phase 1 acceptance, when those zips exist.
+2. Maintenance-log entry: the bootloader now performs the Unix pipe-wrapper handoff, and frozen macOS and Linux resolve a bundled browser path. Add a brief [CHANGELOG.md](../../CHANGELOG.md) Unreleased note as well: the pre-push `check_changelog.py` hook requires an entry when `src/` or `tests/` change, even though no macOS or Linux portable zip ships yet. Keep the note unproven-safe (frozen `--png-check` still open). Full release wording stays with Phase 1 acceptance when those zips exist.
 3. Archive this plan under `dev-docs/plans/archive/` only after the frozen `--png-check` on both macOS and Linux has been recorded, and move the `dev-docs/index.md` row in that same change. Chunks 1–3 landing without that proof do not archive the plan.
 
 **Verify:**
