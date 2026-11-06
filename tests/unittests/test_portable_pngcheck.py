@@ -278,6 +278,31 @@ def test_render_pngs_fails_when_no_sample_saw_a_browser(pngcheck, monkeypatch, t
     assert caught.value.counts["samples"] >= 1
 
 
+def test_null_path_descendant_fails_as_uninspectable(pngcheck, monkeypatch, tmp_path):
+    import os
+
+    from guiskindose.export import images
+
+    inside = tmp_path.resolve() / "chromium" / "chrome.exe"
+    rows = [
+        {"pid": 10, "ppid": os.getpid(), "exe": str(inside), "cmd": "c --headless"},
+        {"pid": 11, "ppid": os.getpid(), "exe": "", "cmd": ""},
+    ]
+    monkeypatch.setattr(images, "figure_to_png", lambda *_a, **_k: b"\x89PNG\r\n\x1a\nxx")
+
+    def fake_payload(_source, *, with_images):
+        png = images.figure_to_png("fig")
+        return type("P", (), {"images": [type("I", (), {"png_bytes": png})()]})()
+
+    _stub_render_environment(monkeypatch, pngcheck, tmp_path, fake_payload)
+    monkeypatch.setattr(pngcheck, "_list_processes", lambda: rows)
+    monkeypatch.setattr(pngcheck, "_SAMPLE_INTERVAL_S", 0.01)
+    with pytest.raises(pngcheck.RenderCheckError, match="browser_uninspectable") as caught:
+        pngcheck._render_pngs([])
+    assert caught.value.counts["uninspectable"] == 1
+    assert caught.value.counts["launched_inside"] == 1
+
+
 def test_render_pngs_fails_when_a_browser_ran_outside_the_onedir(pngcheck, monkeypatch, tmp_path):
     import os
 
@@ -479,11 +504,68 @@ def test_stop_kills_the_watch_when_terminate_does_not(pngcheck, monkeypatch):
     while not sampler._thread.is_alive() and time.monotonic() < deadline:
         time.sleep(0.01)
     sampler.stop()
-    sampler._thread.join(1)
+    assert not sampler._thread.is_alive()
     assert watch.terminated
     assert watch.killed
     assert watch.returncode == -9
+
+
+class _LineAtKillWatch(_StubbornWatch):
+    """The only sample appears when ``kill()`` unblocks the reader."""
+
+    def __init__(self, line: str) -> None:
+        super().__init__()
+        self._line = line
+        self._yielded = False
+
+    def __next__(self) -> str:
+        self._release.wait()
+        if self.killed and not self._yielded:
+            self._yielded = True
+            return self._line
+        raise StopIteration
+
+
+def test_line_released_by_the_kill_fallback_is_recorded(pngcheck, monkeypatch):
+    import time
+
+    line = (
+        '[{"ProcessId": 9, "ParentProcessId": 1, "ExecutablePath": "C:\\\\chromium\\\\chrome.exe",'
+        ' "CommandLine": "chrome"}]\n'
+    )
+    watch = _LineAtKillWatch(line)
+    monkeypatch.setattr(pngcheck, "_windows_sampler", lambda: True)
+    monkeypatch.setattr(pngcheck, "_spawn_chrome_watch", lambda: watch)
+    monkeypatch.setattr(pngcheck, "_SAMPLER_STOP_TIMEOUT_S", 0.05)
+    sampler = pngcheck._ProcessSampler()
+    sampler.start()
+    deadline = time.monotonic() + 1
+    while not sampler._thread.is_alive() and time.monotonic() < deadline:
+        time.sleep(0.01)
+    sampler.stop()
     assert not sampler._thread.is_alive()
+    assert watch.killed
+    assert [row["pid"] for row in sampler.samples[0]] == [9]
+
+
+def test_render_does_not_start_until_the_watcher_parses_a_line(pngcheck, monkeypatch, tmp_path):
+    from guiskindose.export import images
+
+    monkeypatch.setattr(images, "figure_to_png", lambda *_a, **_k: b"\x89PNG\r\n\x1a\nxx")
+    ran: list[int] = []
+
+    def payload(_source, *, with_images):
+        ran.append(1)
+        return type("P", (), {"images": []})()
+
+    _stub_render_environment(monkeypatch, pngcheck, tmp_path, payload)
+    monkeypatch.setattr(pngcheck, "_windows_sampler", lambda: True)
+    monkeypatch.setattr(pngcheck, "_spawn_chrome_watch", _StubbornWatch)
+    monkeypatch.setattr(pngcheck, "_WATCH_READY_TIMEOUT_S", 0.05)
+    monkeypatch.setattr(pngcheck, "_SAMPLER_STOP_TIMEOUT_S", 0.05)
+    with pytest.raises(ValueError, match="process_sampling_failed"):
+        pngcheck._render_pngs([])
+    assert ran == []
 
 
 def test_render_stops_cleanly_when_the_watch_fails_to_spawn(pngcheck, monkeypatch, tmp_path):

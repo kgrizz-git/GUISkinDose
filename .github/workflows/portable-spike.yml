@@ -260,7 +260,9 @@ jobs:
         $r = Get-Content $report | ConvertFrom-Json
         if ($r.page.http_script_refs -ne 0) { throw "Kaleido page references an http script" }
         if ($r.render.launched_outside_onedir -ne 0) { throw "a browser outside the onedir launched" }
-        if ([int]$r.render.png_images -lt 1) { throw "png-check returned no PNG" }
+        # The example export writes the whole-body map and the irradiated-region map.
+        if ([int]$r.render.png_images -lt 2) { throw "png-check returned fewer than two PNGs" }
+        if ([int]$r.render.png_images -ne [int]$r.render.images) { throw "png-check png count does not match its image count" }
         if ([int]$r.render.png_bytes_total -le 0) { throw "png-check returned empty PNG bytes" }
         $bins = @($r.render.launched_from_onedir)
         if ($bins -notcontains 'chromium/chrome.exe') { throw "bundled chrome.exe not seen" }

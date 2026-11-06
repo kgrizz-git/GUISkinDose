@@ -27,3 +27,11 @@ def test_require_preview_stem(selfcheck: Any) -> None:
         selfcheck._require_preview_stem("adult_male")
     with pytest.raises(ValueError, match="edition_phantom_payload_wrong"):
         selfcheck._require_preview_stem("adult_male_reduced_1000t")
+
+
+def test_check_edition_rejects_a_non_3000t_preview_stem(selfcheck: Any, monkeypatch: pytest.MonkeyPatch) -> None:
+    import guiskindose.phantom_mesh_names as names
+
+    monkeypatch.setattr(names, "prefer_reduced_preview_stem", lambda _stem: "adult_male_reduced_1000t")
+    with pytest.raises(ValueError, match="edition_phantom_payload_wrong"):
+        selfcheck._check_edition()

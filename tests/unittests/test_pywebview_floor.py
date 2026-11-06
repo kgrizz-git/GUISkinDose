@@ -10,6 +10,7 @@ from packaging.version import Version
 
 _ROOT = Path(__file__).resolve().parents[2]
 _FLOOR = Version("6.1")
+_BELOW_FLOOR = Version("6.0")
 
 
 def _pywebview_requirement(requirements: list[str]) -> Requirement:
@@ -25,3 +26,5 @@ def test_pywebview_floor_is_at_least_6_1() -> None:
     portable = data["dependency-groups"]["portable"]
     assert _FLOOR in _pywebview_requirement(gui_native).specifier
     assert _FLOOR in _pywebview_requirement(portable).specifier
+    assert _BELOW_FLOOR not in _pywebview_requirement(gui_native).specifier
+    assert _BELOW_FLOOR not in _pywebview_requirement(portable).specifier

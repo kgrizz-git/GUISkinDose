@@ -20,7 +20,8 @@ It fails unless:
 The report ``pngcheck_report.json`` holds booleans, counts, flag names, and paths
 relative to the onedir only: no absolute paths and no exam values. A passing render
 includes ``samples`` and ``rows``. A failed render also stores a stable ``code``
-(``browser_not_seen`` or ``browser_outside``) and integer ``counts``. Those counts
+(``browser_not_seen``, ``browser_outside``, ``browser_uninspectable``, or
+``sampler_did_not_stop``) and integer ``counts`` when it has them. Those counts
 are sample and process totals, never paths.
 """
 
@@ -218,6 +219,40 @@ def _describe_launch(rows: list[dict[str, Any]]) -> dict[str, Any]:
 
 _SAMPLE_INTERVAL_S = 0.1
 _SAMPLER_STOP_TIMEOUT_S = 30.0
+_WATCH_READY_TIMEOUT_S = 10.0
+
+
+def _take_complete_lines(pending: str, piece: str) -> tuple[str, list[str]]:
+    """Append *piece* and return ``(remainder, complete lines)``.
+
+    A chunk with no newline stays in the remainder so the caller can keep it
+    until the rest of the line arrives.
+    """
+    text = pending + piece
+    if not text.endswith("\n") and not text.endswith("\r"):
+        return text, []
+    return "", text.splitlines()
+
+
+def _signal_process(proc: subprocess.Popen[str] | None, *, kill: bool) -> None:
+    """End *proc* if it is still running. ``kill`` also waits for it to exit."""
+    if proc is None or proc.poll() is not None:
+        return
+    with contextlib.suppress(OSError):
+        if kill:
+            proc.kill()
+        else:
+            proc.terminate()
+    if kill:
+        with contextlib.suppress(subprocess.TimeoutExpired):
+            proc.wait(timeout=5)
+
+
+def _uninspectable_descendants(rows: list[dict[str, Any]]) -> int:
+    """Descendants of this process whose executable path is null."""
+    import os
+
+    return sum(1 for row in _descendants(rows, os.getpid()) if not row.get("exe"))
 
 
 class _ProcessSampler:
@@ -230,7 +265,11 @@ class _ProcessSampler:
 
     def __init__(self) -> None:
         self.samples: list[list[dict[str, Any]]] = []
+        self.did_not_stop = False
         self._stop = threading.Event()
+        self._ready = threading.Event()
+        self._half_line = threading.Event()
+        self._line_done = threading.Event()
         self._proc: subprocess.Popen[str] | None = None
         self._thread = threading.Thread(target=self._run, daemon=True)
 
@@ -244,42 +283,75 @@ class _ProcessSampler:
             self._stop.wait(_SAMPLE_INTERVAL_S)
 
     def _read_watch(self) -> None:
-        """Record each flushed CIM line until the watch process closes stdout.
+        """Record each complete CIM line until stdout hits EOF.
 
-        A bad line is skipped. A dead pipe ends the read. Neither is logged: the
-        line can contain an executable path.
+        A fragment with no newline stays buffered, so ``stop`` can avoid cutting it.
+        A bad line is skipped and is not logged: the text can contain an executable path.
         """
         proc = self._proc
         if proc is None or proc.stdout is None:
             return
+        pending = ""
         try:
-            for line in proc.stdout:
-                if not str(line).strip():
-                    continue
-                with contextlib.suppress(Exception):
-                    self.samples.append(_parse_cim_chrome_json(line))
+            for piece in proc.stdout:
+                pending, ready = _take_complete_lines(pending, str(piece))
+                self._note_pending(pending)
+                self._record_lines(ready)
         except Exception:
             return
+
+    def _note_pending(self, pending: str) -> None:
+        if pending:
+            self._half_line.set()
+            return
+        self._half_line.clear()
+        self._line_done.set()
+
+    def _record_lines(self, lines: list[str]) -> None:
+        for line in lines:
+            if not line.strip():
+                continue
+            with contextlib.suppress(Exception):
+                self.samples.append(_parse_cim_chrome_json(line))
+                self._ready.set()
 
     def start(self) -> None:
         if _windows_sampler():
             self._proc = _spawn_chrome_watch()
         self._thread.start()
 
+    def wait_until_ready(self, timeout: float) -> bool:
+        """True once the watcher has parsed a line, or immediately when there is no watcher."""
+        if self._proc is None:
+            return True
+        return self._ready.wait(timeout)
+
     def stop(self) -> None:
-        """Unblock the reader, then wait for the thread to finish."""
+        """Drain complete lines through EOF, then make sure the reader has exited.
+
+        ``terminate`` runs only when no line fragment is buffered. The kill fallback
+        runs after that, and the reader is joined again so a line released by the
+        kill is still recorded. A reader that is still alive is flagged, not detached.
+        """
         self._stop.set()
+        self._wait_out_of_half_line()
         proc = self._proc
-        if proc is not None and proc.poll() is None:
-            with contextlib.suppress(OSError):
-                proc.terminate()
+        if not self._half_line.is_set():
+            _signal_process(proc, kill=False)
+        self._join_reader()
+        if self._thread.is_alive() or (proc is not None and proc.poll() is None):
+            _signal_process(proc, kill=True)
+            self._join_reader()
+        if self._thread.is_alive():
+            self.did_not_stop = True
+
+    def _wait_out_of_half_line(self) -> None:
+        if self._half_line.is_set():
+            self._line_done.wait(_SAMPLER_STOP_TIMEOUT_S)
+
+    def _join_reader(self) -> None:
         if self._thread.is_alive():  # never started if the payload failed before start()
             self._thread.join(_SAMPLER_STOP_TIMEOUT_S)
-        if proc is not None and proc.poll() is None:
-            with contextlib.suppress(OSError):
-                proc.kill()
-            with contextlib.suppress(subprocess.TimeoutExpired):
-                proc.wait(timeout=5)
 
 
 def _recording_figure_to_png(real: Any, errors: list[Exception]) -> Any:
@@ -335,20 +407,24 @@ def _launch_counts(launch: dict[str, Any], rows: list[dict[str, Any]], sample_co
         "launched_inside": len(launch["launched_from_onedir"]),
         "launched_outside": int(launch["launched_outside_onedir"]),
         "system_chrome": int(launch["system_chrome_processes_running"]),
+        "uninspectable": _uninspectable_descendants(rows),
     }
 
 
 def _require_bundled_launch(launch: dict[str, Any], rows: list[dict[str, Any]], sample_count: int) -> None:
-    """Pass only when a browser ran inside the onedir and none ran outside it.
+    """Pass only when every watched browser has a path inside the onedir.
 
-    An outside launch wins when both are true, so the report names that condition.
-    An empty inside list with no outside launch is a missed browser, which still fails.
+    A known outside path fails as ``browser_outside``. A descendant with a null
+    path fails as ``browser_uninspectable`` because it cannot be placed. No inside
+    browser fails as ``browser_not_seen``.
     """
-    if launch["launched_from_onedir"] and not launch["launched_outside_onedir"]:
-        return
     counts = _launch_counts(launch, rows, sample_count)
-    code = "browser_outside" if counts["launched_outside"] else "browser_not_seen"
-    raise RenderCheckError(code, **counts)
+    if counts["launched_outside"]:
+        raise RenderCheckError("browser_outside", **counts)
+    if counts["uninspectable"]:
+        raise RenderCheckError("browser_uninspectable", **counts)
+    if not launch["launched_from_onedir"]:
+        raise RenderCheckError("browser_not_seen", **counts)
 
 
 def _render_pngs(captured_pages: list[str]) -> dict[str, Any]:
@@ -375,14 +451,18 @@ def _render_pngs(captured_pages: list[str]) -> dict[str, Any]:
     settings.phantom.model = "plane"
     started = time.perf_counter()
     try:
-        # The Windows watch cold-starts here, during source load, so later samples overlap Chrome.
+        # The watch starts during source load. The payload waits until one line has parsed.
         sampler.start()
         source = build_cli_export_source([str(_pkg("example_data", "RDSR", _EXAMPLE_RDSR))], settings)
+        if not sampler.wait_until_ready(_WATCH_READY_TIMEOUT_S):
+            raise ValueError("process_sampling_failed")
         payload = collect_export_payload(source, with_images=True)
     finally:
         sampler.stop()
         images.figure_to_png = original_render
         _page_generator.PageGenerator.generate_index = original
+    if sampler.did_not_stop:
+        raise RenderCheckError("sampler_did_not_stop")
     merged = _merge_samples(sampler.samples)
     launch = _describe_launch(merged)
     pngs = [image.png_bytes for image in payload.images if image.png_bytes]

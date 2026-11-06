@@ -8,6 +8,12 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ## [Unreleased]
 
+- **PNG check waits for the watcher and rejects a null browser path** (2026-11-05) —
+  `--png-check` now waits up to 10 seconds for the first parsed process line before it
+  renders, and `stop()` joins the reader again after the kill fallback. A descendant
+  with a null executable path fails as `browser_uninspectable`. The Windows Full job
+  requires both example PNGs.
+
 - **Full PNG sampler stays on one PowerShell watch** (2026-11-05) — On the Windows Full
   runner, the spawn-plus-query interval exceeded a one-shot browser's lifetime, and the
   failed report stored only `ValueError`. `--png-check` now uses one CIM loop for the whole
