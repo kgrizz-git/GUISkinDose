@@ -19,9 +19,12 @@ It fails unless:
 
 The report ``pngcheck_report.json`` holds booleans, counts, flag names, and paths
 relative to the onedir only: no absolute paths and no exam values. A passing render
-includes ``samples`` and ``rows``. A failed render also stores a stable ``code``
-(``browser_not_seen``, ``browser_outside``, ``browser_uninspectable``, or
-``sampler_did_not_stop``) and integer ``counts`` when it has them. Those counts
+includes ``samples``, ``rows``, and ``uninspectable``. A failed render also stores
+a stable ``code`` (``browser_not_seen``, ``browser_outside``,
+``browser_uninspectable``, ``sampler_did_not_stop``, or ``sampler_not_ready``)
+and integer ``counts`` when it has them. ``browser_uninspectable`` is the verdict
+only when no inside browser was seen; a null path beside an inside browser stays
+the ``uninspectable`` count. The two sampler codes carry no counts. Those counts
 are sample and process totals, never paths.
 """
 
@@ -92,10 +95,12 @@ def _parse_cim_chrome_json(raw: str) -> list[dict[str, Any]]:
 # One process for the whole export. On the Windows Full runner the spawn-plus-query
 # interval exceeded a one-shot browser's lifetime. OperationTimeoutSec stops one hung
 # CIM call from stalling the loop. AutoFlush pushes each JSON line out before the next query.
+# CREATE_NO_WINDOW has no console, so the encoding assignment can throw a .NET exception
+# that SilentlyContinue does not suppress. The try/catch keeps that from ending the watch.
 _CHROME_WATCH = (
     "$ProgressPreference='SilentlyContinue';"
     "$ErrorActionPreference='SilentlyContinue';"
-    "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8;"
+    "try { [Console]::OutputEncoding = [Text.Encoding]::UTF8 } catch { };"
     "if ([Console]::Out -is [System.IO.StreamWriter]) { [Console]::Out.AutoFlush = $true };"
     "while ($true) {"
     " $p = @(Get-CimInstance Win32_Process -Filter \"Name='chrome.exe'\" -OperationTimeoutSec 5"
@@ -222,18 +227,6 @@ _SAMPLER_STOP_TIMEOUT_S = 30.0
 _WATCH_READY_TIMEOUT_S = 10.0
 
 
-def _take_complete_lines(pending: str, piece: str) -> tuple[str, list[str]]:
-    """Append *piece* and return ``(remainder, complete lines)``.
-
-    A chunk with no newline stays in the remainder so the caller can keep it
-    until the rest of the line arrives.
-    """
-    text = pending + piece
-    if not text.endswith("\n") and not text.endswith("\r"):
-        return text, []
-    return "", text.splitlines()
-
-
 def _signal_process(proc: subprocess.Popen[str] | None, *, kill: bool) -> None:
     """End *proc* if it is still running. ``kill`` also waits for it to exit."""
     if proc is None or proc.poll() is not None:
@@ -268,8 +261,6 @@ class _ProcessSampler:
         self.did_not_stop = False
         self._stop = threading.Event()
         self._ready = threading.Event()
-        self._half_line = threading.Event()
-        self._line_done = threading.Event()
         self._proc: subprocess.Popen[str] | None = None
         self._thread = threading.Thread(target=self._run, daemon=True)
 
@@ -283,37 +274,28 @@ class _ProcessSampler:
             self._stop.wait(_SAMPLE_INTERVAL_S)
 
     def _read_watch(self) -> None:
-        """Record each complete CIM line until stdout hits EOF.
+        """Record each stdout line until EOF.
 
-        A fragment with no newline stays buffered, so ``stop`` can avoid cutting it.
-        A bad line is skipped and is not logged: the text can contain an executable path.
+        Reading the pipe line by line already returns a trailing fragment when the
+        pipe closes, and that fragment is parsed too. ``stop`` therefore drains
+        every buffered line through EOF without a second timeout. A bad line is
+        skipped and is not logged: the text can contain an executable path.
         """
         proc = self._proc
         if proc is None or proc.stdout is None:
             return
-        pending = ""
         try:
-            for piece in proc.stdout:
-                pending, ready = _take_complete_lines(pending, str(piece))
-                self._note_pending(pending)
-                self._record_lines(ready)
+            for line in proc.stdout:
+                self._record_line(str(line))
         except Exception:
             return
 
-    def _note_pending(self, pending: str) -> None:
-        if pending:
-            self._half_line.set()
+    def _record_line(self, line: str) -> None:
+        if not line.strip():
             return
-        self._half_line.clear()
-        self._line_done.set()
-
-    def _record_lines(self, lines: list[str]) -> None:
-        for line in lines:
-            if not line.strip():
-                continue
-            with contextlib.suppress(Exception):
-                self.samples.append(_parse_cim_chrome_json(line))
-                self._ready.set()
+        with contextlib.suppress(Exception):
+            self.samples.append(_parse_cim_chrome_json(line))
+            self._ready.set()
 
     def start(self) -> None:
         if _windows_sampler():
@@ -327,27 +309,22 @@ class _ProcessSampler:
         return self._ready.wait(timeout)
 
     def stop(self) -> None:
-        """Drain complete lines through EOF, then make sure the reader has exited.
+        """End the watch and drain stdout through EOF, then make sure the reader exited.
 
-        ``terminate`` runs only when no line fragment is buffered. The kill fallback
-        runs after that, and the reader is joined again so a line released by the
-        kill is still recorded. A reader that is still alive is flagged, not detached.
+        ``terminate`` lets the child flush and close the pipe. The reader keeps
+        parsing until that EOF, so a line already buffered is recorded, including
+        one the kill fallback releases. If the reader is still alive after the
+        kill, it is flagged, not detached.
         """
         self._stop.set()
-        self._wait_out_of_half_line()
         proc = self._proc
-        if not self._half_line.is_set():
-            _signal_process(proc, kill=False)
+        _signal_process(proc, kill=False)
         self._join_reader()
         if self._thread.is_alive() or (proc is not None and proc.poll() is None):
             _signal_process(proc, kill=True)
             self._join_reader()
         if self._thread.is_alive():
             self.did_not_stop = True
-
-    def _wait_out_of_half_line(self) -> None:
-        if self._half_line.is_set():
-            self._line_done.wait(_SAMPLER_STOP_TIMEOUT_S)
 
     def _join_reader(self) -> None:
         if self._thread.is_alive():  # never started if the payload failed before start()
@@ -381,14 +358,14 @@ def _merge_samples(samples: list[list[dict[str, Any]]]) -> list[dict[str, Any]]:
 
 
 class RenderCheckError(ValueError):
-    """The PNGs rendered, but the watched browser did not match the bundle.
+    """A PNG check failure with a stable ``code`` and optional integer ``counts``.
 
-    ``code`` is ``browser_not_seen`` when no watched browser was inside the onedir,
-    or ``browser_outside`` when one ran outside it. ``counts`` are integers only:
-    how many samples were taken, how many rows those samples held, how many of
-    those rows had an empty executable, how many descendant browsers were seen,
-    how many distinct inside binaries and outside launches that was, and how many
-    ``chrome.exe`` rows were outside the onedir. No paths.
+    Launch codes are ``browser_not_seen``, ``browser_outside``, and
+    ``browser_uninspectable`` (only when no inside browser was seen). Sampler
+    codes are ``sampler_not_ready`` and ``sampler_did_not_stop``; those carry no
+    counts. Launch ``counts`` are integers only: samples, rows, empty executable
+    rows, descendant browsers, distinct inside binaries, outside launches, and
+    ``chrome.exe`` rows outside the onedir. No paths.
     """
 
     def __init__(self, code: str, **counts: int) -> None:
@@ -412,19 +389,21 @@ def _launch_counts(launch: dict[str, Any], rows: list[dict[str, Any]], sample_co
 
 
 def _require_bundled_launch(launch: dict[str, Any], rows: list[dict[str, Any]], sample_count: int) -> None:
-    """Pass only when every watched browser has a path inside the onedir.
+    """Pass when a watched browser is inside the onedir and none ran outside it.
 
-    A known outside path fails as ``browser_outside``. A descendant with a null
-    path fails as ``browser_uninspectable`` because it cannot be placed. No inside
-    browser fails as ``browser_not_seen``.
+    A known outside path fails as ``browser_outside``. When no inside browser was
+    seen, a descendant with a null path fails as ``browser_uninspectable`` and
+    every other miss fails as ``browser_not_seen``. A null path next to an inside
+    browser is not a verdict; the passing report keeps it as ``uninspectable``.
     """
     counts = _launch_counts(launch, rows, sample_count)
     if counts["launched_outside"]:
         raise RenderCheckError("browser_outside", **counts)
+    if launch["launched_from_onedir"]:
+        return
     if counts["uninspectable"]:
         raise RenderCheckError("browser_uninspectable", **counts)
-    if not launch["launched_from_onedir"]:
-        raise RenderCheckError("browser_not_seen", **counts)
+    raise RenderCheckError("browser_not_seen", **counts)
 
 
 def _render_pngs(captured_pages: list[str]) -> dict[str, Any]:
@@ -455,7 +434,7 @@ def _render_pngs(captured_pages: list[str]) -> dict[str, Any]:
         sampler.start()
         source = build_cli_export_source([str(_pkg("example_data", "RDSR", _EXAMPLE_RDSR))], settings)
         if not sampler.wait_until_ready(_WATCH_READY_TIMEOUT_S):
-            raise ValueError("process_sampling_failed")
+            raise RenderCheckError("sampler_not_ready")
         payload = collect_export_payload(source, with_images=True)
     finally:
         sampler.stop()
@@ -474,6 +453,7 @@ def _render_pngs(captured_pages: list[str]) -> dict[str, Any]:
         **launch,
         "samples": len(sampler.samples),
         "rows": len(merged),
+        "uninspectable": _uninspectable_descendants(merged),
     }
     if errors:  # any failed image fails the check; surface the real cause
         raise errors[0]

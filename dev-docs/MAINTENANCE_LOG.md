@@ -8,6 +8,14 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ## [Unreleased]
 
+- **PNG watcher follow-up** (2026-11-05) — `browser_uninspectable` now fails the render
+  only when no inside browser was seen. A null executable path beside an inside browser
+  stays the integer `uninspectable` count. The CIM watch sets UTF-8 output inside
+  try/catch, because under `CREATE_NO_WINDOW` the assignment can throw a .NET exception
+  that SilentlyContinue does not suppress. `stop()` no longer waits on a half-read line;
+  the reader still drains stdout through EOF. A watcher that parses no line fails as
+  `sampler_not_ready`. That code and `sampler_did_not_stop` are stored with no counts.
+
 - **PNG check waits for the watcher and rejects a null browser path** (2026-11-05) —
   `--png-check` now waits up to 10 seconds for the first parsed process line before it
   renders, and `stop()` joins the reader again after the kill fallback. A descendant
