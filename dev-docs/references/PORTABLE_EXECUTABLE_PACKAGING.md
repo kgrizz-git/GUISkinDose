@@ -49,9 +49,10 @@ Release process lives in the parent hub and [PUBLISHING.md](../../PUBLISHING.md)
    and Linux CI builds remain open in the parent plan. Artifacts expire and are not committed.
 6. **Smoke & checks:** Windows Full smokes offline PNG with `GUISkinDose.exe --png-check`
    (`portable-spike.yml` lines 243–272). Light proves PNG never starts: `to_image` call count stays 0
-   (`selfcheck.py` lines 201–226, workflow lines 224–228). Frozen macOS and Linux Full fail PNG closed
-   until the choreographer wrapper (`PORTABLE_APP_PLAN.md` line 304). Do not write a per-OS PNG smoke
-   for those builds.
+   (`selfcheck.py` lines 201–226, workflow lines 224–228). macOS and Linux Full use the same
+   `figure_to_png` / entry-wrapper path in code ([PORTABLE_BROWSER_WRAPPER_PLAN.md](../plans/PORTABLE_BROWSER_WRAPPER_PLAN.md));
+   frozen `--png-check` on those OSes is still open in the parent plan. Do not write a per-OS PNG smoke
+   for those builds until a Full zip exists.
 
 Expect **large** artifacts (hundreds of MB with scientific stack + phantoms), slower cold start,
 Windows AV false positives, and ongoing rebuild cost when dependencies change.
@@ -76,6 +77,7 @@ Windows AV false positives, and ongoing rebuild cost when dependencies change.
 ## Pointers
 
 - Execution plan: [plans/PORTABLE_APP_PLAN.md](../plans/PORTABLE_APP_PLAN.md)
+- Unix Chromium pipe wrapper: [plans/PORTABLE_BROWSER_WRAPPER_PLAN.md](../plans/PORTABLE_BROWSER_WRAPPER_PLAN.md)
 - Payload cleanup plan: [plans/archive/PORTABLE_PHASE1_PAYLOAD_CLEANUP_PLAN.md](../plans/archive/PORTABLE_PHASE1_PAYLOAD_CLEANUP_PLAN.md)
 - NiceGUI: [Package for Installation](https://nicegui.io/documentation/section_configuration_deployment)
 - Current GUI launch: `run_gui.sh` / `run_gui.bat`, `python -m guiskindose --mode gui [--native]`

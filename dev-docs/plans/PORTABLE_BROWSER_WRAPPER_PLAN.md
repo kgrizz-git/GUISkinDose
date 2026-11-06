@@ -1,6 +1,6 @@
 # Portable Full: Unix Chromium pipe wrapper in the frozen bootloader
 
-_Status: not started._
+_Status: in progress (code complete 2026-11-05; frozen macOS and Linux `--png-check` proof still open)._
 _Child of [PORTABLE_APP_PLAN.md](PORTABLE_APP_PLAN.md) (Freeze bullet, Phase 0b "Export PNG offline", and the Phase 1 note that frozen macOS and Linux Full builds fail PNG closed)._
 _Parent of the shipped Windows path: [archive/PORTABLE_PNG_BUNDLED_BROWSER_PLAN.md](archive/PORTABLE_PNG_BUNDLED_BROWSER_PLAN.md)._
 

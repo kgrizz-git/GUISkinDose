@@ -8,6 +8,16 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ## [Unreleased]
 
+- **Frozen Unix Chromium pipe wrapper (code)** (2026-11-05) — `packaging/portable/entry.py`
+  now performs choreographer's Unix pipe-wrapper re-exec before stream routing or
+  `freeze_support`. Frozen macOS and Linux Full builds resolve bundled browser paths
+  (`Chromium.app/Contents/MacOS/Chromium` and `chromium/chrome`) through
+  `guiskindose.export.png_browser`, and `--png-check` reads license notices from the
+  `chromium/` ancestor. No user-facing release yet: Full macOS and Linux zips are not
+  shipped, and frozen `--png-check` on those OSes is still open in
+  [PORTABLE_BROWSER_WRAPPER_PLAN.md](plans/PORTABLE_BROWSER_WRAPPER_PLAN.md). No
+  `CHANGELOG.md` entry until Phase 1 acceptance in the parent portable plan.
+
 - **PNG watcher follow-up** (2026-11-05) — `browser_uninspectable` now fails the render
   only when no inside browser was seen. A null executable path beside an inside browser
   stays the integer `uninspectable` count. The CIM watch sets UTF-8 output inside
