@@ -73,11 +73,19 @@ def _host_platform() -> str:
     return sys.platform
 
 
+def _bundled_browser_relative_name() -> str:
+    platform = _host_platform()
+    if platform == "win32":
+        return "chrome.exe"
+    if platform == "darwin":
+        return "Chromium.app/Contents/MacOS/Chromium"
+    return "chrome"
+
+
 def bundled_browser(base: Path | None = None) -> Path:
-    """Path of the bundled Chromium: ``<base>/chromium/chrome[.exe]``; *base* defaults to the exe dir."""
+    """Path of the bundled Chromium under ``<base>/chromium/``; *base* defaults to the exe dir."""
     root = base if base is not None else Path(sys.executable).resolve().parent
-    name = "chrome.exe" if _host_platform() == "win32" else "chrome"
-    return root / BROWSER_DIR / name
+    return root / BROWSER_DIR / _bundled_browser_relative_name()
 
 
 def _is_frozen() -> bool:
@@ -85,15 +93,12 @@ def _is_frozen() -> bool:
 
 
 def bundled_browser_for_render() -> Path | None:
-    """The browser to hand to Kaleido, or ``None`` when none may be used.
+    """The browser to hand to Kaleido when frozen, or ``None`` in a source or pip install.
 
-    ``None`` when not frozen. On Windows, the bundled Chromium. On macOS and Linux also
-    ``None``: choreographer launches Chromium there through
-    ``[sys.executable, _unix_pipe_chromium_wrapper.py, ...]``, and in a frozen app
-    ``sys.executable`` is the PyInstaller bootloader (PORTABLE_APP_PLAN.md, "Freeze").
-    Until that wrapper item lands, frozen macOS and Linux Full builds fail PNG closed.
+    On macOS and Linux this relies on ``packaging/portable/entry.py`` running choreographer's
+    Unix pipe wrapper when the bootloader is re-executed with it (PORTABLE_BROWSER_WRAPPER_PLAN.md).
     """
-    if not _is_frozen() or _host_platform() != "win32":
+    if not _is_frozen():
         return None
     return bundled_browser()
 
