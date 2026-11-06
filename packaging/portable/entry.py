@@ -50,6 +50,7 @@ import _entry_platform  # noqa: E402
 
 
 def _host_platform() -> str:
+    """The host OS name as ``sys.platform`` spells it; tests override it through ``_entry_platform``."""
     return _entry_platform.host_platform()
 
 
@@ -231,12 +232,13 @@ def _run_unix_pipe_chromium_wrapper(cli: list[str]) -> int:
         with contextlib.suppress(OSError):
             process.terminate()
 
-    code = 1
+    completed = False
     try:
         code = _wait_for_chromium(process, requested)
+        completed = True
     finally:
-        # Whatever went wrong, leave no Chromium holding fds 3 and 4, and tell choreographer.
-        if process.poll() is None:
+        # If the wait failed, leave no Chromium holding fds 3 and 4. Always tell choreographer.
+        if not completed and process.poll() is None:
             _kill_chromium(process)
         with contextlib.suppress(OSError):
             os.write(1, _BYE_SENTINEL)

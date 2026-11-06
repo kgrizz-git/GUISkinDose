@@ -12,6 +12,7 @@ _override: str | None = None
 
 
 def host_platform() -> str:
+    """Return ``_override`` when a test set it, else ``sys.platform``."""
     if _override is not None:
         return _override
     return sys.platform

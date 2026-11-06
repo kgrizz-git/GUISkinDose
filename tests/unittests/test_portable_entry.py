@@ -785,3 +785,26 @@ def test_signal_during_launch_terminates_chromium_once_it_exists(unix_host, monk
         _load_entry_module(argv=argv)
     assert exc.value.code == 0
     assert procs[0].terminated == 1
+
+
+def test_completed_wait_skips_the_fallback_kill(entry_module, monkeypatch):
+    writes: list[bytes] = []
+
+    class _Exits:
+        def wait(self, timeout: float | None = None) -> int:
+            return 0
+
+        def poll(self) -> None:
+            return None  # even if poll misreports, a completed wait must not kill
+
+        def kill(self) -> None:
+            raise AssertionError("no kill after a completed wait")
+
+    monkeypatch.setattr(entry_module, "_debugging_pipe_fds_free", lambda: True)
+    monkeypatch.setattr(os, "dup2", lambda *_a: None)
+    monkeypatch.setattr(os, "set_inheritable", lambda *_a: None)
+    monkeypatch.setattr(os, "write", lambda _fd, data: writes.append(data) or len(data))
+    monkeypatch.setattr(signal, "signal", lambda *_a: None)
+    monkeypatch.setattr(subprocess, "Popen", lambda *_a, **_k: _Exits())
+    assert entry_module._run_unix_pipe_chromium_wrapper(["chrome"]) == 0
+    assert writes == [b"{bye}\n"]

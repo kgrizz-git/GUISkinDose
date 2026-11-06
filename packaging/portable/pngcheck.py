@@ -56,6 +56,7 @@ def app_dir() -> Path:
 
 
 def _host_platform() -> str:
+    """Return ``sys.platform``. Tests patch this instead of the process-wide value."""
     return sys.platform
 
 
