@@ -64,6 +64,14 @@ def kaleido_calls(monkeypatch: pytest.MonkeyPatch) -> dict[str, list[Any]]:
     return calls
 
 
+def _bundled_chrome_path(root: Path, platform: str) -> Path:
+    if platform == "win32":
+        return root / "chromium" / "chrome.exe"
+    if platform == "darwin":
+        return root / "chromium" / "Chromium.app" / "Contents" / "MacOS" / "Chromium"
+    return root / "chromium" / "chrome"
+
+
 def _frozen(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, platform: str, *, browser: bool) -> Path:
     exe = tmp_path / ("GUISkinDose.exe" if platform == "win32" else "GUISkinDose")
     exe.write_bytes(b"")
@@ -71,9 +79,9 @@ def _frozen(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, platform: str, *, b
     monkeypatch.setattr(sys, "executable", str(exe))
     monkeypatch.setattr(png_browser, "_host_platform", lambda: platform)
     monkeypatch.setattr(png_browser, "png_export_available", lambda: True)
-    chrome = tmp_path / "chromium" / ("chrome.exe" if platform == "win32" else "chrome")
+    chrome = _bundled_chrome_path(tmp_path, platform)
     if browser:
-        chrome.parent.mkdir()
+        chrome.parent.mkdir(parents=True, exist_ok=True)
         chrome.write_bytes(b"x")
     return chrome
 
@@ -177,14 +185,26 @@ def test_render_thread_timeout_is_unavailable(monkeypatch, tmp_path, kaleido_cal
 
 
 @pytest.mark.parametrize("platform", ["darwin", "linux"])
-def test_frozen_unix_fails_closed_but_path_resolves(monkeypatch, tmp_path, kaleido_calls, platform) -> None:
+def test_frozen_unix_passes_bundled_path(monkeypatch, tmp_path, kaleido_calls, platform) -> None:
     chrome = _frozen(monkeypatch, tmp_path, platform, browser=True)
-    assert bundled_browser_for_render() is None
+    assert bundled_browser_for_render() == chrome.resolve()
+    assert figure_to_png(_FakeFig(), width=800, height=600, scale=1.5) == b"png"
+    ((_args, kwargs),) = kaleido_calls["calc"]
+    assert Path(kwargs["kopts"]["path"]) == chrome
+    assert kwargs["kopts"]["mathjax"] is False
+    assert kwargs["opts"]["width"] == 800
+    assert kwargs["opts"]["scale"] == 1.5
+    assert kaleido_calls["server"] == []
+
+
+@pytest.mark.parametrize("platform", ["darwin", "linux"])
+def test_frozen_unix_browser_missing_fails_closed(monkeypatch, tmp_path, kaleido_calls, platform) -> None:
+    _frozen(monkeypatch, tmp_path, platform, browser=False)
     fig = _FakeFig()
-    with pytest.raises(BundledBrowserUnavailableError):
+    with pytest.raises(BundledBrowserUnavailableError) as info:
         figure_to_png(fig)
+    assert str(info.value) == BUNDLED_BROWSER_MESSAGE
     assert kaleido_calls["calc"] == []
-    assert bundled_browser() == chrome.resolve()
 
 
 def test_bundled_browser_honors_base_and_platform(monkeypatch, tmp_path) -> None:
@@ -192,6 +212,10 @@ def test_bundled_browser_honors_base_and_platform(monkeypatch, tmp_path) -> None
     assert bundled_browser(tmp_path) == tmp_path / "chromium" / "chrome.exe"
     monkeypatch.setattr(png_browser, "_host_platform", lambda: "linux")
     assert bundled_browser(tmp_path) == tmp_path / "chromium" / "chrome"
+    monkeypatch.setattr(png_browser, "_host_platform", lambda: "darwin")
+    assert bundled_browser(tmp_path) == (
+        tmp_path / "chromium" / "Chromium.app" / "Contents" / "MacOS" / "Chromium"
+    )
 
 
 def test_not_frozen_has_no_render_browser(monkeypatch) -> None:

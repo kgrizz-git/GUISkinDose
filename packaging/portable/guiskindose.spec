@@ -174,7 +174,7 @@ for dist in ("guiskindose", "nicegui", "plotly", "kaleido", "pydicom", "pywebvie
 # Lazy and dynamic imports inside the package (writers, tabs, adapters). The
 # table_data build scripts are maintainer tools with import-time side effects.
 hiddenimports = collect_submodules("guiskindose", filter=lambda name: ".table_data" not in name)
-hiddenimports += ["webview", "selfcheck", "pngcheck"]
+hiddenimports += ["webview", "selfcheck", "pngcheck", "_entry_platform"]
 print(f"portable edition={EDITION} phantom_stls={len(_phantom_stls())}")
 
 excludes = [

@@ -6,6 +6,10 @@ CLI entry (``guiskindose.__main__:cli``).
 
 Order matters (see ``dev-docs/plans/PORTABLE_APP_PLAN.md`` -> Freeze):
 
+0. On Unix, choreographer re-execs the frozen bootloader with
+   ``_unix_pipe_chromium_wrapper.py`` in ``argv[1]``. The entry performs that
+   wrapper body before anything touches fd 1 (see
+   ``dev-docs/plans/PORTABLE_BROWSER_WRAPPER_PLAN.md``).
 1. A windowed build has no console, so ``sys.stdout`` / ``sys.stderr`` can be
    ``None``. They are pointed at the log sink first, using only the standard
    library, so nothing below writes to ``None``.
@@ -24,16 +28,31 @@ Order matters (see ``dev-docs/plans/PORTABLE_APP_PLAN.md`` -> Freeze):
 
 from __future__ import annotations
 
+import contextlib
 import io
 import logging
 import multiprocessing
 import os
 import re
+import signal
+import subprocess
 import sys
 import threading
 import time
+from functools import partial
+from pathlib import Path
+from types import FrameType
 
 _PROCESS_START = time.perf_counter()
+
+# Beside this script, so it is on sys.path unfrozen and in the spec's pathex frozen.
+import _entry_platform  # noqa: E402
+
+
+def _host_platform() -> str:
+    """The host OS name as ``sys.platform`` spells it; tests override it through ``_entry_platform``."""
+    return _entry_platform.host_platform()
+
 
 # Opt-out for shared machines: no diagnostic file is written when this is set.
 NO_FILE_LOG_ENV = "GUISKINDOSE_NO_FILE_LOG"
@@ -110,6 +129,146 @@ class _LogStream(io.TextIOBase):
             self._emit(pending)
         finally:
             local.busy = False
+
+
+_WRAPPER_SCRIPT_SUFFIX = "_unix_pipe_chromium_wrapper.py"
+_BYE_SENTINEL = b"{bye}\n"
+
+
+def _chromium_path_allowed(exe_path: str, chromium_root: Path) -> bool:
+    """True when *exe_path* resolves under *chromium_root* (same idea as ``pngcheck._inside``)."""
+    if not exe_path:
+        return False
+    target = os.path.normcase(str(Path(exe_path).resolve()))
+    root = os.path.normcase(str(chromium_root.resolve()))
+    try:
+        return os.path.commonpath([target, root]) == root
+    except ValueError:
+        return False
+
+
+_TERMINATE_GRACE_S = 5.0
+_WAIT_POLL_S = 0.2
+
+
+def _terminate_chromium_on_signal(
+    launched: list[subprocess.Popen[bytes]],
+    claim: list[bool],
+    requested: list[float],
+    _sig_num: int,
+    _frame: FrameType | None,
+) -> None:
+    """Ask Chromium to exit and note when. :func:`_wait_for_chromium` kills it after the grace period.
+
+    The handler does no waiting itself, so the wrapper still reaches the ``{bye}`` write. ``claim``
+    starts with one item, and ``list.pop`` is a single C call, so exactly one handler takes it: a
+    signal that lands anywhere inside this handler returns at once. A signal that lands before
+    Chromium starts is only recorded; :func:`_run_unix_pipe_chromium_wrapper` terminates Chromium
+    right after launch.
+    """
+    try:
+        claim.pop()
+    except IndexError:
+        return
+    requested.append(time.monotonic())
+    if launched:
+        with contextlib.suppress(OSError):
+            launched[0].terminate()
+
+
+def _wait_for_chromium(process: subprocess.Popen[bytes], requested: list[float]) -> int:
+    """Wait for Chromium; kill it when it outlives a signalled shutdown by ``_TERMINATE_GRACE_S``."""
+    while True:
+        try:
+            return process.wait(timeout=_WAIT_POLL_S)
+        except subprocess.TimeoutExpired:
+            if requested and time.monotonic() - requested[0] >= _TERMINATE_GRACE_S:
+                return _kill_chromium(process)
+
+
+def _kill_chromium(process: subprocess.Popen[bytes]) -> int:
+    """Kill Chromium and wait a bounded time; ``1`` when it still has not exited."""
+    with contextlib.suppress(OSError):
+        process.kill()
+    try:
+        return process.wait(timeout=_TERMINATE_GRACE_S)
+    except subprocess.TimeoutExpired:
+        return 1
+
+
+def _debugging_pipe_fds_free() -> bool:
+    """True when fds 3 and 4 are not already open (choreographer expects to dup2 onto them)."""
+    for fd in (3, 4):
+        try:
+            os.fstat(fd)
+        except OSError:
+            continue
+        return False
+    return True
+
+
+def _run_unix_pipe_chromium_wrapper(cli: list[str]) -> int:
+    """Hand stdin/stdout to Chromium on fds 3 and 4, wait, then write the pipe close sentinel."""
+    if not _debugging_pipe_fds_free():
+        raise SystemExit(1)
+
+    os.dup2(0, 3)
+    os.dup2(1, 4)
+    os.set_inheritable(3, True)
+    os.set_inheritable(4, True)
+
+    # Handlers go in before the launch, so no signal can arrive while the default action
+    # would end this wrapper and orphan Chromium. Blocking the signals instead would leave
+    # them blocked in Chromium too, because a child inherits the signal mask.
+    launched: list[subprocess.Popen[bytes]] = []
+    claim = [True]
+    requested: list[float] = []
+    handler = partial(_terminate_chromium_on_signal, launched, claim, requested)
+    signal.signal(signal.SIGTERM, handler)
+    signal.signal(signal.SIGINT, handler)
+    process = subprocess.Popen(cli, pass_fds=(3, 4))
+    launched.append(process)
+    if requested:  # a signal arrived before Chromium existed
+        with contextlib.suppress(OSError):
+            process.terminate()
+
+    completed = False
+    try:
+        code = _wait_for_chromium(process, requested)
+        completed = True
+    finally:
+        # If the wait failed, leave no Chromium holding fds 3 and 4. Always tell choreographer.
+        if not completed and process.poll() is None:
+            _kill_chromium(process)
+        with contextlib.suppress(OSError):
+            os.write(1, _BYE_SENTINEL)
+    return code
+
+
+def _maybe_run_unix_pipe_chromium_wrapper() -> None:
+    """Perform choreographer's Unix pipe-wrapper re-exec when ``argv`` matches."""
+    if _host_platform() == "win32" or len(sys.argv) < 3:
+        return
+    if not sys.argv[1].endswith(_WRAPPER_SCRIPT_SUFFIX):
+        return
+
+    cli = sys.argv[2:]
+    if not cli:
+        raise SystemExit(1)
+
+    try:
+        chromium_root = Path(sys.executable).resolve().parent / "chromium"
+        if not _chromium_path_allowed(cli[0], chromium_root):
+            raise SystemExit(1)
+        code = _run_unix_pipe_chromium_wrapper(cli)
+    except SystemExit:
+        raise
+    except BaseException:
+        raise SystemExit(1) from None
+    raise SystemExit(code)
+
+
+_maybe_run_unix_pipe_chromium_wrapper()
 
 
 def _route_missing_streams() -> None:

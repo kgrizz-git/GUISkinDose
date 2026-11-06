@@ -42,7 +42,7 @@ from typing import Any
 
 from selfcheck import _EXAMPLE_RDSR, OWNED_SUBDIR, _pkg, _run_step, _write_atomic
 
-from guiskindose.export.png_browser import bundled_browser
+from guiskindose.export.png_browser import BROWSER_DIR, bundled_browser
 
 # Notices that must sit beside the bundled browser (PORTABLE_CHROMIUM_ARTIFACT.md).
 NOTICE_FILES = ("LICENSE.chromium.txt", "LICENSE.ungoogled-chromium-windows.txt", "CREDITS.html")
@@ -55,10 +55,21 @@ def app_dir() -> Path:
     return Path(sys.executable).resolve().parent
 
 
+def _host_platform() -> str:
+    """Return ``sys.platform``. Tests patch this instead of the process-wide value."""
+    return sys.platform
+
+
+def _chromium_notice_dir(base: Path | None = None) -> Path:
+    """The ``chromium/`` folder that holds the license notices, above any nested macOS ``Chromium.app``."""
+    return (base if base is not None else app_dir()) / BROWSER_DIR
+
+
 def _check_bundle() -> dict[str, Any]:
     browser = bundled_browser(app_dir())
-    notices = {name: (browser.parent / name).is_file() for name in NOTICE_FILES}
-    credits_path = browser.parent / "CREDITS.html"
+    notice_dir = _chromium_notice_dir()
+    notices = {name: (notice_dir / name).is_file() for name in NOTICE_FILES}
+    credits_path = notice_dir / "CREDITS.html"
     found = {
         "browser_present": browser.is_file(),
         "notices": notices,
@@ -119,7 +130,7 @@ def _windows_sampler() -> bool:
 
     Tests replace this. Production follows ``sys.platform`` so a test never has to patch that.
     """
-    return sys.platform == "win32"
+    return _host_platform() == "win32"
 
 
 def _spawn_chrome_watch() -> subprocess.Popen[str]:
@@ -144,7 +155,7 @@ def _list_processes() -> list[dict[str, Any]]:
     The Windows branch is one shot. The export sampler does not use it: a cold
     PowerShell start per sample missed the browser on the Full PNG gate.
     """
-    if sys.platform == "win32":
+    if _host_platform() == "win32":
         # Browser processes only (every Chromium child is also chrome.exe), so a sample is quick.
         # InputObject with @() keeps zero or one match a JSON array.
         script = (
