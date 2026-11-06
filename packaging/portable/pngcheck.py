@@ -42,7 +42,7 @@ from typing import Any
 
 from selfcheck import _EXAMPLE_RDSR, OWNED_SUBDIR, _pkg, _run_step, _write_atomic
 
-from guiskindose.export.png_browser import bundled_browser
+from guiskindose.export.png_browser import BROWSER_DIR, bundled_browser
 
 # Notices that must sit beside the bundled browser (PORTABLE_CHROMIUM_ARTIFACT.md).
 NOTICE_FILES = ("LICENSE.chromium.txt", "LICENSE.ungoogled-chromium-windows.txt", "CREDITS.html")
@@ -55,10 +55,16 @@ def app_dir() -> Path:
     return Path(sys.executable).resolve().parent
 
 
+def _chromium_notice_dir(base: Path | None = None) -> Path:
+    """The ``chromium/`` folder that holds the license notices, above any nested macOS ``Chromium.app``."""
+    return (base if base is not None else app_dir()) / BROWSER_DIR
+
+
 def _check_bundle() -> dict[str, Any]:
     browser = bundled_browser(app_dir())
-    notices = {name: (browser.parent / name).is_file() for name in NOTICE_FILES}
-    credits_path = browser.parent / "CREDITS.html"
+    notice_dir = _chromium_notice_dir()
+    notices = {name: (notice_dir / name).is_file() for name in NOTICE_FILES}
+    credits_path = notice_dir / "CREDITS.html"
     found = {
         "browser_present": browser.is_file(),
         "notices": notices,

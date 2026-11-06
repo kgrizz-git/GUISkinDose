@@ -99,10 +99,79 @@ def test_failed_render_skips_page_step(pngcheck, monkeypatch, tmp_path):
 def test_bundled_browser_honors_patched_app_dir(pngcheck, monkeypatch, tmp_path):
     monkeypatch.setattr(pngcheck, "app_dir", lambda: tmp_path)
     monkeypatch.setattr(png_browser, "_host_platform", lambda: "win32")
-    (tmp_path / BROWSER_DIR).mkdir()
-    (tmp_path / BROWSER_DIR / "chrome.exe").write_bytes(b"x")
+    notice_dir = tmp_path / BROWSER_DIR
+    notice_dir.mkdir()
+    (notice_dir / "chrome.exe").write_bytes(b"x")
     with pytest.raises(FileNotFoundError, match="browser_notices_missing"):
         pngcheck._check_bundle()
+
+
+def _write_chromium_notices(notice_dir: Path, pngcheck) -> None:
+    for name in pngcheck.NOTICE_FILES:
+        if name == "CREDITS.html":
+            (notice_dir / name).write_text("x" * pngcheck._MIN_CREDITS_BYTES, encoding="utf-8")
+        else:
+            (notice_dir / name).write_text("ok", encoding="utf-8")
+
+
+def test_check_bundle_reads_notices_from_chromium_ancestor_on_macos(pngcheck, monkeypatch, tmp_path):
+    monkeypatch.setattr(pngcheck, "app_dir", lambda: tmp_path)
+    monkeypatch.setattr(png_browser, "_host_platform", lambda: "darwin")
+    notice_dir = tmp_path / BROWSER_DIR
+    browser = notice_dir / "Chromium.app" / "Contents" / "MacOS" / "Chromium"
+    browser.parent.mkdir(parents=True, exist_ok=True)
+    browser.write_bytes(b"x")
+    _write_chromium_notices(notice_dir, pngcheck)
+    found = pngcheck._check_bundle()
+    assert found["browser_present"]
+    assert all(found["notices"].values())
+    assert found["credits_bytes"] >= pngcheck._MIN_CREDITS_BYTES
+
+
+def test_check_bundle_macos_notices_beside_macos_binary_are_ignored(pngcheck, monkeypatch, tmp_path):
+    monkeypatch.setattr(pngcheck, "app_dir", lambda: tmp_path)
+    monkeypatch.setattr(png_browser, "_host_platform", lambda: "darwin")
+    notice_dir = tmp_path / BROWSER_DIR
+    browser = notice_dir / "Chromium.app" / "Contents" / "MacOS" / "Chromium"
+    browser.parent.mkdir(parents=True, exist_ok=True)
+    browser.write_bytes(b"x")
+    _write_chromium_notices(browser.parent, pngcheck)
+    with pytest.raises(FileNotFoundError, match="browser_notices_missing"):
+        pngcheck._check_bundle()
+
+
+def test_ps_row_macos_chromium_is_inside_and_bootloader_is_not_a_browser(pngcheck, monkeypatch, tmp_path):
+    import os
+
+    monkeypatch.setattr(pngcheck, "app_dir", lambda: tmp_path.resolve())
+    browser = tmp_path / BROWSER_DIR / "Chromium.app" / "Contents" / "MacOS" / "Chromium"
+    browser.parent.mkdir(parents=True, exist_ok=True)
+    browser.write_bytes(b"x")
+    exe = str(browser.resolve())
+    rows = [{"pid": 10, "ppid": os.getpid(), "exe": exe, "cmd": f"{exe} --headless --no-sandbox"}]
+    launch = pngcheck._describe_launch(rows)
+    assert launch["launched_from_onedir"] == ["chromium/Chromium.app/Contents/MacOS/Chromium"]
+    assert launch["launched_outside_onedir"] == 0
+    assert "chrom" in Path(exe).name.lower()
+
+    bootloader = tmp_path / "GUISkinDose"
+    bootloader.write_bytes(b"")
+    wrapper_rows = [
+        {"pid": 11, "ppid": os.getpid(), "exe": str(bootloader), "cmd": f"{bootloader} wrapper-script chrome"}
+    ]
+    assert pngcheck._describe_launch(wrapper_rows)["browser_processes"] == 0
+
+
+def test_list_processes_parses_macos_chromium_command_line(pngcheck, monkeypatch, tmp_path):
+    import os
+
+    browser = tmp_path / "chromium" / "Chromium.app" / "Contents" / "MacOS" / "Chromium"
+    line = f"  42  {os.getpid()}  {browser} --headless --no-sandbox\n"
+    monkeypatch.setattr(pngcheck.sys, "platform", "linux")
+    monkeypatch.setattr(pngcheck.subprocess, "run", lambda *a, **k: type("R", (), {"stdout": line})())
+    (row,) = pngcheck._list_processes()
+    assert row["exe"] == str(browser)
+    assert row["cmd"] == f"{browser} --headless --no-sandbox"
 
 
 def test_check_bundle_fails_closed_without_browser(pngcheck, monkeypatch, tmp_path):
