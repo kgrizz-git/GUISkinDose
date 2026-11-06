@@ -146,17 +146,36 @@ def _chromium_path_allowed(exe_path: str, chromium_root: Path) -> bool:
         return False
 
 
+_TERMINATE_GRACE_S = 5.0
+_WAIT_POLL_S = 0.2
+
+
 def _terminate_chromium_on_signal(
     process: subprocess.Popen[bytes],
+    requested: list[float],
     _sig_num: int,
     _frame: FrameType | None,
 ) -> None:
-    process.terminate()
-    try:
-        process.wait(5)
-    except subprocess.TimeoutExpired:
-        process.kill()
-        process.wait()
+    """Ask Chromium to exit and note when. :func:`_wait_for_chromium` kills it after the grace period.
+
+    The handler does no waiting itself, so the wrapper still reaches the ``{bye}`` write.
+    """
+    if not requested:
+        requested.append(time.monotonic())
+        with contextlib.suppress(OSError):
+            process.terminate()
+
+
+def _wait_for_chromium(process: subprocess.Popen[bytes], requested: list[float]) -> int:
+    """Wait for Chromium; kill it when it outlives a signalled shutdown by ``_TERMINATE_GRACE_S``."""
+    while True:
+        try:
+            return process.wait(timeout=_WAIT_POLL_S)
+        except subprocess.TimeoutExpired:
+            if requested and time.monotonic() - requested[0] >= _TERMINATE_GRACE_S:
+                with contextlib.suppress(OSError):
+                    process.kill()
+                return process.wait()
 
 
 def _debugging_pipe_fds_free() -> bool:
@@ -181,14 +200,15 @@ def _run_unix_pipe_chromium_wrapper(cli: list[str]) -> int:
     os.set_inheritable(4, True)
 
     process = subprocess.Popen(cli, pass_fds=(3, 4))
-    handler = partial(_terminate_chromium_on_signal, process)
+    requested: list[float] = []
+    handler = partial(_terminate_chromium_on_signal, process, requested)
     signal.signal(signal.SIGTERM, handler)
     signal.signal(signal.SIGINT, handler)
 
-    process.wait()
+    code = _wait_for_chromium(process, requested)
     with contextlib.suppress(OSError):
         os.write(1, _BYE_SENTINEL)
-    return process.returncode if process.returncode is not None else 0
+    return code
 
 
 def _maybe_run_unix_pipe_chromium_wrapper() -> None:
@@ -202,11 +222,10 @@ def _maybe_run_unix_pipe_chromium_wrapper() -> None:
     if not cli:
         raise SystemExit(1)
 
-    chromium_root = Path(sys.executable).resolve().parent / "chromium"
-    if not _chromium_path_allowed(cli[0], chromium_root):
-        raise SystemExit(1)
-
     try:
+        chromium_root = Path(sys.executable).resolve().parent / "chromium"
+        if not _chromium_path_allowed(cli[0], chromium_root):
+            raise SystemExit(1)
         code = _run_unix_pipe_chromium_wrapper(cli)
     except SystemExit:
         raise

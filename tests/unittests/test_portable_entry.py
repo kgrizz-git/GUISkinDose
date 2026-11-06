@@ -407,9 +407,10 @@ def test_unix_wrapper_gate_dup2_popen_and_bye(unix_host, monkeypatch, tmp_path, 
 
     class _FakeProcess:
         returncode = 0
+        terminated = 0
 
         def terminate(self) -> None:
-            return
+            self.terminated += 1
 
         def wait(self, timeout: float | None = None) -> int:
             if timeout is not None:
@@ -419,10 +420,14 @@ def test_unix_wrapper_gate_dup2_popen_and_bye(unix_host, monkeypatch, tmp_path, 
         def kill(self) -> None:
             return
 
+    launched: list[_FakeProcess] = []
+    handlers: dict[int, object] = {}
+
     def _fake_popen(cli: list[str], **kwargs: object) -> _FakeProcess:
         popen_calls["cli"] = cli
         popen_calls["kwargs"] = kwargs
-        return _FakeProcess()
+        launched.append(_FakeProcess())
+        return launched[-1]
 
     real_fstat = os.fstat
 
@@ -436,7 +441,7 @@ def test_unix_wrapper_gate_dup2_popen_and_bye(unix_host, monkeypatch, tmp_path, 
     monkeypatch.setattr(os, "fstat", _free_debug_fds)
     monkeypatch.setattr(subprocess, "Popen", _fake_popen)
     monkeypatch.setattr(os, "write", lambda fd, data: write_calls.append((fd, data)) or len(data))
-    monkeypatch.setattr(signal, "signal", lambda *_args: None)
+    monkeypatch.setattr(signal, "signal", lambda sig, handler: handlers.__setitem__(sig, handler))
 
     argv = _wrapper_argv(tmp_path)
     monkeypatch.setattr(sys, "executable", argv[0])
@@ -449,6 +454,10 @@ def test_unix_wrapper_gate_dup2_popen_and_bye(unix_host, monkeypatch, tmp_path, 
     assert popen_calls["kwargs"] == {"pass_fds": (3, 4)}
     assert write_calls == [(1, b"{bye}\n")]
     assert not any(argv[2] in r.getMessage() for r in captured_root.records)
+    assert set(handlers) == {signal.SIGTERM, signal.SIGINT}
+    for handler in handlers.values():
+        handler(signal.SIGTERM, None)  # type: ignore[operator]
+    assert launched[0].terminated == 1  # one terminate per shutdown, however many signals
 
 
 def test_unix_wrapper_gate_short_argv_does_not_touch_argv_or_dup2(monkeypatch, tmp_path):
@@ -501,29 +510,74 @@ def test_unix_wrapper_gate_rejects_browser_outside_chromium(unix_host, monkeypat
     assert not popen_called
 
 
-def test_unix_wrapper_gate_signal_timeout_still_kills(monkeypatch, entry_module):
-    class _TimeoutProcess:
-        killed = False
-        waited_after_kill = False
+class _SlowProcess:
+    """Ignores terminate(); only kill() ends it."""
 
-        returncode = 1
+    def __init__(self) -> None:
+        self.terminated = False
+        self.killed = False
 
-        def terminate(self) -> None:
-            return
+    def terminate(self) -> None:
+        self.terminated = True
+
+    def wait(self, timeout: float | None = None) -> int:
+        if self.killed:
+            return -9
+        if timeout is None:
+            raise AssertionError("an unbounded wait before kill would hang")
+        raise subprocess.TimeoutExpired(cmd=["chrome"], timeout=timeout)
+
+    def kill(self) -> None:
+        self.killed = True
+
+
+def test_signal_handler_only_terminates(entry_module):
+    proc = _SlowProcess()
+    requested: list[float] = []
+    entry_module._terminate_chromium_on_signal(proc, requested, signal.SIGTERM, None)
+    assert proc.terminated
+    assert not proc.killed
+    assert len(requested) == 1
+
+
+def test_wait_kills_chromium_after_the_grace_period(entry_module, monkeypatch):
+    monkeypatch.setattr(entry_module, "_TERMINATE_GRACE_S", 0.0)
+    proc = _SlowProcess()
+    assert entry_module._wait_for_chromium(proc, [0.0]) == -9
+    assert proc.killed
+
+
+def test_wait_without_a_signal_keeps_waiting(entry_module):
+    class _ExitsOnThirdPoll:
+        polls = 0
 
         def wait(self, timeout: float | None = None) -> int:
-            if timeout == 5:
-                raise subprocess.TimeoutExpired(cmd=["chrome"], timeout=timeout)
-            self.waited_after_kill = True
+            self.polls += 1
+            if self.polls < 3:
+                raise subprocess.TimeoutExpired(cmd=["chrome"], timeout=timeout or 0)
             return 0
 
         def kill(self) -> None:
-            self.killed = True
+            raise AssertionError("no signal, so no kill")
 
-    proc = _TimeoutProcess()
-    entry_module._terminate_chromium_on_signal(proc, signal.SIGTERM, None)
-    assert proc.killed
-    assert proc.waited_after_kill
+    assert entry_module._wait_for_chromium(_ExitsOnThirdPoll(), []) == 0
+
+
+def test_unix_wrapper_gate_resolution_failure_is_silent(unix_host, monkeypatch, tmp_path):
+    stderr = io.StringIO()
+    monkeypatch.setattr(sys, "stderr", stderr)
+    argv = _wrapper_argv(tmp_path)
+    monkeypatch.setattr(sys, "executable", argv[0])
+
+    def _boom(self: Path, *_a: object, **_k: object) -> Path:
+        raise OSError("resolve failed")
+
+    monkeypatch.setattr(Path, "resolve", _boom)
+    monkeypatch.setattr(subprocess, "Popen", lambda *_a, **_k: pytest.fail("Popen must not run"))
+    with pytest.raises(SystemExit) as exc:
+        _load_entry_module(argv=argv)
+    assert exc.value.code == 1
+    assert stderr.getvalue() == ""
 
 
 def test_wrapper_gate_is_no_op_on_win32(monkeypatch, tmp_path):
