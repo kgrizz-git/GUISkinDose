@@ -14,6 +14,7 @@
 #
 # Writes counts and relative browser path names to stdout and appends CI env keys
 # to GITHUB_ENV when set. Never prints absolute paths.
+# Post-resign ``--png-check`` runs from CI on the unzipped artifact (see portable-spike.yml).
 set -euo pipefail
 
 if [[ -z "${APP_BUNDLE:-}" || -z "${APP_EXE:-}" || -z "${CHROMIUM_URL:-}" || -z "${CHROMIUM_SHA256:-}" ]]; then
@@ -25,7 +26,7 @@ SC_SUB="${SC_SUB:-guiskindose-selfcheck}"
 CI_OUT="${GUISKINDOSE_CI_OUT:-out}"
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 PORTABLE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-BROWSER_REL="Helpers/Chromium.app/Contents/MacOS/Chromium"
+export BROWSER_REL="Helpers/Chromium.app/Contents/MacOS/Chromium"
 NESTED_REL="Contents/Helpers/Chromium.app"
 
 append_env() {
@@ -33,25 +34,8 @@ append_env() {
     printf '%s\n' "$1" >>"$GITHUB_ENV"
 }
 
-strip_git_from_path() {
-    local entry new_path=""
-    IFS=':' read -r -a parts <<<"$PATH"
-    for entry in "${parts[@]}"; do
-        [[ -n "$entry" ]] || continue
-        if [[ -x "${entry%/}/git" ]]; then
-            continue
-        fi
-        new_path="${new_path:+$new_path:}$entry"
-    done
-    export PATH="$new_path"
-    command -v git >/dev/null && {
-        echo "git on PATH" >&2
-        return 1
-    }
-}
-
 is_macho() {
-    file -b "$1" | grep -q 'Mach-O'
+    [[ "$(file -b "$1")" == *Mach-O* ]]
 }
 
 adhoc_sign() {
@@ -72,56 +56,6 @@ adhoc_resign_app() {
         adhoc_sign "$bundle"
     done < <(find "$app/Contents" -depth -type d \( -name '*.framework' -o -name '*.app' -o -name '*.xpc' \) -print0)
     adhoc_sign "$app"
-}
-
-png_assert() {
-    python3 - "$1" "$BROWSER_REL" <<'PY'
-import json, sys
-
-data = json.load(open(sys.argv[1]))
-render = data["render"]
-page = data["page"]
-assert data.get("passed"), "png-check did not pass"
-assert page["http_script_refs"] == 0
-assert render["launched_outside_onedir"] == 0
-assert render["png_images"] >= 2
-assert render["png_images"] == render["images"]
-assert render["png_bytes_total"] > 0
-paths = render["launched_from_onedir"]
-assert sys.argv[2] in paths, paths
-PY
-}
-
-run_png() {
-    local label="$1"
-    local out
-    out="$(mktemp -d)"
-    local decoy
-    decoy="$(mktemp -d)"
-    export BROWSER_PATH="${decoy}/Chromium"
-    strip_git_from_path
-    local start=$SECONDS
-    "$APP_EXE" --png-check "$out"
-    local wall=$((SECONDS - start))
-    local report="${out}/${SC_SUB}/pngcheck_report.json"
-    test -f "$report"
-    png_assert "$report"
-    mkdir -p "$CI_OUT"
-    cp "$report" "${CI_OUT}/pngcheck_report_${label}.json"
-    local images
-    images="$(python3 -c "import json; print(json.load(open('${report}'))['render']['png_images'])")"
-    echo "${label}_png_wall_s=${wall} ${label}_png_images=${images}"
-    case "$label" in
-        pre_resign)
-            append_env "PRE_PNG_WALL=${wall}"
-            append_env "PRE_PNG_IMAGES=${images}"
-            ;;
-        post_resign)
-            append_env "POST_PNG_WALL=${wall}"
-            append_env "POST_PNG_IMAGES=${images}"
-            ;;
-    esac
-    rm -rf "$out" "$decoy"
 }
 
 helpers="${APP_BUNDLE}/Contents/Helpers/Chromium.app"
@@ -162,7 +96,8 @@ append_env "CREDITS_PRODUCTS=${libs}"
 rm -rf "$dl" "$mount_dir"
 
 mkdir -p "$CI_OUT"
-run_png pre_resign
+export PNG_CHECK_LABEL=pre_resign
+"${PORTABLE_DIR}/macos_frozen_png_check.sh"
 echo "wrapper_fds=implied_free"
 append_env "WRAPPER_FDS=implied_free"
 
@@ -170,13 +105,3 @@ adhoc_resign_app "$APP_BUNDLE"
 codesign --verify --deep --strict "$APP_BUNDLE"
 echo "outer_verify=passed browser_path=${BROWSER_REL}"
 append_env "OUTER_VERIFY=passed"
-
-if ! run_png post_resign; then
-    if [[ -f "${CI_OUT}/pngcheck_report_pre_resign.json" ]]; then
-        echo "adhoc_resign_broke_launch=true"
-        append_env "adhoc_resign_broke_launch=true"
-    fi
-    exit 1
-fi
-echo "post_png_check=passed"
-append_env "POST_PNG_CHECK=passed"

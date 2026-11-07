@@ -50,10 +50,10 @@ Release process lives in the parent hub and [PUBLISHING.md](../../PUBLISHING.md)
    Artifacts expire after seven days and are not committed. macOS release Developer ID signing and
    notarization stay in the parent plan.
 6. **Smoke & checks:** Windows Full smokes offline PNG with `GUISkinDose.exe --png-check`. Light proves
-   PNG never starts: `to_image` call count stays 0 on every OS. macOS and Linux Full jobs are wired to
-   bundle pinned ungoogled-chromium, run frozen `--png-check` with a decoy `BROWSER_PATH`, and (on
-   macOS Full) ad-hoc re-sign after the browser copy. A completed green run is not recorded yet. Linux
-   Full prepends `chromium/` to `LD_LIBRARY_PATH` in the wrapper child; the job summary lists sonames
+   PNG never starts: `to_image` call count stays 0 on every OS. macOS and Linux Full jobs define the
+   same frozen `--png-check` assertions as Windows, with a decoy `BROWSER_PATH` and (on macOS Full)
+   ad-hoc re-sign after the browser copy. Those steps have not run green on a completed Actions run yet.
+   Linux Full prepends `chromium/` to `LD_LIBRARY_PATH` in the wrapper child; the job summary lists sonames
    `ldd` resolves outside the bundle. That proof is wrapper and path containment, not a claim that the
    tarball is self-contained on an air-gapped machine.
 

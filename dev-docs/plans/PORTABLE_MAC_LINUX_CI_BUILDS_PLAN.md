@@ -1,6 +1,6 @@
 # macOS and Linux portable builds in CI
 
-_Status: in progress — chunks 1–2 landed on branch `portable/mac-linux-ci-builds` (commits through chunk 2); chunk 3 docs and tests are in progress. Frozen Full `--png-check` on macOS and Linux stays pending until a completed Actions run id is recorded._
+_Status: in progress — chunks 1–3 are in the tree on branch `portable/mac-linux-ci-builds`; chunk 4 (archive wrapper plan) waits on green Full macOS arm64 and Linux runs. Frozen Full `--png-check` stays unchecked until a completed Actions run id is recorded._
 _Parent: [PORTABLE_APP_PLAN.md](PORTABLE_APP_PLAN.md) Phase 0b "Export PNG offline" and Phase 1 "CI builds Windows, macOS, and Linux onedir zips"._
 _Closes the frozen-proof gap in [PORTABLE_BROWSER_WRAPPER_PLAN.md](PORTABLE_BROWSER_WRAPPER_PLAN.md). The wrapper code is already on main (PR #218). This plan adds the builds that run it, and it changes the macOS browser path the wrapper plan left undecided._
 
@@ -85,7 +85,7 @@ CI order for Full:
 4. Write notices under `Contents/Resources/chromium/`, including `CREDITS.html` from `dump_chromium_credits.py` against the Mach-O. Run the first `--png-check`. The outer seal is already invalid. A non-quarantined executable still runs, which is what this step is measuring: the pipe wrapper and Kaleido, against the upstream nested binary.
 5. Re-sign inside-out with `codesign --force --sign -` and no `--options runtime`, no `--timestamp`, and no `--deep`: every Mach-O under `Contents`, then each nested `.app` and `.framework` deepest first, then `GUISkinDose.app`. This matches the release script's walk with identity `-`.
 6. `codesign --verify --deep --strict` on `GUISkinDose.app`. A failure fails the job. This is the command the release script will run later. It checks the seal. It does not check dyld library validation.
-7. Run `--png-check` again on the re-signed tree. If the first run passed and this one fails, the summary says `adhoc_resign_broke_launch` and the job fails. The wrapper evidence is the first run. The zip is the re-signed tree, so the second run is the one that matches the artifact.
+7. Run `--png-check` again on the unzipped artifact (expanded tree from the zip that was built after step 6). If the pre-resign run passed and this one fails, the summary says `adhoc_resign_broke_launch` and the job fails. The wrapper evidence is the first run. The post-resign run is the one that matches what a user expands from the artifact.
 
 Light has no `ditto` of a nested app. After the freeze, run `codesign --verify --deep --strict` once. Do not re-sign Light when that verify already passes.
 
@@ -169,7 +169,7 @@ The spec stages Light or Full from `GUISKINDOSE_PORTABLE_EDITION`. Record `BUILD
 
 Zip after the signature step that the artifact should carry. macOS: `ditto -c -k --keepParent` of the re-signed `GUISkinDose.app`. Linux: zip the onedir. The parent plan's `.desktop` file is not in the tree. This Linux zip is the onedir alone.
 
-Expand that archive and run the self-check from the expanded tree. The macOS binary is `GUISkinDose.app/Contents/MacOS/GUISkinDose`. The Linux binary is `GUISkinDose/GUISkinDose`. The two `--png-check` runs on macOS happen before the zip, on the tree that is about to be archived, as specified in the signing order. Linux runs `--png-check` once, from the expanded tree, with `LD_LIBRARY_PATH` already set by the frozen entry.
+Expand that archive and run the self-check from the expanded tree. The macOS binary is `GUISkinDose.app/Contents/MacOS/GUISkinDose`. The Linux binary is `GUISkinDose/GUISkinDose`. On macOS, the pre-resign `--png-check` runs on the build tree before the zip; the post-resign run happens on the expanded artifact. Linux runs `--png-check` once, from the expanded tree, with `LD_LIBRARY_PATH` already set by the frozen entry.
 
 Strip `git` from `PATH`: drop every entry whose directory contains an executable named `git`, then fail if `git` is still visible. `git_on_path` in the report must be false.
 
@@ -178,10 +178,12 @@ Self-check, twice. Same edition assertions as Windows, with these host differenc
 - `report.frozen` is true, and the PSD equals the unfrozen reference from this runner.
 - `reduced_1000t_stl` is 0, the preview stem is `adult_male_reduced_3000t`, and the starter mesh loads.
 - Light: PNG export off, bundled browser absent, `to_image` count 0, non-starter mesh `not_installed`.
-- Full: PNG export on, non-starter mesh `loads`.
+- Full: PNG export on, bundled browser layout present, non-starter mesh `loads`.
 - `webview2.applicable` is false.
 
 Full `--png-check` sets `BROWSER_PATH` to a path that is not on disk. Copy `pngcheck_report.json` into `out/` before the assertions. Require exit 0, `page.http_script_refs == 0`, `render.launched_outside_onedir == 0`, `render.png_images >= 2` and equal to `render.images`, `render.png_bytes_total > 0`, and every `launched_from_onedir` entry relative. macOS includes `Helpers/Chromium.app/Contents/MacOS/Chromium`. Linux includes `chromium/chrome`. Other entries must stay under `Helpers/Chromium.app/` or `chromium/`. An empty process list is `browser_not_seen`, which fails the job.
+
+`pngcheck._require_bundled_launch` only requires a watched browser under `app_dir()` (``Contents`` on macOS, the onedir elsewhere). It does not check the Mach-O path string. CI's `macos_frozen_png_check.sh` sets `BROWSER_REL` and `png_assert` requires that exact relative path in `launched_from_onedir`; Linux and Windows workflows assert `chromium/chrome` or `chromium/chrome.exe` inline the same way.
 
 If the browser file exists and the report is `browser_not_seen`, the follow-up is a long-lived sampler on that OS. Unix already polls `ps` every 0.1 s. Build a long-lived sampler only after that red report. Do not move Chromium again in response to it.
 

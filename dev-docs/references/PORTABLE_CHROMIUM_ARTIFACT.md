@@ -98,7 +98,7 @@ equivalent to Google's.
 | sha256 | `4ff3b084c49d2391aecdd3924ebd1bd7417fb1dd88e3da45891bee73f8e5c173` |
 | Layout | `ditto` the disk image's `Chromium.app` into `GUISkinDose.app/Contents/Helpers/Chromium.app`. Notices under `Contents/Resources/chromium/` (`LICENSE.chromium.txt`, `LICENSE.ungoogled-chromium-macos.txt`, `CREDITS.html`). |
 
-Intel x86_64 dispatch uses the matching `..._x86_64-macos.dmg` with sha256 `152f0d67ab9301a2e6fa4d38b25e1382c0c74c72772d533ce7c4390e599a1db4` (same workflow file).
+Intel x86_64 dispatch uses the matching `..._x86_64-macos.dmg`. Its sha256 is pinned in the workflow; that digest was taken from the release asset notes and has not been independently re-hashed in this repository yet.
 
 ## Pinned artifact (Linux x86_64)
 

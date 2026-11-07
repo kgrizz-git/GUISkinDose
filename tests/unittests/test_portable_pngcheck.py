@@ -205,6 +205,16 @@ def test_list_processes_parses_macos_chromium_command_line(pngcheck, monkeypatch
     assert row["cmd"] == f"{browser} --headless --no-sandbox"
 
 
+def test_app_dir_returns_contents_for_macos_app_bundle(pngcheck, monkeypatch, tmp_path) -> None:
+    macos = tmp_path / "Contents" / "MacOS"
+    macos.mkdir(parents=True)
+    exe = macos / "GUISkinDose"
+    exe.write_bytes(b"")
+    monkeypatch.setattr(pngcheck, "_executable_dir", lambda: macos)
+    monkeypatch.setattr(pngcheck, "_host_platform", lambda: "darwin")
+    assert pngcheck.app_dir() == (tmp_path / "Contents").resolve()
+
+
 @pytest.mark.parametrize(
     ("platform", "extra_name"),
     [

@@ -238,6 +238,7 @@ jobs:
             if ($ed.non_starter_mesh -ne 'not_installed') { throw "Light did not report a non-starter mesh missing" }
           } else {
             if (-not $ed.png_export_available) { throw "Full reports PNG export off" }
+            if (-not $ed.bundled_browser_present) { throw "Full is missing bundled browser layout" }
             if ($ed.non_starter_mesh -ne 'loads') { throw "Full is missing a clinical mesh" }
           }
           # The runner has WebView2, so the native-window pre-check must find it.
@@ -440,15 +441,28 @@ jobs:
         exe="${dest}/GUISkinDose.app/Contents/MacOS/GUISkinDose"
         test -x "$exe"
         echo "APP_EXE=${exe}" >> "$GITHUB_ENV"
+    - name: Post-resign frozen PNG check on unzipped bundle (Full)
+      if: matrix.edition == 'full'
+      env:
+        PNG_CHECK_LABEL: post_resign
+        BROWSER_REL: Helpers/Chromium.app/Contents/MacOS/Chromium
+      run: |
+        set -euo pipefail
+        if ! packaging/portable/macos_frozen_png_check.sh; then
+          if [ -f out/pngcheck_report_pre_resign.json ]; then
+            echo "adhoc_resign_broke_launch=true"
+            echo "adhoc_resign_broke_launch=true" >> "$GITHUB_ENV"
+          fi
+          exit 1
+        fi
+        echo "post_png_check=passed"
+        echo "POST_PNG_CHECK=passed" >> "$GITHUB_ENV"
     - name: Frozen self-check (no git on PATH)
       run: |
         set -euo pipefail
-        export PATH="$(printf '%s' "$PATH" | tr ':' '\n' | while read -r d; do
-          [ -n "$d" ] || continue
-          [ -x "${d%/}/git" ] && continue
-          printf '%s\n' "$d"
-        done | paste -sd: -)"
-        command -v git >/dev/null && { echo "git still on PATH"; exit 1; }
+        # shellcheck source=packaging/portable/strip_git_from_path.sh
+        source packaging/portable/strip_git_from_path.sh
+        strip_git_from_path
         for run in 1 2; do
           out="${RUNNER_TEMP}/selfcheck-${run}"
           start=$SECONDS
@@ -479,6 +493,7 @@ jobs:
             assert ed["non_starter_mesh"] == "not_installed"
         else:
             assert ed["png_export_available"]
+            assert ed["bundled_browser_present"]
             assert ed["non_starter_mesh"] == "loads"
         PY
           echo "self-check run ${run} wall=${wall}s"
@@ -493,12 +508,10 @@ jobs:
     - name: Native GUI launch smoke (listen on loopback)
       run: |
         set -euo pipefail
-        export PATH="$(printf '%s' "$PATH" | tr ':' '\n' | while read -r d; do
-          [ -n "$d" ] || continue
-          [ -x "${d%/}/git" ] && continue
-          printf '%s\n' "$d"
-        done | paste -sd: -)"
-        log="${TMPDIR:-/tmp}/guiskindose/guiskindose-native.log"
+        # shellcheck source=packaging/portable/strip_git_from_path.sh
+        source packaging/portable/strip_git_from_path.sh
+        strip_git_from_path
+        log="$(uv run --no-sync python -c "from guiskindose.debug import default_native_log_path; p=default_native_log_path(); import sys; assert p; sys.stdout.write(str(p))")"
         rm -f "${log}"* 2>/dev/null || true
         start=$SECONDS
         "$APP_EXE" &
@@ -662,12 +675,9 @@ jobs:
     - name: Frozen self-check (no git on PATH)
       run: |
         set -euo pipefail
-        export PATH="$(printf '%s' "$PATH" | tr ':' '\n' | while read -r d; do
-          [ -n "$d" ] || continue
-          [ -x "${d%/}/git" ] && continue
-          printf '%s\n' "$d"
-        done | paste -sd: -)"
-        command -v git >/dev/null && { echo "git still on PATH"; exit 1; }
+        # shellcheck source=packaging/portable/strip_git_from_path.sh
+        source packaging/portable/strip_git_from_path.sh
+        strip_git_from_path
         for run in 1 2; do
           out="${RUNNER_TEMP}/selfcheck-${run}"
           start=$SECONDS
@@ -691,9 +701,11 @@ jobs:
         if edition == "light":
             assert not ed["png_export_available"] and not ed["bundled_browser_present"]
             assert ed["png_gate"]["to_image_calls"] == 0
+            assert not ed["png_gate"]["png_returned"]
             assert ed["non_starter_mesh"] == "not_installed"
         else:
-            assert ed["png_export_available"] and ed["non_starter_mesh"] == "loads"
+            assert ed["png_export_available"] and ed["bundled_browser_present"]
+            assert ed["non_starter_mesh"] == "loads"
         PY
           if [ "$run" -eq 1 ]; then
             cp "$report" out/selfcheck_report.json
@@ -707,11 +719,9 @@ jobs:
       if: matrix.edition == 'full'
       run: |
         set -euo pipefail
-        export PATH="$(printf '%s' "$PATH" | tr ':' '\n' | while read -r d; do
-          [ -n "$d" ] || continue
-          [ -x "${d%/}/git" ] && continue
-          printf '%s\n' "$d"
-        done | paste -sd: -)"
+        # shellcheck source=packaging/portable/strip_git_from_path.sh
+        source packaging/portable/strip_git_from_path.sh
+        strip_git_from_path
         export BROWSER_PATH="${RUNNER_TEMP}/no-such-chrome/chrome"
         out="${RUNNER_TEMP}/pngcheck"
         display=none
@@ -724,7 +734,6 @@ jobs:
           "$APP_EXE" --png-check "$out"
         fi
         code=$?
-        set -e
         if [ "$code" -ne 0 ] && [ "${LINUX_NOT_FOUND_COUNT:-0}" -eq 0 ]; then
           if command -v xvfb-run >/dev/null; then
             display=xvfb
@@ -736,6 +745,7 @@ jobs:
             code=$?
           fi
         fi
+        set -e
         echo "DISPLAY_HELPER=${display}" >> "$GITHUB_ENV"
         test "$code" -eq 0
         wall=$((SECONDS - start))

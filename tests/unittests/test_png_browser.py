@@ -224,6 +224,8 @@ def test_bundled_browser_honors_base_and_platform(monkeypatch, tmp_path) -> None
     assert bundled_browser(macos) == (
         tmp_path / "Contents" / "Helpers" / "Chromium.app" / "Contents" / "MacOS" / "Chromium"
     )
+    monkeypatch.setattr(png_browser, "_host_platform", lambda: "darwin")
+    assert bundled_browser(tmp_path) == tmp_path / "chromium" / "chrome"
 
 
 def test_not_frozen_has_no_render_browser(monkeypatch) -> None:

@@ -82,7 +82,7 @@ def _bundled_browser_relative_name() -> str:
 def bundled_browser(base: Path | None = None) -> Path:
     """Path of the bundled Chromium; *base* is the executable directory (``Contents/MacOS`` on macOS)."""
     root = base if base is not None else Path(sys.executable).resolve().parent
-    if _host_platform() == "darwin":
+    if _host_platform() == "darwin" and root.name == "MacOS":
         return root.parent / "Helpers" / "Chromium.app" / "Contents" / "MacOS" / "Chromium"
     return root / BROWSER_DIR / _bundled_browser_relative_name()
 

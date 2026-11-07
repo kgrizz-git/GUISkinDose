@@ -36,7 +36,7 @@ def test_bundled_browser_present_darwin_helpers_layout(selfcheck: Any, monkeypat
     exe = macos / "GUISkinDose"
     exe.write_bytes(b"")
     monkeypatch.setattr(sys, "executable", str(exe))
-    monkeypatch.setattr(sys, "platform", "darwin")
+    monkeypatch.setattr(selfcheck, "_host_platform", lambda: "darwin")
     assert not selfcheck._bundled_browser_present()
     (contents / "Helpers" / "Chromium.app").mkdir(parents=True)
     assert selfcheck._bundled_browser_present()
@@ -46,7 +46,7 @@ def test_bundled_browser_present_linux_chromium_dir(selfcheck: Any, monkeypatch:
     exe = tmp_path / "GUISkinDose"
     exe.write_bytes(b"")
     monkeypatch.setattr(sys, "executable", str(exe))
-    monkeypatch.setattr(sys, "platform", "linux")
+    monkeypatch.setattr(selfcheck, "_host_platform", lambda: "linux")
     assert not selfcheck._bundled_browser_present()
     (tmp_path / "chromium").mkdir()
     assert selfcheck._bundled_browser_present()
