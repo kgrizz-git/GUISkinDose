@@ -17,4 +17,5 @@ strip_git_from_path() {
         echo "git on PATH" >&2
         return 1
     }
+    return 0
 }

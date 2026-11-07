@@ -80,7 +80,7 @@ The nested `Chromium.app` from the disk image is a separate signature. `codesign
 CI order for Full:
 
 1. Freeze. Delete `tmp/portable/work`.
-2. `ditto` `Chromium.app` into `Contents/Helpers/Chromium.app`. Remove `com.apple.quarantine` from that copied app only. That attribute comes from the downloaded disk image. Clearing it is a CI step. It is not applied to a user download, and it is not `spctl --master-disable`.
+2. `ditto --norsrc --noextattr --noacl` `Chromium.app` into `Contents/Helpers/Chromium.app`, then run `xattr -cr` on that copy only. Clearing only `com.apple.quarantine` is not enough, because `codesign --verify --strict` rejects the other extended attributes the disk image carries. Clearing them is a CI step. It is not applied to a user download, and it is not `spctl --master-disable`.
 3. `codesign --verify --strict` on the nested `Chromium.app` alone. This checks that `ditto` and the attribute clear left the upstream seal intact. A failure stops the job.
 4. Write notices under `Contents/Resources/chromium/`, including `CREDITS.html` from `dump_chromium_credits.py` against the Mach-O. Run the first `--png-check`. The outer seal is already invalid. A non-quarantined executable still runs, which is what this step is measuring: the pipe wrapper and Kaleido, against the upstream nested binary.
 5. Re-sign inside-out with `codesign --force --sign -` and no `--options runtime`, no `--timestamp`, and no `--deep`: every Mach-O under `Contents`, then each nested `.app` and `.framework` deepest first, then `GUISkinDose.app`. This matches the release script's walk with identity `-`.

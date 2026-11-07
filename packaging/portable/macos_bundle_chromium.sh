@@ -76,9 +76,9 @@ echo "chromium_version=${CHROMIUM_VERSION:-unknown} sha256_verified=true"
 
 mount_dir="$(mktemp -d)"
 hdiutil attach "$dmg" -nobrowse -readonly -mountpoint "$mount_dir" >/dev/null
-ditto "${mount_dir}/Chromium.app" "$helpers"
+ditto --norsrc --noextattr --noacl "${mount_dir}/Chromium.app" "$helpers"
 hdiutil detach "$mount_dir" >/dev/null
-xattr -dr com.apple.quarantine "$helpers" 2>/dev/null || true
+xattr -cr "$helpers"
 codesign --verify --strict "$helpers"
 echo "nested_verify=passed nested_path=${NESTED_REL}"
 append_env "NESTED_VERIFY=passed"

@@ -40,8 +40,9 @@ if [[ "$bytes" != "$CHROMIUM_BYTES" ]]; then
 fi
 echo "chromium_sha256_verified=true archive_bytes=${bytes}"
 
-tar -xJf "$archive" -C "$dl"
-tops=( "$dl"/* )
+extract="$(mktemp -d)"
+tar -xJf "$archive" -C "$extract"
+tops=( "$extract"/* )
 if [[ "${#tops[@]}" -ne 1 || ! -d "${tops[0]}" ]]; then
     echo "expected one top-level directory in the Chromium tarball" >&2
     exit 1
@@ -61,7 +62,7 @@ libs="${line#*product_entries=}"
 libs="${libs%% *}"
 echo "credits_product_entries=${libs}"
 append_env "CREDITS_PRODUCTS=${libs}"
-rm -rf "$dl"
+rm -rf "$dl" "$extract"
 
 chrome="${dest}/chrome"
 export LD_LIBRARY_PATH="${dest}${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
