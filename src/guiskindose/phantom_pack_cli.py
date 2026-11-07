@@ -71,8 +71,5 @@ def run_cli_phantom_pack_install(pack_path: Path) -> int:
     except OSError:
         print(_CLI_FAILURE, file=sys.stderr)
         return 1
-    from guiskindose.gui.helpers import clear_mesh_measurement_caches_for_stems
-
-    clear_mesh_measurement_caches_for_stems(result.installed_stems)
     print(_CLI_SUCCESS.format(installed=result.installed, skipped_shipped=result.skipped_shipped))
     return 0

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import io
 import logging
+import os
 import stat
 import zipfile
 from pathlib import Path
@@ -110,7 +111,7 @@ def test_tampered_bytes_leave_previous_file(tmp_path: Path) -> None:
         "oversize_stream",
     ],
 )
-def test_rejects_bad_archives(tmp_path: Path, builder: str) -> None:
+def test_rejects_bad_archives(tmp_path: Path, builder: str, monkeypatch: pytest.MonkeyPatch) -> None:
     shipped = tmp_path / "shipped"
     library = tmp_path / "library"
     body = tiny_stl_body()
@@ -162,12 +163,24 @@ def test_rejects_bad_archives(tmp_path: Path, builder: str) -> None:
             zf.writestr("demo_cosmic_buddha.stl", body)
             zf.writestr("manifest.json", canonical_manifest_bytes(manifest))
     elif builder == "oversize_stream":
-        with zipfile.ZipFile(buf, "w") as zf:
-            info = zipfile.ZipInfo("senior_male.stl")
-            info.compress_type = zipfile.ZIP_DEFLATED
-            info.file_size = 16
-            zf.writestr(info, body * 400_000)
-            zf.writestr("manifest.json", canonical_manifest_bytes(manifest))
+        from guiskindose.phantom_pack_install import _MAX_MEMBER_BYTES
+
+        big = b"x" * (_MAX_MEMBER_BYTES + 128)
+        manifest = manifest_for_files({"senior_male": big})
+        raw = pack_zip_bytes(manifest, {"senior_male": big}, compression=zipfile.ZIP_STORED)
+        original_infolist = zipfile.ZipFile.infolist
+
+        def _lying_infolist(self: zipfile.ZipFile) -> list[zipfile.ZipInfo]:
+            items = original_infolist(self)
+            for info in items:
+                if info.filename.endswith(".stl"):
+                    info.file_size = 64
+            return items
+
+        monkeypatch.setattr(zipfile.ZipFile, "infolist", _lying_infolist)
+        with pytest.raises(PhantomPackError):
+            _install(raw, shipped=shipped, library=library, manifest=manifest)
+        return
     raw = buf.getvalue()
     with pytest.raises(PhantomPackError):
         _install(raw, shipped=shipped, library=library, manifest=manifest)
@@ -201,6 +214,28 @@ def test_all_shipped_skipped_no_library_copy(tmp_path: Path) -> None:
     result = _install(pack_zip_bytes(manifest, files), shipped=shipped, library=library, manifest=manifest)
     assert result.skipped_shipped == 1
     assert result.installed == 0
+    assert not (library / "senior_male.stl").exists()
+
+
+def test_rollback_removes_stem_added_this_install(tmp_path: Path) -> None:
+    shipped = tmp_path / "shipped"
+    library = tmp_path / "library"
+    library.mkdir()
+    body = tiny_stl_body()
+    files = {"junior_male": body, "senior_male": body + b"2"}
+    manifest = manifest_for_files(files)
+    calls = {"count": 0}
+    original_replace = Path.replace
+
+    def flaky_replace(self: Path, target: Path) -> None:
+        calls["count"] += 1
+        if calls["count"] == 2:
+            raise PermissionError("blocked")
+        original_replace(self, target)
+
+    with patch.object(Path, "replace", flaky_replace), pytest.raises(PhantomPackError):
+        _install(pack_zip_bytes(manifest, files), shipped=shipped, library=library, manifest=manifest)
+    assert not (library / "junior_male.stl").exists()
     assert not (library / "senior_male.stl").exists()
 
 
@@ -310,11 +345,21 @@ def test_accepts_members_with_regular_unix_mode(tmp_path: Path) -> None:
     assert (library / "senior_male.stl").read_bytes() == body
 
 
-def test_sweep_unlinks_stale_incoming_symlink_without_touching_target(tmp_path: Path) -> None:
-    import os
-    import time
+def test_orphan_backup_restored_when_destination_missing(tmp_path: Path) -> None:
+    shipped = tmp_path / "shipped"
+    library = tmp_path / "library"
+    library.mkdir()
+    restored_body = tiny_stl_body() + b"#orphan"
+    (library / "missing_mesh.stl.backup-deadbeef").write_bytes(restored_body)
+    body = tiny_stl_body()
+    manifest = manifest_for_files({"senior_male": body})
+    _install(pack_zip_bytes(manifest, {"senior_male": body}), shipped=shipped, library=library, manifest=manifest)
+    assert (library / "missing_mesh.stl").read_bytes() == restored_body
+    assert (library / "senior_male.stl").exists()
 
-    from guiskindose.phantom_pack_install import _sweep_stale_library_artifacts
+
+def test_sweep_unlinks_stale_incoming_symlink_without_touching_target(tmp_path: Path) -> None:
+    from guiskindose.phantom_pack_install import _sweep_library_artifacts
 
     victim = tmp_path / "outside"
     victim.mkdir()
@@ -324,26 +369,19 @@ def test_sweep_unlinks_stale_incoming_symlink_without_touching_target(tmp_path: 
     library.mkdir()
     link = library / ".incoming-trap"
     link.symlink_to(victim)
-    old = time.time() - 400
-    os.utime(link, (old, old))
-    _sweep_stale_library_artifacts(library)
+    _sweep_library_artifacts(library)
     assert not link.exists()
     assert keep.read_bytes() == b"stay"
 
 
 def test_stale_incoming_with_subdir_does_not_block_later_install(tmp_path: Path) -> None:
-    import os
-    import time
-
-    from guiskindose.phantom_pack_install import _sweep_stale_library_artifacts
+    from guiskindose.phantom_pack_install import _sweep_library_artifacts
 
     library = tmp_path / "library"
     stale = library / ".incoming-old"
     nested = stale / "nested"
     nested.mkdir(parents=True)
-    old = time.time() - 400
-    os.utime(stale, (old, old))
-    _sweep_stale_library_artifacts(library)
+    _sweep_library_artifacts(library)
     shipped = tmp_path / "shipped"
     body = tiny_stl_body()
     manifest = manifest_for_files({"senior_male": body})
@@ -373,3 +411,47 @@ def test_source_stream_oserror_is_install_failed(
             expected_manifest_sha256=_pin_for(manifest),
             app_version="1.1.1",
         )
+
+
+def test_non_directory_library_parent_install_failed(tmp_path: Path) -> None:
+    from guiskindose.phantom_pack_install import _INSTALL_FAILED, install_phantom_pack
+
+    shipped = tmp_path / "shipped"
+    blocker = tmp_path / "blocker"
+    blocker.write_bytes(b"not-a-dir")
+    library = blocker / "phantoms"
+    body = tiny_stl_body()
+    manifest = manifest_for_files({"senior_male": body})
+    with pytest.raises(PhantomPackError, match=_INSTALL_FAILED):
+        install_phantom_pack(
+            io.BytesIO(pack_zip_bytes(manifest, {"senior_male": body})),
+            user_library_dir=library,
+            shipped_dir=shipped,
+            expected_manifest_sha256=_pin_for(manifest),
+            app_version="1.1.1",
+        )
+
+
+@pytest.mark.skipif(os.name == "nt", reason="POSIX permissions")
+def test_readonly_library_install_failed(tmp_path: Path) -> None:
+    import os
+
+    from guiskindose.phantom_pack_install import _INSTALL_FAILED, install_phantom_pack
+
+    shipped = tmp_path / "shipped"
+    library = tmp_path / "library"
+    library.mkdir()
+    os.chmod(library, 0o500)
+    body = tiny_stl_body()
+    manifest = manifest_for_files({"senior_male": body})
+    try:
+        with pytest.raises(PhantomPackError, match=_INSTALL_FAILED):
+            install_phantom_pack(
+                io.BytesIO(pack_zip_bytes(manifest, {"senior_male": body})),
+                user_library_dir=library,
+                shipped_dir=shipped,
+                expected_manifest_sha256=_pin_for(manifest),
+                app_version="1.1.1",
+            )
+    finally:
+        os.chmod(library, 0o700)

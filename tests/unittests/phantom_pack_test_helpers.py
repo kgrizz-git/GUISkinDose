@@ -31,11 +31,16 @@ def manifest_for_files(
     }
 
 
-def pack_zip_bytes(manifest: dict[str, Any], files: dict[str, bytes]) -> bytes:
+def pack_zip_bytes(
+    manifest: dict[str, Any],
+    files: dict[str, bytes],
+    *,
+    compression: int = zipfile.ZIP_DEFLATED,
+) -> bytes:
     from guiskindose.phantom_pack import canonical_manifest_bytes
 
     buffer = io.BytesIO()
-    with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+    with zipfile.ZipFile(buffer, "w", compression=compression) as zf:
         zf.writestr("manifest.json", canonical_manifest_bytes(manifest))
         for stem, data in files.items():
             zf.writestr(f"{stem}.stl", data)

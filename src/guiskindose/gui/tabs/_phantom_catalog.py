@@ -11,14 +11,11 @@ from typing import IO, Any
 from nicegui import run, ui
 
 from guiskindose import __version__
-from guiskindose.gui.helpers import (
-    clear_mesh_measurement_caches_for_stems,
-    get_human_mesh_options,
-    mesh_stem_is_installed,
-)
+from guiskindose.gui.helpers import get_human_mesh_options, mesh_stem_is_installed
 from guiskindose.gui.io_helpers import _is_native_mode, open_phantom_pack_stream
 from guiskindose.gui.ui_copy import copy_text
 from guiskindose.gui.window_prefs import show_demo_phantoms_enabled
+from guiskindose.mesh_measurement_cache import clear_mesh_measurement_caches_for_stems
 from guiskindose.phantom_library import (
     _WINDOWS_LIBRARY_UNAVAILABLE,
     PhantomLibraryUnavailableError,

@@ -31,10 +31,17 @@ class PhantomLibraryUnavailableError(UserFacingInputError):
     """The per-OS user mesh library path cannot be resolved on this host."""
 
 
-def _win32_has_reparse_point(path: Path) -> bool:
+def _win32_file_attributes(path: Path) -> int:
     import ctypes
 
-    attrs = ctypes.windll.kernel32.GetFileAttributesW(str(path))  # type: ignore[attr-defined]
+    return int(ctypes.windll.kernel32.GetFileAttributesW(str(path)))  # type: ignore[attr-defined]
+
+
+def _win32_has_reparse_point(path: Path) -> bool:
+    try:
+        attrs = _win32_file_attributes(path)
+    except (AttributeError, OSError):
+        return False
     if attrs == 0xFFFFFFFF:
         return False
     return bool(attrs & 0x400)  # FILE_ATTRIBUTE_REPARSE_POINT

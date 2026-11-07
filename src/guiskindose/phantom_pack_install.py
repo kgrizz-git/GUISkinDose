@@ -7,7 +7,6 @@ import os
 import secrets
 import stat
 import sys
-import time
 import zipfile
 import zlib
 from dataclasses import dataclass
@@ -26,7 +25,11 @@ from guiskindose.phantom_pack import (
     verify_manifest_pin,
     verify_member_bytes,
 )
-from guiskindose.phantom_pack_lock import LibraryInstallLock, install_process_lock
+from guiskindose.phantom_pack_lock import (
+    LibraryInstallLock,
+    LibraryInstallLockBusy,
+    install_process_lock,
+)
 from guiskindose.privacy import safe_error_event
 
 _LOG = logging.getLogger(__name__)
@@ -37,8 +40,6 @@ _MAX_MEMBER_BYTES = 8 * 1024 * 1024
 _MAX_DECOMPRESSED_TOTAL = 80 * 1024 * 1024
 _MAX_COMPRESSION_RATIO = 100
 _READ_CHUNK = 64 * 1024
-_STALE_ARTIFACT_AGE_SEC = 180.0
-
 _BAD_ARCHIVE = "This phantom pack archive is not valid."
 _BAD_ARCHIVE_MEMBER = "This phantom pack archive is not valid."
 _INSTALL_FAILED = "Phantom pack install failed."
@@ -204,13 +205,6 @@ def _prepare_library_root(user_library_dir: Path) -> tuple[Path, bool]:
     return user_library_dir, created
 
 
-def _artifact_is_stale(path: Path, *, min_age_sec: float = _STALE_ARTIFACT_AGE_SEC) -> bool:
-    try:
-        return (time.time() - path.stat().st_mtime) >= min_age_sec
-    except OSError:
-        return False
-
-
 def _safe_remove_path(path: Path) -> None:
     """Remove a file or empty tree without following symlinks."""
     try:
@@ -229,26 +223,29 @@ def _safe_remove_path(path: Path) -> None:
         safe_error_event(_LOG, _OPERATION_INSTALL, exc)
 
 
-def _sweep_stale_incoming_dirs(library_root: Path, *, keep_stage: Path | None) -> None:
+def _sweep_incoming_dirs(library_root: Path, *, keep_stage: Path | None) -> None:
     for incoming in library_root.glob(".incoming-*"):
         if keep_stage is not None and incoming == keep_stage:
             continue
         if incoming.is_symlink():
-            if _artifact_is_stale(incoming):
-                incoming.unlink(missing_ok=True)
+            incoming.unlink(missing_ok=True)
             continue
-        if incoming.is_dir() and _artifact_is_stale(incoming):
+        if incoming.is_dir():
             _safe_remove_path(incoming)
 
 
-def _sweep_stale_backups(library_root: Path) -> None:
+def _reconcile_orphan_backups(library_root: Path) -> None:
+    """Restore backups whose mesh file is missing; delete stale backups otherwise."""
     for backup in library_root.glob("*.stl.backup-*"):
         if backup.is_symlink():
-            if _artifact_is_stale(backup):
-                backup.unlink(missing_ok=True)
+            backup.unlink(missing_ok=True)
             continue
         destination = library_root / backup.name.split(".backup-", 1)[0]
-        if destination.exists() or destination.is_symlink() or not _artifact_is_stale(backup):
+        if destination.exists() or destination.is_symlink():
+            try:
+                backup.unlink(missing_ok=True)
+            except OSError as exc:
+                safe_error_event(_LOG, _OPERATION_INSTALL, exc)
             continue
         try:
             backup.replace(destination)
@@ -256,10 +253,10 @@ def _sweep_stale_backups(library_root: Path) -> None:
             safe_error_event(_LOG, _OPERATION_INSTALL, exc)
 
 
-def _sweep_stale_library_artifacts(library_root: Path, *, keep_stage: Path | None = None) -> None:
-    """Remove stale install temps and revive orphaned backups before a new install."""
-    _sweep_stale_incoming_dirs(library_root, keep_stage=keep_stage)
-    _sweep_stale_backups(library_root)
+def _sweep_library_artifacts(library_root: Path, *, keep_stage: Path | None = None) -> None:
+    """Clear leftover install temps and reconcile orphan backups before a new install."""
+    _sweep_incoming_dirs(library_root, keep_stage=keep_stage)
+    _reconcile_orphan_backups(library_root)
 
 
 def _stage_path(library_root: Path) -> Path:
@@ -316,9 +313,9 @@ def _remove_created_root(library_root: Path) -> None:
         safe_error_event(_LOG, _OPERATION_INSTALL, exc)
 
 
-def _delete_publish_backups(library_root: Path) -> None:
-    for backup in library_root.glob("*.stl.backup-*"):
-        if backup.is_symlink():
+def _delete_publish_backups(backups: dict[Path, Path | None]) -> None:
+    for backup in backups.values():
+        if backup is None or backup.is_symlink():
             continue
         try:
             backup.unlink(missing_ok=True)
@@ -398,14 +395,19 @@ def _commit_install(
     stage_dir: Path | None = None
     backups: dict[Path, Path | None] = {}
     added: list[Path] = []
-    install_error: BaseException | None = None
     with install_process_lock():
         try:
             library_root, created_root = _prepare_library_root(user_library_dir)
+        except PhantomPackError:
+            raise
+        except OSError as exc:
+            safe_error_event(_LOG, _OPERATION_INSTALL, exc)
+            raise PhantomPackError(_INSTALL_FAILED) from None
+        try:
             with LibraryInstallLock(library_root):
                 try:
                     stage_dir = _stage_path(library_root)
-                    _sweep_stale_library_artifacts(library_root, keep_stage=stage_dir)
+                    _sweep_library_artifacts(library_root, keep_stage=stage_dir)
                     stage_dir.mkdir()
                     for stem, body in to_install:
                         staged = stage_dir / f"{stem}.stl"
@@ -419,23 +421,23 @@ def _commit_install(
                         child.unlink(missing_ok=True)
                     stage_dir.rmdir()
                     stage_dir = None
+                    _delete_publish_backups(backups)
                 except OSError as exc:
-                    install_error = exc
                     safe_error_event(_LOG, _OPERATION_INSTALL, exc)
-        except OSError:
+                    _rollback(
+                        library_root=library_root,
+                        created_root=created_root,
+                        backups=backups,
+                        added=added,
+                        stage_dir=stage_dir if stage_dir is not None and stage_dir.exists() else None,
+                    )
+                    raise PhantomPackError(_INSTALL_FAILED) from None
+        except LibraryInstallLockBusy as exc:
+            safe_error_event(_LOG, _OPERATION_INSTALL, exc)
             raise PhantomPackError(_LIBRARY_BUSY) from None
-    if install_error is not None:
-        assert library_root is not None
-        _rollback(
-            library_root=library_root,
-            created_root=created_root,
-            backups=backups,
-            added=added,
-            stage_dir=stage_dir if stage_dir is not None and stage_dir.exists() else None,
-        )
-        raise PhantomPackError(_INSTALL_FAILED) from None
-    assert library_root is not None
-    _delete_publish_backups(library_root)
+        except OSError as exc:
+            safe_error_event(_LOG, _OPERATION_INSTALL, exc)
+            raise PhantomPackError(_INSTALL_FAILED) from None
     return InstallResult(installed=len(to_install), skipped_shipped=skipped, installed_stems=stems)
 
 

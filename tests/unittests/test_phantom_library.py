@@ -173,15 +173,33 @@ def test_user_library_dir_windows_localappdata(tmp_path: Path) -> None:
     assert resolved.parts[-2:] == ("GUISkinDose", "phantoms")
 
 
-def test_path_is_library_link_uses_injected_platform(
+def test_path_is_library_link_uses_injected_platform_via_ctypes(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     from guiskindose.phantom_library import _path_is_library_link
 
     link_root = tmp_path / "lib"
     link_root.mkdir()
-    monkeypatch.setattr("guiskindose.phantom_library._win32_has_reparse_point", lambda _p: True)
+    monkeypatch.setattr(
+        "guiskindose.phantom_library._win32_file_attributes",
+        lambda _p: 0x400,
+    )
     assert _path_is_library_link(link_root, "win32")
+
+
+def test_win32_file_attributes_seam_returns_false_on_attribute_error(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from guiskindose.phantom_library import _win32_has_reparse_point
+
+    link_root = tmp_path / "lib"
+    link_root.mkdir()
+
+    def _boom(_p: Path) -> int:
+        raise AttributeError("no windll")
+
+    monkeypatch.setattr("guiskindose.phantom_library._win32_file_attributes", _boom)
+    assert not _win32_has_reparse_point(link_root)
 
 
 def test_demo_stem_not_marked_installed_without_file(tmp_path: Path) -> None:

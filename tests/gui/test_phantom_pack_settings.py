@@ -66,7 +66,7 @@ def test_missing_catalog_stem_stays_selected(two_root_dirs, monkeypatch) -> None
     assert "phantom pack" in note.lower()
 
 
-def test_pack_install_from_bytes_clears_measurement_cache(two_root_dirs) -> None:
+def test_pack_install_from_bytes_clears_measurement_cache(two_root_dirs, monkeypatch: pytest.MonkeyPatch) -> None:
     from guiskindose import __version__
     from guiskindose.gui.tabs import _phantom_catalog as catalog
     from guiskindose.phantom_pack import manifest_sha256
@@ -79,8 +79,9 @@ def test_pack_install_from_bytes_clears_measurement_cache(two_root_dirs) -> None
     helpers._MESH_EXTENT_CACHE["junior_male"] = (1.0, 2.0, 3.0)
     helpers._MESH_TORSO_WIDTH_CACHE["junior_male"] = 4.0
     raw = pack_zip_bytes(manifest, {"junior_male": body})
-    monkeypatch_pin = __import__("guiskindose.phantom_pack_pin", fromlist=["EXPECTED_PHANTOM_PACK_SHA256"])
-    monkeypatch_pin.EXPECTED_PHANTOM_PACK_SHA256 = pin
+    import guiskindose.phantom_pack_pin as pin_mod
+
+    monkeypatch.setattr(pin_mod, "EXPECTED_PHANTOM_PACK_SHA256", pin)
     result = install_phantom_pack_from_stream(
         io.BytesIO(raw),
         expected_manifest_sha256=pin,

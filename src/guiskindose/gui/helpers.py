@@ -11,7 +11,7 @@ import datetime
 import decimal
 import logging
 import numbers
-from collections.abc import Callable, Iterable
+from collections.abc import Callable
 from math import isclose
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
@@ -20,6 +20,10 @@ import numpy as np
 import pandas as pd
 from stl import mesh as stl_mesh
 
+from guiskindose.mesh_measurement_cache import (
+    _MESH_EXTENT_CACHE,
+    _MESH_TORSO_WIDTH_CACHE,
+)
 from guiskindose.phantom_mesh_names import (
     DEMO_HUMAN_MESHES,
     DEMO_MESH_SECTION_KEY,
@@ -88,8 +92,7 @@ from .table_origins import detected_table_origin, effective_table_origin, stage_
 
 _PHANTOM_DATA_DIR = Path(__file__).parent.parent / "phantom_data"
 _FUN_MESH_MANIFEST_PATH = Path(__file__).resolve().parents[3] / "scripts" / "phantom_gen" / "fun_mesh_manifest.json"
-_MESH_EXTENT_CACHE: dict[str, tuple[float, float, float]] = {}
-_MESH_TORSO_WIDTH_CACHE: dict[str, float] = {}
+
 _TORSO_WIDTH_Z_FRACTION_RANGE = (0.20, 0.65)
 _ZERO_LONGITUDINAL_SPAN_TOLERANCE_CM = 1e-9
 _gui_logger = logging.getLogger("guiskindose.gui.helpers")
@@ -580,13 +583,6 @@ def get_human_mesh_names(
     shipped = (phantom_data_dir or package_phantom_data_dir()).resolve()
     library = user_library_dir if user_library_dir is not None else default_user_library_dir()
     return installed_full_clinical_stems(shipped_dir=shipped, user_library_dir=library)
-
-
-def clear_mesh_measurement_caches_for_stems(stems: Iterable[str]) -> None:
-    """Drop cached extents/torso width after a mesh is installed or replaced."""
-    for stem in stems:
-        _MESH_EXTENT_CACHE.pop(stem, None)
-        _MESH_TORSO_WIDTH_CACHE.pop(stem, None)
 
 
 def mesh_stem_is_installed(
