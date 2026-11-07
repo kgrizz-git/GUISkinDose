@@ -531,17 +531,17 @@ jobs:
         if $up; then
           log_deadline=$((SECONDS + 15))
           while [ $SECONDS -lt $log_deadline ]; do
-            if [ -f "$log" ]; then
-              grep -q 'Portable GUI starting' "$log" && started=true
-              grep -qs 'NiceGUI ready' "$log" "$console" && ready=true
-              $started && $ready && break
-            fi
+            grep -qs 'Portable GUI starting' "$log" && started=true
+            grep -qs 'NiceGUI ready' "$log" "$console" && ready=true
+            $started && $ready && break
             kill -0 "$pid" 2>/dev/null || break
             sleep 0.5
           done
         fi
         kill "$pid" 2>/dev/null || true
         wait "$pid" 2>/dev/null || true
+        mkdir -p out
+        cp "$console" out/gui_console.txt 2>/dev/null || true
         echo "GUI_UP=${up} GUI_START_S=${startup} startup_logged=${started} ready_logged=${ready}"
         echo "GUI_UP=${up}" >> "$GITHUB_ENV"
         echo "GUI_START_S=${startup}" >> "$GITHUB_ENV"
