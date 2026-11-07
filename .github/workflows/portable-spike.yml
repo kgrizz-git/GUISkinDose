@@ -758,9 +758,15 @@ jobs:
         fi
         set -e
         echo "DISPLAY_HELPER=${display}" >> "$GITHUB_ENV"
-        test "$code" -eq 0
-        wall=$((SECONDS - start))
         report="${out}/${SC_SUB}/pngcheck_report.json"
+        if [ "$code" -ne 0 ]; then
+          # The failure code and counts are labels and integers, never paths.
+          if [ -f "$report" ]; then
+            python3 -c 'import json, sys; r = json.load(open(sys.argv[1]))["render"]; print("png_check_failure", r.get("error_type"), r.get("code"), r.get("counts"))' "$report" || true
+          fi
+          exit 1
+        fi
+        wall=$((SECONDS - start))
         test -f "$report"
         python3 - "$report" <<'PY'
         import json, sys
