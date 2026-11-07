@@ -112,12 +112,13 @@ def test_external_lock_reports_busy(tmp_path: Path) -> None:
         manifest = manifest_for_files({"senior_male": body})
         raw = pack_zip_bytes(manifest, {"senior_male": body})
         stream = __import__("io").BytesIO(raw)
+        pin = _pin_for(manifest)
         with pytest.raises(PhantomPackError, match=_LIBRARY_BUSY):
             install_phantom_pack(
                 stream,
                 user_library_dir=library,
                 shipped_dir=shipped,
-                expected_manifest_sha256=_pin_for(manifest),
+                expected_manifest_sha256=pin,
                 app_version="1.1.1",
             )
     finally:

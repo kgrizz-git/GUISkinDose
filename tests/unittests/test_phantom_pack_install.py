@@ -411,12 +411,13 @@ def test_source_stream_oserror_is_install_failed(
     body = tiny_stl_body()
     manifest = manifest_for_files({"senior_male": body})
     stream = io.BytesIO(pack_zip_bytes(manifest, {"senior_male": body}))
+    pin = _pin_for(manifest)
     with pytest.raises(PhantomPackError, match=_INSTALL_FAILED):
         install_phantom_pack(
             stream,
             user_library_dir=library,
             shipped_dir=shipped,
-            expected_manifest_sha256=_pin_for(manifest),
+            expected_manifest_sha256=pin,
             app_version="1.1.1",
         )
 
@@ -431,12 +432,13 @@ def test_non_directory_library_parent_install_failed(tmp_path: Path) -> None:
     body = tiny_stl_body()
     manifest = manifest_for_files({"senior_male": body})
     stream = io.BytesIO(pack_zip_bytes(manifest, {"senior_male": body}))
+    pin = _pin_for(manifest)
     with pytest.raises(PhantomPackError, match=_INSTALL_FAILED):
         install_phantom_pack(
             stream,
             user_library_dir=library,
             shipped_dir=shipped,
-            expected_manifest_sha256=_pin_for(manifest),
+            expected_manifest_sha256=pin,
             app_version="1.1.1",
         )
 
@@ -455,12 +457,13 @@ def test_readonly_library_install_failed(tmp_path: Path) -> None:
     manifest = manifest_for_files({"senior_male": body})
     stream = io.BytesIO(pack_zip_bytes(manifest, {"senior_male": body}))
     try:
+        pin = _pin_for(manifest)
         with pytest.raises(PhantomPackError, match=_INSTALL_FAILED):
             install_phantom_pack(
                 stream,
                 user_library_dir=library,
                 shipped_dir=shipped,
-                expected_manifest_sha256=_pin_for(manifest),
+                expected_manifest_sha256=pin,
                 app_version="1.1.1",
             )
     finally:

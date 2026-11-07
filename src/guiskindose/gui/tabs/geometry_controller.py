@@ -224,12 +224,8 @@ class GeometryTabController:
         )
         self.refs.spinner.visible = False
         self.refs.plot.update_figure(fig or {})
-        if fig is None and state.phantom_model == "human":
-            from guiskindose.phantom_mesh_names import human_mesh_not_installed_message
-
-            missing = human_mesh_not_installed_message(state.human_mesh)
-            if missing:
-                ui.notify(missing, type="negative", timeout=0, close_button="Dismiss", multi_line=True)
+        if fig is None:
+            _notify_missing_human_mesh()
 
     def _resolve_composite_for_render(self) -> bool:
         return resolve_composite_for_render(
@@ -566,3 +562,14 @@ class GeometryTabController:
         self.last_table_origin_scrub = False
         await self._render_preview("plot_procedure")
         self._update_paused_badge()
+
+
+def _notify_missing_human_mesh() -> None:
+    """Explain an empty preview when the selected human mesh is not installed."""
+    if state.phantom_model != "human":
+        return
+    from guiskindose.phantom_mesh_names import human_mesh_not_installed_message
+
+    missing = human_mesh_not_installed_message(state.human_mesh)
+    if missing:
+        ui.notify(missing, type="negative", timeout=0, close_button="Dismiss", multi_line=True)

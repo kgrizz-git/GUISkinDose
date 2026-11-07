@@ -127,6 +127,7 @@ async def open_phantom_pack_stream():
     """Return an open pack zip stream in native mode, else ``None`` when cancelled."""
     try:
         from nicegui import app as _app
+        from nicegui import run
 
         main_window = _app.native.main_window
         if main_window is None:
@@ -144,7 +145,7 @@ async def open_phantom_pack_stream():
         if not result:
             return None
         choice = result[0] if isinstance(result, (list, tuple)) else result
-        return open(choice, "rb")
+        return await run.io_bound(open, choice, "rb")
     except Exception as exc:
         safe_error_event(logger, "native_open_dialog", exc, level=logging.DEBUG)
         return None
