@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import contextlib
 import importlib.util
+import inspect
 import io
 import logging
 import multiprocessing
@@ -17,6 +18,7 @@ import os
 import signal
 import subprocess
 import sys
+import textwrap
 import types
 from pathlib import Path
 from typing import Any, cast
@@ -506,9 +508,7 @@ def test_chromium_child_environ_prepends_linux_chromium_only(entry_module, unix_
     assert entry_module._chromium_child_environ(chromium) is None
 
 
-def test_linux_wrapper_prepends_ld_library_path_in_popen_only(
-    unix_host, monkeypatch, tmp_path, entry_module
-):
+def test_linux_wrapper_prepends_ld_library_path_in_popen_only(unix_host, monkeypatch, tmp_path, entry_module):
     """Bundled library path is passed only to the Chromium Popen, not the process environment."""
     prior = "existing-libs"
     monkeypatch.setenv("LD_LIBRARY_PATH", prior)
@@ -553,9 +553,7 @@ def test_linux_wrapper_prepends_ld_library_path_in_popen_only(
     assert child_env["LD_LIBRARY_PATH"] == f"{prepend}:{prior}"
 
 
-def test_unix_wrapper_gate_dup2_popen_and_bye(
-    unix_host, monkeypatch, tmp_path, captured_root, entry_module
-):
+def test_unix_wrapper_gate_dup2_popen_and_bye(unix_host, monkeypatch, tmp_path, captured_root, entry_module):
     popen_calls: dict[str, object] = {}
     write_calls: list[tuple[int, bytes]] = []
 
@@ -885,44 +883,39 @@ def test_signal_during_launch_terminates_chromium_once_it_exists(unix_host, monk
 
 @pytest.mark.skipif(sys.platform == "win32", reason="POSIX preexec_fn")
 def test_map_debugging_pipe_fds_in_child_when_parent_fd3_is_busy(entry_module, tmp_path) -> None:
-    """Child remaps pipe fds in preexec_fn; the parent's fd 3 is left untouched."""
-    marker_path = tmp_path / "parent_fd3_marker"
-    marker_fd = os.open(marker_path, os.O_RDWR | os.O_CREAT, 0o600)
-    saved_fd3: int | None = None
-    try:
-        with contextlib.suppress(OSError):
-            saved_fd3 = os.dup(3)
+    """Child remaps pipe fds in preexec_fn; the parent's fd 3 is left untouched.
+
+    The experiment runs in its own interpreter, because an xdist worker uses low fds for
+    its channel and overwriting fd 3 there kills the worker.
+    """
+    remap_source = textwrap.dedent(inspect.getsource(entry_module._map_debugging_pipe_fds))
+    harness = textwrap.dedent(
+        """
+        import os, subprocess, sys
+        exec(sys.argv[1])
+        marker_fd = os.open(sys.argv[2], os.O_RDWR | os.O_CREAT, 0o600)
         os.dup2(marker_fd, 3)
-        child = (
-            "import os, sys\n"
-            "data = os.read(3, 4096)\n"
-            "os.write(4, data)\n"
-        )
+        child = "import os; os.write(4, os.read(3, 4096))"
         proc = subprocess.Popen(
             [sys.executable, "-c", child],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             close_fds=False,
-            preexec_fn=entry_module._map_debugging_pipe_fds,
+            preexec_fn=_map_debugging_pipe_fds,
         )
-        payload = b"pipe-handoff-bytes"
-        assert proc.stdin is not None
-        assert proc.stdout is not None
-        proc.stdin.write(payload)
-        proc.stdin.close()
-        echoed = proc.stdout.read()
-        proc.wait(timeout=30)
-        assert proc.returncode == 0
-        assert echoed == payload
+        echoed, _ = proc.communicate(b"pipe-handoff-bytes", timeout=30)
+        assert proc.returncode == 0, proc.returncode
+        assert echoed == b"pipe-handoff-bytes", echoed
         assert os.fstat(3).st_ino == os.fstat(marker_fd).st_ino
-    finally:
-        if saved_fd3 is not None:
-            os.dup2(saved_fd3, 3)
-            os.close(saved_fd3)
-        else:
-            with contextlib.suppress(OSError):
-                os.close(3)
-        os.close(marker_fd)
+        """
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", harness, remap_source, str(tmp_path / "parent_fd3_marker")],
+        capture_output=True,
+        timeout=60,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr.decode(errors="replace")
 
 
 def test_completed_wait_skips_the_fallback_kill(entry_module, monkeypatch):
