@@ -1,8 +1,8 @@
 # Portable Full: Unix Chromium pipe wrapper in the frozen bootloader
 
-_Status: in progress (code complete 2026-11-05; frozen macOS and Linux `--png-check` proof still open)._
-_Child of [PORTABLE_APP_PLAN.md](PORTABLE_APP_PLAN.md) (Freeze bullet, Phase 0b "Export PNG offline", and the Phase 1 note that frozen macOS and Linux Full builds fail PNG closed)._
-_Parent of the shipped Windows path: [archive/PORTABLE_PNG_BUNDLED_BROWSER_PLAN.md](archive/PORTABLE_PNG_BUNDLED_BROWSER_PLAN.md)._
+_Status: **Complete** (2026-11-07). The frozen entry gate shipped in `packaging/portable/entry.py`. macOS uses `Contents/Helpers/Chromium.app`; Linux uses `chromium/chrome`. Frozen Full `--png-check` on macOS and Linux passed on Actions run [42339804464](https://github.com/kgrizz-git/GUISkinDose/actions/runs/42339804464) (commit `526d45af`)._
+_Child of [PORTABLE_APP_PLAN.md](../PORTABLE_APP_PLAN.md)._
+_Parent of the shipped Windows path: [PORTABLE_PNG_BUNDLED_BROWSER_PLAN.md](PORTABLE_PNG_BUNDLED_BROWSER_PLAN.md). Superseded for CI layout and proof by [PORTABLE_MAC_LINUX_CI_BUILDS_PLAN.md](PORTABLE_MAC_LINUX_CI_BUILDS_PLAN.md) (also archived 2026-11-07)._
 
 Versions cited below are the lockfile pins: choreographer **1.4.0**, kaleido **1.5.0**, PyInstaller **6.22.3** (`uv.lock`). Line numbers are from those installed trees. A bump of any of the three re-checks the drift test in chunk 1 before the code is assumed still valid.
 
@@ -100,7 +100,7 @@ Against tag `v6.22.3`: `bootloader/src/pyi_main.c` does not `freopen` stdout or 
 |----|----------|-----------------------------------------------|
 | Windows | ungoogled-chromium zip, already pinned | `<exe dir>/chromium/chrome.exe` (unchanged) |
 | Linux | ungoogled-chromium-portablelinux `.tar.xz`, not the AppImage | `<exe dir>/chromium/chrome`. The unpack is a directory whose main binary is `chrome`, with the shared libraries beside it (portablelinux packaging; a distro ebuild `doexe`s `chrome`). Copy the directory contents into `chromium/`, not the `chrome` file alone. |
-| macOS | ungoogled-chromium-macos `.dmg` | `GUISkinDose.app/Contents/Helpers/Chromium.app/Contents/MacOS/Chromium` (from `png_browser.bundled_browser()` when frozen). CI copies the disk image's `Chromium.app` with `ditto` into `Contents/Helpers`. License files and `CREDITS.html` live under `Contents/Resources/chromium/`, not beside the Mach-O. See [PORTABLE_MAC_LINUX_CI_BUILDS_PLAN.md](PORTABLE_MAC_LINUX_CI_BUILDS_PLAN.md). |
+| macOS | ungoogled-chromium-macos `.dmg` | `GUISkinDose.app/Contents/Helpers/Chromium.app/Contents/MacOS/Chromium` (from `png_browser.bundled_browser()` when frozen). CI copies the disk image's `Chromium.app` with `ditto` into `Contents/Helpers`. License files and `CREDITS.html` live under `Contents/Resources/chromium/`, not beside the Mach-O. See [PORTABLE_MAC_LINUX_CI_BUILDS_PLAN.md](PORTABLE_MAC_LINUX_CI_BUILDS_PLAN.md) (archived). |
 
 `bundled_browser_for_render()` returns `bundled_browser()` whenever the process is frozen, on every OS. It returns `None` only when not frozen. The macOS and Linux `None` branch and its comment go away in the same change as the gate (chunk 1 lands first; see commits).
 
@@ -108,7 +108,7 @@ Notices stay in the `chromium/` directory on Windows and Linux, which is `chrome
 
 On macOS, `selfcheck._bundled_browser_present` checks for `Contents/Helpers/Chromium.app`. On Linux and Windows it still checks for a `chromium/` directory beside the executable.
 
-This plan does not pin macOS or Linux sha256 values, download the artifacts, or sign the nested app. Those stay in [PORTABLE_APP_PLAN.md](PORTABLE_APP_PLAN.md) Phase 0b and Phase 1, and in [references/PORTABLE_CHROMIUM_ARTIFACT.md](../references/PORTABLE_CHROMIUM_ARTIFACT.md).
+This plan does not pin macOS or Linux sha256 values, download the artifacts, or sign the nested app. Those stay in [PORTABLE_APP_PLAN.md](../PORTABLE_APP_PLAN.md) Phase 0b and Phase 1, and in [references/PORTABLE_CHROMIUM_ARTIFACT.md](../../references/PORTABLE_CHROMIUM_ARTIFACT.md).
 
 ## Guarantees that stay
 
@@ -164,7 +164,7 @@ Record the run on the Phase 0b checkbox in the parent plan. Until that run exist
 
 This plan does not add a macOS or Linux workflow leg. Those builds download a browser, and macOS also signs. They already have open checkboxes:
 
-- [PORTABLE_APP_PLAN.md](PORTABLE_APP_PLAN.md) Phase 1, "CI builds Windows, macOS, and Linux onedir zips" (Linux launches browser mode; the job records the system libraries the bundled Chromium needs).
+- [PORTABLE_APP_PLAN.md](../PORTABLE_APP_PLAN.md) Phase 1, "CI builds Windows, macOS, and Linux onedir zips" (Linux launches browser mode; the job records the system libraries the bundled Chromium needs).
 - Phase 0b, "Export PNG offline from that Full app."
 
 When either checkbox is implemented, its `--png-check` is the one specified above. No second proof.
@@ -242,7 +242,7 @@ uv run --extra dev --extra gui --locked python -m pytest tests/unittests/test_po
 **Steps:**
 
 1. From the Phase 1 wrapper sentence and the Freeze bullet, link this plan. Leave the offline-PNG checkbox open until a frozen `--png-check` is recorded.
-2. Maintenance-log entry: the bootloader now performs the Unix pipe-wrapper handoff, and frozen macOS and Linux resolve a bundled browser path. Add a brief [CHANGELOG.md](../../CHANGELOG.md) Unreleased note as well: the pre-push `check_changelog.py` hook requires an entry when `src/` or `tests/` change, even though no macOS or Linux portable zip ships yet. Keep the note unproven-safe (frozen `--png-check` still open). Full release wording stays with Phase 1 acceptance when those zips exist.
+2. Maintenance-log entry: the bootloader now performs the Unix pipe-wrapper handoff, and frozen macOS and Linux resolve a bundled browser path. Add a brief [CHANGELOG.md](../../../CHANGELOG.md) Unreleased note as well: the pre-push `check_changelog.py` hook requires an entry when `src/` or `tests/` change, even though no macOS or Linux portable zip ships yet. Keep the note unproven-safe (frozen `--png-check` still open). Full release wording stays with Phase 1 acceptance when those zips exist.
 3. Archive this plan under `dev-docs/plans/archive/` only after the frozen `--png-check` on both macOS and Linux has been recorded, and move the `dev-docs/index.md` row in that same change. Chunks 1–3 landing without that proof do not archive the plan.
 
 **Verify:**

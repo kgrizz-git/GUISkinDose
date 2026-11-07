@@ -9,7 +9,7 @@ Order matters (see ``dev-docs/plans/PORTABLE_APP_PLAN.md`` -> Freeze):
 0. On Unix, choreographer re-execs the frozen bootloader with
    ``_unix_pipe_chromium_wrapper.py`` in ``argv[1]``. The entry performs that
    wrapper body before anything touches fd 1 (see
-   ``dev-docs/plans/PORTABLE_BROWSER_WRAPPER_PLAN.md``).
+   ``dev-docs/plans/archive/PORTABLE_BROWSER_WRAPPER_PLAN.md``).
 1. A windowed build has no console, so ``sys.stdout`` / ``sys.stderr`` can be
    ``None``. They are pointed at the log sink first, using only the standard
    library, so nothing below writes to ``None``.

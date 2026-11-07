@@ -21,13 +21,12 @@ That keeps SemVer and contributor history organized.
 
 ### Changed
 
-- Portable Full builds for macOS and Linux can now hand PNG export to their bundled Chromium. The macOS
-  bundle places the browser under `Contents/Helpers/Chromium.app` and ships notices under
-  `Contents/Resources/chromium/`. The portable-spike workflow defines macOS arm64 and Linux x86_64 jobs
-  that will build and exercise those shapes when CI runs. No portable macOS or Linux download is published
-  yet. Release signing on macOS and proof that Linux PNG works without host libraries beyond what the CI
-  runner already has remain open. The frozen `--png-check` on those runners is still pending a green Actions
-  run. Windows is unchanged.
+- Portable Full builds for macOS and Linux can hand PNG export to bundled Chromium when a frozen build is
+  available. CI recorded that path on Actions run 42339804464 (2026-11-07). No portable macOS or Linux
+  download is published yet. macOS bundles the browser under `Contents/Helpers/Chromium.app` with notices
+  under `Contents/Resources/chromium/`. Release signing on macOS, optional Intel macOS CI, proof that Linux
+  PNG works on a clean machine without extra system libraries, and manual or VM validation remain open. Windows
+  is unchanged.
 - Installing the optional `gui-native` extra requires `pywebview>=6.1`. The lock already resolves 6.2.1.
   The `portable` dependency group already had the same floor.
 - On Windows, the portable Full app now renders PNG dose maps with the Chromium bundled in the download, never a

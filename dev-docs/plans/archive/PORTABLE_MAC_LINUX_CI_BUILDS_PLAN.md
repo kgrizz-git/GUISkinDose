@@ -1,8 +1,8 @@
 # macOS and Linux portable builds in CI
 
-_Status: in progress — chunks 1–3 are in the tree on branch `portable/mac-linux-ci-builds`; chunk 4 (archive wrapper plan) waits on green Full macOS arm64 and Linux runs. Frozen Full `--png-check` stays unchecked until a completed Actions run id is recorded._
-_Parent: [PORTABLE_APP_PLAN.md](PORTABLE_APP_PLAN.md) Phase 0b "Export PNG offline" and Phase 1 "CI builds Windows, macOS, and Linux onedir zips"._
-_Closes the frozen-proof gap in [PORTABLE_BROWSER_WRAPPER_PLAN.md](PORTABLE_BROWSER_WRAPPER_PLAN.md). The wrapper code is already on main (PR #218). This plan adds the builds that run it, and it changes the macOS browser path the wrapper plan left undecided._
+_Status: **Complete** (2026-11-07). Actions run [42339804464](https://github.com/kgrizz-git/GUISkinDose/actions/runs/42339804464) on commit `526d45af` passed `windows-light`, `windows-full`, `macos-light`, `macos-full`, `linux-light`, and `linux-full`. Intel macOS Full dispatch, release signing, the Linux air-gapped library claim, and manual or VM smokes stay open on [PORTABLE_APP_PLAN.md](../PORTABLE_APP_PLAN.md)._
+_Parent: [PORTABLE_APP_PLAN.md](../PORTABLE_APP_PLAN.md) Phase 0b "Export PNG offline" and Phase 1 "CI builds Windows, macOS, and Linux onedir zips"._
+_Closed the frozen-proof gap in [archive/PORTABLE_BROWSER_WRAPPER_PLAN.md](PORTABLE_BROWSER_WRAPPER_PLAN.md)._
 
 Extend `.github/workflows/portable-spike.yml` with macOS arm64 and Linux x86_64 jobs. Each job builds Light and Full. Full bundles a pinned ungoogled-chromium and runs the frozen `--png-check`. Release Developer ID signing and notarization stay in the parent plan. The macOS job does ad-hoc re-sign the outer bundle after the browser copy, then runs `codesign --verify --deep --strict`. That is a layout check. It is not a notarized release signature.
 
@@ -318,9 +318,7 @@ Chunk 1 before chunk 2. A workflow that runs `--png-check` before the path and n
 
 ### Chunk 4 — Archive the wrapper plan
 
-**Depends on chunk 2's Full macOS arm64 run and Full Linux run.**
-
-Move `PORTABLE_BROWSER_WRAPPER_PLAN.md` to `dev-docs/plans/archive/`, update `dev-docs/index.md`, and add the archive line to the parent plan. Archive this plan in that same commit only when chunks 1–3 are done and Intel is either green or left open on the parent checklist. An open Intel bullet can ship with that archive. An unticked Phase 0b PNG checkbox cannot.
+**Complete 2026-11-07** on run [42339804464](https://github.com/kgrizz-git/GUISkinDose/actions/runs/42339804464). `PORTABLE_BROWSER_WRAPPER_PLAN.md` and this plan were archived; `dev-docs/index.md` and the parent plan were updated.
 
 ## Out of scope
 
@@ -331,6 +329,30 @@ Move `PORTABLE_BROWSER_WRAPPER_PLAN.md` to `dev-docs/plans/archive/`, update `de
 - A `.desktop` file, a browser-mode GUI launch on Linux, and the manual macOS window check.
 - `pull_request` builds and larger runners.
 - Quarantine and Mark of the Web smokes. The CI quarantine-attribute clear is not that smoke.
+
+## CI run evidence (2026-11-07)
+
+| Field | Value |
+|-------|-------|
+| Run | [42339804464](https://github.com/kgrizz-git/GUISkinDose/actions/runs/42339804464) |
+| Commit | `526d45af` |
+| Legs green | Windows Light and Full, macOS arm64 Light and Full (pre- and post-resign Full `--png-check`), Linux x86_64 Light and Full |
+
+### Discoveries from that run (and local repro)
+
+| Topic | What we learned |
+|-------|-----------------|
+| Pipe fds in the frozen app | PyInstaller leaves `base_library.zip` open on fd 3. A parent-side `dup2` onto fds 3 and 4 cannot run, so `packaging/portable/entry.py` remaps stdin and stdout onto 3 and 4 in the Chromium child's `preexec_fn` with `close_fds=False`. |
+| Process sampling | `ps` lists unreaped children as `(name)` on macOS and `[name] <defunct>` on Linux. Those rows have no resolvable executable path, so `pngcheck` treats them as pathless (`uninspectable`), not as outside launches. |
+| `git` on PATH | On runners, `git` lives in `/usr/bin` next to tools the workflow still needs, so stripping whole directories from `PATH` broke steps. `packaging/portable/strip_git_from_path.sh` replaces each git-bearing directory with a temp shim of symlinks to every tool except `git`. |
+| Chromium disk image | Extended attributes from the downloaded `.dmg` made `codesign --verify --strict` fail on the nested app until CI clears `com.apple.quarantine` on the copied `Chromium.app`. |
+
+### Checklist
+
+- [x] Frozen Full `--png-check` macOS arm64 (pre- and post-resign) on run 42339804464.
+- [x] Frozen Full `--png-check` Linux x86_64 on run 42339804464.
+- [x] macOS and Linux Light legs on run 42339804464.
+- [ ] macOS Intel Full (`workflow_dispatch` only; not required for this plan's acceptance).
 
 ## Acceptance
 
