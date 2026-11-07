@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import fcntl
 import os
 import threading
 from pathlib import Path
@@ -96,7 +95,10 @@ def test_concurrent_installs_serialized(tmp_path: Path) -> None:
     assert (library / "senior_male.stl").exists()
 
 
+@pytest.mark.skipif(os.name == "nt", reason="uses POSIX flock to hold the lock externally")
 def test_external_lock_reports_busy(tmp_path: Path) -> None:
+    import fcntl
+
     shipped = tmp_path / "shipped"
     library = tmp_path / "library"
     library.mkdir()

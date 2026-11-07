@@ -455,3 +455,22 @@ def test_readonly_library_install_failed(tmp_path: Path) -> None:
             )
     finally:
         os.chmod(library, 0o700)
+
+
+def test_sweep_does_not_descend_into_a_junction(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """A Windows junction looks like a plain directory to pathlib; its target's files must survive."""
+    import guiskindose.phantom_pack_install as install_mod
+
+    library = tmp_path / "library"
+    junction = library / ".incoming-junction"
+    junction.mkdir(parents=True)
+    victim = junction / "keep.txt"
+    victim.write_bytes(b"keep")
+    real_check = install_mod._path_is_library_link
+    monkeypatch.setattr(
+        install_mod,
+        "_path_is_library_link",
+        lambda path, platform=None: path == junction or real_check(path, platform),
+    )
+    install_mod._sweep_incoming_dirs(library, keep_stage=None)
+    assert victim.read_bytes() == b"keep"

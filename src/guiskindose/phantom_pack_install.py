@@ -205,11 +205,21 @@ def _prepare_library_root(user_library_dir: Path) -> tuple[Path, bool]:
     return user_library_dir, created
 
 
+def _unlink_link(path: Path) -> None:
+    """Remove a symlink or junction itself, never its target."""
+    try:
+        path.unlink(missing_ok=True)
+    except (IsADirectoryError, PermissionError):
+        # A directory junction on Windows is removed with rmdir.
+        path.rmdir()
+
+
 def _safe_remove_path(path: Path) -> None:
     """Remove a file or empty tree without following symlinks."""
     try:
-        if path.is_symlink():
-            path.unlink(missing_ok=True)
+        if path.is_symlink() or _path_is_library_link(path, sys.platform):
+            # A Windows junction is not a symlink to pathlib, so check reparse points too.
+            _unlink_link(path)
             return
         if path.is_file():
             path.unlink(missing_ok=True)
@@ -227,11 +237,7 @@ def _sweep_incoming_dirs(library_root: Path, *, keep_stage: Path | None) -> None
     for incoming in library_root.glob(".incoming-*"):
         if keep_stage is not None and incoming == keep_stage:
             continue
-        if incoming.is_symlink():
-            incoming.unlink(missing_ok=True)
-            continue
-        if incoming.is_dir():
-            _safe_remove_path(incoming)
+        _safe_remove_path(incoming)
 
 
 def _reconcile_orphan_backups(library_root: Path) -> None:
@@ -381,6 +387,29 @@ def _plan_install(
     return to_install, skipped
 
 
+def _publish_all(
+    to_install: list[tuple[str, bytes]],
+    *,
+    library_root: Path,
+    stage_dir: Path,
+    backups: dict[Path, Path | None],
+    added: list[Path],
+) -> None:
+    """Stage and publish each mesh, recording backups and new files for rollback."""
+    stage_dir.mkdir()
+    for stem, body in to_install:
+        staged = stage_dir / f"{stem}.stl"
+        staged.write_bytes(body)
+        destination = library_root / f"{stem}.stl"
+        was_new = not destination.exists()
+        _publish_staged_file(staged, destination, backups=backups)
+        if was_new:
+            added.append(destination)
+    for child in stage_dir.iterdir():
+        child.unlink(missing_ok=True)
+    stage_dir.rmdir()
+
+
 def _commit_install(
     to_install: list[tuple[str, bytes]],
     *,
@@ -395,6 +424,7 @@ def _commit_install(
     stage_dir: Path | None = None
     backups: dict[Path, Path | None] = {}
     added: list[Path] = []
+    failed = False
     with install_process_lock():
         try:
             library_root, created_root = _prepare_library_root(user_library_dir)
@@ -408,30 +438,25 @@ def _commit_install(
                 try:
                     stage_dir = _stage_path(library_root)
                     _sweep_library_artifacts(library_root, keep_stage=stage_dir)
-                    stage_dir.mkdir()
-                    for stem, body in to_install:
-                        staged = stage_dir / f"{stem}.stl"
-                        staged.write_bytes(body)
-                        destination = library_root / f"{stem}.stl"
-                        was_new = not destination.exists()
-                        _publish_staged_file(staged, destination, backups=backups)
-                        if was_new:
-                            added.append(destination)
-                    for child in stage_dir.iterdir():
-                        child.unlink(missing_ok=True)
-                    stage_dir.rmdir()
+                    _publish_all(to_install, library_root=library_root, stage_dir=stage_dir, backups=backups, added=added)
                     stage_dir = None
                     _delete_publish_backups(backups)
                 except OSError as exc:
                     safe_error_event(_LOG, _OPERATION_INSTALL, exc)
+                    # The created root is removed after the lock file is closed, because
+                    # Windows cannot delete a file that is still open.
                     _rollback(
                         library_root=library_root,
-                        created_root=created_root,
+                        created_root=False,
                         backups=backups,
                         added=added,
                         stage_dir=stage_dir if stage_dir is not None and stage_dir.exists() else None,
                     )
-                    raise PhantomPackError(_INSTALL_FAILED) from None
+                    failed = True
+            if failed:
+                if created_root:
+                    _remove_created_root(library_root)
+                raise PhantomPackError(_INSTALL_FAILED)
         except LibraryInstallLockBusy as exc:
             safe_error_event(_LOG, _OPERATION_INSTALL, exc)
             raise PhantomPackError(_LIBRARY_BUSY) from None
