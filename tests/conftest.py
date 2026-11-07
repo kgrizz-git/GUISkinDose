@@ -99,6 +99,7 @@ def _isolated_phantom_user_library(tmp_path_factory: pytest.TempPathFactory, mon
     library = tmp_path_factory.mktemp("phantom_user_library")
     library.mkdir(exist_ok=True)
     monkeypatch.setattr("guiskindose.phantom_library.default_user_library_dir", lambda: library)
+    monkeypatch.setattr("guiskindose.phantom_pack_install.default_install_library_dir", lambda: library)
     return library
 
 

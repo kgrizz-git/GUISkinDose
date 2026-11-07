@@ -10,6 +10,7 @@ import pytest
 
 pytest.importorskip("nicegui")
 
+from guiskindose.gui import helpers
 from guiskindose.gui.helpers import get_human_mesh_options, mesh_stem_is_installed
 from guiskindose.gui.state import state
 from guiskindose.gui.tabs import settings as settings_tab
@@ -34,7 +35,11 @@ def two_root_dirs(tmp_path, monkeypatch):
     library.mkdir()
     (shipped / "adult_male.stl").write_bytes(tiny_stl_body())
     (library / "senior_male.stl").write_bytes(tiny_stl_body())
-    monkeypatch.setattr("guiskindose.phantom_mesh_names.package_phantom_data_dir", lambda: shipped)
+    def _shipped_dir() -> Path:
+        return shipped
+
+    monkeypatch.setattr("guiskindose.phantom_mesh_names.package_phantom_data_dir", _shipped_dir)
+    monkeypatch.setattr("guiskindose.gui.tabs._phantom_catalog.package_phantom_data_dir", _shipped_dir)
     monkeypatch.setattr(
         "guiskindose.phantom_library.default_user_library_dir",
         lambda: library,
@@ -61,28 +66,39 @@ def test_missing_catalog_stem_stays_selected(two_root_dirs, monkeypatch) -> None
     assert "phantom pack" in note.lower()
 
 
-def test_pack_install_from_bytes(two_root_dirs) -> None:
+def test_pack_install_from_bytes_clears_measurement_cache(two_root_dirs) -> None:
+    from guiskindose import __version__
+    from guiskindose.gui.tabs import _phantom_catalog as catalog
     from guiskindose.phantom_pack import manifest_sha256
     from guiskindose.phantom_pack_cli import install_phantom_pack_from_stream
 
     shipped, library = two_root_dirs
     body = tiny_stl_body()
-    manifest = manifest_for_files({"junior_male": body})
+    manifest = manifest_for_files({"junior_male": body}, app_version=__version__)
     pin = manifest_sha256(manifest)
+    helpers._MESH_EXTENT_CACHE["junior_male"] = (1.0, 2.0, 3.0)
+    helpers._MESH_TORSO_WIDTH_CACHE["junior_male"] = 4.0
     raw = pack_zip_bytes(manifest, {"junior_male": body})
+    monkeypatch_pin = __import__("guiskindose.phantom_pack_pin", fromlist=["EXPECTED_PHANTOM_PACK_SHA256"])
+    monkeypatch_pin.EXPECTED_PHANTOM_PACK_SHA256 = pin
     result = install_phantom_pack_from_stream(
         io.BytesIO(raw),
         expected_manifest_sha256=pin,
-        app_version="1.1.1",
+        app_version=__version__,
         user_library_dir=library,
         shipped_dir=shipped,
     )
     assert result.installed == 1
-    assert mesh_stem_is_installed("junior_male")
+    section = catalog._PhantomCatalogSection(mesh_select=type("S", (), {"options": {}, "update": lambda self: None})(), on_change=lambda: None)
+    section.status_label = type("L", (), {"set_text": lambda self, _t: None})()
+    section.report_install_success(result)
+    assert "junior_male" not in helpers._MESH_EXTENT_CACHE
+    assert "junior_male" not in helpers._MESH_TORSO_WIDTH_CACHE
 
 
 @pytest.mark.asyncio
-async def test_catalog_upload_good_zip_installs(two_root_dirs, monkeypatch) -> None:
+async def test_catalog_upload_good_zip_production_wiring(two_root_dirs, monkeypatch) -> None:
+    import guiskindose.phantom_pack_pin as pin_mod
     from guiskindose import __version__
     from guiskindose.gui.tabs import _phantom_catalog as catalog
     from guiskindose.phantom_pack import manifest_sha256
@@ -92,18 +108,7 @@ async def test_catalog_upload_good_zip_installs(two_root_dirs, monkeypatch) -> N
     manifest = manifest_for_files({"junior_male": body}, app_version=__version__)
     pin = manifest_sha256(manifest)
     raw = pack_zip_bytes(manifest, {"junior_male": body})
-    from guiskindose.phantom_pack_cli import install_phantom_pack_from_stream as _install_stream
-
-    def _install_bound(source, **_ignored):
-        return _install_stream(
-            source,
-            expected_manifest_sha256=pin,
-            app_version=__version__,
-            user_library_dir=library,
-            shipped_dir=shipped,
-        )
-
-    monkeypatch.setattr(catalog, "install_phantom_pack_from_stream", _install_bound)
+    monkeypatch.setattr(pin_mod, "EXPECTED_PHANTOM_PACK_SHA256", pin)
     monkeypatch.setattr(catalog.ui, "notify", lambda *_a, **_k: None)
 
     async def _io_bound(fn, *args, **kwargs):
@@ -122,7 +127,8 @@ async def test_catalog_upload_good_zip_installs(two_root_dirs, monkeypatch) -> N
 
 
 @pytest.mark.asyncio
-async def test_catalog_upload_tampered_zip_leaves_missing(two_root_dirs, monkeypatch) -> None:
+async def test_catalog_upload_tampered_zip_leaves_not_installed(two_root_dirs, monkeypatch) -> None:
+    import guiskindose.phantom_pack_pin as pin_mod
     from guiskindose import __version__
     from guiskindose.gui.tabs import _phantom_catalog as catalog
     from guiskindose.phantom_pack import manifest_sha256
@@ -132,28 +138,23 @@ async def test_catalog_upload_tampered_zip_leaves_missing(two_root_dirs, monkeyp
     manifest = manifest_for_files({"junior_male": body}, app_version=__version__)
     pin = manifest_sha256(manifest)
     raw = pack_zip_bytes(manifest, {"junior_male": body + b"#"})
-    from guiskindose.phantom_pack_cli import install_phantom_pack_from_stream as _install_stream
-
-    def _install_bound(source, **_ignored):
-        return _install_stream(
-            source,
-            expected_manifest_sha256=pin,
-            app_version=__version__,
-            user_library_dir=library,
-            shipped_dir=shipped,
-        )
-
-    monkeypatch.setattr("guiskindose.phantom_pack_cli.install_phantom_pack_from_stream", _install_bound)
-
-    class _Upload:
-        async def iterate(self):
-            yield raw
+    monkeypatch.setattr(pin_mod, "EXPECTED_PHANTOM_PACK_SHA256", pin)
+    messages: list[str] = []
+    monkeypatch.setattr(catalog.ui, "notify", lambda message, **_k: messages.append(str(message)))
 
     async def _io_bound(fn, *args, **kwargs):
         return fn(*args, **kwargs)
 
     monkeypatch.setattr(catalog.run, "io_bound", _io_bound)
     section = catalog._PhantomCatalogSection(mesh_select=type("S", (), {"options": {}, "update": lambda self: None})(), on_change=lambda: None)
-    section.status_label = type("L", (), {"set_text": lambda self, _t: None})()
+    status_text: list[str] = []
+    section.status_label = type("L", (), {"set_text": lambda self, text: status_text.append(str(text))})()
+
+    class _Upload:
+        async def iterate(self):
+            yield raw
+
     await section.install_upload(type("E", (), {"file": _Upload()})())
     assert not mesh_stem_is_installed("junior_male", phantom_data_dir=shipped, user_library_dir=library)
+    joined = " ".join(status_text + messages).lower()
+    assert "install failed" in joined or "not valid" in joined

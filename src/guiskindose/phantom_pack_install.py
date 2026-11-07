@@ -7,6 +7,7 @@ import os
 import secrets
 import stat
 import sys
+import time
 import zipfile
 import zlib
 from dataclasses import dataclass
@@ -25,6 +26,7 @@ from guiskindose.phantom_pack import (
     verify_manifest_pin,
     verify_member_bytes,
 )
+from guiskindose.phantom_pack_lock import LibraryInstallLock, install_process_lock
 from guiskindose.privacy import safe_error_event
 
 _LOG = logging.getLogger(__name__)
@@ -35,12 +37,13 @@ _MAX_MEMBER_BYTES = 8 * 1024 * 1024
 _MAX_DECOMPRESSED_TOTAL = 80 * 1024 * 1024
 _MAX_COMPRESSION_RATIO = 100
 _READ_CHUNK = 64 * 1024
+_STALE_ARTIFACT_AGE_SEC = 180.0
 
 _BAD_ARCHIVE = "This phantom pack archive is not valid."
 _BAD_ARCHIVE_MEMBER = "This phantom pack archive is not valid."
 _INSTALL_FAILED = "Phantom pack install failed."
 _LIBRARY_SYMLINK = "The phantom library path cannot be a symbolic link."
-_LIBRARY_MODE_FAILED = "Phantom pack install failed."
+_LIBRARY_BUSY = "Another phantom pack install is already in progress."
 
 _OPERATION_INSTALL = "phantom_pack_install"
 
@@ -64,6 +67,12 @@ def _reject_member(exc: BaseException | None = None) -> None:
     if exc is not None:
         safe_error_event(_LOG, _OPERATION_INSTALL, exc)
     raise PhantomPackError(_BAD_ARCHIVE_MEMBER)
+
+
+def _reject_install(exc: BaseException | None = None) -> None:
+    if exc is not None:
+        safe_error_event(_LOG, _OPERATION_INSTALL, exc)
+    raise PhantomPackError(_INSTALL_FAILED)
 
 
 def classify_member_name(name: str) -> str:
@@ -95,11 +104,30 @@ def _validate_zip_info(info: zipfile.ZipInfo) -> None:
         _reject_member()
     if info.compress_type not in (zipfile.ZIP_STORED, zipfile.ZIP_DEFLATED):
         _reject_member()
-    # S_IFLNK shares a bit with S_IFREG, so test the file type, not a bit mask.
     if stat.S_ISLNK(info.external_attr >> 16):
         _reject_member()
     if info.flag_bits & 0x1:
         _reject_member()
+
+
+def _read_zip_body(zf: zipfile.ZipFile, info: zipfile.ZipInfo, *, running_total: int) -> bytes:
+    buffer = bytearray()
+    try:
+        with zf.open(info, "r") as handle:
+            while True:
+                chunk = handle.read(_READ_CHUNK)
+                if not chunk:
+                    break
+                buffer.extend(chunk)
+                if len(buffer) > _MAX_MEMBER_BYTES:
+                    _reject_member()
+                if running_total + len(buffer) > _MAX_DECOMPRESSED_TOTAL:
+                    _reject_member()
+    except OSError as exc:
+        _reject_install(exc)
+    except (zipfile.BadZipFile, zlib.error, NotImplementedError, RuntimeError) as exc:
+        _reject_member(exc)
+    return bytes(buffer)
 
 
 def read_member_with_cap(
@@ -116,21 +144,7 @@ def read_member_with_cap(
         _reject_member()
     if info.compress_size > 0 and info.file_size / info.compress_size > _MAX_COMPRESSION_RATIO:
         _reject_member()
-    buffer = bytearray()
-    try:
-        with zf.open(info, "r") as handle:
-            while True:
-                chunk = handle.read(_READ_CHUNK)
-                if not chunk:
-                    break
-                buffer.extend(chunk)
-                if len(buffer) > _MAX_MEMBER_BYTES:
-                    _reject_member()
-                if running_total + len(buffer) > _MAX_DECOMPRESSED_TOTAL:
-                    _reject_member()
-    except (zipfile.BadZipFile, zlib.error, NotImplementedError, RuntimeError, OSError) as exc:
-        _reject_member(exc)
-    data = bytes(buffer)
+    data = _read_zip_body(zf, info, running_total=running_total)
     if len(data) > _MAX_MEMBER_BYTES:
         _reject_member()
     return data, running_total + len(data)
@@ -178,7 +192,7 @@ def _chmod_best_effort(path: Path, mode: int) -> None:
 
 def _prepare_library_root(user_library_dir: Path) -> tuple[Path, bool]:
     """Create library root when missing; refuse symlinks/junctions. Returns (root, created_new)."""
-    if _path_is_library_link(user_library_dir):
+    if _path_is_library_link(user_library_dir, sys.platform):
         raise PhantomPackError(_LIBRARY_SYMLINK)
     created = False
     if not user_library_dir.exists():
@@ -187,23 +201,65 @@ def _prepare_library_root(user_library_dir: Path) -> tuple[Path, bool]:
         created = True
     elif not user_library_dir.is_dir():
         raise PhantomPackError(_INSTALL_FAILED)
-    elif _path_is_library_link(user_library_dir):
-        raise PhantomPackError(_LIBRARY_SYMLINK)
     return user_library_dir, created
 
 
-def _sweep_stale_library_artifacts(library_root: Path) -> None:
-    """Remove stale install temps and revive orphaned backups before a new install."""
+def _artifact_is_stale(path: Path, *, min_age_sec: float = _STALE_ARTIFACT_AGE_SEC) -> bool:
+    try:
+        return (time.time() - path.stat().st_mtime) >= min_age_sec
+    except OSError:
+        return False
+
+
+def _safe_remove_path(path: Path) -> None:
+    """Remove a file or empty tree without following symlinks."""
+    try:
+        if path.is_symlink():
+            path.unlink(missing_ok=True)
+            return
+        if path.is_file():
+            path.unlink(missing_ok=True)
+            return
+        if not path.is_dir():
+            return
+        for child in list(path.iterdir()):
+            _safe_remove_path(child)
+        path.rmdir()
+    except OSError as exc:
+        safe_error_event(_LOG, _OPERATION_INSTALL, exc)
+
+
+def _sweep_stale_incoming_dirs(library_root: Path, *, keep_stage: Path | None) -> None:
     for incoming in library_root.glob(".incoming-*"):
-        if not incoming.is_dir():
+        if keep_stage is not None and incoming == keep_stage:
             continue
-        for child in incoming.iterdir():
-            child.unlink(missing_ok=True)
-        incoming.rmdir()
+        if incoming.is_symlink():
+            if _artifact_is_stale(incoming):
+                incoming.unlink(missing_ok=True)
+            continue
+        if incoming.is_dir() and _artifact_is_stale(incoming):
+            _safe_remove_path(incoming)
+
+
+def _sweep_stale_backups(library_root: Path) -> None:
     for backup in library_root.glob("*.stl.backup-*"):
+        if backup.is_symlink():
+            if _artifact_is_stale(backup):
+                backup.unlink(missing_ok=True)
+            continue
         destination = library_root / backup.name.split(".backup-", 1)[0]
-        if not destination.exists():
+        if destination.exists() or destination.is_symlink() or not _artifact_is_stale(backup):
+            continue
+        try:
             backup.replace(destination)
+        except OSError as exc:
+            safe_error_event(_LOG, _OPERATION_INSTALL, exc)
+
+
+def _sweep_stale_library_artifacts(library_root: Path, *, keep_stage: Path | None = None) -> None:
+    """Remove stale install temps and revive orphaned backups before a new install."""
+    _sweep_stale_incoming_dirs(library_root, keep_stage=keep_stage)
+    _sweep_stale_backups(library_root)
 
 
 def _stage_path(library_root: Path) -> Path:
@@ -246,20 +302,28 @@ def _restore_backup(dest: Path, backup: Path | None, added: list[Path]) -> None:
 
 
 def _remove_stage_dir(stage_dir: Path) -> None:
-    try:
-        for child in stage_dir.iterdir():
-            child.unlink(missing_ok=True)
-        stage_dir.rmdir()
-    except OSError as exc:
-        safe_error_event(_LOG, _OPERATION_INSTALL, exc)
+    _safe_remove_path(stage_dir)
 
 
 def _remove_created_root(library_root: Path) -> None:
     try:
-        if not any(library_root.iterdir()):
+        # This install created the root, so its own lock file is the only thing to ignore.
+        lock_file = library_root / ".install.lock"
+        if all(child == lock_file for child in library_root.iterdir()):
+            lock_file.unlink(missing_ok=True)
             library_root.rmdir()
     except OSError as exc:
         safe_error_event(_LOG, _OPERATION_INSTALL, exc)
+
+
+def _delete_publish_backups(library_root: Path) -> None:
+    for backup in library_root.glob("*.stl.backup-*"):
+        if backup.is_symlink():
+            continue
+        try:
+            backup.unlink(missing_ok=True)
+        except OSError as exc:
+            safe_error_event(_LOG, _OPERATION_INSTALL, exc)
 
 
 def _rollback(
@@ -287,8 +351,8 @@ def _check_compressed_limit(zf: zipfile.ZipFile) -> None:
         zf.fp.seek(0)
         if compressed_size > _MAX_COMPRESSED_BYTES:
             _reject_archive()
-    except OSError:
-        return
+    except OSError as exc:
+        _reject_install(exc)
 
 
 def _plan_install(
@@ -335,28 +399,31 @@ def _commit_install(
     backups: dict[Path, Path | None] = {}
     added: list[Path] = []
     install_error: BaseException | None = None
-    try:
-        library_root, created_root = _prepare_library_root(user_library_dir)
-        _sweep_stale_library_artifacts(library_root)
-        stage_dir = _stage_path(library_root)
-        stage_dir.mkdir()
-        for stem, body in to_install:
-            staged = stage_dir / f"{stem}.stl"
-            staged.write_bytes(body)
-            destination = library_root / f"{stem}.stl"
-            was_new = not destination.exists()
-            _publish_staged_file(staged, destination, backups=backups)
-            if was_new:
-                added.append(destination)
-        for child in stage_dir.iterdir():
-            child.unlink(missing_ok=True)
-        stage_dir.rmdir()
-        stage_dir = None
-        for backup in library_root.glob("*.stl.backup-*"):
-            backup.unlink(missing_ok=True)
-    except (OSError, PermissionError) as exc:
-        install_error = exc
-        safe_error_event(_LOG, _OPERATION_INSTALL, exc)
+    with install_process_lock():
+        try:
+            library_root, created_root = _prepare_library_root(user_library_dir)
+            with LibraryInstallLock(library_root):
+                try:
+                    stage_dir = _stage_path(library_root)
+                    _sweep_stale_library_artifacts(library_root, keep_stage=stage_dir)
+                    stage_dir.mkdir()
+                    for stem, body in to_install:
+                        staged = stage_dir / f"{stem}.stl"
+                        staged.write_bytes(body)
+                        destination = library_root / f"{stem}.stl"
+                        was_new = not destination.exists()
+                        _publish_staged_file(staged, destination, backups=backups)
+                        if was_new:
+                            added.append(destination)
+                    for child in stage_dir.iterdir():
+                        child.unlink(missing_ok=True)
+                    stage_dir.rmdir()
+                    stage_dir = None
+                except OSError as exc:
+                    install_error = exc
+                    safe_error_event(_LOG, _OPERATION_INSTALL, exc)
+        except OSError:
+            raise PhantomPackError(_LIBRARY_BUSY) from None
     if install_error is not None:
         assert library_root is not None
         _rollback(
@@ -368,6 +435,7 @@ def _commit_install(
         )
         raise PhantomPackError(_INSTALL_FAILED) from None
     assert library_root is not None
+    _delete_publish_backups(library_root)
     return InstallResult(installed=len(to_install), skipped_shipped=skipped, installed_stems=stems)
 
 
@@ -382,7 +450,10 @@ def install_phantom_pack(
     """Install allow-listed STL members from an open pack zip stream."""
     try:
         zf = zipfile.ZipFile(source)
-    except (zipfile.BadZipFile, zlib.error, NotImplementedError, RuntimeError, OSError) as exc:
+    except OSError as exc:
+        safe_error_event(_LOG, _OPERATION_INSTALL, exc)
+        raise PhantomPackError(_INSTALL_FAILED) from None
+    except (zipfile.BadZipFile, zlib.error, NotImplementedError, RuntimeError) as exc:
         safe_error_event(_LOG, _OPERATION_INSTALL, exc)
         raise PhantomPackError(_BAD_ARCHIVE) from None
     try:
@@ -395,10 +466,15 @@ def install_phantom_pack(
                 app_version=app_version,
             )
             return _commit_install(to_install, user_library_dir=user_library_dir, skipped=skipped)
+    except PhantomPackError:
+        raise
     except KeyError as exc:
         safe_error_event(_LOG, _OPERATION_INSTALL, exc)
         raise PhantomPackError(_BAD_ARCHIVE) from None
-    except (zipfile.BadZipFile, zlib.error, NotImplementedError, RuntimeError, OSError) as exc:
+    except OSError as exc:
+        safe_error_event(_LOG, _OPERATION_INSTALL, exc)
+        raise PhantomPackError(_INSTALL_FAILED) from None
+    except (zipfile.BadZipFile, zlib.error, NotImplementedError, RuntimeError) as exc:
         safe_error_event(_LOG, _OPERATION_INSTALL, exc)
         raise PhantomPackError(_BAD_ARCHIVE) from None
 

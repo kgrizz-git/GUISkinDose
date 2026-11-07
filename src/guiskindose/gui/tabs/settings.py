@@ -10,6 +10,7 @@ the Settings phantom preview and (where needed) the Geometry preview.
 from __future__ import annotations
 
 from collections.abc import Callable
+from typing import Any
 
 from nicegui import ui
 
@@ -126,6 +127,42 @@ def _select_installed_mesh(mesh_options: dict[str, str]) -> str | None:
     return None
 
 
+def _wire_human_mesh_controls(mesh_select: Any, on_change: Callable[[], None]) -> Callable[[], None]:
+    """Bind mesh selector + install-note refresh; return post-catalog refresh callback."""
+
+    @ui.refreshable
+    def _human_mesh_install_note() -> None:
+        note = _select_installed_mesh(get_human_mesh_options())
+        if note:
+            ui.label(note).classes("text-caption text-warning")
+
+    def _refresh_human_mesh_ui() -> None:
+        mesh_select.options = get_human_mesh_options()
+        mesh_select.update()
+        _human_mesh_install_note.refresh()
+
+    def _on_human_mesh_change() -> None:
+        """Validate human-mesh selection and refresh the phantom preview."""
+        if state.human_mesh == DEMO_MESH_SECTION_KEY:
+            options = get_human_mesh_options()
+            state.human_mesh = next(
+                (k for k in options if k != DEMO_MESH_SECTION_KEY),
+                "hudfrid",
+            )
+            mesh_select.value = state.human_mesh
+        on_change()
+        _refresh_human_mesh_ui()
+
+    mesh_select.on(_MODEL_VALUE_EVENT, _on_human_mesh_change)
+    _human_mesh_install_note()
+
+    def _after_catalog_change() -> None:
+        on_change()
+        _refresh_human_mesh_ui()
+
+    return _after_catalog_change
+
+
 def _build_phantom_section(ctx: PageContext, on_change: Callable[[], None]) -> None:
     """Phantom Settings expansion: model, mesh, offsets, and habitus scaling.
 
@@ -151,33 +188,17 @@ def _build_phantom_section(ctx: PageContext, on_change: Callable[[], None]) -> N
                     state, "phantom_model"
                 ).on(_MODEL_VALUE_EVENT, on_change).classes("grow")
 
-                mesh_options = get_human_mesh_options()
-                not_installed_note = _select_installed_mesh(mesh_options)
                 mesh_select = (
-                    ui.select(mesh_options, label="Human mesh", value=state.human_mesh)
+                    ui.select(get_human_mesh_options(), label="Human mesh", value=state.human_mesh)
                     .bind_value(state, "human_mesh")
                     .classes("grow")
                 )
-
-                def _on_human_mesh_change() -> None:
-                    """Validate human-mesh selection and refresh the phantom preview."""
-                    if state.human_mesh == DEMO_MESH_SECTION_KEY:
-                        # Separator is not a mesh; snap back to a real stem.
-                        state.human_mesh = next(
-                            (k for k in mesh_options if k != DEMO_MESH_SECTION_KEY),
-                            "hudfrid",
-                        )
-                        mesh_select.value = state.human_mesh
-                    on_change()
-
-                mesh_select.on(_MODEL_VALUE_EVENT, _on_human_mesh_change)
-            if not_installed_note:
-                ui.label(not_installed_note).classes("text-caption text-warning")
+                _after_catalog_change = _wire_human_mesh_controls(mesh_select, on_change)
 
             catalog_block = ui.column().classes("w-full")
             catalog_block.bind_visibility_from(state, "phantom_model", backward=lambda v: v == "human")
             with catalog_block:
-                catalog_refresh = build_phantom_catalog_section(mesh_select=mesh_select, on_change=on_change)
+                catalog_refresh = build_phantom_catalog_section(mesh_select=mesh_select, on_change=_after_catalog_change)
                 catalog_refresh()
 
             # show/hide mesh selector based on model

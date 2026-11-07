@@ -173,6 +173,17 @@ def test_user_library_dir_windows_localappdata(tmp_path: Path) -> None:
     assert resolved.parts[-2:] == ("GUISkinDose", "phantoms")
 
 
+def test_path_is_library_link_uses_injected_platform(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from guiskindose.phantom_library import _path_is_library_link
+
+    link_root = tmp_path / "lib"
+    link_root.mkdir()
+    monkeypatch.setattr("guiskindose.phantom_library._win32_has_reparse_point", lambda _p: True)
+    assert _path_is_library_link(link_root, "win32")
+
+
 def test_demo_stem_not_marked_installed_without_file(tmp_path: Path) -> None:
     from guiskindose.gui.helpers import mesh_stem_is_installed
 

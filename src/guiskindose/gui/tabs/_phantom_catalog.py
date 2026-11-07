@@ -120,7 +120,7 @@ class _PhantomCatalogSection:
                 expected_manifest_sha256=pack_pin_module.EXPECTED_PHANTOM_PACK_SHA256,
                 app_version=__version__,
                 user_library_dir=None,
-                shipped_dir=package_phantom_data_dir(),
+                shipped_dir=package_phantom_data_dir().resolve(),
             )
         except PhantomPackError as exc:
             _notify_phantom_pack_error(self.status_label, exc)

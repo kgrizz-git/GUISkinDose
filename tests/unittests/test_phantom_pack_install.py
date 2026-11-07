@@ -164,8 +164,9 @@ def test_rejects_bad_archives(tmp_path: Path, builder: str) -> None:
     elif builder == "oversize_stream":
         with zipfile.ZipFile(buf, "w") as zf:
             info = zipfile.ZipInfo("senior_male.stl")
-            info.file_size = 10
-            zf.writestr(info, body * 2_000_000)
+            info.compress_type = zipfile.ZIP_DEFLATED
+            info.file_size = 16
+            zf.writestr(info, body * 400_000)
             zf.writestr("manifest.json", canonical_manifest_bytes(manifest))
     raw = buf.getvalue()
     with pytest.raises(PhantomPackError):
@@ -216,7 +217,7 @@ def test_mid_replace_rollback(tmp_path: Path) -> None:
 
     def flaky_replace(self: Path, target: Path) -> None:
         calls["count"] += 1
-        if calls["count"] == 2:
+        if calls["count"] == 3:
             raise PermissionError("blocked")
         original_replace(self, target)
 
@@ -245,11 +246,13 @@ def test_rejects_bad_crc_stored_member(tmp_path: Path) -> None:
     body = tiny_stl_body()
     manifest = manifest_for_files({"senior_male": body})
     buf = io.BytesIO()
-    with zipfile.ZipFile(buf, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+    with zipfile.ZipFile(buf, "w", compression=zipfile.ZIP_STORED) as zf:
         zf.writestr("senior_male.stl", body)
         zf.writestr("manifest.json", canonical_manifest_bytes(manifest))
     corrupted = bytearray(buf.getvalue())
-    corrupted[-20] ^= 0xFF
+    marker = corrupted.find(b"solid")
+    assert marker >= 0
+    corrupted[marker] ^= 0xFF
     with pytest.raises(PhantomPackError):
         _install(bytes(corrupted), shipped=shipped, library=library, manifest=manifest)
 
@@ -305,3 +308,68 @@ def test_accepts_members_with_regular_unix_mode(tmp_path: Path) -> None:
     result = _install(buf.getvalue(), shipped=shipped, library=library, manifest=manifest)
     assert result.installed == 1
     assert (library / "senior_male.stl").read_bytes() == body
+
+
+def test_sweep_unlinks_stale_incoming_symlink_without_touching_target(tmp_path: Path) -> None:
+    import os
+    import time
+
+    from guiskindose.phantom_pack_install import _sweep_stale_library_artifacts
+
+    victim = tmp_path / "outside"
+    victim.mkdir()
+    keep = victim / "keep.txt"
+    keep.write_bytes(b"stay")
+    library = tmp_path / "library"
+    library.mkdir()
+    link = library / ".incoming-trap"
+    link.symlink_to(victim)
+    old = time.time() - 400
+    os.utime(link, (old, old))
+    _sweep_stale_library_artifacts(library)
+    assert not link.exists()
+    assert keep.read_bytes() == b"stay"
+
+
+def test_stale_incoming_with_subdir_does_not_block_later_install(tmp_path: Path) -> None:
+    import os
+    import time
+
+    from guiskindose.phantom_pack_install import _sweep_stale_library_artifacts
+
+    library = tmp_path / "library"
+    stale = library / ".incoming-old"
+    nested = stale / "nested"
+    nested.mkdir(parents=True)
+    old = time.time() - 400
+    os.utime(stale, (old, old))
+    _sweep_stale_library_artifacts(library)
+    shipped = tmp_path / "shipped"
+    body = tiny_stl_body()
+    manifest = manifest_for_files({"senior_male": body})
+    result = _install(pack_zip_bytes(manifest, {"senior_male": body}), shipped=shipped, library=library, manifest=manifest)
+    assert result.installed == 1
+
+
+def test_source_stream_oserror_is_install_failed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from guiskindose.phantom_pack_install import _INSTALL_FAILED, install_phantom_pack
+
+    def _broken_read(*_args, **_kwargs):
+        raise OSError("broken stream")
+
+    monkeypatch.setattr("guiskindose.phantom_pack_install._read_zip_body", _broken_read)
+
+    shipped = tmp_path / "shipped"
+    library = tmp_path / "library"
+    body = tiny_stl_body()
+    manifest = manifest_for_files({"senior_male": body})
+    with pytest.raises(PhantomPackError, match=_INSTALL_FAILED):
+        install_phantom_pack(
+            io.BytesIO(pack_zip_bytes(manifest, {"senior_male": body})),
+            user_library_dir=library,
+            shipped_dir=shipped,
+            expected_manifest_sha256=_pin_for(manifest),
+            app_version="1.1.1",
+        )

@@ -1,6 +1,6 @@
 # Portable phantom packs — Phase 2
 
-_Status: in progress (Steps 0–3 implemented on branch). Execution plan for Phase 2 of [PORTABLE_APP_PLAN.md](PORTABLE_APP_PLAN.md) (User library and offline pack)._
+_Status: in progress (Steps 0–7 implemented; acceptance checklist and manual Light smoke remain). Execution plan for Phase 2 of [PORTABLE_APP_PLAN.md](PORTABLE_APP_PLAN.md) (User library and offline pack)._
 _Created: 2026-11-07._
 _Parent: [PORTABLE_APP_PLAN.md](PORTABLE_APP_PLAN.md) lines 136–159 and 321–330. Phase 3 download and pack signing stay in the parent plan._
 

@@ -31,14 +31,27 @@ class PhantomLibraryUnavailableError(UserFacingInputError):
     """The per-OS user mesh library path cannot be resolved on this host."""
 
 
-def _path_is_library_link(path: Path) -> bool:
+def _win32_has_reparse_point(path: Path) -> bool:
+    import ctypes
+
+    attrs = ctypes.windll.kernel32.GetFileAttributesW(str(path))  # type: ignore[attr-defined]
+    if attrs == 0xFFFFFFFF:
+        return False
+    return bool(attrs & 0x400)  # FILE_ATTRIBUTE_REPARSE_POINT
+
+
+def _path_is_library_link(path: Path, platform: str | None = None) -> bool:
     """True when *path* must not be used as a writable library root."""
     if path.is_symlink():
         return True
-    if sys.platform == "win32":
-        is_junction = getattr(os.path, "isjunction", None)
-        if callable(is_junction) and path.exists() and is_junction(path):
-            return True
+    plat = platform or sys.platform
+    if plat != "win32" or not path.exists():
+        return False
+    is_junction = getattr(os.path, "isjunction", None)
+    if sys.platform == "win32" and plat == "win32" and callable(is_junction):
+        return bool(is_junction(path))
+    if plat == "win32":
+        return _win32_has_reparse_point(path)
     return False
 
 _DARWIN_PHANTOM_SUBPATH = ("Library", "Application Support", "GUISkinDose", "phantoms")
