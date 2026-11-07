@@ -29,6 +29,29 @@ def test_require_preview_stem(selfcheck: Any) -> None:
         selfcheck._require_preview_stem("adult_male_reduced_1000t")
 
 
+def test_bundled_browser_present_darwin_helpers_layout(selfcheck: Any, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    contents = tmp_path / "GUISkinDose.app" / "Contents"
+    macos = contents / "MacOS"
+    macos.mkdir(parents=True)
+    exe = macos / "GUISkinDose"
+    exe.write_bytes(b"")
+    monkeypatch.setattr(sys, "executable", str(exe))
+    monkeypatch.setattr(selfcheck, "_host_platform", lambda: "darwin")
+    assert not selfcheck._bundled_browser_present()
+    (contents / "Helpers" / "Chromium.app").mkdir(parents=True)
+    assert selfcheck._bundled_browser_present()
+
+
+def test_bundled_browser_present_linux_chromium_dir(selfcheck: Any, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    exe = tmp_path / "GUISkinDose"
+    exe.write_bytes(b"")
+    monkeypatch.setattr(sys, "executable", str(exe))
+    monkeypatch.setattr(selfcheck, "_host_platform", lambda: "linux")
+    assert not selfcheck._bundled_browser_present()
+    (tmp_path / "chromium").mkdir()
+    assert selfcheck._bundled_browser_present()
+
+
 def test_check_edition_rejects_a_non_3000t_preview_stem(selfcheck: Any, monkeypatch: pytest.MonkeyPatch) -> None:
     import guiskindose.phantom_mesh_names as names
 

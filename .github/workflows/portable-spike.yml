@@ -1,19 +1,29 @@
-# Portable app Windows builds (dev-docs/plans/PORTABLE_APP_PLAN.md, Phases 0 and 1):
-# PyInstaller freezes the two editions. The include lists live in
-# src/guiskindose/edition.py, and the spec freezes a staging copy whose _edition.py
-# says which edition it is. Light ships the starter meshes and no browser; its
-# self-check must report edition=light, no bundled browser, and PNG off without a
-# to_image call. Full ships every clinical mesh plus a pinned, sha256-verified Chromium
-# (dev-docs/references/PORTABLE_CHROMIUM_ARTIFACT.md) and proves offline PNG export
-# from it. Each leg zips the onedir, records sizes, and runs the frozen self-check
-# with git removed from PATH and outbound network blocked for the app (and, in Full,
-# for the bundled browser). No release, no signing. The zip is a short-lived artifact.
+# Portable app CI builds (dev-docs/plans/PORTABLE_APP_PLAN.md and PORTABLE_MAC_LINUX_CI_BUILDS_PLAN.md):
+# PyInstaller freezes Light and Full on Windows, macOS arm64, and Linux x64. Full bundles a
+# pinned sha256-verified Chromium and runs frozen --png-check with a decoy BROWSER_PATH. macOS
+# Full puts Chromium under Contents/Helpers, notices under Contents/Resources/chromium, runs
+# png-check before and after an ad-hoc inside-out re-sign, and finishes with codesign
+# --verify --deep --strict. Linux records ldd soname sets resolved inside vs outside chromium/.
+# Windows still blocks outbound network for the app and bundled chrome.exe; Unix records
+# network_block=skipped or unshare results. No release signing or notarization. Zips expire
+# after seven days as workflow artifacts.
 name: portable-spike
 
 on:
   workflow_dispatch:
+    inputs:
+      macos_intel:
+        description: Also build Full on macos-15-intel
+        type: boolean
+        default: false
   push:
-    branches: [ 'spike/portable-*', 'portable/**' ]
+    branches: [ 'spike/portable-*', 'portable/**', 'main' ]
+    paths:
+      - '.github/workflows/portable-spike.yml'
+      - 'packaging/portable/**'
+      - 'src/guiskindose/**'
+      - 'pyproject.toml'
+      - 'uv.lock'
 
 permissions:
   contents: read
@@ -228,6 +238,7 @@ jobs:
             if ($ed.non_starter_mesh -ne 'not_installed') { throw "Light did not report a non-starter mesh missing" }
           } else {
             if (-not $ed.png_export_available) { throw "Full reports PNG export off" }
+            if (-not $ed.bundled_browser_present) { throw "Full is missing bundled browser layout" }
             if ($ed.non_starter_mesh -ne 'loads') { throw "Full is missing a clinical mesh" }
           }
           # The runner has WebView2, so the native-window pre-check must find it.
@@ -341,6 +352,551 @@ jobs:
       uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
       with:
         name: guiskindose-${{ matrix.edition }}-windows-x64
+        path: out/
+        retention-days: 7
+        if-no-files-found: warn
+  macos-edition:
+    name: macos-${{ matrix.edition }}
+    runs-on: macos-15
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        edition: [ light, full ]
+    env:
+      APP_BUNDLE: tmp/portable/dist/GUISkinDose.app
+      APP_EXE: tmp/portable/dist/GUISkinDose.app/Contents/MacOS/GUISkinDose
+      ZIP_NAME: GUISkinDose-${{ matrix.edition }}-macos-arm64.zip
+      ARTIFACT_NAME: guiskindose-${{ matrix.edition }}-macos-arm64
+      GUISKINDOSE_PORTABLE_EDITION: ${{ matrix.edition }}
+      SC_SUB: guiskindose-selfcheck
+      CHROMIUM_VERSION: 156.0.8078.79-1.1
+      CHROMIUM_URL: https://github.com/ungoogled-software/ungoogled-chromium-macos/releases/download/156.0.8078.79-1.1/ungoogled-chromium_156.0.8078.79-1.1_arm64-macos.dmg
+      CHROMIUM_SHA256: 4ff3b084c49d2391aecdd3924ebd1bd7417fb1dd88e3da45891bee73f8e5c173
+      NETWORK_BLOCK: skipped
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      with:
+        persist-credentials: false
+    - name: Require arm64 runner
+      run: |
+        arch="$(uname -m)"
+        echo "runner arch=$arch"
+        test "$arch" = arm64
+    - name: Setup python 3.14
+      uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
+      with:
+        python-version: "3.14"
+    - name: Install uv
+      uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e  # v10.3.2
+      with:
+        version: "0.11.25"
+    - name: Install locked runtime + freeze toolchain
+      run: uv sync --locked --extra gui-native --group portable
+    - name: Unfrozen self-check (reference result)
+      run: |
+        set -euo pipefail
+        out="${RUNNER_TEMP}/selfcheck-unfrozen"
+        uv run --no-sync python packaging/portable/entry.py --self-check "$out"
+        report="${out}/${SC_SUB}/selfcheck_report.json"
+        psd="$(python3 -c "import json; print(json.load(open('${report}'))['calculate_export']['psd_mGy'])")"
+        edition="$(python3 -c "import json; print(json.load(open('${report}'))['edition']['edition'])")"
+        echo "unfrozen psd_mGy=${psd} edition=${edition}"
+        test "$edition" = full
+        echo "UNFROZEN_PSD=${psd}" >> "$GITHUB_ENV"
+    - name: Freeze (PyInstaller windowed app bundle)
+      run: |
+        set -euo pipefail
+        start=$SECONDS
+        uv run --no-sync pyinstaller packaging/portable/guiskindose.spec --noconfirm \
+          --distpath tmp/portable/dist --workpath tmp/portable/work
+        echo "BUILD_SECONDS=$((SECONDS - start))" >> "$GITHUB_ENV"
+        rm -rf tmp/portable/work
+        uv run --no-sync python -c "import PyInstaller; print('PyInstaller', PyInstaller.__version__)"
+    - name: Verify PyInstaller ad-hoc seal (Light)
+      if: matrix.edition == 'light'
+      run: codesign --verify --deep --strict "$APP_BUNDLE"
+    - name: Bundle Chromium, notices, png-checks, and ad-hoc re-sign (Full)
+      if: matrix.edition == 'full'
+      run: packaging/portable/macos_bundle_chromium.sh
+    - name: Light must not bundle Chromium.app in Helpers
+      if: matrix.edition == 'light'
+      run: test ! -d "${APP_BUNDLE}/Contents/Helpers/Chromium.app"
+    - name: Zip app bundle and record sizes
+      run: |
+        set -euo pipefail
+        mkdir -p out
+        ditto -c -k --keepParent "$APP_BUNDLE" "out/${ZIP_NAME}"
+        onedir="$(du -sk "$APP_BUNDLE" | awk '{print $1}')"
+        zipb="$(stat -f%z "out/${ZIP_NAME}")"
+        echo "ONEDIR_MB=$((onedir / 1024))" >> "$GITHUB_ENV"
+        echo "ZIP_MB=$((zipb / 1048576))" >> "$GITHUB_ENV"
+    - name: Unzip into a fresh folder
+      run: |
+        set -euo pipefail
+        dest="${RUNNER_TEMP}/unzipped"
+        rm -rf "$dest"
+        mkdir -p "$dest"
+        ditto -x -k "out/${ZIP_NAME}" "$dest"
+        exe="${dest}/GUISkinDose.app/Contents/MacOS/GUISkinDose"
+        test -x "$exe"
+        echo "APP_EXE=${exe}" >> "$GITHUB_ENV"
+    - name: Post-resign frozen PNG check on unzipped bundle (Full)
+      if: matrix.edition == 'full'
+      env:
+        PNG_CHECK_LABEL: post_resign
+        BROWSER_REL: Helpers/Chromium.app/Contents/MacOS/Chromium
+      run: |
+        set -euo pipefail
+        if ! packaging/portable/macos_frozen_png_check.sh; then
+          if [ -f out/pngcheck_report_pre_resign.json ]; then
+            echo "adhoc_resign_broke_launch=true"
+            echo "adhoc_resign_broke_launch=true" >> "$GITHUB_ENV"
+          fi
+          exit 1
+        fi
+        echo "post_png_check=passed"
+        echo "POST_PNG_CHECK=passed" >> "$GITHUB_ENV"
+    - name: Frozen self-check (no git on PATH)
+      run: |
+        set -euo pipefail
+        # shellcheck source=packaging/portable/strip_git_from_path.sh
+        source packaging/portable/strip_git_from_path.sh
+        strip_git_from_path
+        for run in 1 2; do
+          out="${RUNNER_TEMP}/selfcheck-${run}"
+          start=$SECONDS
+          "$APP_EXE" --self-check "$out"
+          wall=$((SECONDS - start))
+          report="${out}/${SC_SUB}/selfcheck_report.json"
+          python3 - "$report" "$GUISKINDOSE_PORTABLE_EDITION" "$UNFROZEN_PSD" <<'PY'
+        import json, sys
+        report = json.load(open(sys.argv[1]))
+        edition = sys.argv[2]
+        unfrozen = float(sys.argv[3])
+        assert report["passed"]
+        assert report["frozen"]
+        assert not report["git_on_path"]
+        assert not report["repo_root_climbs"]["fun_mesh_manifest_present"]
+        assert float(report["calculate_export"]["psd_mGy"]) == unfrozen
+        ed = report["edition"]
+        assert ed["edition"] == edition
+        assert ed["reduced_1000t_stl"] == 0
+        assert ed["preview_stem"] == "adult_male_reduced_3000t"
+        assert ed["starter_mesh_loads"]
+        assert report["webview2"]["applicable"] is False
+        if edition == "light":
+            assert not ed["png_export_available"]
+            assert not ed["bundled_browser_present"]
+            assert ed["png_gate"]["to_image_calls"] == 0
+            assert not ed["png_gate"]["png_returned"]
+            assert ed["non_starter_mesh"] == "not_installed"
+        else:
+            assert ed["png_export_available"]
+            assert ed["bundled_browser_present"]
+            assert ed["non_starter_mesh"] == "loads"
+        PY
+          echo "self-check run ${run} wall=${wall}s"
+          if [ "$run" -eq 1 ]; then
+            cp "$report" out/selfcheck_report.json
+            echo "PHANTOM_STLS=$(python3 -c "import json; print(json.load(open('${report}'))['package_data']['phantom_data_stl'])")" >> "$GITHUB_ENV"
+            echo "SELFCHECK_COLD_S=${wall}" >> "$GITHUB_ENV"
+          else
+            echo "SELFCHECK_WARM_S=${wall}" >> "$GITHUB_ENV"
+          fi
+        done
+    - name: Native GUI launch smoke (listen on loopback)
+      run: |
+        set -euo pipefail
+        # shellcheck source=packaging/portable/strip_git_from_path.sh
+        source packaging/portable/strip_git_from_path.sh
+        strip_git_from_path
+        log="$(uv run --no-sync python -c "from guiskindose.debug import default_native_log_path; p=default_native_log_path(); import sys; assert p; sys.stdout.write(str(p))")"
+        rm -f "${log}"* 2>/dev/null || true
+        start=$SECONDS
+        # NiceGUI prints its ready line to stdout, and a terminal launch keeps stdout,
+        # so the line lands in the console capture rather than the native log.
+        console="${RUNNER_TEMP}/gui-console.txt"
+        "$APP_EXE" >"$console" 2>&1 &
+        pid=$!
+        up=false
+        while [ $((SECONDS - start)) -lt 120 ]; do
+          if nc -z 127.0.0.1 8765 2>/dev/null; then up=true; break; fi
+          kill -0 "$pid" 2>/dev/null || break
+          sleep 0.5
+        done
+        startup=$((SECONDS - start))
+        started=false
+        ready=false
+        if $up; then
+          log_deadline=$((SECONDS + 15))
+          while [ $SECONDS -lt $log_deadline ]; do
+            grep -qs 'Portable GUI starting' "$log" && started=true
+            grep -qs 'NiceGUI ready' "$log" "$console" && ready=true
+            $started && $ready && break
+            kill -0 "$pid" 2>/dev/null || break
+            sleep 0.5
+          done
+        fi
+        kill "$pid" 2>/dev/null || true
+        wait "$pid" 2>/dev/null || true
+        mkdir -p out
+        cp "$console" out/gui_console.txt 2>/dev/null || true
+        echo "GUI_UP=${up} GUI_START_S=${startup} startup_logged=${started} ready_logged=${ready}"
+        echo "GUI_UP=${up}" >> "$GITHUB_ENV"
+        echo "GUI_START_S=${startup}" >> "$GITHUB_ENV"
+        $up || exit 1
+        $started || exit 1
+        $ready || exit 1
+    - name: Summary
+      if: always()
+      run: |
+        full=$([ "$GUISKINDOSE_PORTABLE_EDITION" = full ] && echo 1 || echo 0)
+        {
+          echo "## Portable build (macOS arm64, ${GUISKINDOSE_PORTABLE_EDITION} edition)"
+          echo "| Metric | Value |"
+          echo "|---|---|"
+          echo "| Build seconds | ${BUILD_SECONDS:-n/a} |"
+          echo "| Onedir size | ${ONEDIR_MB:-n/a} MB |"
+          echo "| Zip size | ${ZIP_MB:-n/a} MB |"
+          echo "| Phantom STLs | ${PHANTOM_STLS:-n/a} |"
+          echo "| Unfrozen reference PSD (mGy) | ${UNFROZEN_PSD:-n/a} |"
+          echo "| Self-check cold / warm (s) | ${SELFCHECK_COLD_S:-n/a} / ${SELFCHECK_WARM_S:-n/a} |"
+          echo "| GUI server up / seconds | ${GUI_UP:-n/a} / ${GUI_START_S:-n/a} |"
+          echo "| Network block | ${NETWORK_BLOCK} |"
+          if [ "$full" -eq 1 ]; then
+            echo "| Chromium | ${CHROMIUM_VERSION} (${CREDITS_PRODUCTS:-n/a} credits entries) |"
+            echo "| Nested verify | ${NESTED_VERIFY:-n/a} |"
+            echo "| Outer verify | ${OUTER_VERIFY:-n/a} |"
+            echo "| Pre-resign PNG wall / images | ${PRE_PNG_WALL:-n/a} / ${PRE_PNG_IMAGES:-n/a} |"
+            echo "| Post-resign PNG wall / images | ${POST_PNG_WALL:-n/a} / ${POST_PNG_IMAGES:-n/a} |"
+            echo "| Browser path | Helpers/Chromium.app/Contents/MacOS/Chromium |"
+            echo "| Wrapper fds | ${WRAPPER_FDS:-n/a} |"
+          else
+            echo "| Bundled browser | none |"
+          fi
+        } >> "$GITHUB_STEP_SUMMARY"
+    - name: Upload zip and reports
+      if: always()
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
+      with:
+        name: ${{ env.ARTIFACT_NAME }}
+        path: out/
+        retention-days: 7
+        if-no-files-found: warn
+  linux-edition:
+    name: linux-${{ matrix.edition }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    strategy:
+      fail-fast: false
+      matrix:
+        edition: [ light, full ]
+    env:
+      APP_DIR: tmp/portable/dist/GUISkinDose
+      APP_EXE: tmp/portable/dist/GUISkinDose/GUISkinDose
+      ZIP_NAME: GUISkinDose-${{ matrix.edition }}-linux-x64.zip
+      ARTIFACT_NAME: guiskindose-${{ matrix.edition }}-linux-x64
+      GUISKINDOSE_PORTABLE_EDITION: ${{ matrix.edition }}
+      SC_SUB: guiskindose-selfcheck
+      CHROMIUM_VERSION: 156.0.8078.79-1
+      CHROMIUM_URL: https://github.com/ungoogled-software/ungoogled-chromium-portablelinux/releases/download/156.0.8078.79-1/ungoogled-chromium-156.0.8078.79-1-x86_64_linux.tar.xz
+      CHROMIUM_SHA256: d35a9064068274af1a2efa8bcb9b42306e590f9b5c929789f2e0e51a35880499
+      CHROMIUM_BYTES: "157697672"
+      NATIVE_GUI: "false"
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      with:
+        persist-credentials: false
+    - name: Record glibc banner
+      run: |
+        banner="$(ldd --version | head -n 1)"
+        echo "glibc=${banner}"
+        echo "GLIBC_BANNER=${banner}" >> "$GITHUB_ENV"
+    - name: Setup python 3.14
+      uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
+      with:
+        python-version: "3.14"
+    - name: Install uv
+      uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e  # v10.3.2
+      with:
+        version: "0.11.25"
+    - name: Install locked runtime + freeze toolchain
+      run: uv sync --locked --extra gui-native --group portable
+    - name: Unfrozen self-check (reference result)
+      run: |
+        set -euo pipefail
+        out="${RUNNER_TEMP}/selfcheck-unfrozen"
+        uv run --no-sync python packaging/portable/entry.py --self-check "$out"
+        report="${out}/${SC_SUB}/selfcheck_report.json"
+        psd="$(python3 -c "import json; print(json.load(open('${report}'))['calculate_export']['psd_mGy'])")"
+        edition="$(python3 -c "import json; print(json.load(open('${report}'))['edition']['edition'])")"
+        test "$edition" = full
+        echo "UNFROZEN_PSD=${psd}" >> "$GITHUB_ENV"
+    - name: Freeze (PyInstaller onedir)
+      run: |
+        set -euo pipefail
+        start=$SECONDS
+        uv run --no-sync pyinstaller packaging/portable/guiskindose.spec --noconfirm \
+          --distpath tmp/portable/dist --workpath tmp/portable/work
+        echo "BUILD_SECONDS=$((SECONDS - start))" >> "$GITHUB_ENV"
+        rm -rf tmp/portable/work
+    - name: Bundle pinned Chromium and record ldd sonames (Full only)
+      if: matrix.edition == 'full'
+      run: packaging/portable/linux_bundle_chromium.sh
+    - name: Light must not contain a chromium directory
+      if: matrix.edition == 'light'
+      run: test ! -d "${APP_DIR}/chromium"
+    - name: Zip onedir and record sizes
+      run: |
+        set -euo pipefail
+        mkdir -p out
+        (cd tmp/portable/dist && zip -rq "../../../out/${ZIP_NAME}" GUISkinDose)
+        onedir="$(du -sk "${APP_DIR}" | awk '{print $1}')"
+        zipb="$(stat -c%s "out/${ZIP_NAME}")"
+        echo "ONEDIR_MB=$((onedir / 1024))" >> "$GITHUB_ENV"
+        echo "ZIP_MB=$((zipb / 1048576))" >> "$GITHUB_ENV"
+    - name: Unzip into a fresh folder
+      run: |
+        set -euo pipefail
+        dest="${RUNNER_TEMP}/unzipped"
+        rm -rf "$dest"
+        mkdir -p "$dest"
+        unzip -q "out/${ZIP_NAME}" -d "$dest"
+        exe="${dest}/GUISkinDose/GUISkinDose"
+        test -x "$exe"
+        echo "APP_EXE=${exe}" >> "$GITHUB_ENV"
+    - name: Network probe (optional user namespace)
+      run: |
+        set -euo pipefail
+        probe="${RUNNER_TEMP}/netprobe"
+        namespace=unavailable
+        if unshare --net true 2>/dev/null; then
+          unshare --net "$APP_EXE" --network-probe "$probe"
+          blocked="$(python3 -c "import json; print(json.load(open('${probe}/${SC_SUB}/network_probe.json'))['outbound_blocked'])")"
+          if [ "$blocked" = "True" ]; then
+            namespace=blocked
+          else
+            namespace=available
+          fi
+        else
+          "$APP_EXE" --network-probe "$probe" || true
+        fi
+        echo "NETWORK_NAMESPACE=${namespace}" >> "$GITHUB_ENV"
+    - name: Frozen self-check (no git on PATH)
+      run: |
+        set -euo pipefail
+        # shellcheck source=packaging/portable/strip_git_from_path.sh
+        source packaging/portable/strip_git_from_path.sh
+        strip_git_from_path
+        for run in 1 2; do
+          out="${RUNNER_TEMP}/selfcheck-${run}"
+          start=$SECONDS
+          "$APP_EXE" --self-check "$out"
+          wall=$((SECONDS - start))
+          report="${out}/${SC_SUB}/selfcheck_report.json"
+          python3 - "$report" "$GUISKINDOSE_PORTABLE_EDITION" "$UNFROZEN_PSD" <<'PY'
+        import json, sys
+        report = json.load(open(sys.argv[1]))
+        edition = sys.argv[2]
+        unfrozen = float(sys.argv[3])
+        assert report["passed"] and report["frozen"] and not report["git_on_path"]
+        assert not report["repo_root_climbs"]["fun_mesh_manifest_present"]
+        assert float(report["calculate_export"]["psd_mGy"]) == unfrozen
+        ed = report["edition"]
+        assert ed["edition"] == edition
+        assert ed["reduced_1000t_stl"] == 0
+        assert ed["preview_stem"] == "adult_male_reduced_3000t"
+        assert ed["starter_mesh_loads"]
+        assert report["webview2"]["applicable"] is False
+        if edition == "light":
+            assert not ed["png_export_available"] and not ed["bundled_browser_present"]
+            assert ed["png_gate"]["to_image_calls"] == 0
+            assert not ed["png_gate"]["png_returned"]
+            assert ed["non_starter_mesh"] == "not_installed"
+        else:
+            assert ed["png_export_available"] and ed["bundled_browser_present"]
+            assert ed["non_starter_mesh"] == "loads"
+        PY
+          if [ "$run" -eq 1 ]; then
+            cp "$report" out/selfcheck_report.json
+            echo "SELFCHECK_COLD_S=${wall}" >> "$GITHUB_ENV"
+            echo "PHANTOM_STLS=$(python3 -c "import json; print(json.load(open('${report}'))['package_data']['phantom_data_stl'])")" >> "$GITHUB_ENV"
+          else
+            echo "SELFCHECK_WARM_S=${wall}" >> "$GITHUB_ENV"
+          fi
+        done
+    - name: Frozen offline PNG from bundled Chromium (Full only)
+      if: matrix.edition == 'full'
+      run: |
+        set -euo pipefail
+        # shellcheck source=packaging/portable/strip_git_from_path.sh
+        source packaging/portable/strip_git_from_path.sh
+        strip_git_from_path
+        export BROWSER_PATH="${RUNNER_TEMP}/no-such-chrome/chrome"
+        out="${RUNNER_TEMP}/pngcheck"
+        display=none
+        start=$SECONDS
+        set +e
+        ns="${NETWORK_NAMESPACE:-unavailable}"
+        if [ "$ns" = "blocked" ]; then
+          unshare --net "$APP_EXE" --png-check "$out"
+        else
+          "$APP_EXE" --png-check "$out"
+        fi
+        code=$?
+        if [ "$code" -ne 0 ] && [ "${LINUX_NOT_FOUND_COUNT:-0}" -eq 0 ]; then
+          if command -v xvfb-run >/dev/null; then
+            display=xvfb
+            if [ "$ns" = "blocked" ]; then
+              unshare --net xvfb-run -a "$APP_EXE" --png-check "$out"
+            else
+              xvfb-run -a "$APP_EXE" --png-check "$out"
+            fi
+            code=$?
+          fi
+        fi
+        set -e
+        echo "DISPLAY_HELPER=${display}" >> "$GITHUB_ENV"
+        report="${out}/${SC_SUB}/pngcheck_report.json"
+        if [ "$code" -ne 0 ]; then
+          # The failure code and counts are labels and integers, never paths.
+          if [ -f "$report" ]; then
+            python3 -c 'import json, sys; r = json.load(open(sys.argv[1]))["render"]; print("png_check_failure", r.get("error_type"), r.get("code"), r.get("counts"))' "$report" || true
+          fi
+          exit 1
+        fi
+        wall=$((SECONDS - start))
+        test -f "$report"
+        python3 - "$report" <<'PY'
+        import json, sys
+        data = json.load(open(sys.argv[1]))
+        render, page = data["render"], data["page"]
+        assert data.get("passed")
+        assert page["http_script_refs"] == 0
+        assert render["launched_outside_onedir"] == 0
+        assert render["png_images"] >= 2 and render["png_images"] == render["images"]
+        assert render["png_bytes_total"] > 0
+        assert "chromium/chrome" in render["launched_from_onedir"]
+        PY
+        cp "$report" out/pngcheck_report.json
+        echo "PNG_WALL_S=${wall}" >> "$GITHUB_ENV"
+        echo "PNG_IMAGES=$(python3 -c "import json; print(json.load(open('${report}'))['render']['png_images'])")" >> "$GITHUB_ENV"
+    - name: Summary
+      if: always()
+      run: |
+        full=$([ "$GUISKINDOSE_PORTABLE_EDITION" = full ] && echo 1 || echo 0)
+        {
+          echo "## Portable build (Linux x64, ${GUISKINDOSE_PORTABLE_EDITION} edition)"
+          echo "| Metric | Value |"
+          echo "|---|---|"
+          echo "| glibc | ${GLIBC_BANNER:-n/a} |"
+          echo "| Build seconds | ${BUILD_SECONDS:-n/a} |"
+          echo "| Onedir size | ${ONEDIR_MB:-n/a} MB |"
+          echo "| Zip size | ${ZIP_MB:-n/a} MB |"
+          echo "| native GUI | ${NATIVE_GUI} |"
+          echo "| Network namespace | ${NETWORK_NAMESPACE:-n/a} |"
+          echo "| Display helper | ${DISPLAY_HELPER:-n/a} |"
+          if [ "$full" -eq 1 ]; then
+            echo "| Chromium | ${CHROMIUM_VERSION} |"
+            echo "| Bundled soname count | ${LINUX_BUNDLED_COUNT:-n/a} |"
+            echo "| System soname count | ${LINUX_SYSTEM_COUNT:-n/a} |"
+            echo "| Not-found soname count | ${LINUX_NOT_FOUND_COUNT:-n/a} |"
+            echo "| PNG wall / images | ${PNG_WALL_S:-n/a} / ${PNG_IMAGES:-n/a} |"
+            echo "| Browser path | chromium/chrome |"
+          fi
+        } >> "$GITHUB_STEP_SUMMARY"
+    - name: Upload zip and reports
+      if: always()
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
+      with:
+        name: ${{ env.ARTIFACT_NAME }}
+        path: out/
+        retention-days: 7
+        if-no-files-found: warn
+
+  macos-intel-full:
+    if: github.event_name == 'workflow_dispatch' && inputs.macos_intel
+    name: macos-intel-full
+    runs-on: macos-15-intel
+    timeout-minutes: 90
+    env:
+      APP_BUNDLE: tmp/portable/dist/GUISkinDose.app
+      APP_EXE: tmp/portable/dist/GUISkinDose.app/Contents/MacOS/GUISkinDose
+      ZIP_NAME: GUISkinDose-full-macos-x64.zip
+      ARTIFACT_NAME: guiskindose-full-macos-x64
+      GUISKINDOSE_PORTABLE_EDITION: full
+      SC_SUB: guiskindose-selfcheck
+      CHROMIUM_VERSION: 156.0.8078.79-1.1
+      CHROMIUM_URL: https://github.com/ungoogled-software/ungoogled-chromium-macos/releases/download/156.0.8078.79-1.1/ungoogled-chromium_156.0.8078.79-1.1_x86_64-macos.dmg
+      CHROMIUM_SHA256: 152f0d67ab9301a2e6fa4d38b25e1382c0c74c72772d533ce7c4390e599a1db4
+      NETWORK_BLOCK: skipped
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      with:
+        persist-credentials: false
+    - name: Require x86_64 runner
+      run: |
+        arch="$(uname -m)"
+        echo "runner arch=$arch"
+        test "$arch" = x86_64
+    - name: Setup python 3.14
+      uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
+      with:
+        python-version: "3.14"
+    - name: Install uv
+      uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e  # v10.3.2
+      with:
+        version: "0.11.25"
+    - name: Install locked runtime + freeze toolchain
+      run: uv sync --locked --extra gui-native --group portable
+    - name: Unfrozen self-check (reference result)
+      run: |
+        set -euo pipefail
+        out="${RUNNER_TEMP}/selfcheck-unfrozen"
+        uv run --no-sync python packaging/portable/entry.py --self-check "$out"
+        report="${out}/${SC_SUB}/selfcheck_report.json"
+        psd="$(python3 -c "import json; print(json.load(open('${report}'))['calculate_export']['psd_mGy'])")"
+        echo "UNFROZEN_PSD=${psd}" >> "$GITHUB_ENV"
+    - name: Freeze (PyInstaller windowed app bundle)
+      run: |
+        set -euo pipefail
+        start=$SECONDS
+        uv run --no-sync pyinstaller packaging/portable/guiskindose.spec --noconfirm \
+          --distpath tmp/portable/dist --workpath tmp/portable/work
+        echo "BUILD_SECONDS=$((SECONDS - start))" >> "$GITHUB_ENV"
+        rm -rf tmp/portable/work
+    - name: Bundle Chromium, notices, png-checks, and ad-hoc re-sign (Full)
+      run: packaging/portable/macos_bundle_chromium.sh
+    - name: Zip app bundle
+      run: |
+        mkdir -p out
+        ditto -c -k --keepParent "$APP_BUNDLE" "out/${ZIP_NAME}"
+    - name: Unzip into a fresh folder
+      run: |
+        set -euo pipefail
+        dest="${RUNNER_TEMP}/unzipped"
+        rm -rf "$dest"
+        mkdir -p "$dest"
+        ditto -x -k "out/${ZIP_NAME}" "$dest"
+        exe="${dest}/GUISkinDose.app/Contents/MacOS/GUISkinDose"
+        test -x "$exe"
+        echo "APP_EXE=${exe}" >> "$GITHUB_ENV"
+    - name: Post-resign frozen PNG check on unzipped bundle
+      env:
+        PNG_CHECK_LABEL: post_resign
+        BROWSER_REL: Helpers/Chromium.app/Contents/MacOS/Chromium
+      run: packaging/portable/macos_frozen_png_check.sh
+    - name: Summary
+      if: always()
+      run: |
+        echo "## Portable build (macOS x64 Intel Full)" >> "$GITHUB_STEP_SUMMARY"
+        echo "Build seconds: ${BUILD_SECONDS:-n/a}" >> "$GITHUB_STEP_SUMMARY"
+    - name: Upload zip
+      if: always()
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
+      with:
+        name: ${{ env.ARTIFACT_NAME }}
         path: out/
         retention-days: 7
         if-no-files-found: warn

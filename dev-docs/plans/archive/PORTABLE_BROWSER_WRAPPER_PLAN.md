@@ -1,8 +1,8 @@
 # Portable Full: Unix Chromium pipe wrapper in the frozen bootloader
 
-_Status: in progress (code complete 2026-11-05; frozen macOS and Linux `--png-check` proof still open)._
-_Child of [PORTABLE_APP_PLAN.md](PORTABLE_APP_PLAN.md) (Freeze bullet, Phase 0b "Export PNG offline", and the Phase 1 note that frozen macOS and Linux Full builds fail PNG closed)._
-_Parent of the shipped Windows path: [archive/PORTABLE_PNG_BUNDLED_BROWSER_PLAN.md](archive/PORTABLE_PNG_BUNDLED_BROWSER_PLAN.md)._
+_Status: **Complete** (2026-11-07). The frozen entry gate shipped in `packaging/portable/entry.py`. macOS uses `Contents/Helpers/Chromium.app`; Linux uses `chromium/chrome`. Frozen Full `--png-check` on macOS and Linux passed on Actions run [42339804464](https://github.com/kgrizz-git/GUISkinDose/actions/runs/42339804464) (commit `526d45af`)._
+_Child of [PORTABLE_APP_PLAN.md](../PORTABLE_APP_PLAN.md)._
+_Parent of the shipped Windows path: [PORTABLE_PNG_BUNDLED_BROWSER_PLAN.md](PORTABLE_PNG_BUNDLED_BROWSER_PLAN.md). Superseded for CI layout and proof by [PORTABLE_MAC_LINUX_CI_BUILDS_PLAN.md](PORTABLE_MAC_LINUX_CI_BUILDS_PLAN.md) (also archived 2026-11-07)._
 
 Versions cited below are the lockfile pins: choreographer **1.4.0**, kaleido **1.5.0**, PyInstaller **6.22.3** (`uv.lock`). Line numbers are from those installed trees. A bump of any of the three re-checks the drift test in chunk 1 before the code is assumed still valid.
 
@@ -46,9 +46,9 @@ Teach the frozen entry to recognize this re-exec, the way `multiprocessing.freez
 On `sys.platform != "win32"`, and only when `len(sys.argv) >= 3`, the entry checks whether `sys.argv[1]` ends with `_unix_pipe_chromium_wrapper.py`. A shorter argv is not a wrapper launch: do not read `argv[1]` or `argv[2]`. When it matches, the entry:
 
 1. Runs before `_route_missing_streams()` and before `multiprocessing.freeze_support()` (`entry.py`, lines 128–129). A later gate is too late: `freeze_support` must not run in this child, and nothing may write fd 1. The debugging pipe is fd 1.
-2. Treats `sys.argv[2:]` as the Chromium argument vector. Before any `dup2`, the first token must resolve inside `<exe dir>/chromium/` (`Path.resolve` plus `os.path.commonpath`, same idea as `pngcheck._inside`). Any other target, including a path that does not resolve, exits 1 with no write to stdout or stderr and without calling `dup2` or `Popen`. stderr is choreographer's logger pipe (`browser_async.py`, lines 145–149); a message there can carry a path into logistro.
-3. Only after that check passes, `dup2`s stdin/stdout onto fds 3 and 4 and marks them inheritable.
-4. Installs the SIGTERM and SIGINT handlers, then `Popen`s that vector with `pass_fds=(3, 4)` and no shell. A handler takes a one-item claim with `list.pop`, records the time, and calls `terminate()`; it never waits, so a nested signal is a no-op and the `{bye}` write is still reached. A signal that lands before launch is recorded, and Chromium is terminated right after `Popen`. The main flow polls `wait(timeout=0.2)` and kills Chromium 5 s after a signal; the wait after `kill()` is bounded too. A `finally` kills any Chromium still running and writes `{bye}`, whatever went wrong. Do not copy the wrapper's bare `wait(5)` (`_unix_pipe_chromium_wrapper.py`, lines 51–53): a timeout there raises and skips `kill()`. Signals are not blocked with `pthread_sigmask` instead, because Chromium would inherit the blocked mask.
+2. Treats `sys.argv[2:]` as the Chromium argument vector. Before `Popen`, the first token must resolve inside the bundled browser root (`Path.resolve` plus `os.path.commonpath`, same idea as `pngcheck._inside`). Any other target, including a path that does not resolve, exits 1 with no write to stdout or stderr and without calling `Popen`. stderr is choreographer's logger pipe (`browser_async.py`, lines 145–149); a message there can carry a path into logistro.
+3. After that check passes, installs SIGTERM and SIGINT handlers, then `Popen`s that vector with `close_fds=False` and `preexec_fn=_map_debugging_pipe_fds`. The parent does not `dup2` onto fds 3 and 4. In the frozen bootloader those fds are often already open (`base_library.zip` sits on fd 3), so choreographer's in-parent remap would refuse to run. The child's `preexec_fn` runs immediately before `exec`, copies stdin onto fd 3 and stdout onto fd 4, and leaves the parent's descriptors untouched.
+4. A handler takes a one-item claim with `list.pop`, records the time, and calls `terminate()`; it never waits, so a nested signal is a no-op and the `{bye}` write is still reached. A signal that lands before launch is recorded, and Chromium is terminated right after `Popen`. The main flow polls `wait(timeout=0.2)` and kills Chromium 5 s after a signal; the wait after `kill()` is bounded too. A `finally` kills any Chromium still running and writes `{bye}`, whatever went wrong. Do not copy the wrapper's bare `wait(5)` (`_unix_pipe_chromium_wrapper.py`, lines 51–53): a timeout there raises and skips `kill()`. Signals are not blocked with `pthread_sigmask` instead, because Chromium would inherit the blocked mask.
 5. After `wait`, `os.write(1, b"{bye}\n")` and `SystemExit` with the child return code. `os.write` on fd 1, not `print`, so a replaced `sys.stdout` cannot swallow the sentinel or send it somewhere else.
 6. Does not import `guiskindose`, kaleido, or choreographer on this path. The stdlib imports already at the top of `entry.py` stay above the gate; they must not write stdout. Do not add a project import above the gate. The one exception is `_entry_platform`, a stdlib-only module beside `entry.py` that exists so tests can set the host platform without patching `sys.platform`; it is in the spec's `pathex` and `hiddenimports`.
 
@@ -86,7 +86,7 @@ No fallback browser is added to paper over a mismatch.
 
 The develop `pyi_main.c` does not `freopen` stdout in the onedir child. Debug lines go to stderr, and only when bootloader debug is on. The windowed subprocess runtime hook (PyInstaller PR 6364, still the documented windowed behavior) replaces stdin, stdout, or stderr only when the caller left them unset. choreographer sets all three. PyInstaller is not installed in the default `.venv` (it is the `portable` group), so chunk 1 confirms both claims against the 6.22.3 tag before the gate is trusted: the onedir bootloader must not replace an inherited stdout, and the runtime hook must leave an explicit pipe alone.
 
-The gate still has to be first. A write to fd 1 before `dup2` corrupts the DevTools stream, and `--png-check` then fails closed. That failure is the signal to stop and re-plan. It is not a reason to fall back to a system browser.
+The gate still has to be first. A write to fd 1 before Chromium's pipe fds are wired corrupts the DevTools stream, and `--png-check` then fails closed. That failure is the signal to stop and re-plan. It is not a reason to fall back to a system browser.
 
 #### PyInstaller 6.22.3 evidence (Chunk 1, recorded 2026-11-05)
 
@@ -94,23 +94,21 @@ Against tag `v6.22.3`: `bootloader/src/pyi_main.c` does not `freopen` stdout or 
 
 ## Browser path
 
-`bundled_browser()` today is `<base>/chromium/chrome.exe` on Windows and `<base>/chromium/chrome` elsewhere (`png_browser.py`, lines 76–80). `base` defaults to `Path(sys.executable).resolve().parent`. On a macOS `.app` that parent is `Contents/MacOS`.
-
-Those names match Windows and Linux. They do not match the macOS build.
+`bundled_browser()` is `<base>/chromium/chrome.exe` on Windows, `<base>/chromium/chrome` on Linux, and `Contents/Helpers/Chromium.app/Contents/MacOS/Chromium` on a frozen macOS `.app` (`png_browser.py`). `base` defaults to `Path(sys.executable).resolve().parent`. On macOS that parent is `Contents/MacOS`, so the browser path walks up to `Helpers`.
 
 | OS | Artifact | Executable `bundled_browser()` must return |
 |----|----------|-----------------------------------------------|
 | Windows | ungoogled-chromium zip, already pinned | `<exe dir>/chromium/chrome.exe` (unchanged) |
 | Linux | ungoogled-chromium-portablelinux `.tar.xz`, not the AppImage | `<exe dir>/chromium/chrome`. The unpack is a directory whose main binary is `chrome`, with the shared libraries beside it (portablelinux packaging; a distro ebuild `doexe`s `chrome`). Copy the directory contents into `chromium/`, not the `chrome` file alone. |
-| macOS | ungoogled-chromium-macos `.dmg` | `<exe dir>/chromium/Chromium.app/Contents/MacOS/Chromium`. The dmg contains `Chromium.app`; the Mach-O is `Contents/MacOS/Chromium` (the same path choreographer searches under `/Applications`, `_chrome_constants.py` line 83). **Record-only layout today:** copy with `ditto` into `GUISkinDose.app/Contents/MacOS/chromium/Chromium.app` (sibling of the GUISkinDose Mach-O). Before the first signed Full build, decide whether that stays under `Contents/MacOS/chromium/` or moves to `Contents/Frameworks/chromium/`, then verify with `codesign --verify --deep --strict`, `spctl -a -t exec -vv`, and the notary log. Do not change code paths until that decision is recorded. |
+| macOS | ungoogled-chromium-macos `.dmg` | `GUISkinDose.app/Contents/Helpers/Chromium.app/Contents/MacOS/Chromium` (from `png_browser.bundled_browser()` when frozen). CI copies the disk image's `Chromium.app` with `ditto` into `Contents/Helpers`. License files and `CREDITS.html` live under `Contents/Resources/chromium/`, not beside the Mach-O. See [PORTABLE_MAC_LINUX_CI_BUILDS_PLAN.md](PORTABLE_MAC_LINUX_CI_BUILDS_PLAN.md) (archived). |
 
 `bundled_browser_for_render()` returns `bundled_browser()` whenever the process is frozen, on every OS. It returns `None` only when not frozen. The macOS and Linux `None` branch and its comment go away in the same change as the gate (chunk 1 lands first; see commits).
 
-Notices stay in the `chromium/` directory, which is `chrome.exe`'s parent on Windows and `chrome`'s parent on Linux. On macOS the Mach-O's parent is `Contents/MacOS`, so `pngcheck._check_bundle` must not use `browser.parent` for notices (`pngcheck.py`, lines 58–61). Resolve the ancestor whose name is `chromium`. Windows then looks at the same directory it looks at today.
+Notices stay in the `chromium/` directory on Windows and Linux, which is `chrome.exe`'s or `chrome`'s parent. On macOS they live under `Contents/Resources/chromium/`. `pngcheck.required_notice_names()` picks the platform license file (`LICENSE.ungoogled-chromium-macos.txt` or `LICENSE.ungoogled-chromium-portablelinux.txt`).
 
-`selfcheck._bundled_browser_present` keeps checking for a `chromium/` directory beside the executable. A nested `Chromium.app` still satisfies that.
+On macOS, `selfcheck._bundled_browser_present` checks for `Contents/Helpers/Chromium.app`. On Linux and Windows it still checks for a `chromium/` directory beside the executable.
 
-This plan does not pin macOS or Linux sha256 values, download the artifacts, or sign the nested app. Those stay in [PORTABLE_APP_PLAN.md](PORTABLE_APP_PLAN.md) Phase 0b and Phase 1, and in [references/PORTABLE_CHROMIUM_ARTIFACT.md](../references/PORTABLE_CHROMIUM_ARTIFACT.md).
+This plan does not pin macOS or Linux sha256 values, download the artifacts, or sign the nested app. Those stay in [PORTABLE_APP_PLAN.md](../PORTABLE_APP_PLAN.md) Phase 0b and Phase 1, and in [references/PORTABLE_CHROMIUM_ARTIFACT.md](../../references/PORTABLE_CHROMIUM_ARTIFACT.md).
 
 ## Guarantees that stay
 
@@ -134,14 +132,15 @@ Unchanged from the shipped Windows design:
 
 ## Tests
 
-Unit tests run unfrozen. They must not `dup2` the pytest process's real fds 3 and 4. Monkeypatch `os.dup2`, `os.set_inheritable`, `subprocess.Popen`, `os.write`, and `signal.signal`.
+Unit tests run unfrozen. Mocked gate tests must not remap the pytest process's real fds 3 and 4. Monkeypatch `subprocess.Popen`, `os.write`, and `signal.signal`. One POSIX integration test runs `_map_debugging_pipe_fds` through a real `Popen` with the parent holding fd 3 open.
 
 | Test | Asserts |
 |------|---------|
 | Drift | Installed `_unix_pipe_chromium_wrapper.py` still `dup2`s 0→3 and 1→4, `Popen`s with `pass_fds=(3, 4)`, and prints `{bye}`. `pipe.py` still compares `b"{bye}\n"`. `get_cli` source still names `sys.executable` and `_unix_pipe_chromium_wrapper.py` off Windows. |
-| Gate, matching argv | `Popen` receives `argv[2:]` and `pass_fds=(3, 4)`. Sentinel write is `b"{bye}\n"` on fd 1. No log record contains the temp path. |
-| Gate, `len(sys.argv) < 3` | No read of `argv[1]` or `argv[2]`, no `dup2`, no `Popen`, and the import does not exit. |
-| Gate, Chromium path outside `<exe>/chromium` | `SystemExit(1)` before `dup2`. `dup2` and `Popen` are not called, and nothing is written. |
+| Gate, matching argv | `Popen` receives `argv[2:]`, `close_fds=False`, and `preexec_fn=_map_debugging_pipe_fds`. Sentinel write is `b"{bye}\n"` on fd 1. No log record contains the temp path. |
+| Gate, `len(sys.argv) < 3` | No read of `argv[1]` or `argv[2]`, no `Popen`, and the import does not exit. |
+| Gate, Chromium path outside bundled root | `SystemExit(1)` before `Popen`; nothing is written. |
+| `preexec_fn` (POSIX) | With fd 3 occupied in the parent, a child started with `preexec_fn=_map_debugging_pipe_fds` echoes stdin on fds 3/4 and the parent's fd 3 is unchanged. |
 | Gate, signals | The handler only terminates and claims the shutdown once, including for a nested signal. The wait loop kills Chromium after the grace period, and the post-kill wait is bounded. A signal before launch still terminates Chromium. A wait error still kills Chromium and writes `{bye}`. |
 | Gate, `win32` | Even with the suffix in argv, no `dup2` and no `Popen`. |
 | Gate, normal argv | Import of `entry.py` (existing `test_portable_entry.py` fixture) does not exit. `freeze_support` still runs for a non-wrapper import. |
@@ -165,12 +164,12 @@ Record the run on the Phase 0b checkbox in the parent plan. Until that run exist
 
 This plan does not add a macOS or Linux workflow leg. Those builds download a browser, and macOS also signs. They already have open checkboxes:
 
-- [PORTABLE_APP_PLAN.md](PORTABLE_APP_PLAN.md) Phase 1, "CI builds Windows, macOS, and Linux onedir zips" (Linux launches browser mode; the job records the system libraries the bundled Chromium needs).
+- [PORTABLE_APP_PLAN.md](../PORTABLE_APP_PLAN.md) Phase 1, "CI builds Windows, macOS, and Linux onedir zips" (Linux launches browser mode; the job records the system libraries the bundled Chromium needs).
 - Phase 0b, "Export PNG offline from that Full app."
 
 When either checkbox is implemented, its `--png-check` is the one specified above. No second proof.
 
-The gate refuses to start Chromium when fd 3 or 4 is already open, so a frozen build that holds one of them would fail PNG as a plain `BundledBrowserUnavailableError`. The first frozen run on each OS should therefore record whether fds 3 and 4 were free at entry, as a boolean only. If one is held, the fallback is to `os.dup` the held descriptor to a high number and close the original before the handoff, instead of failing.
+Frozen PyInstaller keeps low fds busy (`base_library.zip` on fd 3 showed up in CI and in local `lsof`). The gate therefore remaps pipe fds in the Chromium child's `preexec_fn`, not in the bootloader parent. A green `--png-check` proves that handoff works on the runner even when the parent still holds fd 3.
 
 ## Commits
 
@@ -185,7 +184,7 @@ Each function stays at Ruff C901 ≤ 10. `png_browser.py` is under `src/` and is
 **Steps:**
 
 1. Add a stdlib-only gate at import time, after the existing stdlib imports and before `_route_missing_streams()`.
-2. Match the wrapper suffix only off `win32`, and only when `len(sys.argv) >= 3`. Confine `argv[2]` to `<exe dir>/chromium/` and `SystemExit(1)` silently on failure before any `dup2`. Refuse (exit 1) when fd 3 or 4 is already open. Then `dup2`, signal handlers, `Popen`, the bounded wait loop, and `{bye}` in a `finally`. Resolution, confinement and the run sit in one `try`, so any error exits 1 with no traceback.
+2. Match the wrapper suffix only off `win32`, and only when `len(sys.argv) >= 3`. Confine `argv[2]` to the bundled browser root and `SystemExit(1)` silently on failure before `Popen`. Then signal handlers, `Popen` with `close_fds=False` and child-side `_map_debugging_pipe_fds`, the bounded wait loop, and `{bye}` in a `finally`. Resolution, confinement and the run sit in one `try`, so any error exits 1 with no traceback.
 3. Confirm in the PyInstaller 6.22.3 sources (portable group, not the default `.venv`) that the windowed subprocess hook does not replace an explicit stdin, stdout, or stderr. Note the file and the condition in the commit message. If it does replace them, stop. Do not ship the gate.
 4. Add the drift test and the gate tests in the table above. The existing entry-module fixture must still import.
 
@@ -243,7 +242,7 @@ uv run --extra dev --extra gui --locked python -m pytest tests/unittests/test_po
 **Steps:**
 
 1. From the Phase 1 wrapper sentence and the Freeze bullet, link this plan. Leave the offline-PNG checkbox open until a frozen `--png-check` is recorded.
-2. Maintenance-log entry: the bootloader now performs the Unix pipe-wrapper handoff, and frozen macOS and Linux resolve a bundled browser path. Add a brief [CHANGELOG.md](../../CHANGELOG.md) Unreleased note as well: the pre-push `check_changelog.py` hook requires an entry when `src/` or `tests/` change, even though no macOS or Linux portable zip ships yet. Keep the note unproven-safe (frozen `--png-check` still open). Full release wording stays with Phase 1 acceptance when those zips exist.
+2. Maintenance-log entry: the bootloader now performs the Unix pipe-wrapper handoff, and frozen macOS and Linux resolve a bundled browser path. Add a brief [CHANGELOG.md](../../../CHANGELOG.md) Unreleased note as well: the pre-push `check_changelog.py` hook requires an entry when `src/` or `tests/` change, even though no macOS or Linux portable zip ships yet. Keep the note unproven-safe (frozen `--png-check` still open). Full release wording stays with Phase 1 acceptance when those zips exist.
 3. Archive this plan under `dev-docs/plans/archive/` only after the frozen `--png-check` on both macOS and Linux has been recorded, and move the `dev-docs/index.md` row in that same change. Chunks 1–3 landing without that proof do not archive the plan.
 
 **Verify:**

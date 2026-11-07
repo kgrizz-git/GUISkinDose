@@ -45,14 +45,18 @@ Release process lives in the parent hub and [PUBLISHING.md](../../PUBLISHING.md)
 4. **Editions:** Light does not bundle Chromium and disables PNG export. Its native window uses the
    WebView2 runtime already installed on the PC. Full bundles Chromium and the clinical STL set in
    item 3. Neither frozen edition bundles the Fixed Version WebView2 runtime yet.
-5. **CI:** `.github/workflows/portable-spike.yml` builds Windows Light and Full onedir zips. macOS
-   and Linux CI builds remain open in the parent plan. Artifacts expire and are not committed.
-6. **Smoke & checks:** Windows Full smokes offline PNG with `GUISkinDose.exe --png-check`
-   (`portable-spike.yml` lines 243–272). Light proves PNG never starts: `to_image` call count stays 0
-   (`selfcheck.py` lines 201–226, workflow lines 224–228). macOS and Linux Full use the same
-   `figure_to_png` / entry-wrapper path in code ([PORTABLE_BROWSER_WRAPPER_PLAN.md](../plans/PORTABLE_BROWSER_WRAPPER_PLAN.md));
-   frozen `--png-check` on those OSes is still open in the parent plan. Do not write a per-OS PNG smoke
-   for those builds until a Full zip exists.
+5. **CI:** `.github/workflows/portable-spike.yml` builds Windows, macOS arm64, and Linux x86_64 Light
+   and Full onedir zips. Default matrix legs passed on Actions run
+   [42339804464](https://github.com/kgrizz-git/GUISkinDose/actions/runs/42339804464) (2026-11-07). See
+   [archive/PORTABLE_MAC_LINUX_CI_BUILDS_PLAN.md](../plans/archive/PORTABLE_MAC_LINUX_CI_BUILDS_PLAN.md).
+   Artifacts expire after seven days and are not committed. macOS release Developer ID signing,
+   optional Intel macOS dispatch, and notarization stay in the parent plan.
+6. **Smoke & checks:** Windows Full smokes offline PNG with `GUISkinDose.exe --png-check`. Light proves
+   PNG never starts: `to_image` call count stays 0 on every OS. macOS and Linux Full jobs run the same
+   frozen `--png-check` assertions as Windows on run 42339804464, with a decoy `BROWSER_PATH` and (on
+   macOS Full) ad-hoc re-sign after the browser copy. Linux Full prepends `chromium/` to `LD_LIBRARY_PATH`
+   in the wrapper child; the job summary lists sonames `ldd` resolves outside the bundle. That proof is
+   wrapper and path containment, not a claim that the tarball is self-contained on an air-gapped machine.
 
 Expect **large** artifacts (hundreds of MB with scientific stack + phantoms), slower cold start,
 Windows AV false positives, and ongoing rebuild cost when dependencies change.
@@ -72,12 +76,14 @@ Windows AV false positives, and ongoing rebuild cost when dependencies change.
 - The Windows spike and package-data proof are done (`--self-check` opens data through `importlib.resources`).
   A default corrections path resolves to packaged data, and a file named `corrections.db` in the working directory is ignored.
 - Per-OS release smoke is still open. That includes a zip downloaded through a browser, so Mark of the Web and macOS quarantine are present.
-- macOS and Linux CI builds, macOS Developer ID signing/notarization, and the Linux runtime library verification.
+- macOS Developer ID signing and notarization, optional Intel macOS CI, confirmation whether Linux PNG
+  on a clean VM needs packages only root can install, and browser-download smokes for Mark of the Web
+  and quarantine.
 
 ## Pointers
 
 - Execution plan: [plans/PORTABLE_APP_PLAN.md](../plans/PORTABLE_APP_PLAN.md)
-- Unix Chromium pipe wrapper: [plans/PORTABLE_BROWSER_WRAPPER_PLAN.md](../plans/PORTABLE_BROWSER_WRAPPER_PLAN.md)
+- Unix Chromium pipe wrapper: [plans/archive/PORTABLE_BROWSER_WRAPPER_PLAN.md](../plans/archive/PORTABLE_BROWSER_WRAPPER_PLAN.md)
 - Payload cleanup plan: [plans/archive/PORTABLE_PHASE1_PAYLOAD_CLEANUP_PLAN.md](../plans/archive/PORTABLE_PHASE1_PAYLOAD_CLEANUP_PLAN.md)
 - NiceGUI: [Package for Installation](https://nicegui.io/documentation/section_configuration_deployment)
 - Current GUI launch: `run_gui.sh` / `run_gui.bat`, `python -m guiskindose --mode gui [--native]`

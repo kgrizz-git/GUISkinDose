@@ -9,7 +9,7 @@ Order matters (see ``dev-docs/plans/PORTABLE_APP_PLAN.md`` -> Freeze):
 0. On Unix, choreographer re-execs the frozen bootloader with
    ``_unix_pipe_chromium_wrapper.py`` in ``argv[1]``. The entry performs that
    wrapper body before anything touches fd 1 (see
-   ``dev-docs/plans/PORTABLE_BROWSER_WRAPPER_PLAN.md``).
+   ``dev-docs/plans/archive/PORTABLE_BROWSER_WRAPPER_PLAN.md``).
 1. A windowed build has no console, so ``sys.stdout`` / ``sys.stderr`` can be
    ``None``. They are pointed at the log sink first, using only the standard
    library, so nothing below writes to ``None``.
@@ -135,6 +135,24 @@ _WRAPPER_SCRIPT_SUFFIX = "_unix_pipe_chromium_wrapper.py"
 _BYE_SENTINEL = b"{bye}\n"
 
 
+def _chromium_wrapper_root(exe_parent: Path) -> Path:
+    """Directory that may hold the bundled browser binary (``Helpers`` on macOS, else ``chromium/``)."""
+    if _host_platform() == "darwin" and exe_parent.name == "MacOS":
+        return exe_parent.parent / "Helpers"
+    return exe_parent / "chromium"
+
+
+def _chromium_child_environ(chromium_root: Path) -> dict[str, str] | None:
+    """Copy of ``os.environ`` with ``chromium_root`` prepended to ``LD_LIBRARY_PATH`` (Linux only)."""
+    if _host_platform() != "linux" or not chromium_root.is_dir():
+        return None
+    env = os.environ.copy()
+    prepend = os.fsdecode(chromium_root.resolve())
+    existing = env.get("LD_LIBRARY_PATH", "")
+    env["LD_LIBRARY_PATH"] = f"{prepend}:{existing}" if existing else prepend
+    return env
+
+
 def _chromium_path_allowed(exe_path: str, chromium_root: Path) -> bool:
     """True when *exe_path* resolves under *chromium_root* (same idea as ``pngcheck._inside``)."""
     if not exe_path:
@@ -196,27 +214,22 @@ def _kill_chromium(process: subprocess.Popen[bytes]) -> int:
         return 1
 
 
-def _debugging_pipe_fds_free() -> bool:
-    """True when fds 3 and 4 are not already open (choreographer expects to dup2 onto them)."""
-    for fd in (3, 4):
-        try:
-            os.fstat(fd)
-        except OSError:
-            continue
-        return False
-    return True
+def _map_debugging_pipe_fds() -> None:
+    """Child-side ``preexec_fn``: put stdin and stdout on fds 3 and 4 for Chromium.
 
-
-def _run_unix_pipe_chromium_wrapper(cli: list[str]) -> int:
-    """Hand stdin/stdout to Chromium on fds 3 and 4, wait, then write the pipe close sentinel."""
-    if not _debugging_pipe_fds_free():
-        raise SystemExit(1)
-
+    The frozen runtime keeps its own files open on low fds (``base_library.zip`` sits on
+    fd 3), so the parent cannot ``dup2`` onto 3 and 4 the way choreographer's script does.
+    This runs in the forked child just before exec, so the parent's fds stay untouched.
+    ``os.dup2`` marks the new fds inheritable, and ``close_fds=False`` keeps them.
+    ``preexec_fn`` is only safe because the gate runs at import time, before
+    ``freeze_support()`` and before any thread starts. Keep the gate above both.
+    """
     os.dup2(0, 3)
     os.dup2(1, 4)
-    os.set_inheritable(3, True)
-    os.set_inheritable(4, True)
 
+
+def _run_unix_pipe_chromium_wrapper(cli: list[str], *, chromium_root: Path | None = None) -> int:
+    """Hand stdin/stdout to Chromium on fds 3 and 4, wait, then write the pipe close sentinel."""
     # Handlers go in before the launch, so no signal can arrive while the default action
     # would end this wrapper and orphan Chromium. Blocking the signals instead would leave
     # them blocked in Chromium too, because a child inherits the signal mask.
@@ -226,7 +239,10 @@ def _run_unix_pipe_chromium_wrapper(cli: list[str]) -> int:
     handler = partial(_terminate_chromium_on_signal, launched, claim, requested)
     signal.signal(signal.SIGTERM, handler)
     signal.signal(signal.SIGINT, handler)
-    process = subprocess.Popen(cli, pass_fds=(3, 4))
+    child_env: dict[str, str] | None = None
+    if chromium_root is not None:
+        child_env = _chromium_child_environ(chromium_root)
+    process = subprocess.Popen(cli, close_fds=False, preexec_fn=_map_debugging_pipe_fds, env=child_env)
     launched.append(process)
     if requested:  # a signal arrived before Chromium existed
         with contextlib.suppress(OSError):
@@ -257,10 +273,11 @@ def _maybe_run_unix_pipe_chromium_wrapper() -> None:
         raise SystemExit(1)
 
     try:
-        chromium_root = Path(sys.executable).resolve().parent / "chromium"
+        exe_parent = Path(sys.executable).resolve().parent
+        chromium_root = _chromium_wrapper_root(exe_parent)
         if not _chromium_path_allowed(cli[0], chromium_root):
             raise SystemExit(1)
-        code = _run_unix_pipe_chromium_wrapper(cli)
+        code = _run_unix_pipe_chromium_wrapper(cli, chromium_root=chromium_root)
     except SystemExit:
         raise
     except BaseException:
