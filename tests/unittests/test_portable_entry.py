@@ -30,6 +30,10 @@ _ENTRY_FILE = _ENTRY / "entry.py"
 _ENTRY_MODULE_NAME = "guiskindose_portable_entry"
 
 
+def _assert_map_debugging_pipe_preexec(preexec_fn: object) -> None:
+    assert getattr(preexec_fn, "__name__", None) == "_map_debugging_pipe_fds"
+
+
 def _load_entry_module(*, argv: list[str] | None = None) -> types.ModuleType:
     """Import ``entry.py`` fresh so import-time gates see the given ``argv``."""
     saved_argv = sys.argv[:]
@@ -429,8 +433,7 @@ def _darwin_wrapper_argv(tmp_path: Path, *, under_helpers: bool) -> list[str]:
     return [str(exe), str(wrapper), str(browser), "--headless"]
 
 
-def test_darwin_wrapper_gate_allows_helpers_chromium(darwin_host, monkeypatch, tmp_path, captured_root):
-    dup2_called = False
+def test_darwin_wrapper_gate_allows_helpers_chromium(darwin_host, monkeypatch, tmp_path, captured_root, entry_module):
     popen_calls: dict[str, object] = {}
 
     class _FakeProcess:
@@ -448,25 +451,11 @@ def test_darwin_wrapper_gate_allows_helpers_chromium(darwin_host, monkeypatch, t
         def kill(self) -> None:
             return
 
-    def _dup2(*_args: object) -> None:
-        nonlocal dup2_called
-        dup2_called = True
-
     def _fake_popen(cli: list[str], **kwargs: object) -> _FakeProcess:
         popen_calls["cli"] = cli
         popen_calls["kwargs"] = kwargs
         return _FakeProcess()
 
-    real_fstat = os.fstat
-
-    def _free_debug_fds(fd: int) -> object:
-        if fd in (3, 4):
-            raise OSError
-        return real_fstat(fd)
-
-    monkeypatch.setattr(os, "dup2", _dup2)
-    monkeypatch.setattr(os, "set_inheritable", lambda *_a: None)
-    monkeypatch.setattr(os, "fstat", _free_debug_fds)
     monkeypatch.setattr(subprocess, "Popen", _fake_popen)
     monkeypatch.setattr(os, "write", lambda _fd, data: len(data))
     monkeypatch.setattr(signal, "signal", lambda *_a: None)
@@ -475,8 +464,10 @@ def test_darwin_wrapper_gate_allows_helpers_chromium(darwin_host, monkeypatch, t
     with pytest.raises(SystemExit) as exc:
         _load_entry_module(argv=argv)
     assert exc.value.code == 0
-    assert dup2_called
     assert popen_calls["cli"] == [argv[2], "--headless"]
+    popen_kwargs = cast(dict[str, Any], popen_calls["kwargs"])
+    assert popen_kwargs["close_fds"] is False
+    _assert_map_debugging_pipe_preexec(popen_kwargs["preexec_fn"])
 
 
 def test_darwin_wrapper_gate_rejects_macos_chromium_dir(darwin_host, monkeypatch, tmp_path):
@@ -515,7 +506,9 @@ def test_chromium_child_environ_prepends_linux_chromium_only(entry_module, unix_
     assert entry_module._chromium_child_environ(chromium) is None
 
 
-def test_linux_wrapper_prepends_ld_library_path_in_popen_only(unix_host, monkeypatch, tmp_path):
+def test_linux_wrapper_prepends_ld_library_path_in_popen_only(
+    unix_host, monkeypatch, tmp_path, entry_module
+):
     """Bundled library path is passed only to the Chromium Popen, not the process environment."""
     prior = "existing-libs"
     monkeypatch.setenv("LD_LIBRARY_PATH", prior)
@@ -541,16 +534,6 @@ def test_linux_wrapper_prepends_ld_library_path_in_popen_only(unix_host, monkeyp
         popen_calls.update(kwargs)
         return _FakeProcess()
 
-    real_fstat = os.fstat
-
-    def _free_debug_fds(fd: int) -> object:
-        if fd in (3, 4):
-            raise OSError
-        return real_fstat(fd)
-
-    monkeypatch.setattr(os, "dup2", lambda *_a: None)
-    monkeypatch.setattr(os, "set_inheritable", lambda *_a: None)
-    monkeypatch.setattr(os, "fstat", _free_debug_fds)
     monkeypatch.setattr(subprocess, "Popen", _fake_popen)
     monkeypatch.setattr(os, "write", lambda _fd, data: len(data))
     monkeypatch.setattr(signal, "signal", lambda *_a: None)
@@ -562,15 +545,17 @@ def test_linux_wrapper_prepends_ld_library_path_in_popen_only(unix_host, monkeyp
         _load_entry_module(argv=argv)
     assert exc.value.code == 0
     assert os.environ.get("LD_LIBRARY_PATH") == env_before == prior
+    assert popen_calls["close_fds"] is False
+    _assert_map_debugging_pipe_preexec(popen_calls["preexec_fn"])
     child_env = popen_calls["env"]
     assert isinstance(child_env, dict)
     prepend = os.fsdecode(chromium_dir)
     assert child_env["LD_LIBRARY_PATH"] == f"{prepend}:{prior}"
 
 
-def test_unix_wrapper_gate_dup2_popen_and_bye(unix_host, monkeypatch, tmp_path, captured_root):
-    dup2_calls: list[tuple[int, int]] = []
-    inheritable: list[tuple[int, bool]] = []
+def test_unix_wrapper_gate_dup2_popen_and_bye(
+    unix_host, monkeypatch, tmp_path, captured_root, entry_module
+):
     popen_calls: dict[str, object] = {}
     write_calls: list[tuple[int, bytes]] = []
 
@@ -601,16 +586,6 @@ def test_unix_wrapper_gate_dup2_popen_and_bye(unix_host, monkeypatch, tmp_path, 
         launched.append(_FakeProcess())
         return launched[-1]
 
-    real_fstat = os.fstat
-
-    def _free_debug_fds(fd: int) -> object:
-        if fd in (3, 4):
-            raise OSError
-        return real_fstat(fd)
-
-    monkeypatch.setattr(os, "dup2", lambda src, dst: dup2_calls.append((src, dst)))
-    monkeypatch.setattr(os, "set_inheritable", lambda fd, val: inheritable.append((fd, val)))
-    monkeypatch.setattr(os, "fstat", _free_debug_fds)
     monkeypatch.setattr(subprocess, "Popen", _fake_popen)
     monkeypatch.setattr(os, "write", lambda fd, data: write_calls.append((fd, data)) or len(data))
     monkeypatch.setattr(signal, "signal", lambda sig, handler: handlers.__setitem__(sig, handler))
@@ -620,11 +595,10 @@ def test_unix_wrapper_gate_dup2_popen_and_bye(unix_host, monkeypatch, tmp_path, 
     with pytest.raises(SystemExit) as exc:
         _load_entry_module(argv=argv)
     assert exc.value.code == 0
-    assert dup2_calls == [(0, 3), (1, 4)]
-    assert set(inheritable) == {(3, True), (4, True)}
     assert popen_calls["cli"] == [argv[2], "--headless"]
     popen_kwargs = cast(dict[str, Any], popen_calls["kwargs"])
-    assert popen_kwargs["pass_fds"] == (3, 4)
+    assert popen_kwargs["close_fds"] is False
+    _assert_map_debugging_pipe_preexec(popen_kwargs["preexec_fn"])
     child_env = cast(dict[str, str], popen_kwargs["env"])
     chromium_prepend = os.fsdecode((tmp_path / "chromium").resolve())
     assert child_env["LD_LIBRARY_PATH"].startswith(chromium_prepend)
@@ -780,9 +754,6 @@ def test_wait_error_still_kills_chromium_and_writes_bye(entry_module, monkeypatc
             self.killed = True
 
     proc = _Broken()
-    monkeypatch.setattr(entry_module, "_debugging_pipe_fds_free", lambda: True)
-    monkeypatch.setattr(os, "dup2", lambda *_a: None)
-    monkeypatch.setattr(os, "set_inheritable", lambda *_a: None)
     monkeypatch.setattr(os, "write", lambda _fd, data: writes.append(data) or len(data))
     monkeypatch.setattr(signal, "signal", lambda *_a: None)
     monkeypatch.setattr(subprocess, "Popen", lambda *_a, **_k: proc)
@@ -853,34 +824,6 @@ def test_wrapper_gate_is_no_op_on_win32(monkeypatch, tmp_path):
     assert not dup2_called
 
 
-def test_unix_wrapper_gate_rejects_open_debugging_fds(unix_host, monkeypatch, tmp_path):
-    dup2_called = False
-    fstat_calls: list[int] = []
-
-    def _dup2(*_args: object) -> None:
-        nonlocal dup2_called
-        dup2_called = True
-
-    real_fstat = os.fstat
-
-    def _fstat(fd: int) -> object:
-        fstat_calls.append(fd)
-        if fd == 3:
-            return real_fstat(0)
-        raise OSError
-
-    monkeypatch.setattr(os, "fstat", _fstat)
-    monkeypatch.setattr(os, "dup2", _dup2)
-    monkeypatch.setattr(subprocess, "Popen", lambda *_a, **_k: pytest.fail("Popen must not run"))
-    argv = _wrapper_argv(tmp_path)
-    monkeypatch.setattr(sys, "executable", argv[0])
-    with pytest.raises(SystemExit) as exc:
-        _load_entry_module(argv=argv)
-    assert exc.value.code == 1
-    assert 3 in fstat_calls
-    assert not dup2_called
-
-
 def test_unix_wrapper_gate_suppresses_traceback_on_popen_failure(unix_host, monkeypatch, tmp_path):
     stderr = io.StringIO()
     monkeypatch.setattr(sys, "stderr", stderr)
@@ -888,17 +831,7 @@ def test_unix_wrapper_gate_suppresses_traceback_on_popen_failure(unix_host, monk
     def _boom(*_a: object, **_k: object) -> object:
         raise RuntimeError("must not reach choreographer")
 
-    real_fstat = os.fstat
-
-    def _free_debug_fds(fd: int) -> object:
-        if fd in (3, 4):
-            raise OSError
-        return real_fstat(fd)
-
     monkeypatch.setattr(subprocess, "Popen", _boom)
-    monkeypatch.setattr(os, "fstat", _free_debug_fds)
-    monkeypatch.setattr(os, "dup2", lambda *_a: None)
-    monkeypatch.setattr(os, "set_inheritable", lambda *_a: None)
     monkeypatch.setattr(signal, "signal", lambda *_a: None)
     argv = _wrapper_argv(tmp_path)
     monkeypatch.setattr(sys, "executable", argv[0])
@@ -939,16 +872,6 @@ def test_signal_during_launch_terminates_chromium_once_it_exists(unix_host, monk
         procs.append(_Proc())
         return procs[-1]
 
-    real_fstat = os.fstat
-
-    def _free_debug_fds(fd: int) -> object:
-        if fd in (3, 4):
-            raise OSError
-        return real_fstat(fd)
-
-    monkeypatch.setattr(os, "fstat", _free_debug_fds)
-    monkeypatch.setattr(os, "dup2", lambda *_a: None)
-    monkeypatch.setattr(os, "set_inheritable", lambda *_a: None)
     monkeypatch.setattr(os, "write", lambda _fd, data: len(data))
     monkeypatch.setattr(signal, "signal", lambda sig, handler: handlers.__setitem__(sig, handler))
     monkeypatch.setattr(subprocess, "Popen", _popen)
@@ -958,6 +881,48 @@ def test_signal_during_launch_terminates_chromium_once_it_exists(unix_host, monk
         _load_entry_module(argv=argv)
     assert exc.value.code == 0
     assert procs[0].terminated == 1
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX preexec_fn")
+def test_map_debugging_pipe_fds_in_child_when_parent_fd3_is_busy(entry_module, tmp_path) -> None:
+    """Child remaps pipe fds in preexec_fn; the parent's fd 3 is left untouched."""
+    marker_path = tmp_path / "parent_fd3_marker"
+    marker_fd = os.open(marker_path, os.O_RDWR | os.O_CREAT, 0o600)
+    saved_fd3: int | None = None
+    try:
+        with contextlib.suppress(OSError):
+            saved_fd3 = os.dup(3)
+        os.dup2(marker_fd, 3)
+        child = (
+            "import os, sys\n"
+            "data = os.read(3, 4096)\n"
+            "os.write(4, data)\n"
+        )
+        proc = subprocess.Popen(
+            [sys.executable, "-c", child],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            close_fds=False,
+            preexec_fn=entry_module._map_debugging_pipe_fds,
+        )
+        payload = b"pipe-handoff-bytes"
+        assert proc.stdin is not None
+        assert proc.stdout is not None
+        proc.stdin.write(payload)
+        proc.stdin.close()
+        echoed = proc.stdout.read()
+        proc.wait(timeout=30)
+        assert proc.returncode == 0
+        assert echoed == payload
+        assert os.fstat(3).st_ino == os.fstat(marker_fd).st_ino
+    finally:
+        if saved_fd3 is not None:
+            os.dup2(saved_fd3, 3)
+            os.close(saved_fd3)
+        else:
+            with contextlib.suppress(OSError):
+                os.close(3)
+        os.close(marker_fd)
 
 
 def test_completed_wait_skips_the_fallback_kill(entry_module, monkeypatch):
@@ -973,9 +938,6 @@ def test_completed_wait_skips_the_fallback_kill(entry_module, monkeypatch):
         def kill(self) -> None:
             raise AssertionError("no kill after a completed wait")
 
-    monkeypatch.setattr(entry_module, "_debugging_pipe_fds_free", lambda: True)
-    monkeypatch.setattr(os, "dup2", lambda *_a: None)
-    monkeypatch.setattr(os, "set_inheritable", lambda *_a: None)
     monkeypatch.setattr(os, "write", lambda _fd, data: writes.append(data) or len(data))
     monkeypatch.setattr(signal, "signal", lambda *_a: None)
     monkeypatch.setattr(subprocess, "Popen", lambda *_a, **_k: _Exits())

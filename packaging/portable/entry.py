@@ -214,27 +214,20 @@ def _kill_chromium(process: subprocess.Popen[bytes]) -> int:
         return 1
 
 
-def _debugging_pipe_fds_free() -> bool:
-    """True when fds 3 and 4 are not already open (choreographer expects to dup2 onto them)."""
-    for fd in (3, 4):
-        try:
-            os.fstat(fd)
-        except OSError:
-            continue
-        return False
-    return True
+def _map_debugging_pipe_fds() -> None:
+    """Child-side ``preexec_fn``: put stdin and stdout on fds 3 and 4 for Chromium.
+
+    The frozen runtime keeps its own files open on low fds (``base_library.zip`` sits on
+    fd 3), so the parent cannot ``dup2`` onto 3 and 4 the way choreographer's script does.
+    This runs in the forked child just before exec, so the parent's fds stay untouched.
+    ``os.dup2`` marks the new fds inheritable, and ``close_fds=False`` keeps them.
+    """
+    os.dup2(0, 3)
+    os.dup2(1, 4)
 
 
 def _run_unix_pipe_chromium_wrapper(cli: list[str], *, chromium_root: Path | None = None) -> int:
     """Hand stdin/stdout to Chromium on fds 3 and 4, wait, then write the pipe close sentinel."""
-    if not _debugging_pipe_fds_free():
-        raise SystemExit(1)
-
-    os.dup2(0, 3)
-    os.dup2(1, 4)
-    os.set_inheritable(3, True)
-    os.set_inheritable(4, True)
-
     # Handlers go in before the launch, so no signal can arrive while the default action
     # would end this wrapper and orphan Chromium. Blocking the signals instead would leave
     # them blocked in Chromium too, because a child inherits the signal mask.
@@ -247,7 +240,7 @@ def _run_unix_pipe_chromium_wrapper(cli: list[str], *, chromium_root: Path | Non
     child_env: dict[str, str] | None = None
     if chromium_root is not None:
         child_env = _chromium_child_environ(chromium_root)
-    process = subprocess.Popen(cli, pass_fds=(3, 4), env=child_env)
+    process = subprocess.Popen(cli, close_fds=False, preexec_fn=_map_debugging_pipe_fds, env=child_env)
     launched.append(process)
     if requested:  # a signal arrived before Chromium existed
         with contextlib.suppress(OSError):

@@ -525,9 +525,17 @@ jobs:
         startup=$((SECONDS - start))
         started=false
         ready=false
-        if [ -f "$log" ]; then
-          grep -q 'Portable GUI starting' "$log" && started=true
-          grep -q 'NiceGUI ready' "$log" && ready=true
+        if $up; then
+          log_deadline=$((SECONDS + 15))
+          while [ $SECONDS -lt $log_deadline ]; do
+            if [ -f "$log" ]; then
+              grep -q 'Portable GUI starting' "$log" && started=true
+              grep -q 'NiceGUI ready' "$log" && ready=true
+              $started && $ready && break
+            fi
+            kill -0 "$pid" 2>/dev/null || break
+            sleep 0.5
+          done
         fi
         kill "$pid" 2>/dev/null || true
         wait "$pid" 2>/dev/null || true
