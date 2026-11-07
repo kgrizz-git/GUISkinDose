@@ -74,21 +74,22 @@ def _host_platform() -> str:
 
 
 def _bundled_browser_relative_name() -> str:
-    platform = _host_platform()
-    if platform == "win32":
+    """Browser file name under ``chromium/`` on Windows and Linux."""
+    if _host_platform() == "win32":
         return "chrome.exe"
-    if platform == "darwin":
-        return "Chromium.app/Contents/MacOS/Chromium"
     return "chrome"
 
 
 def bundled_browser(base: Path | None = None) -> Path:
-    """Path of the bundled Chromium under ``<base>/chromium/``; *base* defaults to the exe dir."""
+    """Path of the bundled Chromium; *base* is the executable directory (``Contents/MacOS`` on macOS)."""
     root = base if base is not None else Path(sys.executable).resolve().parent
+    if _host_platform() == "darwin" and root.name == "MacOS":
+        return root.parent / "Helpers" / "Chromium.app" / "Contents" / "MacOS" / "Chromium"
     return root / BROWSER_DIR / _bundled_browser_relative_name()
 
 
 def _is_frozen() -> bool:
+    """True when running from a frozen portable build."""
     return bool(getattr(sys, "frozen", False))
 
 
@@ -104,6 +105,7 @@ def bundled_browser_for_render() -> Path | None:
 
 
 def _layout_size(fig_dict: dict[str, Any], key: str) -> Any:
+    """Figure layout value for *key*, falling back to the template layout."""
     layout = fig_dict.get("layout")
     if not isinstance(layout, dict):
         return None
@@ -172,6 +174,7 @@ def _run_in_fresh_thread(make_coro: Callable[[], Any]) -> Any:
 def _render_with_bundled_browser(
     fig: Any, browser: Path, width: int | None, height: int | None, scale: float | None
 ) -> bytes:
+    """Render *fig* to PNG bytes with Kaleido and the bundled browser."""
     try:
         import kaleido
         from plotly.io import defaults

@@ -45,6 +45,7 @@ _logger = logging.getLogger("guiskindose.portable.selfcheck")
 
 
 def _pkg(*parts: str):
+    """Traversable for a path inside the installed ``guiskindose`` package."""
     node = files("guiskindose")
     for part in parts:
         node = node / part
@@ -52,10 +53,12 @@ def _pkg(*parts: str):
 
 
 def _count(parts: tuple[str, ...], suffix: str) -> int:
+    """Number of package entries under *parts* whose names end with *suffix*."""
     return sum(1 for item in _pkg(*parts).iterdir() if item.name.endswith(suffix))
 
 
 def _read_json(*parts: str) -> int:
+    """Number of top-level entries in a packaged JSON file."""
     return len(json.loads(_pkg(*parts).read_text(encoding="utf-8")))
 
 
@@ -193,9 +196,17 @@ def _calculate_and_export(out_dir: Path) -> dict[str, Any]:
     }
 
 
+def _host_platform() -> str:
+    """Return ``sys.platform``. Tests patch this instead of the process-wide value."""
+    return sys.platform
+
+
 def _bundled_browser_present() -> bool:
-    """True when a ``chromium/`` folder sits beside the frozen executable."""
-    return (Path(sys.executable).resolve().parent / "chromium").exists()
+    """True when the frozen Full shape includes its bundled browser layout."""
+    exe_parent = Path(sys.executable).resolve().parent
+    if _host_platform() == "darwin" and exe_parent.name == "MacOS":
+        return (exe_parent.parent / "Helpers" / "Chromium.app").is_dir()
+    return (exe_parent / "chromium").is_dir()
 
 
 def _light_png_gate() -> dict[str, Any]:
@@ -287,6 +298,7 @@ def _check_webview2() -> dict[str, Any]:
 
 
 def _log_sink_state() -> dict[str, Any]:
+    """Confirm the diagnostic log file exists unless file logging is opted out."""
     from guiskindose.debug import default_native_log_path
 
     if os.environ.get("GUISKINDOSE_NO_FILE_LOG"):
@@ -337,6 +349,7 @@ def _failure_record(exc: BaseException) -> dict[str, Any]:
 
 
 def _run_step(report: dict[str, Any], name: str, step: Callable[[], dict[str, Any]]) -> bool:
+    """Run one self-check step, store its result or failure record, and return success."""
     try:
         report[name] = step()
         return True

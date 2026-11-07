@@ -44,15 +44,23 @@ from selfcheck import _EXAMPLE_RDSR, OWNED_SUBDIR, _pkg, _run_step, _write_atomi
 
 from guiskindose.export.png_browser import BROWSER_DIR, bundled_browser
 
-# Notices that must sit beside the bundled browser (PORTABLE_CHROMIUM_ARTIFACT.md).
-NOTICE_FILES = ("LICENSE.chromium.txt", "LICENSE.ungoogled-chromium-windows.txt", "CREDITS.html")
 _MIN_CREDITS_BYTES = 100_000
+_SYSTEM_CHROME_NAMES = frozenset({"chrome.exe", "chrome", "google-chrome", "google chrome"})
 _PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
 _HTTP_SCRIPT = re.compile(r"<script\b[^>]*\bsrc\s*=\s*[\"']?\s*https?:", re.IGNORECASE)
 
 
-def app_dir() -> Path:
+def _executable_dir() -> Path:
+    """Directory that holds the frozen executable (``Contents/MacOS`` on macOS)."""
     return Path(sys.executable).resolve().parent
+
+
+def app_dir() -> Path:
+    """Containment root for launch checks: the onedir, or ``Contents`` on macOS."""
+    exe_parent = _executable_dir()
+    if _host_platform() == "darwin" and exe_parent.name == "MacOS":
+        return exe_parent.parent
+    return exe_parent
 
 
 def _host_platform() -> str:
@@ -60,15 +68,34 @@ def _host_platform() -> str:
     return sys.platform
 
 
-def _chromium_notice_dir(base: Path | None = None) -> Path:
-    """The ``chromium/`` folder that holds the license notices, above any nested macOS ``Chromium.app``."""
-    return (base if base is not None else app_dir()) / BROWSER_DIR
+def required_notice_names() -> tuple[str, ...]:
+    """License files that must ship with the bundled browser (PORTABLE_CHROMIUM_ARTIFACT.md)."""
+    common = ("LICENSE.chromium.txt", "CREDITS.html")
+    platform = _host_platform()
+    if platform == "win32":
+        return (*common, "LICENSE.ungoogled-chromium-windows.txt")
+    if platform == "darwin":
+        return (*common, "LICENSE.ungoogled-chromium-macos.txt")
+    return (*common, "LICENSE.ungoogled-chromium-portablelinux.txt")
+
+
+def _chromium_notice_dir() -> Path:
+    """Folder that holds the bundled browser's license notices."""
+    if _host_platform() == "darwin":
+        return app_dir() / "Resources" / "chromium"
+    return _executable_dir() / BROWSER_DIR
+
+
+def _is_system_chrome_process(exe: str) -> bool:
+    """True when *exe* has a system Google Chrome binary name."""
+    return Path(exe).name.lower() in _SYSTEM_CHROME_NAMES
 
 
 def _check_bundle() -> dict[str, Any]:
-    browser = bundled_browser(app_dir())
+    """Report whether the bundled browser and its notices are present."""
+    browser = bundled_browser(_executable_dir())
     notice_dir = _chromium_notice_dir()
-    notices = {name: (notice_dir / name).is_file() for name in NOTICE_FILES}
+    notices = {name: (notice_dir / name).is_file() for name in required_notice_names()}
     credits_path = notice_dir / "CREDITS.html"
     found = {
         "browser_present": browser.is_file(),
@@ -149,6 +176,19 @@ def _spawn_chrome_watch() -> subprocess.Popen[str]:
     )
 
 
+def _ps_executable(cmd: str) -> str:
+    """Executable path from a ``ps`` command column, or ``""`` when it has none.
+
+    ``ps`` shows an exited child that is not yet reaped with no path: ``(name)`` on
+    macOS and ``[name] <defunct>`` on Linux. Resolving that name would place it in the
+    working directory and count it as a browser outside the bundle, so it is reported
+    as uninspectable instead.
+    """
+    if cmd.startswith(("(", "[")):
+        return ""
+    return cmd.split(" --", 1)[0]
+
+
 def _list_processes() -> list[dict[str, Any]]:
     """Every process as ``{pid, ppid, exe, cmd}``; Windows via CIM, else ``ps``.
 
@@ -177,11 +217,12 @@ def _list_processes() -> list[dict[str, Any]]:
     rows = []
     for line in raw.splitlines():
         pid, ppid, cmd = line.strip().split(None, 2)
-        rows.append({"pid": int(pid), "ppid": int(ppid), "exe": cmd.split(" --", 1)[0], "cmd": cmd})
+        rows.append({"pid": int(pid), "ppid": int(ppid), "exe": _ps_executable(cmd), "cmd": cmd})
     return rows
 
 
 def _descendants(rows: list[dict[str, Any]], root: int) -> list[dict[str, Any]]:
+    """Every row below *root* in the process tree built from *rows*."""
     children: dict[int, list[dict[str, Any]]] = {}
     for row in rows:
         children.setdefault(row["ppid"], []).append(row)
@@ -228,7 +269,7 @@ def _describe_launch(rows: list[dict[str, Any]]) -> dict[str, Any]:
         "launched_outside_onedir": outside,
         "flags": sorted(f for f in flags if f in {"--headless", "--no-sandbox", "--disable-gpu", "--user-data-dir"}),
         "system_chrome_processes_running": sum(
-            1 for row in rows if Path(row["exe"]).name.lower() == "chrome.exe" and not _inside(row["exe"], base)
+            1 for row in rows if _is_system_chrome_process(row["exe"]) and not _inside(row["exe"], base)
         ),
     }
 
@@ -396,7 +437,27 @@ def _launch_counts(launch: dict[str, Any], rows: list[dict[str, Any]], sample_co
         "launched_outside": int(launch["launched_outside_onedir"]),
         "system_chrome": int(launch["system_chrome_processes_running"]),
         "uninspectable": _uninspectable_descendants(rows),
+        **_outside_kinds(rows),
     }
+
+
+def _outside_kinds(rows: list[dict[str, Any]]) -> dict[str, int]:
+    """Count outside browser rows by path kind, so a failure says why without a path."""
+    import os
+
+    base = app_dir().resolve()
+    kinds = {"outside_relative": 0, "outside_proc": 0, "outside_absolute": 0}
+    for row in _descendants(rows, os.getpid()):
+        exe = row["exe"]
+        if "chrom" not in Path(exe).name.lower() or _inside(exe, base):
+            continue
+        if not Path(exe).is_absolute():
+            kinds["outside_relative"] += 1
+        elif exe.startswith("/proc/"):
+            kinds["outside_proc"] += 1
+        else:
+            kinds["outside_absolute"] += 1
+    return kinds
 
 
 def _require_bundled_launch(launch: dict[str, Any], rows: list[dict[str, Any]], sample_count: int) -> None:
@@ -418,6 +479,7 @@ def _require_bundled_launch(launch: dict[str, Any], rows: list[dict[str, Any]], 
 
 
 def _render_pngs(captured_pages: list[str]) -> dict[str, Any]:
+    """Export the example procedure and record how its PNGs were rendered."""
     from kaleido import _page_generator
 
     from guiskindose import PyskindoseSettings, load_settings_example_json
@@ -477,6 +539,7 @@ def _render_pngs(captured_pages: list[str]) -> dict[str, Any]:
 
 
 def _check_page(captured_pages: list[str]) -> dict[str, Any]:
+    """Check the captured Kaleido pages for remote script references."""
     found = {
         "pages_captured": len(captured_pages),
         "http_script_refs": sum(len(_HTTP_SCRIPT.findall(page)) for page in captured_pages),

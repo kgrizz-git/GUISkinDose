@@ -8,6 +8,27 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ## [Unreleased]
 
+- **Portable-spike run 42339804464** (2026-11-07, commit `526d45af`) — All default `portable-spike.yml`
+  legs passed: Windows, macOS arm64, and Linux x86_64 Light and Full, including frozen Full
+  `--png-check` on macOS (pre- and post-resign) and Linux. Findings: fd 3 held by `base_library.zip`
+  in the frozen parent, so pipe fds remap in the Chromium child `preexec_fn`; `ps` unreaped rows as
+  `(name)` on macOS and `[name] <defunct>` on Linux counted as pathless; `/usr/bin/git` required PATH
+  shims instead of directory stripping; Chromium `.dmg` xattrs cleared before `codesign --verify
+  --strict`. Archived [archive/PORTABLE_BROWSER_WRAPPER_PLAN.md](plans/archive/PORTABLE_BROWSER_WRAPPER_PLAN.md)
+  and [archive/PORTABLE_MAC_LINUX_CI_BUILDS_PLAN.md](plans/archive/PORTABLE_MAC_LINUX_CI_BUILDS_PLAN.md).
+  Intel macOS dispatch, release signing, Linux air-gapped proof, and manual or VM smokes stay on
+  [PORTABLE_APP_PLAN.md](plans/PORTABLE_APP_PLAN.md).
+
+- **Portable macOS/Linux CI jobs and bundle layout** (2026-11-06) — Chunk 1 moved the macOS Full
+  browser to `Contents/Helpers/Chromium.app` and notices to `Contents/Resources/chromium/`. Linux
+  wrapper children get `LD_LIBRARY_PATH` with the `chromium/` directory prepended. Chunk 2 added
+  `macos-edition`, `linux-edition`, and optional Intel Full jobs to `portable-spike.yml` via
+  `macos_bundle_chromium.sh` and `linux_bundle_chromium.sh`. Frozen Full `--png-check` on macOS and
+  Linux remains unchecked in the parent plan until Actions records a green run id. Release signing
+  and the Linux air-gapped PNG claim stay open. Plans:
+  [archive/PORTABLE_MAC_LINUX_CI_BUILDS_PLAN.md](plans/archive/PORTABLE_MAC_LINUX_CI_BUILDS_PLAN.md),
+  [PORTABLE_APP_PLAN.md](plans/PORTABLE_APP_PLAN.md).
+
 - **Frozen Unix Chromium pipe wrapper (code)** (2026-11-05) — `packaging/portable/entry.py`
   now performs choreographer's Unix pipe-wrapper re-exec before stream routing or
   `freeze_support`. Frozen macOS and Linux Full builds resolve bundled browser paths
@@ -15,7 +36,7 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
   `chromium/chrome` on Linux) through `guiskindose.export.png_browser`, and `--png-check`
   reads license notices from the `chromium/` ancestor. No portable macOS or Linux zip is
   shipped yet; frozen `--png-check` on those OSes is still open in
-  [PORTABLE_BROWSER_WRAPPER_PLAN.md](plans/PORTABLE_BROWSER_WRAPPER_PLAN.md). A brief
+  [archive/PORTABLE_BROWSER_WRAPPER_PLAN.md](plans/archive/PORTABLE_BROWSER_WRAPPER_PLAN.md). A brief
   [CHANGELOG.md](../CHANGELOG.md) Unreleased note records the in-tree work for the pre-push
   changelog hook; user-facing release wording waits for Phase 1 acceptance when those zips exist.
 
