@@ -8,11 +8,16 @@ import secrets
 import stat
 import sys
 import zipfile
+import zlib
 from dataclasses import dataclass
 from pathlib import Path
 from typing import IO
 
-from guiskindose.phantom_library import shipped_mesh_stl_path, user_library_dir_for_platform
+from guiskindose.phantom_library import (
+    _path_is_library_link,
+    shipped_mesh_stl_path,
+    user_library_dir_for_platform,
+)
 from guiskindose.phantom_pack import (
     PhantomPackError,
     parse_pack_manifest,
@@ -46,6 +51,7 @@ class InstallResult:
 
     installed: int
     skipped_shipped: int
+    installed_stems: tuple[str, ...] = ()
 
 
 def _reject_archive(exc: BaseException | None = None) -> None:
@@ -87,6 +93,8 @@ def classify_member_name(name: str) -> str:
 def _validate_zip_info(info: zipfile.ZipInfo) -> None:
     if info.is_dir():
         _reject_member()
+    if info.compress_type not in (zipfile.ZIP_STORED, zipfile.ZIP_DEFLATED):
+        _reject_member()
     # S_IFLNK shares a bit with S_IFREG, so test the file type, not a bit mask.
     if stat.S_ISLNK(info.external_attr >> 16):
         _reject_member()
@@ -109,16 +117,19 @@ def read_member_with_cap(
     if info.compress_size > 0 and info.file_size / info.compress_size > _MAX_COMPRESSION_RATIO:
         _reject_member()
     buffer = bytearray()
-    with zf.open(info, "r") as handle:
-        while True:
-            chunk = handle.read(_READ_CHUNK)
-            if not chunk:
-                break
-            buffer.extend(chunk)
-            if len(buffer) > _MAX_MEMBER_BYTES:
-                _reject_member()
-            if running_total + len(buffer) > _MAX_DECOMPRESSED_TOTAL:
-                _reject_member()
+    try:
+        with zf.open(info, "r") as handle:
+            while True:
+                chunk = handle.read(_READ_CHUNK)
+                if not chunk:
+                    break
+                buffer.extend(chunk)
+                if len(buffer) > _MAX_MEMBER_BYTES:
+                    _reject_member()
+                if running_total + len(buffer) > _MAX_DECOMPRESSED_TOTAL:
+                    _reject_member()
+    except (zipfile.BadZipFile, zlib.error, NotImplementedError, RuntimeError, OSError) as exc:
+        _reject_member(exc)
     data = bytes(buffer)
     if len(data) > _MAX_MEMBER_BYTES:
         _reject_member()
@@ -166,8 +177,8 @@ def _chmod_best_effort(path: Path, mode: int) -> None:
 
 
 def _prepare_library_root(user_library_dir: Path) -> tuple[Path, bool]:
-    """Create library root when missing; refuse symlinks. Returns (root, created_new)."""
-    if user_library_dir.is_symlink():
+    """Create library root when missing; refuse symlinks/junctions. Returns (root, created_new)."""
+    if _path_is_library_link(user_library_dir):
         raise PhantomPackError(_LIBRARY_SYMLINK)
     created = False
     if not user_library_dir.exists():
@@ -176,9 +187,23 @@ def _prepare_library_root(user_library_dir: Path) -> tuple[Path, bool]:
         created = True
     elif not user_library_dir.is_dir():
         raise PhantomPackError(_INSTALL_FAILED)
-    elif user_library_dir.is_symlink():
+    elif _path_is_library_link(user_library_dir):
         raise PhantomPackError(_LIBRARY_SYMLINK)
     return user_library_dir, created
+
+
+def _sweep_stale_library_artifacts(library_root: Path) -> None:
+    """Remove stale install temps and revive orphaned backups before a new install."""
+    for incoming in library_root.glob(".incoming-*"):
+        if not incoming.is_dir():
+            continue
+        for child in incoming.iterdir():
+            child.unlink(missing_ok=True)
+        incoming.rmdir()
+    for backup in library_root.glob("*.stl.backup-*"):
+        destination = library_root / backup.name.split(".backup-", 1)[0]
+        if not destination.exists():
+            backup.replace(destination)
 
 
 def _stage_path(library_root: Path) -> Path:
@@ -208,6 +233,35 @@ def _publish_staged_file(
     backups[destination] = backup
 
 
+def _restore_backup(dest: Path, backup: Path | None, added: list[Path]) -> None:
+    try:
+        if backup is not None and backup.exists():
+            if dest.exists():
+                dest.unlink(missing_ok=True)
+            backup.replace(dest)
+        elif backup is None and dest in added and dest.exists():
+            dest.unlink(missing_ok=True)
+    except OSError as exc:
+        safe_error_event(_LOG, _OPERATION_INSTALL, exc)
+
+
+def _remove_stage_dir(stage_dir: Path) -> None:
+    try:
+        for child in stage_dir.iterdir():
+            child.unlink(missing_ok=True)
+        stage_dir.rmdir()
+    except OSError as exc:
+        safe_error_event(_LOG, _OPERATION_INSTALL, exc)
+
+
+def _remove_created_root(library_root: Path) -> None:
+    try:
+        if not any(library_root.iterdir()):
+            library_root.rmdir()
+    except OSError as exc:
+        safe_error_event(_LOG, _OPERATION_INSTALL, exc)
+
+
 def _rollback(
     *,
     library_root: Path,
@@ -217,18 +271,11 @@ def _rollback(
     stage_dir: Path | None,
 ) -> None:
     for dest, backup in backups.items():
-        if backup is not None and backup.exists():
-            if dest.exists():
-                dest.unlink(missing_ok=True)
-            backup.replace(dest)
-        elif backup is None and dest in added and dest.exists():
-            dest.unlink(missing_ok=True)
+        _restore_backup(dest, backup, added)
     if stage_dir is not None and stage_dir.exists():
-        for child in stage_dir.iterdir():
-            child.unlink(missing_ok=True)
-        stage_dir.rmdir()
-    if created_root and library_root.exists() and not any(library_root.iterdir()):
-        library_root.rmdir()
+        _remove_stage_dir(stage_dir)
+    if created_root and library_root.exists():
+        _remove_created_root(library_root)
 
 
 def _check_compressed_limit(zf: zipfile.ZipFile) -> None:
@@ -281,12 +328,18 @@ def _commit_install(
 ) -> InstallResult:
     if not to_install:
         return InstallResult(installed=0, skipped_shipped=skipped)
-    library_root, created_root = _prepare_library_root(user_library_dir)
-    stage_dir = _stage_path(library_root)
-    stage_dir.mkdir()
+    stems = tuple(stem for stem, _ in to_install)
+    library_root: Path | None = None
+    created_root = False
+    stage_dir: Path | None = None
     backups: dict[Path, Path | None] = {}
     added: list[Path] = []
+    install_error: BaseException | None = None
     try:
+        library_root, created_root = _prepare_library_root(user_library_dir)
+        _sweep_stale_library_artifacts(library_root)
+        stage_dir = _stage_path(library_root)
+        stage_dir.mkdir()
         for stem, body in to_install:
             staged = stage_dir / f"{stem}.stl"
             staged.write_bytes(body)
@@ -298,20 +351,24 @@ def _commit_install(
         for child in stage_dir.iterdir():
             child.unlink(missing_ok=True)
         stage_dir.rmdir()
-        for backup in backups.values():
-            if backup is not None and backup.exists():
-                backup.unlink()
+        stage_dir = None
+        for backup in library_root.glob("*.stl.backup-*"):
+            backup.unlink(missing_ok=True)
     except (OSError, PermissionError) as exc:
+        install_error = exc
         safe_error_event(_LOG, _OPERATION_INSTALL, exc)
+    if install_error is not None:
+        assert library_root is not None
         _rollback(
             library_root=library_root,
             created_root=created_root,
             backups=backups,
             added=added,
-            stage_dir=stage_dir if stage_dir.exists() else None,
+            stage_dir=stage_dir if stage_dir is not None and stage_dir.exists() else None,
         )
         raise PhantomPackError(_INSTALL_FAILED) from None
-    return InstallResult(installed=len(to_install), skipped_shipped=skipped)
+    assert library_root is not None
+    return InstallResult(installed=len(to_install), skipped_shipped=skipped, installed_stems=stems)
 
 
 def install_phantom_pack(
@@ -325,7 +382,7 @@ def install_phantom_pack(
     """Install allow-listed STL members from an open pack zip stream."""
     try:
         zf = zipfile.ZipFile(source)
-    except zipfile.BadZipFile as exc:
+    except (zipfile.BadZipFile, zlib.error, NotImplementedError, RuntimeError, OSError) as exc:
         safe_error_event(_LOG, _OPERATION_INSTALL, exc)
         raise PhantomPackError(_BAD_ARCHIVE) from None
     try:
@@ -339,6 +396,9 @@ def install_phantom_pack(
             )
             return _commit_install(to_install, user_library_dir=user_library_dir, skipped=skipped)
     except KeyError as exc:
+        safe_error_event(_LOG, _OPERATION_INSTALL, exc)
+        raise PhantomPackError(_BAD_ARCHIVE) from None
+    except (zipfile.BadZipFile, zlib.error, NotImplementedError, RuntimeError, OSError) as exc:
         safe_error_event(_LOG, _OPERATION_INSTALL, exc)
         raise PhantomPackError(_BAD_ARCHIVE) from None
 

@@ -30,12 +30,12 @@ class PhantomSettings:
     model : str
         Select which model to represent the skin surface for skindose
         calculations. Valid selections: "plane" (2D planar surface),
-        "cylinder" (cylinder with elliptical cross section) or "human" (phantom
-        in the shape of a human, created with MakeHuman.)
+        "cylinder" (cylinder with elliptical cross section) or "human" (STL mesh
+        phantom loaded from the shipped catalog and/or the per-user library.)
     human_mesh: str
-        Select which MakeHuman phantom to represent the patient when
-        model = "human" is selected. Valid selections: Any of the .stl files
-        in the folder phantom_data. Enter as a simple basename string without
+        Select which clinical mesh stem represents the patient when
+        model = "human" is selected. Stems come from the shipped catalog and
+        optional user library, not only files under package phantom_data. Enter as a simple basename string without
         the .stl ending (no path separators or ``..``); unknown or escaping
         stems are rejected. Custom meshes use the trusted Phantom tuple API.
     patient_offset : PhantomOffset

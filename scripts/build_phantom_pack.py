@@ -55,11 +55,9 @@ def build_pack_manifest(paths: list[Path], *, app_version: str) -> dict:
     }
 
 
-def canonical_manifest_bytes(manifest: dict) -> bytes:
-    return json.dumps(manifest, sort_keys=True, separators=(",", ":")).encode("utf-8")
-
-
 def write_pack_zip(manifest: dict, paths: list[Path], out_zip: Path) -> None:
+    from guiskindose.phantom_pack import canonical_manifest_bytes
+
     out_zip.parent.mkdir(parents=True, exist_ok=True)
     manifest_name = "manifest.json"
     with zipfile.ZipFile(out_zip, "w", compression=zipfile.ZIP_DEFLATED) as zf:
@@ -88,7 +86,10 @@ def main() -> int:
     args = _parse_args()
     app_version = _load_version()
     paths = _pack_stl_paths()
+    from guiskindose.phantom_pack import canonical_manifest_bytes, validate_manifest_for_install
+
     manifest = build_pack_manifest(paths, app_version=app_version)
+    validate_manifest_for_install(manifest, app_version=app_version)
     digest = hashlib.sha256(canonical_manifest_bytes(manifest)).hexdigest()
     if args.check:
         from guiskindose.phantom_pack_pin import EXPECTED_PHANTOM_PACK_SHA256

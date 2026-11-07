@@ -61,23 +61,21 @@ def test_light_make_dosemap_png_raises_before_building_a_figure(light, monkeypat
         figures.make_dosemap_png()
 
 
-def test_settings_reports_a_saved_mesh_that_is_not_installed(light, monkeypatch) -> None:
+def test_settings_reports_a_saved_mesh_that_is_not_installed(light, tmp_path, monkeypatch) -> None:
+    from guiskindose import phantom_mesh_names
+    from guiskindose.gui.helpers import get_human_mesh_options
     from guiskindose.gui.tabs import settings as settings_tab
 
+    shipped = tmp_path / "shipped"
+    shipped.mkdir()
+    (shipped / "adult_male.stl").write_bytes(b"starter")
+    monkeypatch.setattr(phantom_mesh_names, "package_phantom_data_dir", lambda: shipped)
     monkeypatch.setattr(state, "human_mesh", "senior_male")
-    monkeypatch.setattr(
-        settings_tab, "human_mesh_not_installed_message", lambda stem: "missing" if stem == "senior_male" else None
-    )
-    options = {
-        "adult_male": "Adult Male",
-        "senior_male": "Senior Male (not installed)",
-        "hudfrid": "Hudfrid",
-    }
-
-    note = settings_tab._select_installed_mesh(options)
+    note = settings_tab._select_installed_mesh(get_human_mesh_options())
 
     assert state.human_mesh == "senior_male"
-    assert note == "missing"
+    assert note is not None
+    assert "phantom pack" in note.lower()
 
 
 def test_full_reports_a_missing_mesh_as_reinstall(monkeypatch) -> None:
@@ -134,22 +132,22 @@ def _starter_mesh_options() -> dict[str, str]:
     return {"adult_male": "Adult Male"}
 
 
-def test_import_reports_a_mesh_that_is_not_installed(light, monkeypatch, notes) -> None:
+def test_import_reports_a_mesh_that_is_not_installed(light, tmp_path, monkeypatch, notes) -> None:
     """Import uses the Settings replacement and surfaces its explanation."""
-    from guiskindose.gui import helpers
+    from guiskindose import phantom_mesh_names
     from guiskindose.gui.tabs import _run_config
-    from guiskindose.gui.tabs import settings as settings_tab
 
+    shipped = tmp_path / "shipped"
+    shipped.mkdir()
+    (shipped / "adult_male.stl").write_bytes(b"starter")
+    monkeypatch.setattr(phantom_mesh_names, "package_phantom_data_dir", lambda: shipped)
     monkeypatch.setattr(state, "human_mesh", "senior_male")
-    monkeypatch.setattr(helpers, "get_human_mesh_options", _starter_mesh_options)
-    monkeypatch.setattr(
-        settings_tab, "human_mesh_not_installed_message", lambda stem: "missing" if stem == "senior_male" else None
-    )
 
     _run_config._notify_unavailable_imported_mesh()
 
     assert state.human_mesh == "senior_male"
-    assert notes == ["missing"]
+    assert len(notes) == 1
+    assert "phantom pack" in notes[0].lower()
 
 
 def test_import_stays_silent_for_an_installed_mesh(monkeypatch, notes) -> None:
@@ -166,18 +164,20 @@ def test_import_stays_silent_for_an_installed_mesh(monkeypatch, notes) -> None:
     assert notes == []
 
 
-def test_calculate_refuses_a_mesh_that_is_not_installed(light, monkeypatch, notes) -> None:
+def test_calculate_refuses_a_mesh_that_is_not_installed(light, tmp_path, monkeypatch, notes) -> None:
     from guiskindose import phantom_mesh_names
     from guiskindose.gui.tabs import calculate as calc_tab
 
+    shipped = tmp_path / "shipped"
+    shipped.mkdir()
+    (shipped / "adult_male.stl").write_bytes(b"starter")
+    monkeypatch.setattr(phantom_mesh_names, "package_phantom_data_dir", lambda: shipped)
     monkeypatch.setattr(state, "phantom_model", "human")
     monkeypatch.setattr(state, "human_mesh", "senior_male")
-    monkeypatch.setattr(
-        phantom_mesh_names, "human_mesh_not_installed_message", lambda stem, **_k: f"{stem} is not installed"
-    )
 
     assert calc_tab._CalculationController._human_mesh_is_installed() is False
-    assert notes == ["senior_male is not installed"]
+    assert len(notes) == 1
+    assert "phantom pack" in notes[0].lower()
 
     monkeypatch.setattr(state, "phantom_model", "plane")
     assert calc_tab._CalculationController._human_mesh_is_installed() is True

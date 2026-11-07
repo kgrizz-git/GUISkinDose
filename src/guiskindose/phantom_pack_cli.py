@@ -7,7 +7,10 @@ from pathlib import Path
 from typing import IO
 
 from guiskindose import __version__, phantom_mesh_names
-from guiskindose.phantom_library import _WINDOWS_LIBRARY_UNAVAILABLE
+from guiskindose.phantom_library import (
+    _WINDOWS_LIBRARY_UNAVAILABLE,
+    PhantomLibraryUnavailableError,
+)
 from guiskindose.phantom_pack import PhantomPackError
 from guiskindose.phantom_pack_install import InstallResult, install_phantom_pack
 
@@ -62,8 +65,7 @@ def run_cli_phantom_pack_install(pack_path: Path) -> int:
     except PhantomPackError as exc:
         print(exc.user_message(), file=sys.stderr)
         return 1
-    except ValueError:
-        # Only the fixed library-unavailable sentence is printed, never an arbitrary message.
+    except PhantomLibraryUnavailableError:
         print(_WINDOWS_LIBRARY_UNAVAILABLE, file=sys.stderr)
         return 1
     except OSError:

@@ -72,7 +72,10 @@ def is_allowed_pack_stem(stem: str) -> bool:
         return False
     if any(stem.endswith(suffix) for suffix in _LEGACY_REDUCED_SUFFIXES):
         return False
-    canonical = resolve_human_mesh_stem(stem)
+    try:
+        canonical = resolve_human_mesh_stem(stem)
+    except ValueError:
+        return False
     if canonical != stem:
         return False
     return is_clinical_catalog_stem(stem)

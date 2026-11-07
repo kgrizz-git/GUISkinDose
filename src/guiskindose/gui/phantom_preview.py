@@ -1,7 +1,8 @@
 """Settings-tab human phantom preview figure builder (no RDSR).
 
 Builds a Plotly figure of the selected human mesh on table+pad for the Settings
-UI. Prefer ``{stem}_reduced_3000t`` when present under package ``phantom_data/``.
+UI. Mesh files resolve from the shipped catalog first, then the per-user library;
+prefer ``{stem}_reduced_3000t`` when present in either root.
 Dose calculation continues to use the full logical mesh stem.
 
 Inputs

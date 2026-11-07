@@ -11,7 +11,7 @@ import datetime
 import decimal
 import logging
 import numbers
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from math import isclose
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
@@ -582,23 +582,38 @@ def get_human_mesh_names(
     return installed_full_clinical_stems(shipped_dir=shipped, user_library_dir=library)
 
 
+def clear_mesh_measurement_caches_for_stems(stems: Iterable[str]) -> None:
+    """Drop cached extents/torso width after a mesh is installed or replaced."""
+    for stem in stems:
+        _MESH_EXTENT_CACHE.pop(stem, None)
+        _MESH_TORSO_WIDTH_CACHE.pop(stem, None)
+
+
 def mesh_stem_is_installed(
     stem: str,
     *,
     phantom_data_dir: Path | None = None,
     user_library_dir: Path | None = None,
 ) -> bool:
-    """True when a clinical full mesh stem resolves to an STL in either root."""
-    from guiskindose.phantom_mesh_names import human_mesh_not_installed_message
-
-    return (
-        human_mesh_not_installed_message(
-            stem,
-            phantom_data_dir=phantom_data_dir,
-            user_library_dir=user_library_dir,
-        )
-        is None
+    """True when *stem* resolves to an STL in the shipped tree or user library."""
+    from guiskindose.phantom_library import (
+        default_user_library_dir,
+        shipped_mesh_stl_path,
+        user_library_mesh_stl_path,
     )
+    from guiskindose.phantom_mesh_names import package_phantom_data_dir, resolve_human_mesh_stem
+
+    try:
+        canonical = resolve_human_mesh_stem(stem)
+    except ValueError:
+        return False
+    shipped_dir = (phantom_data_dir or package_phantom_data_dir()).resolve()
+    library_dir = user_library_dir if user_library_dir is not None else default_user_library_dir()
+    if shipped_mesh_stl_path(canonical, shipped_dir=shipped_dir) is not None:
+        return True
+    if library_dir is None:
+        return False
+    return user_library_mesh_stl_path(canonical, user_library_dir=library_dir.resolve()) is not None
 
 
 def get_human_mesh_options(

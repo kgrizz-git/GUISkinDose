@@ -13,6 +13,8 @@ Meshes resolve **shipped bundle first**, then your per-user library. A pack cann
 
 On **Settings → Phantom Settings**, the clinical catalog lists each mesh as **Installed** or **Not installed**. Use **Install phantom pack** to pick a `.zip` (browser upload or native file dialog). After a successful install, the list and mesh selector update without restarting.
 
+Pack zips must stay under **80 MiB**. The browser upload control sets that limit client-side, and the Settings handler stops streaming once the cumulative body exceeds 80 MiB even if a client bypasses the widget cap. There is no separate HTTP body limit for this path.
+
 ## Install from the command line
 
 ```bash

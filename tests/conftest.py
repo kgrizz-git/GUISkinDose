@@ -93,6 +93,15 @@ def _workspace_snapshot() -> tuple[dict[Path, str], dict[Path, str]]:
     return tracked, other
 
 
+@pytest.fixture(autouse=True)
+def _isolated_phantom_user_library(tmp_path_factory: pytest.TempPathFactory, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """Keep pack installs and mesh lookups off the developer home directory."""
+    library = tmp_path_factory.mktemp("phantom_user_library")
+    library.mkdir(exist_ok=True)
+    monkeypatch.setattr("guiskindose.phantom_library.default_user_library_dir", lambda: library)
+    return library
+
+
 def pytest_sessionstart(session: pytest.Session) -> None:
     """Snapshot the checkout so tests cannot hide writes in an already-dirty tree."""
     try:

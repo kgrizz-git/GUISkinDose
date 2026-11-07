@@ -13,6 +13,29 @@ from guiskindose.phantom_pack_cli import (
 from tests.unittests.phantom_pack_test_helpers import manifest_for_files, pack_zip_bytes, tiny_stl_body
 
 
+def test_headless_cli_install_via_entry(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    from guiskindose import __main__ as entry
+
+    shipped = tmp_path / "shipped"
+    library = tmp_path / "library"
+    shipped.mkdir()
+    body = tiny_stl_body()
+    manifest = manifest_for_files({"senior_male": body})
+    from guiskindose.phantom_pack import manifest_sha256
+
+    pin = manifest_sha256(manifest)
+    zip_path = tmp_path / "pack.zip"
+    zip_path.write_bytes(pack_zip_bytes(manifest, {"senior_male": body}))
+    monkeypatch.setattr("guiskindose.phantom_pack_pin.EXPECTED_PHANTOM_PACK_SHA256", pin)
+    monkeypatch.setattr("guiskindose.phantom_mesh_names.package_phantom_data_dir", lambda: shipped)
+    monkeypatch.setattr("guiskindose.phantom_pack_install.default_install_library_dir", lambda: library)
+    monkeypatch.setattr(sys, "argv", ["guiskindose", "--install-phantom-pack", str(zip_path)])
+    with pytest.raises(SystemExit) as exc:
+        entry.cli()
+    assert exc.value.code == 0
+    assert "Installed 1" in capsys.readouterr().out
+
+
 def test_gui_mode_refuses_pack_install(monkeypatch: pytest.MonkeyPatch) -> None:
     from guiskindose import __main__ as entry
 
@@ -50,13 +73,13 @@ def test_install_without_file_path_prints_counts(
 def test_install_library_unavailable_prints_fixed_sentence(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    from guiskindose.phantom_library import _WINDOWS_LIBRARY_UNAVAILABLE
+    from guiskindose.phantom_library import _WINDOWS_LIBRARY_UNAVAILABLE, PhantomLibraryUnavailableError
 
     zip_path = tmp_path / "pack.zip"
     zip_path.write_bytes(b"not used")
     monkeypatch.setattr(
         "guiskindose.phantom_pack_cli.install_phantom_pack_from_stream",
-        lambda *_a, **_k: (_ for _ in ()).throw(ValueError(_WINDOWS_LIBRARY_UNAVAILABLE)),
+        lambda *_a, **_k: (_ for _ in ()).throw(PhantomLibraryUnavailableError(_WINDOWS_LIBRARY_UNAVAILABLE)),
     )
     code = run_cli_phantom_pack_install(zip_path)
     err = capsys.readouterr().err

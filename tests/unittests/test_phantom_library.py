@@ -140,3 +140,42 @@ def test_unknown_stem_is_value_error_not_missing(tmp_path: Path) -> None:
     with pytest.raises(ValueError, match="Unknown human mesh") as info:
         resolve_human_mesh_stl_path("not_a_catalog_mesh", phantom_data_dir=shipped, user_library_dir=None)
     assert not isinstance(info.value, HumanMeshNotInstalledError)
+
+
+@pytest.mark.parametrize(
+    ("platform", "environ", "expected_suffix"),
+    [
+        ("darwin", {}, ("Library", "Application Support", "GUISkinDose", "phantoms")),
+        ("linux", {"XDG_DATA_HOME": "/xdg"}, ("guiskindose", "phantoms")),
+        ("linux", {}, (".local", "share", "guiskindose", "phantoms")),
+    ],
+)
+def test_user_library_dir_for_platform_posix(
+    tmp_path: Path, platform: str, environ: dict[str, str], expected_suffix: tuple[str, ...]
+) -> None:
+    from guiskindose.phantom_library import user_library_dir_for_platform
+
+    home = tmp_path / "home"
+    home.mkdir()
+    path = user_library_dir_for_platform(platform, environ=environ, home=home)
+    if platform == "linux" and "XDG_DATA_HOME" in environ:
+        assert path == Path(environ["XDG_DATA_HOME"]) / "guiskindose" / "phantoms"
+    else:
+        assert path == home.joinpath(*expected_suffix)
+
+
+def test_user_library_dir_windows_localappdata(tmp_path: Path) -> None:
+    from guiskindose.phantom_library import PhantomLibraryUnavailableError, user_library_dir_for_platform
+
+    with pytest.raises(PhantomLibraryUnavailableError):
+        user_library_dir_for_platform("win32", environ={}, home=tmp_path)
+    resolved = user_library_dir_for_platform("win32", environ={"LOCALAPPDATA": str(tmp_path / "local")}, home=tmp_path)
+    assert resolved.parts[-2:] == ("GUISkinDose", "phantoms")
+
+
+def test_demo_stem_not_marked_installed_without_file(tmp_path: Path) -> None:
+    from guiskindose.gui.helpers import mesh_stem_is_installed
+
+    shipped = tmp_path / "shipped"
+    shipped.mkdir()
+    assert not mesh_stem_is_installed("demo_cosmic_buddha", phantom_data_dir=shipped, user_library_dir=tmp_path / "lib")

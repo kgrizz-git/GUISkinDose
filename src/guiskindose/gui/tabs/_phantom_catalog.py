@@ -11,11 +11,18 @@ from typing import IO, Any
 from nicegui import run, ui
 
 from guiskindose import __version__
-from guiskindose.gui.helpers import get_human_mesh_options, mesh_stem_is_installed
+from guiskindose.gui.helpers import (
+    clear_mesh_measurement_caches_for_stems,
+    get_human_mesh_options,
+    mesh_stem_is_installed,
+)
 from guiskindose.gui.io_helpers import _is_native_mode, open_phantom_pack_stream
 from guiskindose.gui.ui_copy import copy_text
 from guiskindose.gui.window_prefs import show_demo_phantoms_enabled
-from guiskindose.phantom_library import _WINDOWS_LIBRARY_UNAVAILABLE
+from guiskindose.phantom_library import (
+    _WINDOWS_LIBRARY_UNAVAILABLE,
+    PhantomLibraryUnavailableError,
+)
 from guiskindose.phantom_mesh_names import (
     _CLINICAL_SORT_ORDER,
     _PREVIEW_REDUCED_SUFFIXES,
@@ -27,7 +34,6 @@ from guiskindose.phantom_mesh_names import (
 from guiskindose.phantom_pack import PhantomPackError
 from guiskindose.phantom_pack_cli import install_phantom_pack_from_stream
 from guiskindose.phantom_pack_install import InstallResult
-from guiskindose.phantom_pack_pin import EXPECTED_PHANTOM_PACK_SHA256
 from guiskindose.privacy import safe_error_event
 
 logger = logging.getLogger(__name__)
@@ -91,6 +97,7 @@ class _PhantomCatalogSection:
 
     def report_install_success(self, result: InstallResult) -> None:
         assert self.status_label is not None
+        clear_mesh_measurement_caches_for_stems(result.installed_stems)
         self.status_label.set_text(
             copy_text("settings.phantom_catalog.install_success").format(
                 installed=result.installed,
@@ -103,12 +110,14 @@ class _PhantomCatalogSection:
     async def commit_install(self, stream: IO[bytes]) -> None:
         assert self.status_label is not None
         stream.seek(0)
+        import guiskindose.phantom_pack_pin as pack_pin_module
+
         result: InstallResult | None = None
         try:
             result = await run.io_bound(
                 install_phantom_pack_from_stream,
                 stream,
-                expected_manifest_sha256=EXPECTED_PHANTOM_PACK_SHA256,
+                expected_manifest_sha256=pack_pin_module.EXPECTED_PHANTOM_PACK_SHA256,
                 app_version=__version__,
                 user_library_dir=None,
                 shipped_dir=package_phantom_data_dir(),
@@ -116,7 +125,7 @@ class _PhantomCatalogSection:
         except PhantomPackError as exc:
             _notify_phantom_pack_error(self.status_label, exc)
             return
-        except ValueError:
+        except PhantomLibraryUnavailableError:
             _notify_library_unavailable(self.status_label)
             return
         finally:

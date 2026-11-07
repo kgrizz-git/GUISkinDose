@@ -79,7 +79,7 @@ def test_second_install_replaces_without_stage_leftovers(tmp_path: Path) -> None
     _install(raw2, shipped=shipped, library=library, manifest=manifest2)
     assert (library / "senior_male.stl").read_bytes() == body2
     assert not any(p.name.startswith(".incoming-") for p in library.iterdir())
-    assert not any(p.name.endswith(".backup-") for p in library.glob("*.stl"))
+    assert not list(library.glob("*.backup-*"))
 
 
 def test_tampered_bytes_leave_previous_file(tmp_path: Path) -> None:
@@ -225,6 +225,7 @@ def test_mid_replace_rollback(tmp_path: Path) -> None:
     assert (library / "junior_male.stl").read_bytes() == b"original-junior"
     assert not (library / "senior_male.stl").exists()
     assert not any(p.name.startswith(".incoming-") for p in library.iterdir())
+    assert not list(library.glob("*.backup-*"))
 
 
 def test_failure_logs_contain_no_paths(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
@@ -236,6 +237,56 @@ def test_failure_logs_contain_no_paths(tmp_path: Path, caplog: pytest.LogCapture
         _install(b"not-a-zip", shipped=shipped, library=library, manifest=manifest_for_files({}))
     assert tag not in caplog.text
     assert tag not in str(info.value)
+
+
+def test_rejects_bad_crc_stored_member(tmp_path: Path) -> None:
+    shipped = tmp_path / "shipped"
+    library = tmp_path / "library"
+    body = tiny_stl_body()
+    manifest = manifest_for_files({"senior_male": body})
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("senior_male.stl", body)
+        zf.writestr("manifest.json", canonical_manifest_bytes(manifest))
+    corrupted = bytearray(buf.getvalue())
+    corrupted[-20] ^= 0xFF
+    with pytest.raises(PhantomPackError):
+        _install(bytes(corrupted), shipped=shipped, library=library, manifest=manifest)
+
+
+def test_rejects_unsupported_compression(tmp_path: Path) -> None:
+    shipped = tmp_path / "shipped"
+    library = tmp_path / "library"
+    body = tiny_stl_body()
+    manifest = manifest_for_files({"senior_male": body})
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as zf:
+        info = zipfile.ZipInfo("senior_male.stl")
+        info.compress_type = zipfile.ZIP_BZIP2
+        zf.writestr(info, body)
+        zf.writestr("manifest.json", canonical_manifest_bytes(manifest))
+    with pytest.raises(PhantomPackError):
+        _install(buf.getvalue(), shipped=shipped, library=library, manifest=manifest)
+
+
+def test_failure_before_first_replace_removes_created_library(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    shipped = tmp_path / "shipped"
+    library = tmp_path / "library"
+    body = tiny_stl_body()
+    files = {"senior_male": body}
+    manifest = manifest_for_files(files)
+    original_mkdir = Path.mkdir
+
+    def fail_mkdir(self: Path, *args, **kwargs):
+        if self.name.startswith(".incoming-"):
+            raise OSError("no stage")
+        return original_mkdir(self, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "mkdir", fail_mkdir)
+    assert not library.exists()
+    with pytest.raises(PhantomPackError):
+        _install(pack_zip_bytes(manifest, files), shipped=shipped, library=library, manifest=manifest)
+    assert not library.exists()
 
 
 def test_accepts_members_with_regular_unix_mode(tmp_path: Path) -> None:

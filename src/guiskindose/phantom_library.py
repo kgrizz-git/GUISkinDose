@@ -20,10 +20,26 @@ from guiskindose.phantom_mesh_names import (
     is_clinical_catalog_stem,
     resolve_human_mesh_stem,
 )
+from guiskindose.privacy import UserFacingInputError
 
 _WINDOWS_LIBRARY_UNAVAILABLE = (
     "The phantom library cannot be used because the local application data folder is not configured."
 )
+
+
+class PhantomLibraryUnavailableError(UserFacingInputError):
+    """The per-OS user mesh library path cannot be resolved on this host."""
+
+
+def _path_is_library_link(path: Path) -> bool:
+    """True when *path* must not be used as a writable library root."""
+    if path.is_symlink():
+        return True
+    if sys.platform == "win32":
+        is_junction = getattr(os.path, "isjunction", None)
+        if callable(is_junction) and path.exists() and is_junction(path):
+            return True
+    return False
 
 _DARWIN_PHANTOM_SUBPATH = ("Library", "Application Support", "GUISkinDose", "phantoms")
 _WIN32_PHANTOM_PARTS = ("GUISkinDose", "phantoms")
@@ -40,7 +56,7 @@ def user_library_dir_for_platform(
 
     Raises
     ------
-    ValueError
+    PhantomLibraryUnavailableError
         On Windows when ``LOCALAPPDATA`` is unset (fixed sentence only).
     """
     env = dict(os.environ if environ is None else environ)
@@ -50,7 +66,7 @@ def user_library_dir_for_platform(
     if platform == "win32":
         local = env.get("LOCALAPPDATA")
         if not local:
-            raise ValueError(_WINDOWS_LIBRARY_UNAVAILABLE)
+            raise PhantomLibraryUnavailableError(_WINDOWS_LIBRARY_UNAVAILABLE)
         return Path(local).joinpath(*_WIN32_PHANTOM_PARTS)
     data_home = env.get("XDG_DATA_HOME")
     if data_home:
@@ -62,7 +78,7 @@ def default_user_library_dir() -> Path | None:
     """Return the user library path, or ``None`` when the OS location is undefined."""
     try:
         return user_library_dir_for_platform(sys.platform)
-    except ValueError:
+    except PhantomLibraryUnavailableError:
         return None
 
 

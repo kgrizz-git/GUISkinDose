@@ -29,7 +29,7 @@ be archived.
 - [ ] **Geometry-driven support transmission** — See the correction-data roadmap in
   Active Work / [GEOMETRY_DRIVEN_SUPPORT_TRANSMISSION_PLAN.md](plans/GEOMETRY_DRIVEN_SUPPORT_TRANSMISSION_PLAN.md).
 - [ ] **Portable phantom packs (in progress)** — user library, manifest, and safe zip install:
-  [PORTABLE_PHANTOM_PACKS_PLAN.md](plans/PORTABLE_PHANTOM_PACKS_PLAN.md) (Steps 4–7 remain).
+  [PORTABLE_PHANTOM_PACKS_PLAN.md](plans/PORTABLE_PHANTOM_PACKS_PLAN.md) (acceptance / manual Light smoke remain).
 - [ ] **Portable desktop app** — Light and Full double-click builds. Phase 1 partial (editions, pywebview floor, Light PNG gate, WebView2 registry pre-check, preview proof, packaging note, Windows edition matrix, PNG timing, Unix pipe-wrapper code, macOS Helpers plus Linux `chromium/` layout, `portable-spike.yml` macOS/Linux jobs, and frozen Full `--png-check` on run [42339804464](https://github.com/kgrizz-git/GUISkinDose/actions/runs/42339804464) (2026-11-07)):
   [PORTABLE_APP_PLAN.md](plans/PORTABLE_APP_PLAN.md). Wrapper and CI build proof: [archive/PORTABLE_BROWSER_WRAPPER_PLAN.md](plans/archive/PORTABLE_BROWSER_WRAPPER_PLAN.md), [archive/PORTABLE_MAC_LINUX_CI_BUILDS_PLAN.md](plans/archive/PORTABLE_MAC_LINUX_CI_BUILDS_PLAN.md). Detail in Active Work.
 
