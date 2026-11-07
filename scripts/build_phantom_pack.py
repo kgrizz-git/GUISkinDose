@@ -35,7 +35,7 @@ def _pack_stl_paths() -> list[Path]:
     return paths
 
 
-def _manifest_for(paths: list[Path], *, app_version: str) -> dict:
+def build_pack_manifest(paths: list[Path], *, app_version: str) -> dict:
     files = []
     for path in paths:
         data = path.read_bytes()
@@ -88,7 +88,7 @@ def main() -> int:
     args = _parse_args()
     app_version = _load_version()
     paths = _pack_stl_paths()
-    manifest = _manifest_for(paths, app_version=app_version)
+    manifest = build_pack_manifest(paths, app_version=app_version)
     digest = hashlib.sha256(canonical_manifest_bytes(manifest)).hexdigest()
     if args.check:
         from guiskindose.phantom_pack_pin import EXPECTED_PHANTOM_PACK_SHA256

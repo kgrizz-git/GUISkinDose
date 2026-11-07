@@ -294,6 +294,33 @@
       "help": [
         "docs/source/gui_help/calculation_workflow.md"
       ]
+    },
+    "phantom_packs": {
+      "status": "shipped",
+      "code": [
+        "src/guiskindose/phantom_library.py",
+        "src/guiskindose/phantom_pack.py",
+        "src/guiskindose/phantom_pack_install.py",
+        "src/guiskindose/phantom_pack_cli.py",
+        "src/guiskindose/gui/tabs/_phantom_catalog.py",
+        "scripts/build_phantom_pack.py"
+      ],
+      "tests": [
+        "tests/unittests/test_phantom_library.py",
+        "tests/unittests/test_phantom_pack_manifest.py",
+        "tests/unittests/test_phantom_pack_install.py",
+        "tests/unittests/test_phantom_pack_cli.py",
+        "tests/gui/test_phantom_pack_settings.py"
+      ],
+      "docs": [
+        "dev-docs/plans/PORTABLE_PHANTOM_PACKS_PLAN.md",
+        "dev-docs/ADDITIONAL_PHANTOMS.md",
+        "dev-docs/FEATURE_INVENTORY.md",
+        "AGENTS.md"
+      ],
+      "help": [
+        "docs/source/gui_help/phantom_packs.md"
+      ]
     }
   }
 }

@@ -10,6 +10,7 @@ import pytest
 pytest.importorskip("nicegui")
 
 from guiskindose.gui import phantom_preview_controller
+from guiskindose.gui.phantom_preview import PreviewSnapshot
 from guiskindose.gui.phantom_preview_controller import PhantomPreviewController
 from guiskindose.gui.state import state
 
@@ -62,7 +63,18 @@ async def test_run_refresh_unavailable_when_fig_none(monkeypatch: pytest.MonkeyP
     async def _fake_io_bound(fn, *args, **kwargs):
         return None
 
-    monkeypatch.setattr(phantom_preview_controller, "capture_phantom_preview_snapshot", lambda st: {})
+    snapshot = PreviewSnapshot(
+        phantom_model="human",
+        human_mesh="senior_male",
+        patient_orientation="supine",
+        scale_lat=1.0,
+        scale_ap=1.0,
+        scale_lon=1.0,
+        d_lon=0.0,
+        d_ver=0.0,
+        d_lat=0.0,
+    )
+    monkeypatch.setattr(phantom_preview_controller, "capture_phantom_preview_snapshot", lambda st: snapshot)
     monkeypatch.setattr(phantom_preview_controller.run, "io_bound", _fake_io_bound)
 
     await ctrl._run_refresh(ctrl.preview_request_id)

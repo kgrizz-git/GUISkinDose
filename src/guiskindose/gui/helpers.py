@@ -582,7 +582,31 @@ def get_human_mesh_names(
     return installed_full_clinical_stems(shipped_dir=shipped, user_library_dir=library)
 
 
-def get_human_mesh_options(*, include_demos: bool | None = None) -> dict[str, str]:
+def mesh_stem_is_installed(
+    stem: str,
+    *,
+    phantom_data_dir: Path | None = None,
+    user_library_dir: Path | None = None,
+) -> bool:
+    """True when a clinical full mesh stem resolves to an STL in either root."""
+    from guiskindose.phantom_mesh_names import human_mesh_not_installed_message
+
+    return (
+        human_mesh_not_installed_message(
+            stem,
+            phantom_data_dir=phantom_data_dir,
+            user_library_dir=user_library_dir,
+        )
+        is None
+    )
+
+
+def get_human_mesh_options(
+    *,
+    include_demos: bool | None = None,
+    phantom_data_dir: Path | None = None,
+    user_library_dir: Path | None = None,
+) -> dict[str, str]:
     """Return NiceGUI ``ui.select`` options as ``{stem: display_label}``.
 
     Dict **keys** are the bound values (canonical file stems under ``phantom_data/``).
@@ -595,20 +619,32 @@ def get_human_mesh_options(*, include_demos: bool | None = None) -> dict[str, st
     label→stem — that would bind
     the label string into ``state.human_mesh`` and break STL paths.
     """
+    from guiskindose.phantom_mesh_names import _CLINICAL_SORT_ORDER, _PREVIEW_REDUCED_SUFFIXES
+
+    from .ui_copy import copy_text
     from .window_prefs import show_demo_phantoms_enabled
 
     if include_demos is None:
         include_demos = show_demo_phantoms_enabled()
 
-    names = get_human_mesh_names()
-    clinical = sort_clinical_mesh_stems(
-        stem for stem in names if stem not in DEMO_HUMAN_MESHES and stem not in GUI_HIDDEN_HUMAN_MESHES
-    )
-    demos = sorted(stem for stem in names if stem in DEMO_HUMAN_MESHES) if include_demos else []
-
+    catalog_stems = [
+        stem
+        for stem in _CLINICAL_SORT_ORDER
+        if not any(stem.endswith(suffix) for suffix in _PREVIEW_REDUCED_SUFFIXES)
+    ]
+    clinical = sort_clinical_mesh_stems(catalog_stems)
+    not_installed_suffix = copy_text("settings.phantom_catalog.not_installed_suffix")
     options: dict[str, str] = {}
     for stem in clinical:
-        options[stem] = human_mesh_display_label(stem)
+        label = human_mesh_display_label(stem)
+        if not mesh_stem_is_installed(stem, phantom_data_dir=phantom_data_dir, user_library_dir=user_library_dir):
+            label = f"{label}{not_installed_suffix}"
+        options[stem] = label
+    demos = []
+    if include_demos:
+        for stem in sorted(DEMO_HUMAN_MESHES):
+            if mesh_stem_is_installed(stem, phantom_data_dir=phantom_data_dir, user_library_dir=user_library_dir):
+                demos.append(stem)
     if demos:
         options[DEMO_MESH_SECTION_KEY] = DEMO_MESH_SECTION_LABEL
         for stem in demos:

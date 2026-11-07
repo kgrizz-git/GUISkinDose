@@ -13,8 +13,11 @@ from collections.abc import Callable
 
 from nicegui import ui
 
-from guiskindose.edition import is_light
-from guiskindose.phantom_mesh_names import human_mesh_not_installed_message, resolve_human_mesh_stem
+from guiskindose.phantom_mesh_names import (
+    human_mesh_not_installed_message,
+    is_clinical_catalog_stem,
+    resolve_human_mesh_stem,
+)
 
 from ..components import HelpButton
 from ..constants import (
@@ -40,6 +43,7 @@ from ..state import reset_results, state
 from ..summary_formatters import format_scale_cm_label, format_table_offset_line, multi_exam_phantom_offset_caption
 from ..ui_copy import copy_text
 from ._per_exam import build_per_exam_section
+from ._phantom_catalog import build_phantom_catalog_section
 from ._run_config import build_run_config_card
 
 # Shared Quasar/Tailwind row class for Settings section headers (python:S1192).
@@ -106,32 +110,20 @@ def build(ctx: PageContext) -> None:
 
 
 def _select_installed_mesh(mesh_options: dict[str, str]) -> str | None:
-    """Point ``state.human_mesh`` at a selectable mesh and explain a substitution.
-
-    A saved stem that is not one of ``mesh_options`` cannot stay in the selector.
-    The fallback is Hudfrid when that mesh is installed. The phantom section calls
-    this when the selector is built. Run-configuration import calls it again after
-    a successful load or re-parse, because that write happens after the selector
-    already exists and is bound to ``state.human_mesh``.
-
-    An installed stem, including a legacy alias that resolves to one, is left as
-    that canonical stem and this returns ``None``. A clinical mesh this build does
-    not ship keeps the substitution sentence and then points at the Full download
-    on Light, or at reinstalling GUISkinDose on Full. Any other unavailable stem
-    (unknown, demo gated off, preview suffix) uses the shorter explanation.
-    """
-    saved = state.human_mesh
-    state.human_mesh = canonicalize_human_mesh_selection(saved, mesh_options)
-    if state.human_mesh == resolve_human_mesh_stem(saved or ""):
-        return None
-    label = mesh_options.get(state.human_mesh, state.human_mesh)
-    if human_mesh_not_installed_message(saved):
-        # Same ``{label}`` sentence either way. Light (and any unrecognized
-        # edition, which fails closed as Light) points at the Full download.
-        # Full already includes the mesh, so a missing file is a broken install.
-        key = "settings.human_mesh.not_installed" if is_light() else "settings.human_mesh.not_installed.reinstall"
-        return copy_text(key).format(label=label)
-    return copy_text("settings.human_mesh.unavailable").format(saved=saved or "none", label=label)
+    """Resolve aliases only; keep a missing clinical stem selected and return its hint."""
+    saved = state.human_mesh or ""
+    canonical = resolve_human_mesh_stem(saved)
+    if canonical in mesh_options or is_clinical_catalog_stem(canonical):
+        state.human_mesh = canonical
+    else:
+        state.human_mesh = canonicalize_human_mesh_selection(saved, mesh_options)
+    missing = human_mesh_not_installed_message(state.human_mesh)
+    if missing:
+        return missing
+    if state.human_mesh != canonical and saved:
+        label = mesh_options.get(state.human_mesh, state.human_mesh)
+        return copy_text("settings.human_mesh.unavailable").format(saved=saved, label=label)
+    return None
 
 
 def _build_phantom_section(ctx: PageContext, on_change: Callable[[], None]) -> None:
@@ -148,6 +140,11 @@ def _build_phantom_section(ctx: PageContext, on_change: Callable[[], None]) -> N
                     title="Phantom Positioning Offsets",
                     content_path="positioning_offsets.md",
                     help_id="settings_positioning",
+                )
+                HelpButton(
+                    title="Phantom packs",
+                    content_path="phantom_packs.md",
+                    help_id="settings_phantom_packs",
                 )
             with ui.row().classes("w-full gap-6"):
                 ui.select(PHANTOM_MODELS, label="Phantom model", value=state.phantom_model).bind_value(
@@ -176,6 +173,12 @@ def _build_phantom_section(ctx: PageContext, on_change: Callable[[], None]) -> N
                 mesh_select.on(_MODEL_VALUE_EVENT, _on_human_mesh_change)
             if not_installed_note:
                 ui.label(not_installed_note).classes("text-caption text-warning")
+
+            catalog_block = ui.column().classes("w-full")
+            catalog_block.bind_visibility_from(state, "phantom_model", backward=lambda v: v == "human")
+            with catalog_block:
+                catalog_refresh = build_phantom_catalog_section(mesh_select=mesh_select, on_change=on_change)
+                catalog_refresh()
 
             # show/hide mesh selector based on model
             def _update_mesh_visibility():

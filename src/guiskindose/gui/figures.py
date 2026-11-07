@@ -51,6 +51,8 @@ def make_geometry_fig(
     composite: bool = False,
 ):
     """Build a Plotly Figure for geometry preview. Returns fig dict or None."""
+    from guiskindose.phantom_mesh_names import HumanMeshNotInstalledError
+
     try:
         import plotly.graph_objects as go
 
@@ -113,6 +115,8 @@ def make_geometry_fig(
                 },
             )
             return fig.to_dict()
+        return None
+    except HumanMeshNotInstalledError:
         return None
     except Exception as exc:
         safe_error_event(logger, "geometry_figure_render", exc, level=logging.DEBUG)

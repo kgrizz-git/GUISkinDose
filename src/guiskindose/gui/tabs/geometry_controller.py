@@ -224,6 +224,12 @@ class GeometryTabController:
         )
         self.refs.spinner.visible = False
         self.refs.plot.update_figure(fig or {})
+        if fig is None and state.phantom_model == "human":
+            from guiskindose.phantom_mesh_names import human_mesh_not_installed_message
+
+            missing = human_mesh_not_installed_message(state.human_mesh)
+            if missing:
+                ui.notify(missing, type="negative", timeout=0, close_button="Dismiss", multi_line=True)
 
     def _resolve_composite_for_render(self) -> bool:
         return resolve_composite_for_render(

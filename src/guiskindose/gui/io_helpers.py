@@ -121,3 +121,30 @@ async def _get_save_path(default_name: str, extension: str) -> str | None:
     except Exception as exc:
         safe_error_event(logger, "native_save_dialog", exc, level=logging.DEBUG)
         return None
+
+
+async def open_phantom_pack_stream():
+    """Return an open pack zip stream in native mode, else ``None`` when cancelled."""
+    try:
+        from nicegui import app as _app
+
+        main_window = _app.native.main_window
+        if main_window is None:
+            return None
+    except Exception:
+        return None
+    try:
+        import webview  # pyright: ignore[reportMissingImports]
+
+        open_dialog = webview.FileDialog.OPEN if hasattr(webview, "FileDialog") else webview.OPEN_DIALOG
+        result = await main_window.create_file_dialog(
+            int(open_dialog),
+            file_types=("Zip archives (*.zip)",),
+        )
+        if not result:
+            return None
+        choice = result[0] if isinstance(result, (list, tuple)) else result
+        return open(choice, "rb")
+    except Exception as exc:
+        safe_error_event(logger, "native_open_dialog", exc, level=logging.DEBUG)
+        return None

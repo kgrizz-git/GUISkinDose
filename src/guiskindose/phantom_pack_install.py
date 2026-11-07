@@ -10,7 +10,7 @@ import sys
 import zipfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import BinaryIO
+from typing import IO
 
 from guiskindose.phantom_library import shipped_mesh_stl_path, user_library_dir_for_platform
 from guiskindose.phantom_pack import (
@@ -315,7 +315,7 @@ def _commit_install(
 
 
 def install_phantom_pack(
-    source: BinaryIO,
+    source: IO[bytes],
     *,
     user_library_dir: Path,
     shipped_dir: Path,

@@ -221,6 +221,12 @@ def cli() -> None:
     configure_logging()
 
     if args.mode == RUN_ARGUMENTS_MODE_GUI:
+        from guiskindose.gui.phantom_pack_messages import gui_mode_phantom_pack_refusal
+        from guiskindose.phantom_pack_cli import phantom_pack_cli_args_present
+
+        if phantom_pack_cli_args_present(args):
+            print(gui_mode_phantom_pack_refusal(), file=sys.stderr)
+            sys.exit(1)
         if import_opts.any_set():
             print(GUI_IMPORT_OPTIONS_MESSAGE, file=sys.stderr)
             sys.exit(1)
@@ -237,6 +243,10 @@ def cli() -> None:
             port=getattr(args, "port", None),
         )
         return
+    from guiskindose.phantom_pack_cli import phantom_pack_cli_args_present, run_cli_phantom_pack_install
+
+    if phantom_pack_cli_args_present(args):
+        sys.exit(run_cli_phantom_pack_install(args.install_phantom_pack))
     if getattr(args, "input_preview_only", False):
         _call_or_exit(lambda: _run_preview(args, import_opts))
         return

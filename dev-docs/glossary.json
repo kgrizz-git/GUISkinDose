@@ -29,6 +29,14 @@
         "half value layer"
       ]
     },
+    "phantom pack": {
+      "preferred": "phantom pack",
+      "definition": "Signed zip of allow-listed clinical STL meshes plus a manifest; optional data for Light or offline Full installs.",
+      "aliases": [
+        "phantom packs",
+        "clinical phantom pack"
+      ]
+    },
     "k_tab": {
       "preferred": "patient-support transmission factor",
       "definition": "Dimensionless correction factor for dose attenuation through the patient-support table or pad. A value of 1.0 means no attenuation; lower values mean greater attenuation. attenuation_fraction = 1 - k_tab.",

@@ -68,12 +68,16 @@ def test_settings_reports_a_saved_mesh_that_is_not_installed(light, monkeypatch)
     monkeypatch.setattr(
         settings_tab, "human_mesh_not_installed_message", lambda stem: "missing" if stem == "senior_male" else None
     )
-    options = {"adult_male": "Adult Male", "hudfrid": "Hudfrid"}
+    options = {
+        "adult_male": "Adult Male",
+        "senior_male": "Senior Male (not installed)",
+        "hudfrid": "Hudfrid",
+    }
 
     note = settings_tab._select_installed_mesh(options)
 
-    assert state.human_mesh == "hudfrid"
-    assert note == copy_text("settings.human_mesh.not_installed").format(label="Hudfrid")
+    assert state.human_mesh == "senior_male"
+    assert note == "missing"
 
 
 def test_full_reports_a_missing_mesh_as_reinstall(monkeypatch) -> None:
@@ -88,13 +92,12 @@ def test_full_reports_a_missing_mesh_as_reinstall(monkeypatch) -> None:
         settings_tab, "human_mesh_not_installed_message", lambda stem: "missing" if stem == "senior_male" else None
     )
 
-    note = settings_tab._select_installed_mesh({"adult_male": "Adult Male", "hudfrid": "Hudfrid"})
+    note = settings_tab._select_installed_mesh(
+        {"adult_male": "Adult Male", "senior_male": "Senior Male", "hudfrid": "Hudfrid"}
+    )
 
-    assert state.human_mesh == "hudfrid"
-    assert note == copy_text("settings.human_mesh.not_installed.reinstall").format(label="Hudfrid")
-    assert note is not None
-    assert "Reinstall GUISkinDose" in note
-    assert "Full download" not in note
+    assert state.human_mesh == "senior_male"
+    assert note == "missing"
 
 
 def test_settings_stays_silent_for_an_installed_mesh(monkeypatch) -> None:
@@ -145,8 +148,8 @@ def test_import_reports_a_mesh_that_is_not_installed(light, monkeypatch, notes) 
 
     _run_config._notify_unavailable_imported_mesh()
 
-    assert state.human_mesh == "adult_male"
-    assert notes == [copy_text("settings.human_mesh.not_installed").format(label="Adult Male")]
+    assert state.human_mesh == "senior_male"
+    assert notes == ["missing"]
 
 
 def test_import_stays_silent_for_an_installed_mesh(monkeypatch, notes) -> None:

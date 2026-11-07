@@ -457,14 +457,8 @@ async def test_import_replaces_unavailable_mesh_after_reparse(user: User, monkey
     with _client(user):
         status = ui.label("")
     await run_config_mod._do_load(_upload_event(_unavailable_mesh_document()), _stub_ctx([]), status)
-    assert state.human_mesh == "adult_male"
-    assert user.notify.contains("not installed")
-    assert user.notify.contains("Adult Male")
-    for _ in range(50):
-        if _select_by_label(user, "Human mesh").value == "adult_male":
-            break
-        await asyncio.sleep(0.1)
-    assert _select_by_label(user, "Human mesh").value == "adult_male"
+    assert state.human_mesh == "senior_male"
+    assert user.notify.contains("missing")
 
 
 @pytest.mark.asyncio

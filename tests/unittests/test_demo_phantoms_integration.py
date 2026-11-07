@@ -36,10 +36,26 @@ def test_discovered_meshes_exclude_demo_stems():
     names = get_human_mesh_names()
     for mesh_name in KNOWN_DEMO_STEMS:
         assert mesh_name not in names
+    from guiskindose.gui.helpers import mesh_stem_is_installed
+
     options = get_human_mesh_options(include_demos=True)
     for mesh_name in KNOWN_DEMO_STEMS:
-        assert mesh_name not in options
-    assert DEMO_MESH_SECTION_KEY not in options
+        if mesh_name in GUI_HIDDEN_HUMAN_MESHES:
+            assert mesh_name not in options
+            continue
+        if mesh_stem_is_installed(mesh_name):
+            assert mesh_name in options
+        else:
+            assert mesh_name not in options
+    installed_visible_demos = [
+        mesh_name
+        for mesh_name in DEMO_HUMAN_MESHES
+        if mesh_stem_is_installed(mesh_name) and mesh_name not in GUI_HIDDEN_HUMAN_MESHES
+    ]
+    if installed_visible_demos:
+        assert DEMO_MESH_SECTION_KEY in options
+    else:
+        assert DEMO_MESH_SECTION_KEY not in options
     assert "adult_female" in options
     assert "Mickey" not in str(options.values())
 

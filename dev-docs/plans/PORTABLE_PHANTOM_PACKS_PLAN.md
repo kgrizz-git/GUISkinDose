@@ -121,7 +121,7 @@ Add `PhantomPackError` in `src/guiskindose/phantom_pack.py`, subclassing `UserFa
 
 - [x] Add a row for this file under Master plans in `dev-docs/index.md`.
 - [x] Add a short pointer in `dev-docs/TO_DO.md` that links here. Remove that pointer in the PR that finishes the acceptance list.
-- [ ] Do not tick the Phase 2 boxes in `PORTABLE_APP_PLAN.md` until the matching step here is done.
+- [x] Do not tick the Phase 2 boxes in `PORTABLE_APP_PLAN.md` until the matching step here is done.
 
 ## Step 1 — One catalog lookup
 
@@ -194,13 +194,13 @@ Files:
 
 The settings field `phantom.human_mesh` stays the selector. Do not add a second mesh flag.
 
-- [ ] A headless calculate or plot whose human mesh is a missing catalog stem prints the `HumanMeshNotInstalledError` sentence to stderr and exits 1. The excepthook must not replace it with the generic operation code.
-- [ ] The same run for plane or cylinder does not consult the mesh library.
-- [ ] Add `--install-phantom-pack PATH` on the headless parser in `cli_args.py`. It installs and exits. It does not require `--file-path`. It prints counts and a fixed success or failure sentence. It does not print `PATH`.
-- [ ] `--mode gui` plus `--install-phantom-pack` exits 1 with a fixed sentence, the same shape as the equipment-profile GUI refusal in `__main__.py`.
-- [ ] A bad zip exits 1 with the `PhantomPackError` sentence and does not create a library file. `BadZipFile` and `OSError` from the installer are not what the process prints.
-- [ ] Tests in `tests/unittests/test_phantom_pack_cli.py` use the temp library and monkeypatch the pin and the version. They do not launch the GUI.
-- [ ] One test runs `--install-phantom-pack` with no `--file-path`. It exits 0, prints the installed count, and does not start a calculation.
+- [x] A headless calculate or plot whose human mesh is a missing catalog stem prints the `HumanMeshNotInstalledError` sentence to stderr and exits 1. The excepthook must not replace it with the generic operation code.
+- [x] The same run for plane or cylinder does not consult the mesh library.
+- [x] Add `--install-phantom-pack PATH` on the headless parser in `cli_args.py`. It installs and exits. It does not require `--file-path`. It prints counts and a fixed success or failure sentence. It does not print `PATH`.
+- [x] `--mode gui` plus `--install-phantom-pack` exits 1 with a fixed sentence, the same shape as the equipment-profile GUI refusal in `__main__.py`.
+- [x] A bad zip exits 1 with the `PhantomPackError` sentence and does not create a library file. `BadZipFile` and `OSError` from the installer are not what the process prints.
+- [x] Tests in `tests/unittests/test_phantom_pack_cli.py` use the temp library and monkeypatch the pin and the version. They do not launch the GUI.
+- [x] One test runs `--install-phantom-pack` with no `--file-path`. It exits 0, prints the installed count, and does not start a calculation.
 
 ## Step 5 — Settings rows and install action
 
@@ -224,9 +224,9 @@ After a successful install, rebuild the options from a fresh `get_human_mesh_opt
 
 GUI tests in `tests/gui/test_phantom_pack_settings.py`:
 
-- [ ] With a temp shipped set that has `adult_male` and a temp library that has `senior_male`, the senior row is Installed and the adult row is Installed.
-- [ ] A catalog stem in neither root is Not installed, remains the selected value, and is not replaced by `hudfrid`.
-- [ ] The install control accepts a synthetic zip and the row flips to Installed without a process restart. The test reads the temp library file. It does not assert a real home path.
+- [x] With a temp shipped set that has `adult_male` and a temp library that has `senior_male`, the senior row is Installed and the adult row is Installed.
+- [x] A catalog stem in neither root is Not installed, remains the selected value, and is not replaced by `hudfrid`.
+- [x] The install control accepts a synthetic zip and the row flips to Installed without a process restart. The test reads the temp library file. It does not assert a real home path.
 - [ ] A tampered zip leaves the row Not installed.
 - [ ] The preview status for a missing human mesh shows the install hint and does not draw a different body.
 
@@ -240,25 +240,25 @@ Files:
 
 These three paths exist today. `calculate.py` gates `do_calculate`. `figures.py` owns `make_geometry_fig`. `geometry_controller.py` calls that function around the `run.io_bound` site.
 
-- [ ] Human model plus a missing catalog stem notifies with the install hint, does not call the dose runner, and does not change `state.human_mesh`.
-- [ ] The same stem becomes calculable after the Step 5 install, using a synthetic STL that `Phantom` can load or a stub of the runner if the STL is too small to mesh. Prefer a tiny valid STL if the test suite already has a builder. Otherwise stub `Phantom` only in the GUI test and keep a real `Phantom` load in the unit test from Step 1.
-- [ ] Plane and cylinder still calculate without a mesh file.
-- [ ] Geometry preview of a missing human mesh shows the hint and does not substitute `hudfrid`.
-- [ ] GUI coverage goes in `tests/gui/test_phantom_pack_settings.py` or `tests/gui/test_calculate_tab_coverage.py`. Do not put this NiceGUI test under `tests/unittests/`.
+- [x] Human model plus a missing catalog stem notifies with the install hint, does not call the dose runner, and does not change `state.human_mesh`.
+- [x] The same stem becomes calculable after the Step 5 install, using a synthetic STL that `Phantom` can load or a stub of the runner if the STL is too small to mesh. Prefer a tiny valid STL if the test suite already has a builder. Otherwise stub `Phantom` only in the GUI test and keep a real `Phantom` load in the unit test from Step 1.
+- [x] Plane and cylinder still calculate without a mesh file.
+- [x] Geometry preview of a missing human mesh shows the hint and does not substitute `hudfrid`.
+- [x] GUI coverage goes in `tests/gui/test_phantom_pack_settings.py` or `tests/gui/test_calculate_tab_coverage.py`. Do not put this NiceGUI test under `tests/unittests/`.
 
 ## Step 7 — Docs, help, and registries
 
-- [ ] Add `docs/source/gui_help/phantom_packs.md`. State that a pack is optional data, that Full already contains the catalog, that Light gains the other clinical meshes from a pack zip or from the Full download, and that removing extra meshes means deleting the per-OS phantom directory. Name `~/.guiskindose/` as the prefs and profile directory, not as the mesh directory. Do not write an absolute path from this machine.
-- [ ] Register it in `dev-docs/help_registry.json` with a new help id, and add a `HelpButton` on the catalog section.
-- [ ] Adjust `docs/source/gui_help/phantom_preview.md` so it no longer says the mesh list is only what `phantom_data/` happens to contain.
-- [ ] Run `python scripts/sync_gui_help.py` and commit the mirrored help.
-- [ ] Add `ui_copy` keys for the not-installed suffix, the install button, the success count sentence, the failure sentence, the Phase 3 caption, and the CLI GUI-mode refusal. Owners are the modules that call `copy_text()`.
-- [ ] Add a glossary entry `phantom pack` in `dev-docs/glossary.json`.
-- [ ] Add a `phantom_packs` feature to `dev-docs/feature_doc_matrix.json` with the new modules, the new tests, this plan, `ADDITIONAL_PHANTOMS.md`, and the help page.
-- [ ] Update `AGENTS.md` (phantom paragraph), `dev-docs/ADDITIONAL_PHANTOMS.md`, and `dev-docs/FEATURE_INVENTORY.md` so they describe the catalog lookup and the user library.
-- [ ] Run `python scripts/check_help_registry.py`, `python scripts/check_ui_copy.py`, `python scripts/check_feature_doc_matrix.py`, and `python scripts/sync_gui_help.py --check`.
-- [ ] Tick the matching Phase 2 boxes in `PORTABLE_APP_PLAN.md` only for behavior that has landed. Leave the parent acceptance box open until the acceptance section below is done.
-- [ ] Changelog Added bullet. Maintenance log bullet for the pin script and the tests.
+- [x] Add `docs/source/gui_help/phantom_packs.md`. State that a pack is optional data, that Full already contains the catalog, that Light gains the other clinical meshes from a pack zip or the Full download, and that removing extra meshes means deleting the per-OS phantom directory. Name `~/.guiskindose/` as the prefs and profile directory, not as the mesh directory. Do not write an absolute path from this machine.
+- [x] Register it in `dev-docs/help_registry.json` with a new help id, and add a `HelpButton` on the catalog section.
+- [x] Adjust `docs/source/gui_help/phantom_preview.md` so it no longer says the mesh list is only what `phantom_data/` happens to contain.
+- [x] Run `python scripts/sync_gui_help.py` and commit the mirrored help.
+- [x] Add `ui_copy` keys for the not-installed suffix, the install button, the success count sentence, the failure sentence, the Phase 3 caption, and the CLI GUI-mode refusal. Owners are the modules that call `copy_text()`.
+- [x] Add a glossary entry `phantom pack` in `dev-docs/glossary.json`.
+- [x] Add a `phantom_packs` feature to `dev-docs/feature_doc_matrix.json` with the new modules, the new tests, this plan, `ADDITIONAL_PHANTOMS.md`, and the help page.
+- [x] Update `AGENTS.md` (phantom paragraph), `dev-docs/ADDITIONAL_PHANTOMS.md`, and `dev-docs/FEATURE_INVENTORY.md` so they describe the catalog lookup and the user library.
+- [x] Run `python scripts/check_help_registry.py`, `python scripts/check_ui_copy.py`, `python scripts/check_feature_doc_matrix.py`, and `python scripts/sync_gui_help.py --check`.
+- [x] Tick the matching Phase 2 boxes in `PORTABLE_APP_PLAN.md` only for behavior that has landed. Leave the parent acceptance box open until the acceptance section below is done.
+- [x] Changelog Added bullet. Maintenance log bullet for the pin script and the tests.
 
 ## Acceptance
 

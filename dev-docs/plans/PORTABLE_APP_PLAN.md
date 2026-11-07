@@ -322,12 +322,12 @@ The Light app is now reproduced from committed files. `guiskindose.spec` writes 
 
 ### Phase 2 — User library and offline pack
 
-- [ ] Add the canonical catalog and one resolution entry point (shipped payload, then user library, with stem confinement). A shipped file cannot be shadowed. Move `Phantom`, the preview, mesh measurement, and the selector onto it. Remove the selector's silent fallback.
-- [ ] "Install phantom pack" picks a local zip, verifies the manifest, and copies only allow-listed STLs into the user library. Extract entry by entry into a temp directory with a running decompressed-byte cap, because central-directory sizes can lie. Reject symlinks, hardlinks, directories, and names that collide after case folding. Move only allow-listed `.stl` files into place.
-- [ ] Settings shows installed and not-installed catalog rows.
-- [ ] A missing mesh blocks calculation with an install hint.
-- [ ] Unit tests use a temp library and a tiny synthetic STL. They do not download anything.
-- [ ] Help text states that packs are optional data and that Full already contains the catalog.
+- [x] Add the canonical catalog and one resolution entry point (shipped payload, then user library, with stem confinement). A shipped file cannot be shadowed. Move `Phantom`, the preview, mesh measurement, and the selector onto it. Remove the selector's silent fallback.
+- [x] "Install phantom pack" picks a local zip, verifies the manifest, and copies only allow-listed STLs into the user library. Extract entry by entry into a temp directory with a running decompressed-byte cap, because central-directory sizes can lie. Reject symlinks, hardlinks, directories, and names that collide after case folding. Move only allow-listed `.stl` files into place.
+- [x] Settings shows installed and not-installed catalog rows.
+- [x] A missing mesh blocks calculation with an install hint.
+- [x] Unit tests use a temp library and a tiny synthetic STL. They do not download anything.
+- [x] Help text states that packs are optional data and that Full already contains the catalog.
 
 **Acceptance:** a Light app plus a pack zip gains a mesh that was not in the Light payload, survives restart, and is used for a calculation. A tampered STL is rejected. An oversized zip is rejected before extraction finishes.
 
