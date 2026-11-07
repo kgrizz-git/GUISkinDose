@@ -244,12 +244,10 @@ def _run_unix_pipe_chromium_wrapper(cli: list[str], *, chromium_root: Path | Non
     handler = partial(_terminate_chromium_on_signal, launched, claim, requested)
     signal.signal(signal.SIGTERM, handler)
     signal.signal(signal.SIGINT, handler)
-    popen_kwargs: dict[str, object] = {"pass_fds": (3, 4)}
+    child_env: dict[str, str] | None = None
     if chromium_root is not None:
         child_env = _chromium_child_environ(chromium_root)
-        if child_env is not None:
-            popen_kwargs["env"] = child_env
-    process = subprocess.Popen(cli, **popen_kwargs)  # type: ignore[arg-type]
+    process = subprocess.Popen(cli, pass_fds=(3, 4), env=child_env)
     launched.append(process)
     if requested:  # a signal arrived before Chromium existed
         with contextlib.suppress(OSError):
