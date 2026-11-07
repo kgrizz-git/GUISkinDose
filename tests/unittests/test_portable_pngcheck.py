@@ -205,6 +205,22 @@ def test_list_processes_parses_macos_chromium_command_line(pngcheck, monkeypatch
     assert row["cmd"] == f"{browser} --headless --no-sandbox"
 
 
+@pytest.mark.parametrize(
+    ("platform", "extra_name"),
+    [
+        ("win32", "LICENSE.ungoogled-chromium-windows.txt"),
+        ("darwin", "LICENSE.ungoogled-chromium-macos.txt"),
+        ("linux", "LICENSE.ungoogled-chromium-portablelinux.txt"),
+    ],
+)
+def test_required_notice_names_per_platform(pngcheck, monkeypatch, platform, extra_name) -> None:
+    monkeypatch.setattr(pngcheck, "_host_platform", lambda: platform)
+    names = pngcheck.required_notice_names()
+    assert names[:2] == ("LICENSE.chromium.txt", "CREDITS.html")
+    assert names[-1] == extra_name
+    assert len(names) == 3
+
+
 def test_check_bundle_fails_closed_without_browser(pngcheck, monkeypatch, tmp_path):
     monkeypatch.setattr(pngcheck, "app_dir", lambda: tmp_path)
     with pytest.raises(FileNotFoundError, match="bundled_browser_missing"):

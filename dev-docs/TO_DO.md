@@ -28,9 +28,10 @@ be archived.
    next: close remaining Phase 2 acceptance and per-slice contracts; later activation/transmission/authoring work remains open.
 - [ ] **Geometry-driven support transmission** — See the correction-data roadmap in
   Active Work / [GEOMETRY_DRIVEN_SUPPORT_TRANSMISSION_PLAN.md](plans/GEOMETRY_DRIVEN_SUPPORT_TRANSMISSION_PLAN.md).
-- [ ] **Portable desktop app** — Light and Full double-click builds. Phase 1 partial (editions, pywebview floor, Light PNG gate, WebView2 registry pre-check, preview proof, packaging note, Windows edition matrix, PNG timing, Unix pipe-wrapper code):
-  [PORTABLE_APP_PLAN.md](plans/PORTABLE_APP_PLAN.md). Unix Chromium wrapper shipped in tree; frozen macOS/Linux `--png-check` proof still open:
-  [PORTABLE_BROWSER_WRAPPER_PLAN.md](plans/PORTABLE_BROWSER_WRAPPER_PLAN.md). Detail in Active Work.
+- [ ] **Portable desktop app** — Light and Full double-click builds. Phase 1 partial (editions, pywebview floor, Light PNG gate, WebView2 registry pre-check, preview proof, packaging note, Windows edition matrix, PNG timing, Unix pipe-wrapper code, macOS Helpers plus Linux `chromium/` layout, and `portable-spike.yml` macOS/Linux jobs):
+  [PORTABLE_APP_PLAN.md](plans/PORTABLE_APP_PLAN.md). Unix Chromium wrapper shipped in tree; frozen macOS/Linux `--png-check` proof still open until CI records a green Full run:
+  [PORTABLE_BROWSER_WRAPPER_PLAN.md](plans/PORTABLE_BROWSER_WRAPPER_PLAN.md);
+  CI jobs and path move: [PORTABLE_MAC_LINUX_CI_BUILDS_PLAN.md](plans/PORTABLE_MAC_LINUX_CI_BUILDS_PLAN.md). Detail in Active Work.
 
 ## Active Work
 
@@ -57,9 +58,10 @@ be archived.
   - *Native window* — restore-from-maximize and multi-display OS smokes
     ([MAC_NATIVE_WINDOW_MAXIMIZE_PLAN.md](plans/archive/MAC_NATIVE_WINDOW_MAXIMIZE_PLAN.md),
     [NATIVE_WINDOW_GEOMETRY_PLAN.md](plans/archive/NATIVE_WINDOW_GEOMETRY_PLAN.md)).
-- [ ] **Portable desktop app (PyInstaller)** — Phase 1 partial (the Light/Full editions, the pywebview floor, the Light PNG gate, the WebView2 registry pre-check, the preview proof, the packaging note, the Windows edition matrix, the PNG timing, and the Unix pipe-wrapper code are in; macOS/Linux CI, macOS release signing, frozen macOS/Linux `--png-check`, the manual offline PNG check, and the clean-VM checks remain):
+- [ ] **Portable desktop app (PyInstaller)** — Phase 1 partial (the Light/Full editions, the pywebview floor, the Light PNG gate, the WebView2 registry pre-check, the preview proof, the packaging note, the Windows edition matrix, the PNG timing, the Unix pipe-wrapper code, and the macOS/Linux CI workflow jobs are in; green macOS/Linux Full `--png-check` runs, macOS release signing, the manual offline PNG check, and the clean-VM checks remain):
   [PORTABLE_APP_PLAN.md](plans/PORTABLE_APP_PLAN.md). Wrapper plan:
-  [PORTABLE_BROWSER_WRAPPER_PLAN.md](plans/PORTABLE_BROWSER_WRAPPER_PLAN.md). Light is a small phantom set with no PNG export
+  [PORTABLE_BROWSER_WRAPPER_PLAN.md](plans/PORTABLE_BROWSER_WRAPPER_PLAN.md);
+  macOS/Linux CI and layout: [PORTABLE_MAC_LINUX_CI_BUILDS_PLAN.md](plans/PORTABLE_MAC_LINUX_CI_BUILDS_PLAN.md). Light is a small phantom set with no PNG export
   and no bundled browser. Full is the clinical library plus Chromium for offline Kaleido PNG
   (not Chrome for Testing). Phase 0 is a Windows freeze spike. Light checks for
   WebView2 before the window starts and does not ship that 250 MB runtime. Public Full

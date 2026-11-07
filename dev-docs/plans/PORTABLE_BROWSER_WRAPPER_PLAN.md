@@ -94,21 +94,19 @@ Against tag `v6.22.3`: `bootloader/src/pyi_main.c` does not `freopen` stdout or 
 
 ## Browser path
 
-`bundled_browser()` today is `<base>/chromium/chrome.exe` on Windows and `<base>/chromium/chrome` elsewhere (`png_browser.py`, lines 76–80). `base` defaults to `Path(sys.executable).resolve().parent`. On a macOS `.app` that parent is `Contents/MacOS`.
-
-Those names match Windows and Linux. They do not match the macOS build.
+`bundled_browser()` is `<base>/chromium/chrome.exe` on Windows, `<base>/chromium/chrome` on Linux, and `Contents/Helpers/Chromium.app/Contents/MacOS/Chromium` on a frozen macOS `.app` (`png_browser.py`). `base` defaults to `Path(sys.executable).resolve().parent`. On macOS that parent is `Contents/MacOS`, so the browser path walks up to `Helpers`.
 
 | OS | Artifact | Executable `bundled_browser()` must return |
 |----|----------|-----------------------------------------------|
 | Windows | ungoogled-chromium zip, already pinned | `<exe dir>/chromium/chrome.exe` (unchanged) |
 | Linux | ungoogled-chromium-portablelinux `.tar.xz`, not the AppImage | `<exe dir>/chromium/chrome`. The unpack is a directory whose main binary is `chrome`, with the shared libraries beside it (portablelinux packaging; a distro ebuild `doexe`s `chrome`). Copy the directory contents into `chromium/`, not the `chrome` file alone. |
-| macOS | ungoogled-chromium-macos `.dmg` | `<exe dir>/chromium/Chromium.app/Contents/MacOS/Chromium`. The dmg contains `Chromium.app`; the Mach-O is `Contents/MacOS/Chromium` (the same path choreographer searches under `/Applications`, `_chrome_constants.py` line 83). **Record-only layout today:** copy with `ditto` into `GUISkinDose.app/Contents/MacOS/chromium/Chromium.app` (sibling of the GUISkinDose Mach-O). Before the first signed Full build, decide whether that stays under `Contents/MacOS/chromium/` or moves to `Contents/Frameworks/chromium/`, then verify with `codesign --verify --deep --strict`, `spctl -a -t exec -vv`, and the notary log. Do not change code paths until that decision is recorded. |
+| macOS | ungoogled-chromium-macos `.dmg` | `GUISkinDose.app/Contents/Helpers/Chromium.app/Contents/MacOS/Chromium` (from `png_browser.bundled_browser()` when frozen). CI copies the disk image's `Chromium.app` with `ditto` into `Contents/Helpers`. License files and `CREDITS.html` live under `Contents/Resources/chromium/`, not beside the Mach-O. See [PORTABLE_MAC_LINUX_CI_BUILDS_PLAN.md](PORTABLE_MAC_LINUX_CI_BUILDS_PLAN.md). |
 
 `bundled_browser_for_render()` returns `bundled_browser()` whenever the process is frozen, on every OS. It returns `None` only when not frozen. The macOS and Linux `None` branch and its comment go away in the same change as the gate (chunk 1 lands first; see commits).
 
-Notices stay in the `chromium/` directory, which is `chrome.exe`'s parent on Windows and `chrome`'s parent on Linux. On macOS the Mach-O's parent is `Contents/MacOS`, so `pngcheck._check_bundle` must not use `browser.parent` for notices (`pngcheck.py`, lines 58–61). Resolve the ancestor whose name is `chromium`. Windows then looks at the same directory it looks at today.
+Notices stay in the `chromium/` directory on Windows and Linux, which is `chrome.exe`'s or `chrome`'s parent. On macOS they live under `Contents/Resources/chromium/`. `pngcheck.required_notice_names()` picks the platform license file (`LICENSE.ungoogled-chromium-macos.txt` or `LICENSE.ungoogled-chromium-portablelinux.txt`).
 
-`selfcheck._bundled_browser_present` keeps checking for a `chromium/` directory beside the executable. A nested `Chromium.app` still satisfies that.
+On macOS, `selfcheck._bundled_browser_present` checks for `Contents/Helpers/Chromium.app`. On Linux and Windows it still checks for a `chromium/` directory beside the executable.
 
 This plan does not pin macOS or Linux sha256 values, download the artifacts, or sign the nested app. Those stay in [PORTABLE_APP_PLAN.md](PORTABLE_APP_PLAN.md) Phase 0b and Phase 1, and in [references/PORTABLE_CHROMIUM_ARTIFACT.md](../references/PORTABLE_CHROMIUM_ARTIFACT.md).
 

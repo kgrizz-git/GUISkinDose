@@ -8,6 +8,16 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ## [Unreleased]
 
+- **Portable macOS/Linux CI jobs and bundle layout** (2026-11-06) — Chunk 1 moved the macOS Full
+  browser to `Contents/Helpers/Chromium.app` and notices to `Contents/Resources/chromium/`. Linux
+  wrapper children get `LD_LIBRARY_PATH` with the `chromium/` directory prepended. Chunk 2 added
+  `macos-edition`, `linux-edition`, and optional Intel Full jobs to `portable-spike.yml` via
+  `macos_bundle_chromium.sh` and `linux_bundle_chromium.sh`. Frozen Full `--png-check` on macOS and
+  Linux remains unchecked in the parent plan until Actions records a green run id. Release signing
+  and the Linux air-gapped PNG claim stay open. Plans:
+  [PORTABLE_MAC_LINUX_CI_BUILDS_PLAN.md](plans/PORTABLE_MAC_LINUX_CI_BUILDS_PLAN.md),
+  [PORTABLE_APP_PLAN.md](plans/PORTABLE_APP_PLAN.md).
+
 - **Frozen Unix Chromium pipe wrapper (code)** (2026-11-05) — `packaging/portable/entry.py`
   now performs choreographer's Unix pipe-wrapper re-exec before stream routing or
   `freeze_support`. Frozen macOS and Linux Full builds resolve bundled browser paths

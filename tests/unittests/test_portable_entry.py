@@ -495,6 +495,25 @@ def test_darwin_wrapper_gate_rejects_macos_chromium_dir(darwin_host, monkeypatch
     assert not dup2_called
 
 
+def test_chromium_child_environ_prepends_linux_chromium_only(entry_module, unix_host, monkeypatch, tmp_path):
+    import importlib
+
+    entry_platform = importlib.import_module("_entry_platform")
+    monkeypatch.setattr(entry_platform, "_override", "linux")
+    prior = "existing-libs"
+    monkeypatch.setenv("LD_LIBRARY_PATH", prior)
+    chromium = tmp_path / "chromium"
+    chromium.mkdir()
+    env = entry_module._chromium_child_environ(chromium)
+    assert env is not None
+    assert env["LD_LIBRARY_PATH"].startswith(f"{chromium.resolve()}:")
+    assert env["LD_LIBRARY_PATH"].endswith(prior)
+    assert os.environ.get("LD_LIBRARY_PATH") == prior
+
+    monkeypatch.setattr(entry_platform, "_override", "darwin")
+    assert entry_module._chromium_child_environ(chromium) is None
+
+
 def test_linux_wrapper_prepends_ld_library_path_in_popen_only(unix_host, monkeypatch, tmp_path):
     """Bundled library path is passed only to the Chromium Popen, not the process environment."""
     prior = "existing-libs"

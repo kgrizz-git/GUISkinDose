@@ -89,16 +89,36 @@ is a stable-branch build with a smaller footprint, but its binaries come from a 
 Its build logs are public on GitHub Actions, which makes the provenance auditable, not
 equivalent to Google's.
 
-## Other operating systems (not yet tested)
+## Pinned artifact (macOS arm64)
+
+| Field | Value |
+|-------|-------|
+| Provider | `ungoogled-software/ungoogled-chromium-macos`, GitHub Release `156.0.8078.79-1.1` |
+| URL | `https://github.com/ungoogled-software/ungoogled-chromium-macos/releases/download/156.0.8078.79-1.1/ungoogled-chromium_156.0.8078.79-1.1_arm64-macos.dmg` |
+| sha256 | `4ff3b084c49d2391aecdd3924ebd1bd7417fb1dd88e3da45891bee73f8e5c173` |
+| Layout | `ditto` the disk image's `Chromium.app` into `GUISkinDose.app/Contents/Helpers/Chromium.app`. Notices under `Contents/Resources/chromium/` (`LICENSE.chromium.txt`, `LICENSE.ungoogled-chromium-macos.txt`, `CREDITS.html`). |
+
+Intel x86_64 dispatch uses the matching `..._x86_64-macos.dmg` with sha256 `152f0d67ab9301a2e6fa4d38b25e1382c0c74c72772d533ce7c4390e599a1db4` (same workflow file).
+
+## Pinned artifact (Linux x86_64)
+
+| Field | Value |
+|-------|-------|
+| Provider | `ungoogled-software/ungoogled-chromium-portablelinux`, GitHub Release `156.0.8078.79-1` |
+| URL | `https://github.com/ungoogled-software/ungoogled-chromium-portablelinux/releases/download/156.0.8078.79-1/ungoogled-chromium-156.0.8078.79-1-x86_64_linux.tar.xz` |
+| sha256 | `d35a9064068274af1a2efa8bcb9b42306e590f9b5c929789f2e0e51a35880499` |
+| Layout | Unpack the tarball into `<onedir>/chromium/` beside the `GUISkinDose` binary. Launch `chromium/chrome` directly. The binary lists many `DT_NEEDED` sonames and has no `DT_RUNPATH`; the frozen entry prepends `chromium/` to `LD_LIBRARY_PATH` for wrapper children only. CI records sonames resolved outside `chromium/` via `ldd`; a green `--png-check` on the default Ubuntu runner still uses system libraries for some of them. |
+
+Notices on Linux match Windows: all three files under `<onedir>/chromium/`, with `LICENSE.ungoogled-chromium-portablelinux.txt` instead of the Windows packaging license.
+
+The macOS build is a nested `.app` with helper apps. Phase 0b release signing re-signs every nested binary, the browser included, inside-out with our Developer ID for notarization. CI ad-hoc re-sign is layout-only. The upstream nested signature is exercised before that re-sign.
+
+## Upstream snapshot comparison (unchanged)
 
 | OS | ungoogled-chromium | Upstream snapshot |
 |----|--------------------|-------------------|
-| macOS arm64 | `ungoogled-chromium-macos` release `156.0.8078.47-1.1`, `..._arm64-macos.dmg`, 150.9 MB | `Mac_Arm/1732297/chrome-mac.zip`, 180.1 MB |
-| Linux x86_64 | `ungoogled-chromium-portablelinux` release `156.0.8078.79-1`, `..._x86_64.AppImage`, 209.5 MB (a `.tar.xz` is also published) | `Linux_x64/1732295/chrome-linux.zip`, 254.9 MB |
-
-The macOS build is a nested `.app` with helper apps. Phase 0b re-signs every nested binary,
-the browser included, inside-out with our Developer ID for notarization. So the upstream signature
-does not matter on macOS. The macOS and Linux sha256 values are not pinned yet.
+| macOS arm64 | pinned above | `Mac_Arm/1732297/chrome-mac.zip`, 180.1 MB |
+| Linux x86_64 | pinned above | `Linux_x64/1732295/chrome-linux.zip`, 254.9 MB |
 
 ## Kaleido and choreographer facts that shape the integration
 

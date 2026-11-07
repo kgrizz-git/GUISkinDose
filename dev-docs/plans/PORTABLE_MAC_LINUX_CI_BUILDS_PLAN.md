@@ -1,6 +1,6 @@
 # macOS and Linux portable builds in CI
 
-_Status: not started (plan written 2026-11-06, revised the same day after review)._
+_Status: in progress — chunks 1–2 landed on branch `portable/mac-linux-ci-builds` (commits through chunk 2); chunk 3 docs and tests are in progress. Frozen Full `--png-check` on macOS and Linux stays pending until a completed Actions run id is recorded._
 _Parent: [PORTABLE_APP_PLAN.md](PORTABLE_APP_PLAN.md) Phase 0b "Export PNG offline" and Phase 1 "CI builds Windows, macOS, and Linux onedir zips"._
 _Closes the frozen-proof gap in [PORTABLE_BROWSER_WRAPPER_PLAN.md](PORTABLE_BROWSER_WRAPPER_PLAN.md). The wrapper code is already on main (PR #218). This plan adds the builds that run it, and it changes the macOS browser path the wrapper plan left undecided._
 
