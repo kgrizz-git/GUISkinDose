@@ -172,6 +172,18 @@ def _spawn_chrome_watch() -> subprocess.Popen[str]:
     )
 
 
+def _ps_executable(cmd: str) -> str:
+    """Executable path from a ``ps`` command column, or ``""`` when it has none.
+
+    ``ps`` shows an exited child that is not yet reaped as ``(name)``, with no path.
+    Resolving that name would place it in the working directory and count it as a
+    browser outside the bundle, so it is reported as uninspectable instead.
+    """
+    if cmd.startswith("("):
+        return ""
+    return cmd.split(" --", 1)[0]
+
+
 def _list_processes() -> list[dict[str, Any]]:
     """Every process as ``{pid, ppid, exe, cmd}``; Windows via CIM, else ``ps``.
 
@@ -200,7 +212,7 @@ def _list_processes() -> list[dict[str, Any]]:
     rows = []
     for line in raw.splitlines():
         pid, ppid, cmd = line.strip().split(None, 2)
-        rows.append({"pid": int(pid), "ppid": int(ppid), "exe": cmd.split(" --", 1)[0], "cmd": cmd})
+        rows.append({"pid": int(pid), "ppid": int(ppid), "exe": _ps_executable(cmd), "cmd": cmd})
     return rows
 
 

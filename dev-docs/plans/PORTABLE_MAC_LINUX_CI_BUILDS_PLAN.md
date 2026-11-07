@@ -91,7 +91,7 @@ Light has no `ditto` of a nested app. After the freeze, run `codesign --verify -
 
 `macos_sign_notarize.sh` stays out of this job. It requires a Developer ID, it turns on the hardened runtime, and it notarizes. The later release PR re-signs this same Helpers layout with that script and reads the notary log. The empty entitlements file stays empty.
 
-A passing first `--png-check` means the bootloader handed Chromium pipe fds through child-side `preexec_fn` remap even when the frozen parent already holds fd 3 (`base_library.zip`). The summary still says `wrapper_fds=implied_free` when that run passes. The signing script's use of fd 3 is the shell reading a notary env file. This job does not run that script.
+A passing first `--png-check` means the bootloader handed Chromium pipe fds through child-side `preexec_fn` remap even when the frozen parent already holds fd 3 (`base_library.zip`). The summary says `wrapper_fds=child_remap` when that run passes. The signing script's use of fd 3 is the shell reading a notary env file. This job does not run that script.
 
 ## Runners, memory, and disk
 

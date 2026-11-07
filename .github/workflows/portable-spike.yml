@@ -514,7 +514,10 @@ jobs:
         log="$(uv run --no-sync python -c "from guiskindose.debug import default_native_log_path; p=default_native_log_path(); import sys; assert p; sys.stdout.write(str(p))")"
         rm -f "${log}"* 2>/dev/null || true
         start=$SECONDS
-        "$APP_EXE" &
+        # NiceGUI prints its ready line to stdout, and a terminal launch keeps stdout,
+        # so the line lands in the console capture rather than the native log.
+        console="${RUNNER_TEMP}/gui-console.txt"
+        "$APP_EXE" >"$console" 2>&1 &
         pid=$!
         up=false
         while [ $((SECONDS - start)) -lt 120 ]; do
@@ -530,7 +533,7 @@ jobs:
           while [ $SECONDS -lt $log_deadline ]; do
             if [ -f "$log" ]; then
               grep -q 'Portable GUI starting' "$log" && started=true
-              grep -q 'NiceGUI ready' "$log" && ready=true
+              grep -qs 'NiceGUI ready' "$log" "$console" && ready=true
               $started && $ready && break
             fi
             kill -0 "$pid" 2>/dev/null || break

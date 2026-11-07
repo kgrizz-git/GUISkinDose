@@ -205,6 +205,23 @@ def test_list_processes_parses_macos_chromium_command_line(pngcheck, monkeypatch
     assert row["cmd"] == f"{browser} --headless --no-sandbox"
 
 
+def test_unreaped_child_row_has_no_path_and_is_not_counted_outside(pngcheck, monkeypatch, tmp_path):
+    """An exited helper shows as ``(Chromium Helper)``; it must not fail the launch check."""
+    import os
+
+    contents = tmp_path / "Contents"
+    browser = contents / "Helpers" / "Chromium.app" / "Contents" / "MacOS" / "Chromium"
+    lines = f"  42  {os.getpid()}  {browser} --headless\n  43  42  (Chromium Helper)\n"
+    monkeypatch.setattr(pngcheck, "_host_platform", lambda: "linux")
+    monkeypatch.setattr(pngcheck.subprocess, "run", lambda *a, **k: type("R", (), {"stdout": lines})())
+    monkeypatch.setattr(pngcheck, "app_dir", lambda: contents)
+    rows = pngcheck._list_processes()
+    assert rows[1]["exe"] == ""
+    launch = pngcheck._describe_launch(rows)
+    assert launch["launched_outside_onedir"] == 0
+    pngcheck._require_bundled_launch(launch, rows, 1)
+
+
 def test_app_dir_returns_contents_for_macos_app_bundle(pngcheck, monkeypatch, tmp_path) -> None:
     macos = tmp_path / "Contents" / "MacOS"
     macos.mkdir(parents=True)

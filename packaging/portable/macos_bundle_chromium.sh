@@ -98,8 +98,8 @@ rm -rf "$dl" "$mount_dir"
 mkdir -p "$CI_OUT"
 export PNG_CHECK_LABEL=pre_resign
 "${PORTABLE_DIR}/macos_frozen_png_check.sh"
-echo "wrapper_fds=implied_free"
-append_env "WRAPPER_FDS=implied_free"
+echo "wrapper_fds=child_remap"
+append_env "WRAPPER_FDS=child_remap"
 
 adhoc_resign_app "$APP_BUNDLE"
 codesign --verify --deep --strict "$APP_BUNDLE"
