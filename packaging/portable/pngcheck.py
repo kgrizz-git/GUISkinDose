@@ -175,11 +175,12 @@ def _spawn_chrome_watch() -> subprocess.Popen[str]:
 def _ps_executable(cmd: str) -> str:
     """Executable path from a ``ps`` command column, or ``""`` when it has none.
 
-    ``ps`` shows an exited child that is not yet reaped as ``(name)``, with no path.
-    Resolving that name would place it in the working directory and count it as a
-    browser outside the bundle, so it is reported as uninspectable instead.
+    ``ps`` shows an exited child that is not yet reaped with no path: ``(name)`` on
+    macOS and ``[name] <defunct>`` on Linux. Resolving that name would place it in the
+    working directory and count it as a browser outside the bundle, so it is reported
+    as uninspectable instead.
     """
-    if cmd.startswith("("):
+    if cmd.startswith(("(", "[")):
         return ""
     return cmd.split(" --", 1)[0]
 

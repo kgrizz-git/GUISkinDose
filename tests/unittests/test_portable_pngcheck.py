@@ -211,12 +211,15 @@ def test_unreaped_child_row_has_no_path_and_is_not_counted_outside(pngcheck, mon
 
     contents = tmp_path / "Contents"
     browser = contents / "Helpers" / "Chromium.app" / "Contents" / "MacOS" / "Chromium"
-    lines = f"  42  {os.getpid()}  {browser} --headless\n  43  42  (Chromium Helper)\n"
+    lines = (
+        f"  42  {os.getpid()}  {browser} --headless\n  43  42  (Chromium Helper)\n  44  42  [chrome] <defunct>\n"
+    )
     monkeypatch.setattr(pngcheck, "_host_platform", lambda: "linux")
     monkeypatch.setattr(pngcheck.subprocess, "run", lambda *a, **k: type("R", (), {"stdout": lines})())
     monkeypatch.setattr(pngcheck, "app_dir", lambda: contents)
     rows = pngcheck._list_processes()
     assert rows[1]["exe"] == ""
+    assert rows[2]["exe"] == ""
     launch = pngcheck._describe_launch(rows)
     assert launch["launched_outside_onedir"] == 0
     pngcheck._require_bundled_launch(launch, rows, 1)
