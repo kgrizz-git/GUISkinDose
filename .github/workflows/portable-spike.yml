@@ -872,6 +872,21 @@ jobs:
       run: |
         mkdir -p out
         ditto -c -k --keepParent "$APP_BUNDLE" "out/${ZIP_NAME}"
+    - name: Unzip into a fresh folder
+      run: |
+        set -euo pipefail
+        dest="${RUNNER_TEMP}/unzipped"
+        rm -rf "$dest"
+        mkdir -p "$dest"
+        ditto -x -k "out/${ZIP_NAME}" "$dest"
+        exe="${dest}/GUISkinDose.app/Contents/MacOS/GUISkinDose"
+        test -x "$exe"
+        echo "APP_EXE=${exe}" >> "$GITHUB_ENV"
+    - name: Post-resign frozen PNG check on unzipped bundle
+      env:
+        PNG_CHECK_LABEL: post_resign
+        BROWSER_REL: Helpers/Chromium.app/Contents/MacOS/Chromium
+      run: packaging/portable/macos_frozen_png_check.sh
     - name: Summary
       if: always()
       run: |

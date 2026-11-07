@@ -51,6 +51,7 @@ _HTTP_SCRIPT = re.compile(r"<script\b[^>]*\bsrc\s*=\s*[\"']?\s*https?:", re.IGNO
 
 
 def _executable_dir() -> Path:
+    """Directory that holds the frozen executable (``Contents/MacOS`` on macOS)."""
     return Path(sys.executable).resolve().parent
 
 
@@ -79,16 +80,19 @@ def required_notice_names() -> tuple[str, ...]:
 
 
 def _chromium_notice_dir() -> Path:
+    """Folder that holds the bundled browser's license notices."""
     if _host_platform() == "darwin":
         return app_dir() / "Resources" / "chromium"
     return _executable_dir() / BROWSER_DIR
 
 
 def _is_system_chrome_process(exe: str) -> bool:
+    """True when *exe* has a system Google Chrome binary name."""
     return Path(exe).name.lower() in _SYSTEM_CHROME_NAMES
 
 
 def _check_bundle() -> dict[str, Any]:
+    """Report whether the bundled browser and its notices are present."""
     browser = bundled_browser(_executable_dir())
     notice_dir = _chromium_notice_dir()
     notices = {name: (notice_dir / name).is_file() for name in required_notice_names()}
@@ -218,6 +222,7 @@ def _list_processes() -> list[dict[str, Any]]:
 
 
 def _descendants(rows: list[dict[str, Any]], root: int) -> list[dict[str, Any]]:
+    """Every row below *root* in the process tree built from *rows*."""
     children: dict[int, list[dict[str, Any]]] = {}
     for row in rows:
         children.setdefault(row["ppid"], []).append(row)
@@ -474,6 +479,7 @@ def _require_bundled_launch(launch: dict[str, Any], rows: list[dict[str, Any]], 
 
 
 def _render_pngs(captured_pages: list[str]) -> dict[str, Any]:
+    """Export the example procedure and record how its PNGs were rendered."""
     from kaleido import _page_generator
 
     from guiskindose import PyskindoseSettings, load_settings_example_json
@@ -533,6 +539,7 @@ def _render_pngs(captured_pages: list[str]) -> dict[str, Any]:
 
 
 def _check_page(captured_pages: list[str]) -> dict[str, Any]:
+    """Check the captured Kaleido pages for remote script references."""
     found = {
         "pages_captured": len(captured_pages),
         "http_script_refs": sum(len(_HTTP_SCRIPT.findall(page)) for page in captured_pages),

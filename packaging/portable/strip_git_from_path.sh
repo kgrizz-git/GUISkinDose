@@ -11,6 +11,9 @@ strip_git_from_path() {
     IFS=':' read -r -a parts <<<"$PATH"
     for entry in "${parts[@]}"; do
         [[ -n "$entry" ]] || continue
+        # Every relative PATH entry is pinned to the current directory, so the
+        # shim links still point at the right tools after a later cd.
+        [[ "$entry" == /* ]] || entry="${PWD}/${entry}"
         if [[ -x "${entry%/}/git" ]]; then
             shim="$(mktemp -d)"
             for tool in "${entry%/}"/*; do
