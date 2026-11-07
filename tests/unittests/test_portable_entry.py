@@ -906,7 +906,7 @@ def test_map_debugging_pipe_fds_in_child_when_parent_fd3_is_busy(entry_module, t
         echoed, _ = proc.communicate(b"pipe-handoff-bytes", timeout=30)
         assert proc.returncode == 0, proc.returncode
         assert echoed == b"pipe-handoff-bytes", echoed
-        assert os.fstat(3).st_ino == os.fstat(marker_fd).st_ino
+        assert os.fstat(3).st_ino == os.stat(sys.argv[2]).st_ino
         """
     )
     result = subprocess.run(

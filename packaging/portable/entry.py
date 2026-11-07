@@ -221,6 +221,8 @@ def _map_debugging_pipe_fds() -> None:
     fd 3), so the parent cannot ``dup2`` onto 3 and 4 the way choreographer's script does.
     This runs in the forked child just before exec, so the parent's fds stay untouched.
     ``os.dup2`` marks the new fds inheritable, and ``close_fds=False`` keeps them.
+    ``preexec_fn`` is only safe because the gate runs at import time, before
+    ``freeze_support()`` and before any thread starts. Keep the gate above both.
     """
     os.dup2(0, 3)
     os.dup2(1, 4)
