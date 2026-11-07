@@ -19,6 +19,7 @@ import subprocess
 import sys
 import types
 from pathlib import Path
+from typing import Any, cast
 
 import pytest
 
@@ -622,9 +623,9 @@ def test_unix_wrapper_gate_dup2_popen_and_bye(unix_host, monkeypatch, tmp_path, 
     assert dup2_calls == [(0, 3), (1, 4)]
     assert set(inheritable) == {(3, True), (4, True)}
     assert popen_calls["cli"] == [argv[2], "--headless"]
-    popen_kwargs = popen_calls["kwargs"]
+    popen_kwargs = cast(dict[str, Any], popen_calls["kwargs"])
     assert popen_kwargs["pass_fds"] == (3, 4)
-    child_env = popen_kwargs["env"]
+    child_env = cast(dict[str, str], popen_kwargs["env"])
     chromium_prepend = os.fsdecode((tmp_path / "chromium").resolve())
     assert child_env["LD_LIBRARY_PATH"].startswith(chromium_prepend)
     assert write_calls == [(1, b"{bye}\n")]
