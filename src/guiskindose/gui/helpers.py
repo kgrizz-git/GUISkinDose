@@ -568,13 +568,18 @@ def get_example_tabular_files() -> list[Path]:
     return sorted(get_path_to_example_tabular_files().glob("*.csv"))
 
 
-def get_human_mesh_names() -> list[str]:
-    """Return available human mesh names (full-resolution only, canonical stems)."""
-    return sorted(
-        p.stem
-        for p in _PHANTOM_DATA_DIR.glob("*.stl")
-        if "_reduced_" not in p.stem
-    )
+def get_human_mesh_names(
+    *,
+    phantom_data_dir: Path | None = None,
+    user_library_dir: Path | None = None,
+) -> list[str]:
+    """Return installed human mesh names (full-resolution clinical stems only)."""
+    from guiskindose.phantom_library import default_user_library_dir, installed_full_clinical_stems
+    from guiskindose.phantom_mesh_names import package_phantom_data_dir
+
+    shipped = (phantom_data_dir or package_phantom_data_dir()).resolve()
+    library = user_library_dir if user_library_dir is not None else default_user_library_dir()
+    return installed_full_clinical_stems(shipped_dir=shipped, user_library_dir=library)
 
 
 def get_human_mesh_options(*, include_demos: bool | None = None) -> dict[str, str]:
@@ -655,8 +660,13 @@ def _cache_mesh_baseline_measurements(mesh_name: str) -> None:
     if mesh_name in _MESH_EXTENT_CACHE and mesh_name in _MESH_TORSO_WIDTH_CACHE:
         return
 
-    phantom_path = _PHANTOM_DATA_DIR / f"{mesh_name}.stl"
-    if not phantom_path.exists():
+    from guiskindose.phantom_mesh_names import HumanMeshNotInstalledError, resolve_human_mesh_stl_path
+
+    try:
+        phantom_path = resolve_human_mesh_stl_path(mesh_name, phantom_data_dir=_PHANTOM_DATA_DIR)
+    except (ValueError, OSError, HumanMeshNotInstalledError):
+        phantom_path = None
+    if phantom_path is None or not phantom_path.exists():
         _MESH_EXTENT_CACHE[mesh_name] = (0.0, 0.0, 0.0)
         _MESH_TORSO_WIDTH_CACHE[mesh_name] = 0.0
         return

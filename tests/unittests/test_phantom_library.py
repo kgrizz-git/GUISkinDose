@@ -1,0 +1,142 @@
+"""Two-root phantom library resolution."""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+import pytest
+
+from guiskindose.phantom_mesh_names import (
+    HumanMeshNotInstalledError,
+    human_mesh_not_installed_message,
+    prefer_reduced_preview_stem,
+    resolve_human_mesh_stl_path,
+)
+from tests.unittests.phantom_pack_test_helpers import tiny_stl_body
+
+
+def _write_stl(root: Path, stem: str, body: bytes | None = None) -> None:
+    root.mkdir(parents=True, exist_ok=True)
+    (root / f"{stem}.stl").write_bytes(body or tiny_stl_body())
+
+
+def test_user_library_resolves_when_shipped_missing(tmp_path: Path) -> None:
+    shipped = tmp_path / "shipped"
+    library = tmp_path / "library"
+    _write_stl(library, "senior_male")
+    path = resolve_human_mesh_stl_path(
+        "senior_male",
+        phantom_data_dir=shipped,
+        user_library_dir=library,
+    )
+    assert path.is_relative_to(library.resolve())
+    assert path.name == "senior_male.stl"
+
+
+def test_shipped_wins_over_user_library(tmp_path: Path) -> None:
+    shipped = tmp_path / "shipped"
+    library = tmp_path / "library"
+    _write_stl(shipped, "senior_male", b"shipped-bytes")
+    _write_stl(library, "senior_male", b"user-bytes")
+    path = resolve_human_mesh_stl_path(
+        "senior_male",
+        phantom_data_dir=shipped,
+        user_library_dir=library,
+    )
+    assert path.read_bytes() == b"shipped-bytes"
+    assert path.is_relative_to(shipped.resolve())
+
+
+def test_missing_message_names_pack_without_paths(tmp_path: Path) -> None:
+    shipped = tmp_path / "shipped"
+    library = tmp_path / "library"
+    shipped.mkdir()
+    library.mkdir()
+    message = human_mesh_not_installed_message(
+        "senior_male",
+        phantom_data_dir=shipped,
+        user_library_dir=library,
+    )
+    assert message is not None
+    assert "Senior Male" in message
+    assert "senior_male" in message
+    assert "phantom pack" in message.lower()
+    assert str(shipped) not in message
+    assert "/" not in message or "Full download" in message
+
+
+def test_legacy_alias_still_resolves(tmp_path: Path) -> None:
+    shipped = tmp_path / "shipped"
+    _write_stl(shipped, "ped_5y_male")
+    path = resolve_human_mesh_stl_path("pediatric_5y_male", phantom_data_dir=shipped, user_library_dir=None)
+    assert path.name == "ped_5y_male.stl"
+
+
+def test_preview_prefers_reduced_shipped_first(tmp_path: Path) -> None:
+    shipped = tmp_path / "shipped"
+    library = tmp_path / "library"
+    _write_stl(shipped, "adult_male")
+    _write_stl(library, "adult_male_reduced_3000t")
+    assert prefer_reduced_preview_stem("adult_male", phantom_data_dir=shipped, user_library_dir=library) == (
+        "adult_male_reduced_3000t"
+    )
+    _write_stl(shipped, "adult_male_reduced_3000t", b"ship-reduced")
+    assert prefer_reduced_preview_stem("adult_male", phantom_data_dir=shipped, user_library_dir=library) == (
+        "adult_male_reduced_3000t"
+    )
+
+
+def test_demo_not_from_user_library(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from guiskindose.gui import window_prefs
+
+    shipped = tmp_path / "shipped"
+    library = tmp_path / "library"
+    shipped.mkdir()
+    _write_stl(library, "demo_cosmic_buddha")
+    monkeypatch.setattr(window_prefs, "show_demo_phantoms_enabled", lambda **_: True)
+    with pytest.raises(ValueError, match="Unknown human mesh"):
+        resolve_human_mesh_stl_path(
+            "demo_cosmic_buddha",
+            phantom_data_dir=shipped,
+            user_library_dir=library,
+            show_demo_phantoms=True,
+        )
+
+
+def test_demo_from_shipped_when_enabled(tmp_path: Path) -> None:
+    shipped = tmp_path / "shipped"
+    _write_stl(shipped, "demo_cosmic_buddha")
+    path = resolve_human_mesh_stl_path(
+        "demo_cosmic_buddha",
+        phantom_data_dir=shipped,
+        user_library_dir=None,
+        show_demo_phantoms=True,
+    )
+    assert path.is_relative_to(shipped.resolve())
+
+
+def test_demo_off_raises_value_error(tmp_path: Path) -> None:
+    shipped = tmp_path / "shipped"
+    _write_stl(shipped, "demo_cosmic_buddha")
+    with pytest.raises(ValueError, match="Unknown human mesh"):
+        resolve_human_mesh_stl_path(
+            "demo_cosmic_buddha",
+            phantom_data_dir=shipped,
+            user_library_dir=None,
+            show_demo_phantoms=False,
+        )
+
+
+def test_missing_clinical_raises_typed_error(tmp_path: Path) -> None:
+    shipped = tmp_path / "shipped"
+    shipped.mkdir()
+    with pytest.raises(HumanMeshNotInstalledError):
+        resolve_human_mesh_stl_path("senior_male", phantom_data_dir=shipped, user_library_dir=tmp_path / "lib")
+
+
+def test_unknown_stem_is_value_error_not_missing(tmp_path: Path) -> None:
+    shipped = tmp_path / "shipped"
+    shipped.mkdir()
+    with pytest.raises(ValueError, match="Unknown human mesh") as info:
+        resolve_human_mesh_stl_path("not_a_catalog_mesh", phantom_data_dir=shipped, user_library_dir=None)
+    assert not isinstance(info.value, HumanMeshNotInstalledError)

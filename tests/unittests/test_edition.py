@@ -193,6 +193,7 @@ def test_non_starter_mesh_is_reported_not_installed(light, starter_only):
     assert "senior_male" in message
     assert "Light" in message
     assert "Full download" in message
+    assert "phantom pack" in message.lower()
     assert str(starter_only) not in message
 
 
