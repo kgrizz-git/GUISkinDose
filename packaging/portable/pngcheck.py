@@ -431,7 +431,27 @@ def _launch_counts(launch: dict[str, Any], rows: list[dict[str, Any]], sample_co
         "launched_outside": int(launch["launched_outside_onedir"]),
         "system_chrome": int(launch["system_chrome_processes_running"]),
         "uninspectable": _uninspectable_descendants(rows),
+        **_outside_kinds(rows),
     }
+
+
+def _outside_kinds(rows: list[dict[str, Any]]) -> dict[str, int]:
+    """Count outside browser rows by path kind, so a failure says why without a path."""
+    import os
+
+    base = app_dir().resolve()
+    kinds = {"outside_relative": 0, "outside_proc": 0, "outside_absolute": 0}
+    for row in _descendants(rows, os.getpid()):
+        exe = row["exe"]
+        if "chrom" not in Path(exe).name.lower() or _inside(exe, base):
+            continue
+        if not Path(exe).is_absolute():
+            kinds["outside_relative"] += 1
+        elif exe.startswith("/proc/"):
+            kinds["outside_proc"] += 1
+        else:
+            kinds["outside_absolute"] += 1
+    return kinds
 
 
 def _require_bundled_launch(launch: dict[str, Any], rows: list[dict[str, Any]], sample_count: int) -> None:
