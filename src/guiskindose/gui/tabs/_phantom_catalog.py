@@ -39,6 +39,11 @@ _MAX_PACK_UPLOAD_BYTES = 80 * 1024 * 1024
 _SPOOL_MAX_BYTES = 1024 * 1024
 
 
+def _new_pack_spool() -> tempfile.SpooledTemporaryFile[bytes]:
+    """Open the upload spool; called on a worker thread to keep file I/O off the event loop."""
+    return tempfile.SpooledTemporaryFile(max_size=_SPOOL_MAX_BYTES)
+
+
 def _catalog_stems(*, include_demos: bool) -> list[str]:
     stems = [
         stem
@@ -132,19 +137,24 @@ class _PhantomCatalogSection:
 
     async def install_upload(self, event: Any) -> None:
         assert self.status_label is not None
-        spool: tempfile.SpooledTemporaryFile[bytes] = tempfile.SpooledTemporaryFile(max_size=_SPOOL_MAX_BYTES)  # noqa: SIM115
+        # Stream into the spool chunk by chunk, so the cap holds before the whole body is in memory.
+        spool = await run.io_bound(_new_pack_spool)
+        if spool is None:
+            # run.io_bound returns None when the app is shutting down.
+            _notify_install_failure(self.status_label)
+            return
         total = 0
         try:
             async for chunk in event.file.iterate():
                 total += len(chunk)
                 if total > _MAX_PACK_UPLOAD_BYTES:
-                    spool.close()
+                    await run.io_bound(spool.close)
                     _notify_install_failure(self.status_label)
                     return
-                spool.write(chunk)
+                await run.io_bound(spool.write, chunk)
         except Exception as exc:
             safe_error_event(logger, "phantom_pack_upload_read", exc)
-            spool.close()
+            await run.io_bound(spool.close)
             _notify_install_failure(self.status_label)
             return
         await self.commit_install(spool)

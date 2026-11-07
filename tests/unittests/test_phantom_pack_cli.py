@@ -67,7 +67,8 @@ def test_install_without_file_path_prints_counts(
     out = capsys.readouterr()
     assert code == 0
     assert "Installed 1" in out.out or "installed 1" in out.out.lower()
-    assert str(zip_path) not in out.out and str(zip_path) not in out.err
+    assert str(zip_path) not in out.out
+    assert str(zip_path) not in out.err
 
 
 def test_install_library_unavailable_prints_fixed_sentence(

@@ -17,7 +17,8 @@ from guiskindose.gui.tabs import settings as settings_tab
 
 _helpers_path = Path(__file__).resolve().parents[1] / "unittests" / "phantom_pack_test_helpers.py"
 _spec = importlib.util.spec_from_file_location("phantom_pack_test_helpers", _helpers_path)
-assert _spec is not None and _spec.loader is not None
+assert _spec is not None
+assert _spec.loader is not None
 _helpers = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(_helpers)
 manifest_for_files = _helpers.manifest_for_files

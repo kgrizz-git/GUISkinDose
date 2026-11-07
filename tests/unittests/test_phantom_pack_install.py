@@ -50,7 +50,7 @@ def test_installs_into_user_library(tmp_path: Path) -> None:
     result = _install(pack_zip_bytes(manifest, files), shipped=shipped, library=library, manifest=manifest)
     assert result.installed == 1
     assert (library / "senior_male.stl").read_bytes() == body
-    assert not list(shipped.glob("*.stl"))
+    assert not any(shipped.glob("*.stl"))
 
 
 def test_creates_library_with_mode(tmp_path: Path) -> None:
@@ -80,7 +80,7 @@ def test_second_install_replaces_without_stage_leftovers(tmp_path: Path) -> None
     _install(raw2, shipped=shipped, library=library, manifest=manifest2)
     assert (library / "senior_male.stl").read_bytes() == body2
     assert not any(p.name.startswith(".incoming-") for p in library.iterdir())
-    assert not list(library.glob("*.backup-*"))
+    assert not any(library.glob("*.backup-*"))
 
 
 def test_tampered_bytes_leave_previous_file(tmp_path: Path) -> None:
@@ -92,8 +92,9 @@ def test_tampered_bytes_leave_previous_file(tmp_path: Path) -> None:
     _install(pack_zip_bytes(manifest, files), shipped=shipped, library=library, manifest=manifest)
     bad_manifest = manifest_for_files({"senior_male": body})
     bad_manifest["files"][0]["sha256"] = "f" * 64
+    bad_raw = pack_zip_bytes(bad_manifest, files)
     with pytest.raises(PhantomPackError):
-        _install(pack_zip_bytes(bad_manifest, files), shipped=shipped, library=library, manifest=bad_manifest)
+        _install(bad_raw, shipped=shipped, library=library, manifest=bad_manifest)
     assert (library / "senior_male.stl").read_bytes() == body
 
 
@@ -233,8 +234,9 @@ def test_rollback_removes_stem_added_this_install(tmp_path: Path) -> None:
             raise PermissionError("blocked")
         original_replace(self, target)
 
+    raw = pack_zip_bytes(manifest, files)
     with patch.object(Path, "replace", flaky_replace), pytest.raises(PhantomPackError):
-        _install(pack_zip_bytes(manifest, files), shipped=shipped, library=library, manifest=manifest)
+        _install(raw, shipped=shipped, library=library, manifest=manifest)
     assert not (library / "junior_male.stl").exists()
     assert not (library / "senior_male.stl").exists()
 
@@ -256,12 +258,13 @@ def test_mid_replace_rollback(tmp_path: Path) -> None:
             raise PermissionError("blocked")
         original_replace(self, target)
 
+    raw = pack_zip_bytes(manifest, files)
     with patch.object(Path, "replace", flaky_replace), pytest.raises(PhantomPackError):
-        _install(pack_zip_bytes(manifest, files), shipped=shipped, library=library, manifest=manifest)
+        _install(raw, shipped=shipped, library=library, manifest=manifest)
     assert (library / "junior_male.stl").read_bytes() == b"original-junior"
     assert not (library / "senior_male.stl").exists()
     assert not any(p.name.startswith(".incoming-") for p in library.iterdir())
-    assert not list(library.glob("*.backup-*"))
+    assert not any(library.glob("*.backup-*"))
 
 
 def test_failure_logs_contain_no_paths(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
@@ -269,8 +272,9 @@ def test_failure_logs_contain_no_paths(tmp_path: Path, caplog: pytest.LogCapture
     shipped = tmp_path / "shipped"
     library = tmp_path / "library"
     tag = tmp_path.name
+    empty_manifest = manifest_for_files({})
     with caplog.at_level(logging.DEBUG), pytest.raises(PhantomPackError) as info:
-        _install(b"not-a-zip", shipped=shipped, library=library, manifest=manifest_for_files({}))
+        _install(b"not-a-zip", shipped=shipped, library=library, manifest=empty_manifest)
     assert tag not in caplog.text
     assert tag not in str(info.value)
 
@@ -288,8 +292,9 @@ def test_rejects_bad_crc_stored_member(tmp_path: Path) -> None:
     marker = corrupted.find(b"solid")
     assert marker >= 0
     corrupted[marker] ^= 0xFF
+    bad_raw = bytes(corrupted)
     with pytest.raises(PhantomPackError):
-        _install(bytes(corrupted), shipped=shipped, library=library, manifest=manifest)
+        _install(bad_raw, shipped=shipped, library=library, manifest=manifest)
 
 
 def test_rejects_unsupported_compression(tmp_path: Path) -> None:
@@ -303,8 +308,9 @@ def test_rejects_unsupported_compression(tmp_path: Path) -> None:
         info.compress_type = zipfile.ZIP_BZIP2
         zf.writestr(info, body)
         zf.writestr("manifest.json", canonical_manifest_bytes(manifest))
+    raw = buf.getvalue()
     with pytest.raises(PhantomPackError):
-        _install(buf.getvalue(), shipped=shipped, library=library, manifest=manifest)
+        _install(raw, shipped=shipped, library=library, manifest=manifest)
 
 
 def test_failure_before_first_replace_removes_created_library(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -322,8 +328,9 @@ def test_failure_before_first_replace_removes_created_library(tmp_path: Path, mo
 
     monkeypatch.setattr(Path, "mkdir", fail_mkdir)
     assert not library.exists()
+    raw = pack_zip_bytes(manifest, files)
     with pytest.raises(PhantomPackError):
-        _install(pack_zip_bytes(manifest, files), shipped=shipped, library=library, manifest=manifest)
+        _install(raw, shipped=shipped, library=library, manifest=manifest)
     assert not library.exists()
 
 
@@ -403,9 +410,10 @@ def test_source_stream_oserror_is_install_failed(
     library = tmp_path / "library"
     body = tiny_stl_body()
     manifest = manifest_for_files({"senior_male": body})
+    stream = io.BytesIO(pack_zip_bytes(manifest, {"senior_male": body}))
     with pytest.raises(PhantomPackError, match=_INSTALL_FAILED):
         install_phantom_pack(
-            io.BytesIO(pack_zip_bytes(manifest, {"senior_male": body})),
+            stream,
             user_library_dir=library,
             shipped_dir=shipped,
             expected_manifest_sha256=_pin_for(manifest),
@@ -422,9 +430,10 @@ def test_non_directory_library_parent_install_failed(tmp_path: Path) -> None:
     library = blocker / "phantoms"
     body = tiny_stl_body()
     manifest = manifest_for_files({"senior_male": body})
+    stream = io.BytesIO(pack_zip_bytes(manifest, {"senior_male": body}))
     with pytest.raises(PhantomPackError, match=_INSTALL_FAILED):
         install_phantom_pack(
-            io.BytesIO(pack_zip_bytes(manifest, {"senior_male": body})),
+            stream,
             user_library_dir=library,
             shipped_dir=shipped,
             expected_manifest_sha256=_pin_for(manifest),
@@ -444,10 +453,11 @@ def test_readonly_library_install_failed(tmp_path: Path) -> None:
     os.chmod(library, 0o500)
     body = tiny_stl_body()
     manifest = manifest_for_files({"senior_male": body})
+    stream = io.BytesIO(pack_zip_bytes(manifest, {"senior_male": body}))
     try:
         with pytest.raises(PhantomPackError, match=_INSTALL_FAILED):
             install_phantom_pack(
-                io.BytesIO(pack_zip_bytes(manifest, {"senior_male": body})),
+                stream,
                 user_library_dir=library,
                 shipped_dir=shipped,
                 expected_manifest_sha256=_pin_for(manifest),

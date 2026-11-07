@@ -126,7 +126,7 @@ def _read_zip_body(zf: zipfile.ZipFile, info: zipfile.ZipInfo, *, running_total:
                     _reject_member()
     except OSError as exc:
         _reject_install(exc)
-    except (zipfile.BadZipFile, zlib.error, NotImplementedError, RuntimeError) as exc:
+    except (zipfile.BadZipFile, zlib.error, NotImplementedError) as exc:
         _reject_member(exc)
     return bytes(buffer)
 
@@ -226,7 +226,7 @@ def _safe_remove_path(path: Path) -> None:
             return
         if not path.is_dir():
             return
-        for child in list(path.iterdir()):
+        for child in path.iterdir():
             _safe_remove_path(child)
         path.rmdir()
     except OSError as exc:
@@ -480,7 +480,7 @@ def install_phantom_pack(
     except OSError as exc:
         safe_error_event(_LOG, _OPERATION_INSTALL, exc)
         raise PhantomPackError(_INSTALL_FAILED) from None
-    except (zipfile.BadZipFile, zlib.error, NotImplementedError, RuntimeError) as exc:
+    except (zipfile.BadZipFile, zlib.error, NotImplementedError) as exc:
         safe_error_event(_LOG, _OPERATION_INSTALL, exc)
         raise PhantomPackError(_BAD_ARCHIVE) from None
     try:
@@ -501,7 +501,7 @@ def install_phantom_pack(
     except OSError as exc:
         safe_error_event(_LOG, _OPERATION_INSTALL, exc)
         raise PhantomPackError(_INSTALL_FAILED) from None
-    except (zipfile.BadZipFile, zlib.error, NotImplementedError, RuntimeError) as exc:
+    except (zipfile.BadZipFile, zlib.error, NotImplementedError) as exc:
         safe_error_event(_LOG, _OPERATION_INSTALL, exc)
         raise PhantomPackError(_BAD_ARCHIVE) from None
 

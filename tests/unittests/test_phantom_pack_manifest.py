@@ -38,15 +38,13 @@ def test_bad_format_version_and_stem_rules() -> None:
         manifest_for_files({"adult_male_reduced_1000t": body}),
     ]
     for manifest in cases:
-        raw = canonical_manifest_bytes(manifest)
-        parsed = parse_pack_manifest(raw)
+        parsed = parse_pack_manifest(canonical_manifest_bytes(manifest))
         with pytest.raises(PhantomPackError):
             validate_manifest_for_install(parsed, app_version="1.1.1")
+    invalid_manifest = manifest_for_files({"not_a_catalog": body})
+    invalid_parsed = parse_pack_manifest(canonical_manifest_bytes(invalid_manifest))
     with pytest.raises(PhantomPackError):
-        validate_manifest_for_install(
-            parse_pack_manifest(canonical_manifest_bytes(manifest_for_files({"not_a_catalog": body}))),
-            app_version="1.1.1",
-        )
+        validate_manifest_for_install(invalid_parsed, app_version="1.1.1")
 
 
 def test_byte_and_hash_mismatch() -> None:
@@ -71,8 +69,9 @@ def test_byte_and_hash_mismatch() -> None:
 def test_unknown_manifest_key_rejected() -> None:
     manifest = manifest_for_files({"senior_male": tiny_stl_body()})
     manifest["extra"] = 1
+    raw = canonical_manifest_bytes(manifest)
     with pytest.raises(PhantomPackError):
-        parse_pack_manifest(canonical_manifest_bytes(manifest))
+        parse_pack_manifest(raw)
 
 
 def test_injected_hash_round_trip() -> None:

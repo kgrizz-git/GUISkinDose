@@ -25,8 +25,9 @@ def test_library_lock_refused_then_acquired(tmp_path: Path) -> None:
     library.mkdir()
     first = LibraryInstallLock(library)
     first.__enter__()
+    second = LibraryInstallLock(library)
     with pytest.raises(LibraryInstallLockBusy):
-        LibraryInstallLock(library).__enter__()
+        second.__enter__()
     first.__exit__(None, None, None)
     with LibraryInstallLock(library):
         pass
@@ -58,8 +59,9 @@ def test_symlinked_lock_path_refused_on_posix(tmp_path: Path) -> None:
     real_lock = tmp_path / "real.lock"
     real_lock.write_bytes(b"x")
     (library / ".install.lock").symlink_to(real_lock)
+    lock = LibraryInstallLock(library)
     with pytest.raises(OSError):
-        LibraryInstallLock(library).__enter__()
+        lock.__enter__()
 
 
 def test_concurrent_installs_serialized(tmp_path: Path) -> None:
@@ -109,9 +111,10 @@ def test_external_lock_reports_busy(tmp_path: Path) -> None:
         body = tiny_stl_body()
         manifest = manifest_for_files({"senior_male": body})
         raw = pack_zip_bytes(manifest, {"senior_male": body})
+        stream = __import__("io").BytesIO(raw)
         with pytest.raises(PhantomPackError, match=_LIBRARY_BUSY):
             install_phantom_pack(
-                __import__("io").BytesIO(raw),
+                stream,
                 user_library_dir=library,
                 shipped_dir=shipped,
                 expected_manifest_sha256=_pin_for(manifest),
