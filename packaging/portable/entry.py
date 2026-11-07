@@ -135,6 +135,24 @@ _WRAPPER_SCRIPT_SUFFIX = "_unix_pipe_chromium_wrapper.py"
 _BYE_SENTINEL = b"{bye}\n"
 
 
+def _chromium_wrapper_root(exe_parent: Path) -> Path:
+    """Directory that may hold the bundled browser binary (``Helpers`` on macOS, else ``chromium/``)."""
+    if _host_platform() == "darwin" and exe_parent.name == "MacOS":
+        return exe_parent.parent / "Helpers"
+    return exe_parent / "chromium"
+
+
+def _chromium_child_environ(chromium_root: Path) -> dict[str, str] | None:
+    """Copy of ``os.environ`` with ``chromium_root`` prepended to ``LD_LIBRARY_PATH`` (Linux only)."""
+    if _host_platform() != "linux" or not chromium_root.is_dir():
+        return None
+    env = os.environ.copy()
+    prepend = os.fsdecode(chromium_root.resolve())
+    existing = env.get("LD_LIBRARY_PATH", "")
+    env["LD_LIBRARY_PATH"] = f"{prepend}:{existing}" if existing else prepend
+    return env
+
+
 def _chromium_path_allowed(exe_path: str, chromium_root: Path) -> bool:
     """True when *exe_path* resolves under *chromium_root* (same idea as ``pngcheck._inside``)."""
     if not exe_path:
@@ -207,7 +225,7 @@ def _debugging_pipe_fds_free() -> bool:
     return True
 
 
-def _run_unix_pipe_chromium_wrapper(cli: list[str]) -> int:
+def _run_unix_pipe_chromium_wrapper(cli: list[str], *, chromium_root: Path | None = None) -> int:
     """Hand stdin/stdout to Chromium on fds 3 and 4, wait, then write the pipe close sentinel."""
     if not _debugging_pipe_fds_free():
         raise SystemExit(1)
@@ -226,7 +244,12 @@ def _run_unix_pipe_chromium_wrapper(cli: list[str]) -> int:
     handler = partial(_terminate_chromium_on_signal, launched, claim, requested)
     signal.signal(signal.SIGTERM, handler)
     signal.signal(signal.SIGINT, handler)
-    process = subprocess.Popen(cli, pass_fds=(3, 4))
+    popen_kwargs: dict[str, object] = {"pass_fds": (3, 4)}
+    if chromium_root is not None:
+        child_env = _chromium_child_environ(chromium_root)
+        if child_env is not None:
+            popen_kwargs["env"] = child_env
+    process = subprocess.Popen(cli, **popen_kwargs)  # type: ignore[arg-type]
     launched.append(process)
     if requested:  # a signal arrived before Chromium existed
         with contextlib.suppress(OSError):
@@ -257,10 +280,11 @@ def _maybe_run_unix_pipe_chromium_wrapper() -> None:
         raise SystemExit(1)
 
     try:
-        chromium_root = Path(sys.executable).resolve().parent / "chromium"
+        exe_parent = Path(sys.executable).resolve().parent
+        chromium_root = _chromium_wrapper_root(exe_parent)
         if not _chromium_path_allowed(cli[0], chromium_root):
             raise SystemExit(1)
-        code = _run_unix_pipe_chromium_wrapper(cli)
+        code = _run_unix_pipe_chromium_wrapper(cli, chromium_root=chromium_root)
     except SystemExit:
         raise
     except BaseException:

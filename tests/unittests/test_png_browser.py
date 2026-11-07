@@ -64,22 +64,28 @@ def kaleido_calls(monkeypatch: pytest.MonkeyPatch) -> dict[str, list[Any]]:
     return calls
 
 
-def _bundled_chrome_path(root: Path, platform: str) -> Path:
+def _bundled_chrome_path(exe_parent: Path, platform: str) -> Path:
     if platform == "win32":
-        return root / "chromium" / "chrome.exe"
+        return exe_parent / "chromium" / "chrome.exe"
     if platform == "darwin":
-        return root / "chromium" / "Chromium.app" / "Contents" / "MacOS" / "Chromium"
-    return root / "chromium" / "chrome"
+        return exe_parent.parent / "Helpers" / "Chromium.app" / "Contents" / "MacOS" / "Chromium"
+    return exe_parent / "chromium" / "chrome"
 
 
 def _frozen(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, platform: str, *, browser: bool) -> Path:
-    exe = tmp_path / ("GUISkinDose.exe" if platform == "win32" else "GUISkinDose")
+    if platform == "darwin":
+        exe_parent = tmp_path / "Contents" / "MacOS"
+        exe_parent.mkdir(parents=True)
+        exe = exe_parent / "GUISkinDose"
+    else:
+        exe = tmp_path / ("GUISkinDose.exe" if platform == "win32" else "GUISkinDose")
+        exe_parent = tmp_path
     exe.write_bytes(b"")
     monkeypatch.setattr(sys, "frozen", True, raising=False)
     monkeypatch.setattr(sys, "executable", str(exe))
     monkeypatch.setattr(png_browser, "_host_platform", lambda: platform)
     monkeypatch.setattr(png_browser, "png_export_available", lambda: True)
-    chrome = _bundled_chrome_path(tmp_path, platform)
+    chrome = _bundled_chrome_path(exe_parent, platform)
     if browser:
         chrome.parent.mkdir(parents=True, exist_ok=True)
         chrome.write_bytes(b"x")
@@ -212,9 +218,11 @@ def test_bundled_browser_honors_base_and_platform(monkeypatch, tmp_path) -> None
     assert bundled_browser(tmp_path) == tmp_path / "chromium" / "chrome.exe"
     monkeypatch.setattr(png_browser, "_host_platform", lambda: "linux")
     assert bundled_browser(tmp_path) == tmp_path / "chromium" / "chrome"
+    macos = tmp_path / "Contents" / "MacOS"
+    macos.mkdir(parents=True)
     monkeypatch.setattr(png_browser, "_host_platform", lambda: "darwin")
-    assert bundled_browser(tmp_path) == (
-        tmp_path / "chromium" / "Chromium.app" / "Contents" / "MacOS" / "Chromium"
+    assert bundled_browser(macos) == (
+        tmp_path / "Contents" / "Helpers" / "Chromium.app" / "Contents" / "MacOS" / "Chromium"
     )
 
 

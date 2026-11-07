@@ -44,15 +44,22 @@ from selfcheck import _EXAMPLE_RDSR, OWNED_SUBDIR, _pkg, _run_step, _write_atomi
 
 from guiskindose.export.png_browser import BROWSER_DIR, bundled_browser
 
-# Notices that must sit beside the bundled browser (PORTABLE_CHROMIUM_ARTIFACT.md).
-NOTICE_FILES = ("LICENSE.chromium.txt", "LICENSE.ungoogled-chromium-windows.txt", "CREDITS.html")
 _MIN_CREDITS_BYTES = 100_000
+_SYSTEM_CHROME_NAMES = frozenset({"chrome.exe", "chrome", "google-chrome", "google chrome"})
 _PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
 _HTTP_SCRIPT = re.compile(r"<script\b[^>]*\bsrc\s*=\s*[\"']?\s*https?:", re.IGNORECASE)
 
 
-def app_dir() -> Path:
+def _executable_dir() -> Path:
     return Path(sys.executable).resolve().parent
+
+
+def app_dir() -> Path:
+    """Containment root for launch checks: the onedir, or ``Contents`` on macOS."""
+    exe_parent = _executable_dir()
+    if _host_platform() == "darwin" and exe_parent.name == "MacOS":
+        return exe_parent.parent
+    return exe_parent
 
 
 def _host_platform() -> str:
@@ -60,15 +67,31 @@ def _host_platform() -> str:
     return sys.platform
 
 
-def _chromium_notice_dir(base: Path | None = None) -> Path:
-    """The ``chromium/`` folder that holds the license notices, above any nested macOS ``Chromium.app``."""
-    return (base if base is not None else app_dir()) / BROWSER_DIR
+def required_notice_names() -> tuple[str, ...]:
+    """License files that must ship with the bundled browser (PORTABLE_CHROMIUM_ARTIFACT.md)."""
+    common = ("LICENSE.chromium.txt", "CREDITS.html")
+    platform = _host_platform()
+    if platform == "win32":
+        return (*common, "LICENSE.ungoogled-chromium-windows.txt")
+    if platform == "darwin":
+        return (*common, "LICENSE.ungoogled-chromium-macos.txt")
+    return (*common, "LICENSE.ungoogled-chromium-portablelinux.txt")
+
+
+def _chromium_notice_dir() -> Path:
+    if _host_platform() == "darwin":
+        return app_dir() / "Resources" / "chromium"
+    return _executable_dir() / BROWSER_DIR
+
+
+def _is_system_chrome_process(exe: str) -> bool:
+    return Path(exe).name.lower() in _SYSTEM_CHROME_NAMES
 
 
 def _check_bundle() -> dict[str, Any]:
-    browser = bundled_browser(app_dir())
+    browser = bundled_browser(_executable_dir())
     notice_dir = _chromium_notice_dir()
-    notices = {name: (notice_dir / name).is_file() for name in NOTICE_FILES}
+    notices = {name: (notice_dir / name).is_file() for name in required_notice_names()}
     credits_path = notice_dir / "CREDITS.html"
     found = {
         "browser_present": browser.is_file(),
@@ -228,7 +251,7 @@ def _describe_launch(rows: list[dict[str, Any]]) -> dict[str, Any]:
         "launched_outside_onedir": outside,
         "flags": sorted(f for f in flags if f in {"--headless", "--no-sandbox", "--disable-gpu", "--user-data-dir"}),
         "system_chrome_processes_running": sum(
-            1 for row in rows if Path(row["exe"]).name.lower() == "chrome.exe" and not _inside(row["exe"], base)
+            1 for row in rows if _is_system_chrome_process(row["exe"]) and not _inside(row["exe"], base)
         ),
     }
 

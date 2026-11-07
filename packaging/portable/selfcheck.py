@@ -194,8 +194,11 @@ def _calculate_and_export(out_dir: Path) -> dict[str, Any]:
 
 
 def _bundled_browser_present() -> bool:
-    """True when a ``chromium/`` folder sits beside the frozen executable."""
-    return (Path(sys.executable).resolve().parent / "chromium").exists()
+    """True when the frozen Full shape includes its bundled browser layout."""
+    exe_parent = Path(sys.executable).resolve().parent
+    if sys.platform == "darwin" and exe_parent.name == "MacOS":
+        return (exe_parent.parent / "Helpers" / "Chromium.app").is_dir()
+    return (exe_parent / "chromium").is_dir()
 
 
 def _light_png_gate() -> dict[str, Any]:

@@ -399,6 +399,155 @@ def _wrapper_argv(tmp_path: Path, *, browser_name: str = "chrome") -> list[str]:
     return [str(exe), str(wrapper), str(browser), "--headless"]
 
 
+@pytest.fixture
+def darwin_host(monkeypatch):
+    """Run the gate as on macOS without changing ``sys.platform``."""
+    monkeypatch.syspath_prepend(str(_ENTRY))
+    monkeypatch.setattr(importlib.import_module("_entry_platform"), "_override", "darwin")
+
+
+def _darwin_bundle_contents(tmp_path: Path) -> tuple[Path, Path]:
+    contents = tmp_path / "Contents"
+    macos = contents / "MacOS"
+    macos.mkdir(parents=True)
+    exe = macos / "GUISkinDose"
+    exe.write_text("", encoding="utf-8")
+    wrapper = tmp_path / "_unix_pipe_chromium_wrapper.py"
+    wrapper.write_text("", encoding="utf-8")
+    return exe, wrapper
+
+
+def _darwin_wrapper_argv(tmp_path: Path, *, under_helpers: bool) -> list[str]:
+    exe, wrapper = _darwin_bundle_contents(tmp_path)
+    if under_helpers:
+        browser = tmp_path / "Contents" / "Helpers" / "Chromium.app" / "Contents" / "MacOS" / "Chromium"
+    else:
+        browser = tmp_path / "Contents" / "MacOS" / "chromium" / "chrome"
+    browser.parent.mkdir(parents=True, exist_ok=True)
+    browser.write_text("", encoding="utf-8")
+    return [str(exe), str(wrapper), str(browser), "--headless"]
+
+
+def test_darwin_wrapper_gate_allows_helpers_chromium(darwin_host, monkeypatch, tmp_path, captured_root):
+    dup2_called = False
+    popen_calls: dict[str, object] = {}
+
+    class _FakeProcess:
+        returncode = 0
+
+        def poll(self) -> int:
+            return 0
+
+        def wait(self, timeout: float | None = None) -> int:
+            return 0
+
+        def terminate(self) -> None:
+            return
+
+        def kill(self) -> None:
+            return
+
+    def _dup2(*_args: object) -> None:
+        nonlocal dup2_called
+        dup2_called = True
+
+    def _fake_popen(cli: list[str], **kwargs: object) -> _FakeProcess:
+        popen_calls["cli"] = cli
+        popen_calls["kwargs"] = kwargs
+        return _FakeProcess()
+
+    real_fstat = os.fstat
+
+    def _free_debug_fds(fd: int) -> object:
+        if fd in (3, 4):
+            raise OSError
+        return real_fstat(fd)
+
+    monkeypatch.setattr(os, "dup2", _dup2)
+    monkeypatch.setattr(os, "set_inheritable", lambda *_a: None)
+    monkeypatch.setattr(os, "fstat", _free_debug_fds)
+    monkeypatch.setattr(subprocess, "Popen", _fake_popen)
+    monkeypatch.setattr(os, "write", lambda _fd, data: len(data))
+    monkeypatch.setattr(signal, "signal", lambda *_a: None)
+    argv = _darwin_wrapper_argv(tmp_path, under_helpers=True)
+    monkeypatch.setattr(sys, "executable", argv[0])
+    with pytest.raises(SystemExit) as exc:
+        _load_entry_module(argv=argv)
+    assert exc.value.code == 0
+    assert dup2_called
+    assert popen_calls["cli"] == [argv[2], "--headless"]
+
+
+def test_darwin_wrapper_gate_rejects_macos_chromium_dir(darwin_host, monkeypatch, tmp_path):
+    dup2_called = False
+
+    def _dup2(*_args: object) -> None:
+        nonlocal dup2_called
+        dup2_called = True
+
+    argv = _darwin_wrapper_argv(tmp_path, under_helpers=False)
+    monkeypatch.setattr(os, "dup2", _dup2)
+    monkeypatch.setattr(subprocess, "Popen", lambda *_a, **_k: pytest.fail("Popen must not run"))
+    monkeypatch.setattr(sys, "executable", argv[0])
+    with pytest.raises(SystemExit) as exc:
+        _load_entry_module(argv=argv)
+    assert exc.value.code == 1
+    assert not dup2_called
+
+
+def test_linux_wrapper_prepends_ld_library_path_in_popen_only(unix_host, monkeypatch, tmp_path):
+    """Bundled library path is passed only to the Chromium Popen, not the process environment."""
+    prior = "existing-libs"
+    monkeypatch.setenv("LD_LIBRARY_PATH", prior)
+    popen_calls: dict[str, object] = {}
+
+    class _FakeProcess:
+        returncode = 0
+
+        def poll(self) -> int:
+            return 0
+
+        def wait(self, timeout: float | None = None) -> int:
+            return 0
+
+        def terminate(self) -> None:
+            return
+
+        def kill(self) -> None:
+            return
+
+    def _fake_popen(cli: list[str], **kwargs: object) -> _FakeProcess:
+        popen_calls["cli"] = cli
+        popen_calls.update(kwargs)
+        return _FakeProcess()
+
+    real_fstat = os.fstat
+
+    def _free_debug_fds(fd: int) -> object:
+        if fd in (3, 4):
+            raise OSError
+        return real_fstat(fd)
+
+    monkeypatch.setattr(os, "dup2", lambda *_a: None)
+    monkeypatch.setattr(os, "set_inheritable", lambda *_a: None)
+    monkeypatch.setattr(os, "fstat", _free_debug_fds)
+    monkeypatch.setattr(subprocess, "Popen", _fake_popen)
+    monkeypatch.setattr(os, "write", lambda _fd, data: len(data))
+    monkeypatch.setattr(signal, "signal", lambda *_a: None)
+    argv = _wrapper_argv(tmp_path)
+    chromium_dir = (tmp_path / "chromium").resolve()
+    env_before = os.environ.get("LD_LIBRARY_PATH")
+    monkeypatch.setattr(sys, "executable", argv[0])
+    with pytest.raises(SystemExit) as exc:
+        _load_entry_module(argv=argv)
+    assert exc.value.code == 0
+    assert os.environ.get("LD_LIBRARY_PATH") == env_before == prior
+    child_env = popen_calls["env"]
+    assert isinstance(child_env, dict)
+    prepend = os.fsdecode(chromium_dir)
+    assert child_env["LD_LIBRARY_PATH"] == f"{prepend}:{prior}"
+
+
 def test_unix_wrapper_gate_dup2_popen_and_bye(unix_host, monkeypatch, tmp_path, captured_root):
     dup2_calls: list[tuple[int, int]] = []
     inheritable: list[tuple[int, bool]] = []
@@ -454,7 +603,11 @@ def test_unix_wrapper_gate_dup2_popen_and_bye(unix_host, monkeypatch, tmp_path, 
     assert dup2_calls == [(0, 3), (1, 4)]
     assert set(inheritable) == {(3, True), (4, True)}
     assert popen_calls["cli"] == [argv[2], "--headless"]
-    assert popen_calls["kwargs"] == {"pass_fds": (3, 4)}
+    popen_kwargs = popen_calls["kwargs"]
+    assert popen_kwargs["pass_fds"] == (3, 4)
+    child_env = popen_kwargs["env"]
+    chromium_prepend = os.fsdecode((tmp_path / "chromium").resolve())
+    assert child_env["LD_LIBRARY_PATH"].startswith(chromium_prepend)
     assert write_calls == [(1, b"{bye}\n")]
     assert not any(argv[2] in r.getMessage() for r in captured_root.records)
     assert set(handlers) == {signal.SIGTERM, signal.SIGINT}

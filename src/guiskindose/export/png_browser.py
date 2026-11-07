@@ -74,17 +74,16 @@ def _host_platform() -> str:
 
 
 def _bundled_browser_relative_name() -> str:
-    platform = _host_platform()
-    if platform == "win32":
+    if _host_platform() == "win32":
         return "chrome.exe"
-    if platform == "darwin":
-        return "Chromium.app/Contents/MacOS/Chromium"
     return "chrome"
 
 
 def bundled_browser(base: Path | None = None) -> Path:
-    """Path of the bundled Chromium under ``<base>/chromium/``; *base* defaults to the exe dir."""
+    """Path of the bundled Chromium; *base* is the executable directory (``Contents/MacOS`` on macOS)."""
     root = base if base is not None else Path(sys.executable).resolve().parent
+    if _host_platform() == "darwin":
+        return root.parent / "Helpers" / "Chromium.app" / "Contents" / "MacOS" / "Chromium"
     return root / BROWSER_DIR / _bundled_browser_relative_name()
 
 
