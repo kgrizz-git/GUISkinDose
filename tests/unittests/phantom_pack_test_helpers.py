@@ -13,6 +13,7 @@ def manifest_for_files(
     *,
     app_version: str = "1.1.1",
 ) -> dict[str, Any]:
+    """Manifest for files."""
     entries = []
     for stem in sorted(files):
         data = files[stem]
@@ -37,6 +38,7 @@ def pack_zip_bytes(
     *,
     compression: int = zipfile.ZIP_DEFLATED,
 ) -> bytes:
+    """Pack zip bytes."""
     from guiskindose.phantom_pack import canonical_manifest_bytes
 
     buffer = io.BytesIO()
@@ -48,4 +50,5 @@ def pack_zip_bytes(
 
 
 def tiny_stl_body() -> bytes:
+    """Tiny stl body."""
     return b"solid t\nendsolid t\n"

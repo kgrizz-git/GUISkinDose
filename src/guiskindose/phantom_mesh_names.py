@@ -297,6 +297,7 @@ def resolve_human_mesh_stl_path(
 
 
 def _show_demo_phantoms_for_resolution() -> bool:
+    """Show demo phantoms for resolution."""
     try:
         from guiskindose.gui.window_prefs import show_demo_phantoms_enabled
     except ImportError:

@@ -145,7 +145,7 @@ async def open_phantom_pack_stream():
         if not result:
             return None
         choice = result[0] if isinstance(result, (list, tuple)) else result
-        return await run.io_bound(open, choice, "rb")
     except Exception as exc:
         safe_error_event(logger, "native_open_dialog", exc, level=logging.DEBUG)
         return None
+    return await run.io_bound(open, choice, "rb")

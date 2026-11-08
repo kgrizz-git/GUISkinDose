@@ -27,6 +27,7 @@ class PhantomPreviewController:
         *,
         debounce_sec: float = GEOMETRY_DEBOUNCE_SEC,
     ) -> None:
+        """Initialize the instance."""
         self.plot = plot
         self.status_label = status_label
         self.debounce_sec = float(debounce_sec)
@@ -42,11 +43,13 @@ class PhantomPreviewController:
         request_id = self.preview_request_id
 
         async def _fire() -> None:
+            """Fire."""
             await self._run_refresh(request_id)
 
         self._timer = ui.timer(self.debounce_sec, _fire, once=True)
 
     async def _run_refresh(self, request_id: int) -> None:
+        """Run refresh."""
         self._timer = None
         if request_id != self.preview_request_id:
             return

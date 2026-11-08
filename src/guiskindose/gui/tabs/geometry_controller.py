@@ -54,6 +54,7 @@ class GeometryTabController:
     """
 
     def __init__(self, ctx: PageContext) -> None:
+        """Initialize the instance."""
         self.ctx = ctx
         self.exam_selector_guard = {"suppress": False}
         self.event_select_guard = {"suppress": False}
@@ -160,6 +161,7 @@ class GeometryTabController:
         self._slider_timer = ui.timer(GEOMETRY_DEBOUNCE_SEC, self._do_debounced_render, once=True)
 
     async def _do_debounced_render(self) -> None:
+        """Do debounced render."""
         self._slider_timer = None
         if self.table_origin_pending:
             commit_table_origin_transform(state, self.active_exam_index)
@@ -193,6 +195,7 @@ class GeometryTabController:
             reset_results()
 
     async def _render_preview(self, mode: str) -> None:
+        """Render preview."""
         if state.rdsr_df is None:
             self.refs.plot.update_figure({})
             return
@@ -228,6 +231,7 @@ class GeometryTabController:
             _notify_missing_human_mesh()
 
     def _resolve_composite_for_render(self) -> bool:
+        """Resolve composite for render."""
         return resolve_composite_for_render(
             composite_preview=self.composite_preview,
             last_table_origin_scrub=self.last_table_origin_scrub,
@@ -253,10 +257,12 @@ class GeometryTabController:
         self.schedule_debounced_render()
 
     def _update_paused_badge(self) -> None:
+        """Update paused badge."""
         blocked = self.live_preview_requested and not self.live_preview_allowed()
         self.refs.paused_badge.set_visibility(blocked)
 
     def _preview_slice_count(self) -> int:
+        """Preview slice count."""
         if state.is_multi_exam:
             return preview_event_count(
                 state,
@@ -470,6 +476,7 @@ class GeometryTabController:
         original_refresh_per_exam = self.ctx.refresh_per_exam
 
         def _refresh_per_exam_with_sliders() -> None:
+            """Refresh per exam with sliders."""
             original_refresh_per_exam()
             self.refresh_geometry_sliders()
 

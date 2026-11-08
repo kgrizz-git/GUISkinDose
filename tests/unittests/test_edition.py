@@ -43,6 +43,7 @@ _EDITION_FILE = Path(__file__).resolve().parents[2] / "src" / "guiskindose" / "_
 
 @pytest.fixture
 def light(monkeypatch):
+    """Light."""
     monkeypatch.setattr(_edition, "EDITION", EDITION_LIGHT)
 
 
@@ -55,7 +56,9 @@ def no_browser_launch(monkeypatch):
     calls: list[str] = []
 
     def refuse(name):
+        """Refuse."""
         def _refuse(*_args, **_kwargs):
+            """Refuse."""
             calls.append(name)
             raise AssertionError(f"{name} called in Light")
 
@@ -69,24 +72,28 @@ def no_browser_launch(monkeypatch):
 
 
 def test_committed_edition_is_full():
+    """Exercise committed edition is full."""
     assert 'EDITION = "full"\n' in _EDITION_FILE.read_text(encoding="utf-8")
     assert current_edition() == EDITION_FULL
     assert png_export_available()
 
 
 def test_unknown_edition_fails_closed_to_light(monkeypatch):
+    """Exercise unknown edition fails closed to light."""
     monkeypatch.setattr(_edition, "EDITION", "medium")
     assert current_edition() == EDITION_LIGHT
     assert not png_export_available()
 
 
 def test_environment_does_not_override_edition(monkeypatch):
+    """Exercise environment does not override edition."""
     monkeypatch.setenv("GUISKINDOSE_EDITION", "light")
     monkeypatch.setenv("GUISKINDOSE_PORTABLE_EDITION", "light")
     assert current_edition() == EDITION_FULL
 
 
 def test_light_list_is_the_proposed_starter_set():
+    """Exercise light list is the proposed starter set."""
     names = light_phantom_stl_names()
     assert len(names) == len(LIGHT_BASE_MESHES) * 4 == 28
     assert all(name.endswith(".stl") for name in names)
@@ -97,6 +104,7 @@ def test_light_list_is_the_proposed_starter_set():
 
 
 def test_full_list_keeps_every_clinical_mesh_but_no_1000t_previews():
+    """Exercise full list keeps every clinical mesh but no 1000t previews."""
     shipped = sorted(path.name for path in package_phantom_data_dir().glob("*.stl"))
     full = full_phantom_stl_names(shipped)
     assert full == edition_phantom_stl_names(EDITION_FULL, shipped)
@@ -106,6 +114,7 @@ def test_full_list_keeps_every_clinical_mesh_but_no_1000t_previews():
 
 
 def test_light_list_refuses_a_partial_starter_set():
+    """Exercise light list refuses a partial starter set."""
     names = light_phantom_stl_names()[1:]
     with pytest.raises(ValueError, match="missing"):
         edition_phantom_stl_names(EDITION_LIGHT, names)
@@ -114,6 +123,7 @@ def test_light_list_refuses_a_partial_starter_set():
 
 
 def test_light_png_render_returns_none_without_a_browser(light, no_browser_launch):
+    """Exercise light png render returns none without a browser."""
     from guiskindose.export.images import render_dosemap_png
 
     png = render_dosemap_png(*_TRIANGLE)
@@ -123,6 +133,7 @@ def test_light_png_render_returns_none_without_a_browser(light, no_browser_launc
 
 
 def test_light_rich_report_marks_images_unavailable_without_a_browser(light, no_browser_launch):
+    """Exercise light rich report marks images unavailable without a browser."""
     from guiskindose import PyskindoseSettings, load_settings_example_json
     from guiskindose.export import collect_export_payload
     from guiskindose.export.writers import render_bytes
@@ -157,6 +168,7 @@ def test_full_png_render_reaches_the_kaleido_entry(monkeypatch):
 
 
 def test_light_static_dose_maps_stop_before_rendering(light, capsys):
+    """Exercise light static dose maps stop before rendering."""
     from guiskindose.plotting.create_dose_map_plot import _write_and_show_static_dose_maps
 
     fig = MagicMock()
@@ -175,6 +187,7 @@ def starter_only(tmp_path):
 
 
 def test_catalog_stems_include_aliases_poses_and_previews():
+    """Exercise catalog stems include aliases poses and previews."""
     assert is_clinical_catalog_stem("senior_male")
     assert is_clinical_catalog_stem("senior_male_arms_down_reduced_3000t")
     assert is_clinical_catalog_stem("pediatric_10y_male")  # legacy alias
@@ -183,6 +196,7 @@ def test_catalog_stems_include_aliases_poses_and_previews():
 
 
 def test_non_starter_mesh_is_reported_not_installed(light, starter_only):
+    """Exercise non starter mesh is reported not installed."""
     assert resolve_human_mesh_stl_path("adult_male", phantom_data_dir=starter_only).is_file()
 
     with pytest.raises(HumanMeshNotInstalledError) as excinfo:
@@ -198,6 +212,7 @@ def test_non_starter_mesh_is_reported_not_installed(light, starter_only):
 
 
 def test_missing_mesh_in_full_points_at_reinstall(starter_only):
+    """Exercise missing mesh in full points at reinstall."""
     message = human_mesh_not_installed_message("senior_male", phantom_data_dir=starter_only)
     assert message is not None
     assert "Reinstall" in message
@@ -205,12 +220,14 @@ def test_missing_mesh_in_full_points_at_reinstall(starter_only):
 
 
 def test_unknown_stem_is_still_unknown_not_missing(starter_only):
+    """Exercise unknown stem is still unknown not missing."""
     with pytest.raises(ValueError, match="Unknown human mesh stem") as excinfo:
         resolve_human_mesh_stl_path("not_a_catalog_mesh", phantom_data_dir=starter_only)
     assert not isinstance(excinfo.value, HumanMeshNotInstalledError)
 
 
 def test_phantom_refuses_a_missing_mesh_instead_of_replacing_it(light, starter_only, monkeypatch):
+    """Exercise phantom refuses a missing mesh instead of replacing it."""
     from guiskindose import load_settings_example_json, phantom_mesh_names
     from guiskindose.phantom_class import Phantom
     from guiskindose.settings import PyskindoseSettings

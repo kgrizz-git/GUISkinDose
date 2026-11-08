@@ -106,6 +106,7 @@ def _run_preview(args: argparse.Namespace, import_opts: TabularImportOptions) ->
     preview_settings = prepare_cli_settings(args)
 
     def _preview_all() -> None:
+        """Preview all."""
         for single_path in file_paths:
             preview_input_file(
                 single_path,
@@ -128,6 +129,7 @@ def _run_export(
     """Write a Rich report from the resolved CLI file list."""
 
     def _export() -> None:
+        """Export."""
         run_cli_export(
             file_paths,
             run_settings,
@@ -157,6 +159,7 @@ def _run_single_file(
     if Path(single_path).suffix.lower() in TABULAR_SUFFIXES:
 
         def _analyze_tabular() -> Any:
+            """Analyze tabular."""
             return analyze_input_file(
                 single_path,
                 settings=run_settings,
@@ -169,6 +172,7 @@ def _run_single_file(
         return
 
     def _analyze_rdsr() -> Any:
+        """Analyze rdsr."""
         reject_import_options_for_non_tabular([single_path], import_opts)
         return main(file_path=single_path, settings=run_settings)
 
@@ -186,6 +190,7 @@ def _run_headless(args: argparse.Namespace, import_opts: TabularImportOptions) -
     if len(file_paths) > 1:
 
         def _analyze_many() -> Any:
+            """Analyze many."""
             return analyze_multiple_input_files(
                 file_paths,
                 settings=run_settings,

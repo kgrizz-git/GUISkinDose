@@ -16,11 +16,13 @@ from tests.unittests.phantom_pack_test_helpers import tiny_stl_body
 
 
 def _write_stl(root: Path, stem: str, body: bytes | None = None) -> None:
+    """Write stl."""
     root.mkdir(parents=True, exist_ok=True)
     (root / f"{stem}.stl").write_bytes(body or tiny_stl_body())
 
 
 def test_user_library_resolves_when_shipped_missing(tmp_path: Path) -> None:
+    """Exercise user library resolves when shipped missing."""
     shipped = tmp_path / "shipped"
     library = tmp_path / "library"
     _write_stl(library, "senior_male")
@@ -34,6 +36,7 @@ def test_user_library_resolves_when_shipped_missing(tmp_path: Path) -> None:
 
 
 def test_shipped_wins_over_user_library(tmp_path: Path) -> None:
+    """Exercise shipped wins over user library."""
     shipped = tmp_path / "shipped"
     library = tmp_path / "library"
     _write_stl(shipped, "senior_male", b"shipped-bytes")
@@ -48,6 +51,7 @@ def test_shipped_wins_over_user_library(tmp_path: Path) -> None:
 
 
 def test_missing_message_names_pack_without_paths(tmp_path: Path) -> None:
+    """Exercise missing message names pack without paths."""
     shipped = tmp_path / "shipped"
     library = tmp_path / "library"
     shipped.mkdir()
@@ -66,6 +70,7 @@ def test_missing_message_names_pack_without_paths(tmp_path: Path) -> None:
 
 
 def test_legacy_alias_still_resolves(tmp_path: Path) -> None:
+    """Exercise legacy alias still resolves."""
     shipped = tmp_path / "shipped"
     _write_stl(shipped, "ped_5y_male")
     path = resolve_human_mesh_stl_path("pediatric_5y_male", phantom_data_dir=shipped, user_library_dir=None)
@@ -73,6 +78,7 @@ def test_legacy_alias_still_resolves(tmp_path: Path) -> None:
 
 
 def test_preview_prefers_reduced_shipped_first(tmp_path: Path) -> None:
+    """Exercise preview prefers reduced shipped first."""
     shipped = tmp_path / "shipped"
     library = tmp_path / "library"
     _write_stl(shipped, "adult_male")
@@ -87,6 +93,7 @@ def test_preview_prefers_reduced_shipped_first(tmp_path: Path) -> None:
 
 
 def test_demo_not_from_user_library(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Exercise demo not from user library."""
     from guiskindose.gui import window_prefs
 
     shipped = tmp_path / "shipped"
@@ -104,6 +111,7 @@ def test_demo_not_from_user_library(tmp_path: Path, monkeypatch: pytest.MonkeyPa
 
 
 def test_demo_from_shipped_when_enabled(tmp_path: Path) -> None:
+    """Exercise demo from shipped when enabled."""
     shipped = tmp_path / "shipped"
     _write_stl(shipped, "demo_cosmic_buddha")
     path = resolve_human_mesh_stl_path(
@@ -116,6 +124,7 @@ def test_demo_from_shipped_when_enabled(tmp_path: Path) -> None:
 
 
 def test_demo_off_raises_value_error(tmp_path: Path) -> None:
+    """Exercise demo off raises value error."""
     shipped = tmp_path / "shipped"
     _write_stl(shipped, "demo_cosmic_buddha")
     with pytest.raises(ValueError, match="Unknown human mesh"):
@@ -128,6 +137,7 @@ def test_demo_off_raises_value_error(tmp_path: Path) -> None:
 
 
 def test_missing_clinical_raises_typed_error(tmp_path: Path) -> None:
+    """Exercise missing clinical raises typed error."""
     shipped = tmp_path / "shipped"
     shipped.mkdir()
     with pytest.raises(HumanMeshNotInstalledError):
@@ -135,6 +145,7 @@ def test_missing_clinical_raises_typed_error(tmp_path: Path) -> None:
 
 
 def test_unknown_stem_is_value_error_not_missing(tmp_path: Path) -> None:
+    """Exercise unknown stem is value error not missing."""
     shipped = tmp_path / "shipped"
     shipped.mkdir()
     with pytest.raises(ValueError, match="Unknown human mesh") as info:
@@ -153,6 +164,7 @@ def test_unknown_stem_is_value_error_not_missing(tmp_path: Path) -> None:
 def test_user_library_dir_for_platform_posix(
     tmp_path: Path, platform: str, environ: dict[str, str], expected_suffix: tuple[str, ...]
 ) -> None:
+    """Exercise user library dir for platform posix."""
     from guiskindose.phantom_library import user_library_dir_for_platform
 
     home = tmp_path / "home"
@@ -165,6 +177,7 @@ def test_user_library_dir_for_platform_posix(
 
 
 def test_user_library_dir_windows_localappdata(tmp_path: Path) -> None:
+    """Exercise user library dir windows localappdata."""
     from guiskindose.phantom_library import PhantomLibraryUnavailableError, user_library_dir_for_platform
 
     with pytest.raises(PhantomLibraryUnavailableError):
@@ -176,10 +189,14 @@ def test_user_library_dir_windows_localappdata(tmp_path: Path) -> None:
 def test_path_is_library_link_uses_injected_platform_via_ctypes(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """Exercise path is library link uses injected platform via ctypes."""
+    import os
+
     from guiskindose.phantom_library import _path_is_library_link
 
     link_root = tmp_path / "lib"
     link_root.mkdir()
+    monkeypatch.delattr(os.path, "isjunction", raising=False)
     monkeypatch.setattr(
         "guiskindose.phantom_library._win32_file_attributes",
         lambda _p: 0x400,
@@ -190,21 +207,28 @@ def test_path_is_library_link_uses_injected_platform_via_ctypes(
 def test_win32_file_attributes_seam_returns_false_on_attribute_error(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """Exercise win32 file attributes seam returns false on attribute error."""
     from guiskindose.phantom_library import _win32_has_reparse_point
 
     link_root = tmp_path / "lib"
     link_root.mkdir()
 
     def _boom(_p: Path) -> int:
+        """Boom."""
         raise AttributeError("no windll")
 
     monkeypatch.setattr("guiskindose.phantom_library._win32_file_attributes", _boom)
     assert not _win32_has_reparse_point(link_root)
 
 
-def test_demo_stem_not_marked_installed_without_file(tmp_path: Path) -> None:
-    from guiskindose.gui.helpers import mesh_stem_is_installed
+def test_demo_stl_in_user_library_alone_is_not_shipped_mesh(tmp_path: Path) -> None:
+    """Exercise demo stl in user library alone is not shipped mesh."""
+    from guiskindose.phantom_library import shipped_mesh_stl_path, user_library_mesh_stl_path
 
     shipped = tmp_path / "shipped"
+    library = tmp_path / "lib"
     shipped.mkdir()
-    assert not mesh_stem_is_installed("demo_cosmic_buddha", phantom_data_dir=shipped, user_library_dir=tmp_path / "lib")
+    library.mkdir()
+    (library / "demo_cosmic_buddha.stl").write_bytes(b"solid t\nendsolid t\n")
+    assert user_library_mesh_stl_path("demo_cosmic_buddha", user_library_dir=library) is not None
+    assert shipped_mesh_stl_path("demo_cosmic_buddha", shipped_dir=shipped) is None

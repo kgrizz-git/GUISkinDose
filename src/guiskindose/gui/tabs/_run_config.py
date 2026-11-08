@@ -274,6 +274,7 @@ def _refresh_all(ctx: PageContext) -> None:
     ctx.refresh_per_exam()
     ctx.refresh_geometry_tab()
     ctx.refresh_phantom_preview()
+    ctx.refresh_human_mesh_install_note()
 
 
 def _notify_warnings(warnings: list[str]) -> None:

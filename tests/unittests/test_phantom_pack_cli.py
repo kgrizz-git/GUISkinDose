@@ -14,6 +14,7 @@ from tests.unittests.phantom_pack_test_helpers import manifest_for_files, pack_z
 
 
 def test_headless_cli_install_via_entry(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Exercise headless cli install via entry."""
     from guiskindose import __main__ as entry
 
     shipped = tmp_path / "shipped"
@@ -37,6 +38,7 @@ def test_headless_cli_install_via_entry(monkeypatch: pytest.MonkeyPatch, tmp_pat
 
 
 def test_gui_mode_refuses_pack_install(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Exercise gui mode refuses pack install."""
     from guiskindose import __main__ as entry
 
     argv = ["guiskindose", "--mode", "gui", "--install-phantom-pack", "pack.zip"]
@@ -49,6 +51,7 @@ def test_gui_mode_refuses_pack_install(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_install_without_file_path_prints_counts(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
+    """Exercise install without file path prints counts."""
     shipped = tmp_path / "shipped"
     library = tmp_path / "library"
     shipped.mkdir()
@@ -60,7 +63,7 @@ def test_install_without_file_path_prints_counts(
     zip_path = tmp_path / "pack.zip"
     zip_path.write_bytes(pack_zip_bytes(manifest, {"senior_male": body}))
     monkeypatch.setattr("guiskindose.phantom_pack_pin.EXPECTED_PHANTOM_PACK_SHA256", pin)
-    monkeypatch.setattr("guiskindose.__version__", "1.1.1")
+    monkeypatch.setattr("guiskindose.phantom_pack_cli.__version__", "1.1.1")
     monkeypatch.setattr("guiskindose.phantom_pack_install.default_install_library_dir", lambda: library)
     monkeypatch.setattr("guiskindose.phantom_mesh_names.package_phantom_data_dir", lambda: shipped)
     code = run_cli_phantom_pack_install(zip_path)
@@ -74,6 +77,7 @@ def test_install_without_file_path_prints_counts(
 def test_install_library_unavailable_prints_fixed_sentence(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
+    """Exercise install library unavailable prints fixed sentence."""
     from guiskindose.phantom_library import _WINDOWS_LIBRARY_UNAVAILABLE, PhantomLibraryUnavailableError
 
     zip_path = tmp_path / "pack.zip"
@@ -89,6 +93,7 @@ def test_install_library_unavailable_prints_fixed_sentence(
 
 
 def test_bad_zip_user_message_no_path(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Exercise bad zip user message no path."""
     bad = tmp_path / "bad.zip"
     bad.write_bytes(b"not a zip")
     code = run_cli_phantom_pack_install(bad)
@@ -100,6 +105,7 @@ def test_bad_zip_user_message_no_path(tmp_path: Path, capsys: pytest.CaptureFixt
 def test_missing_mesh_headless_uses_install_hint(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
+    """Exercise missing mesh headless uses install hint."""
     from guiskindose import load_settings_example_json
     from guiskindose.phantom_class import Phantom
     from guiskindose.phantom_mesh_names import HumanMeshNotInstalledError

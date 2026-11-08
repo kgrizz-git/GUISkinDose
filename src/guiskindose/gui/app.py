@@ -107,6 +107,7 @@ class _StaticFilesRegistration:
     __slots__ = ("registered",)
 
     def __init__(self) -> None:
+        """Initialize the instance."""
         self.registered = False
 
 
@@ -221,6 +222,7 @@ def _show_onboarding_dialog() -> None:
         dont_show = ui.checkbox("Don't show this again").classes("q-mt-md")
 
         def on_ok() -> None:
+            """On ok."""
             acknowledge_intended_use()
             if dont_show.value:
                 dismiss_onboarding()
@@ -355,6 +357,7 @@ def index():
 
 
 def _detect_native_screens() -> list[ScreenBounds]:
+    """Detect native screens."""
     screens: list[ScreenBounds] = []
     if sys.platform == "darwin":
         try:
@@ -405,6 +408,7 @@ def _detect_native_screens() -> list[ScreenBounds]:
 
 
 def _detect_macos_visible_primary_bounds() -> ScreenBounds | None:
+    """Detect macos visible primary bounds."""
     if sys.platform != "darwin":
         return None
     try:
@@ -430,6 +434,7 @@ def _detect_macos_visible_primary_bounds() -> ScreenBounds | None:
 
 
 def _resolve_native_window_prefs(screens: list[ScreenBounds]) -> NativeWindowPrefs:
+    """Resolve native window prefs."""
     raw = load_native_window_prefs()
     if raw is not None:
         return validate_prefs(raw, screens)
@@ -442,6 +447,7 @@ def _normalize_macos_maximized_startup(
     prefs: NativeWindowPrefs,
     screens: list[ScreenBounds],
 ) -> NativeWindowPrefs:
+    """Normalize macos maximized startup."""
     if sys.platform != "darwin" or not prefs.maximized:
         return prefs
 
@@ -483,6 +489,7 @@ def _register_native_focus_handler() -> None:
 
     @app.on_connect
     def _handle_native_focus():
+        """Handle native focus."""
         try:
             if app.native.main_window is not None:
                 set_on_top = getattr(app.native.main_window, "set_on_top", None)
@@ -499,7 +506,9 @@ def _register_browser_shutdown_handler(
 
     @app.on_disconnect
     def _shutdown_when_last_window_closes() -> None:
+        """Shutdown when last window closes."""
         async def _shutdown_if_idle() -> None:
+            """Shutdown if idle."""
             await asyncio.sleep(4.0)
             if not any(c.has_socket_connection for c in Client.instances.values()):
                 dprint("GUI", "Last browser window closed; shutting down server.")
@@ -569,6 +578,7 @@ def _open_browser_when_ready(url: str, host: str = "127.0.0.1", port: int = 8765
     """
 
     def _wait_and_open() -> None:
+        """Wait and open."""
         if not _wait_for_port(host, port):
             return
         if not probe_own_server(host, port):
@@ -603,6 +613,7 @@ def _loopback_port_is_free(port: int) -> bool:
 
 
 def _os_assigned_loopback_port() -> int:
+    """Os assigned loopback port."""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
         probe.bind(("127.0.0.1", 0))
         return probe.getsockname()[1]
@@ -682,6 +693,9 @@ def run_gui(native: bool = False, host: str | None = None, port: int | None = No
     else:
         launch_token, security_config = generate_launch_token(bind_port)
         configure_loopback_security(security_config)
+    from guiskindose.gui.upload_body_limit_middleware import UploadBodyLimitMiddleware
+
+    app.add_middleware(UploadBodyLimitMiddleware)
     app.add_middleware(LoopbackSecurityMiddleware)
 
     show_browser = native

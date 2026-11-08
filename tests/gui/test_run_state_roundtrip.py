@@ -32,6 +32,7 @@ from guiskindose.settings import PyskindoseSettings  # noqa: E402
 
 
 def _example_settings() -> PyskindoseSettings:
+    """Example settings."""
     base = load_settings_example_json()
     base["kerma_meter_correction"] = {
         "enable": True,
@@ -70,6 +71,7 @@ def _seed_single_exam() -> None:
 
 
 def _make_document() -> dict:
+    """Make document."""
     populated = AppState()
     populated.input_schema = "dosetrack"
     populated.input_source_type = "xlsx"
@@ -107,15 +109,18 @@ def _make_document() -> dict:
 
 
 def _upload_event(document: dict) -> SimpleNamespace:
+    """Upload event."""
     payload = json.dumps(document).encode("utf-8")
 
     async def _read() -> bytes:
+        """Read."""
         return payload
 
     return SimpleNamespace(file=SimpleNamespace(read=_read))
 
 
 def _stub_ctx(calls: list[str]) -> PageContext:
+    """Stub ctx."""
     ctx = PageContext(
         tabs=MagicMock(),
         file_label=MagicMock(),
@@ -129,15 +134,18 @@ def _stub_ctx(calls: list[str]) -> PageContext:
     ctx.refresh_per_exam = lambda: calls.append("per_exam")
     ctx.refresh_geometry_tab = lambda: calls.append("geometry_tab")
     ctx.refresh_phantom_preview = lambda: calls.append("phantom_preview")
+    ctx.refresh_human_mesh_install_note = lambda: calls.append("human_mesh_install_note")
     return ctx
 
 
 def _client(user: User) -> Any:
+    """Client."""
     assert user.client is not None
     return user.client
 
 
 def _number_by_label(user: User, label: str) -> Any:
+    """Number by label."""
     for el in _client(user).elements.values():
         if isinstance(el, ui.number) and el._props.get("label") == label:
             return el
@@ -145,6 +153,7 @@ def _number_by_label(user: User, label: str) -> Any:
 
 
 def _select_by_label(user: User, label: str) -> Any:
+    """Select by label."""
     for el in _client(user).elements.values():
         if isinstance(el, ui.select) and el._props.get("label") == label:
             return el
@@ -179,7 +188,15 @@ async def test_import_restores_state_invokes_refresh_and_clears_results(user: Us
     assert state.input_schema == "dosetrack"
     assert state.loaded_exam_meta[0]["flip_tx"] is True
     assert state.kerma_meter_in_memory_table == {("Acme", "TubeA"): 1.02}
-    assert calls == ["event_table", "exams_table", "import_preview", "per_exam", "geometry_tab", "phantom_preview"]
+    assert calls == [
+        "event_table",
+        "exams_table",
+        "import_preview",
+        "per_exam",
+        "geometry_tab",
+        "phantom_preview",
+        "human_mesh_install_note",
+    ]
     assert state.calculation_done is False
     assert state.output is None
     assert "1 exam" in status.text
@@ -265,6 +282,7 @@ async def test_import_reparse_failure_suppresses_success_status(user: User, monk
     state.output = {"psd": 1.0}
 
     def _fake_load_tabular(file_path: Path, app_state: AppState, _force: bool = True) -> tuple[bool, str]:
+        """Fake load tabular."""
         return False, "boom"
 
     monkeypatch.setattr(run_config_mod, "load_tabular", _fake_load_tabular)
@@ -304,7 +322,15 @@ async def test_import_count_mismatch_rolls_back_and_keeps_results(user: User) ->
     assert state.d_lon == 0.0
     assert state.calculation_done is True  # pre-import results stay valid
     assert state.output == {"psd": 1.0}
-    assert calls == ["event_table", "exams_table", "import_preview", "per_exam", "geometry_tab", "phantom_preview"]
+    assert calls == [
+        "event_table",
+        "exams_table",
+        "import_preview",
+        "per_exam",
+        "geometry_tab",
+        "phantom_preview",
+        "human_mesh_install_note",
+    ]
     assert not user.notify.contains("Run configuration loaded")
 
 
@@ -315,6 +341,7 @@ async def test_import_unexpected_error_restores_and_notifies(user: User, monkeyp
     _seed_single_exam()
 
     def _boom(document: dict, app_state: AppState) -> None:
+        """Boom."""
         app_state.input_schema = "mutated"
         raise RuntimeError("simulated unexpected failure")
 
@@ -341,6 +368,7 @@ async def test_import_second_apply_failure_restores_original_exams(user: User, m
         # alongside the scalars (next calc must see old exams + old state).
         # The fake also flips loader-owned display state, as a real re-parse
         # would, to prove rollback covers it too.
+        """Fake load tabular."""
         app_state.loaded_exams = [object(), object()]
         app_state.is_multi_exam = True
         app_state.import_provenance = SimpleNamespace(schema_name="dosetrack")
@@ -370,6 +398,7 @@ async def test_import_rereparses_before_restoring_offsets(user: User, monkeypatc
     reparse_calls: list[str] = []
 
     def _fake_load_tabular(file_path: Path, app_state: AppState, _force: bool = True) -> tuple[bool, str]:
+        """Fake load tabular."""
         reparse_calls.append(str(file_path))
         # Simulate the rebuild wiping per-exam offsets/toggles AND landing on
         # a different sheet than the document: only the post-rebuild re-apply
@@ -436,6 +465,7 @@ async def test_import_replaces_unavailable_mesh_after_reparse(user: User, monkey
     await user.should_see("Human mesh")
 
     def _fake_load_tabular(file_path: Path, app_state: AppState, _force: bool = True) -> tuple[bool, str]:
+        """Fake load tabular."""
         app_state.loaded_exam_meta = [
             {
                 "file_name": "export.xlsx",
@@ -456,7 +486,12 @@ async def test_import_replaces_unavailable_mesh_after_reparse(user: User, monkey
     _patch_starter_mesh(monkeypatch)
     with _client(user):
         status = ui.label("")
-    await run_config_mod._do_load(_upload_event(_unavailable_mesh_document()), _stub_ctx([]), status)
+    ctx = _stub_ctx([])
+    await run_config_mod._do_load(_upload_event(_unavailable_mesh_document()), ctx, status)
+    for _ in range(40):
+        if state.human_mesh == "senior_male":
+            break
+        await __import__("asyncio").sleep(0.05)
     assert state.human_mesh == "senior_male"
     assert user.notify.contains("missing")
 
@@ -469,6 +504,7 @@ async def test_failed_reparse_does_not_announce_a_mesh_replacement(user: User, m
     state.human_mesh = "hudfrid"
 
     def _fake_load_tabular(file_path: Path, app_state: AppState, _force: bool = True) -> tuple[bool, str]:
+        """Fake load tabular."""
         return False, "boom"
 
     monkeypatch.setattr(run_config_mod, "load_tabular", _fake_load_tabular)
@@ -496,6 +532,7 @@ def test_legacy_kerma_mode_prompt_sets_ask_for_missing():
 
 
 def _unresolved_labels_document(*, include_identifiers: bool) -> dict:
+    """Unresolved labels document."""
     populated = AppState()
     populated.kerma_meter_unresolved_labels = {"Exam 1": "Room-7"}
     populated.loaded_exam_meta = []
@@ -544,6 +581,7 @@ def test_unresolved_equipment_labels_malformed_rejected() -> None:
 
 
 def _per_exam_document(*, include_identifiers: bool) -> dict:
+    """Per exam document."""
     populated = AppState()
     populated.kerma_meter_in_memory_table = {
         ("Exam 1", "Acme", "A"): 1.1,
@@ -562,6 +600,7 @@ def _per_exam_document(*, include_identifiers: bool) -> dict:
 
 
 def test_per_exam_factors_and_periods_round_trip() -> None:
+    """Exercise per exam factors and periods round trip."""
     from guiskindose.gui.run_state import apply_run_state
 
     fresh = AppState()
@@ -575,6 +614,7 @@ def test_per_exam_factors_and_periods_round_trip() -> None:
 
 
 def test_per_exam_factors_and_periods_are_redacted_without_identifiers() -> None:
+    """Exercise per exam factors and periods are redacted without identifiers."""
     from guiskindose.gui.run_state import apply_run_state
 
     document = _per_exam_document(include_identifiers=False)
@@ -588,6 +628,7 @@ def test_per_exam_factors_and_periods_are_redacted_without_identifiers() -> None
 
 
 def test_malformed_per_exam_values_are_rejected() -> None:
+    """Exercise malformed per exam values are rejected."""
     from guiskindose.gui.run_state import RunStateError, apply_run_state
 
     document = _per_exam_document(include_identifiers=True)
@@ -598,6 +639,7 @@ def test_malformed_per_exam_values_are_rejected() -> None:
 
 
 def test_k_tab_mode_round_trips_and_legacy_flag_maps() -> None:
+    """Exercise k tab mode round trips and legacy flag maps."""
     from guiskindose.gui.run_state import apply_run_state
 
     document = _per_exam_document(include_identifiers=True)

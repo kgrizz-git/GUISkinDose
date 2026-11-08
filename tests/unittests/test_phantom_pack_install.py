@@ -18,6 +18,7 @@ from tests.unittests.phantom_pack_test_helpers import manifest_for_files, pack_z
 
 
 def _pin_for(manifest: dict) -> str:
+    """Pin for."""
     from guiskindose.phantom_pack import manifest_sha256
 
     return manifest_sha256(manifest)
@@ -31,6 +32,7 @@ def _install(
     manifest: dict,
     app_version: str = "1.1.1",
 ) -> InstallResult:
+    """Install."""
     shipped.mkdir(parents=True, exist_ok=True)
     return install_phantom_pack(
         io.BytesIO(raw),
@@ -42,6 +44,7 @@ def _install(
 
 
 def test_installs_into_user_library(tmp_path: Path) -> None:
+    """Exercise installs into user library."""
     shipped = tmp_path / "shipped"
     library = tmp_path / "library"
     body = tiny_stl_body()
@@ -54,6 +57,7 @@ def test_installs_into_user_library(tmp_path: Path) -> None:
 
 
 def test_creates_library_with_mode(tmp_path: Path) -> None:
+    """Exercise creates library with mode."""
     shipped = tmp_path / "shipped"
     library = tmp_path / "library"
     body = tiny_stl_body()
@@ -61,11 +65,12 @@ def test_creates_library_with_mode(tmp_path: Path) -> None:
     manifest = manifest_for_files(files)
     _install(pack_zip_bytes(manifest, files), shipped=shipped, library=library, manifest=manifest)
     assert library.is_dir()
-    if hasattr(stat, "S_IRWXU"):
+    if os.name == "posix" and hasattr(stat, "S_IRWXU"):
         assert library.stat().st_mode & 0o777 == 0o700
 
 
 def test_second_install_replaces_without_stage_leftovers(tmp_path: Path) -> None:
+    """Exercise second install replaces without stage leftovers."""
     shipped = tmp_path / "shipped"
     library = tmp_path / "library"
     body = tiny_stl_body()
@@ -84,6 +89,7 @@ def test_second_install_replaces_without_stage_leftovers(tmp_path: Path) -> None
 
 
 def test_tampered_bytes_leave_previous_file(tmp_path: Path) -> None:
+    """Exercise tampered bytes leave previous file."""
     shipped = tmp_path / "shipped"
     library = tmp_path / "library"
     body = tiny_stl_body()
@@ -113,6 +119,7 @@ def test_tampered_bytes_leave_previous_file(tmp_path: Path) -> None:
     ],
 )
 def test_rejects_bad_archives(tmp_path: Path, builder: str, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Exercise rejects bad archives."""
     shipped = tmp_path / "shipped"
     library = tmp_path / "library"
     body = tiny_stl_body()
@@ -172,6 +179,7 @@ def test_rejects_bad_archives(tmp_path: Path, builder: str, monkeypatch: pytest.
         original_infolist = zipfile.ZipFile.infolist
 
         def _lying_infolist(self: zipfile.ZipFile) -> list[zipfile.ZipInfo]:
+            """Lying infolist."""
             items = original_infolist(self)
             for info in items:
                 if info.filename.endswith(".stl"):
@@ -189,6 +197,7 @@ def test_rejects_bad_archives(tmp_path: Path, builder: str, monkeypatch: pytest.
 
 
 def test_skip_shipped_install_other(tmp_path: Path) -> None:
+    """Exercise skip shipped install other."""
     shipped = tmp_path / "shipped"
     library = tmp_path / "library"
     body = tiny_stl_body()
@@ -205,6 +214,7 @@ def test_skip_shipped_install_other(tmp_path: Path) -> None:
 
 
 def test_all_shipped_skipped_no_library_copy(tmp_path: Path) -> None:
+    """Exercise all shipped skipped no library copy."""
     shipped = tmp_path / "shipped"
     library = tmp_path / "library"
     body = tiny_stl_body()
@@ -219,6 +229,7 @@ def test_all_shipped_skipped_no_library_copy(tmp_path: Path) -> None:
 
 
 def test_rollback_removes_stem_added_this_install(tmp_path: Path) -> None:
+    """Exercise rollback removes stem added this install."""
     shipped = tmp_path / "shipped"
     library = tmp_path / "library"
     library.mkdir()
@@ -229,6 +240,7 @@ def test_rollback_removes_stem_added_this_install(tmp_path: Path) -> None:
     original_replace = Path.replace
 
     def flaky_replace(self: Path, target: Path) -> None:
+        """Flaky replace."""
         calls["count"] += 1
         if calls["count"] == 2:
             raise PermissionError("blocked")
@@ -242,6 +254,7 @@ def test_rollback_removes_stem_added_this_install(tmp_path: Path) -> None:
 
 
 def test_mid_replace_rollback(tmp_path: Path) -> None:
+    """Exercise mid replace rollback."""
     shipped = tmp_path / "shipped"
     library = tmp_path / "library"
     body = tiny_stl_body()
@@ -253,8 +266,9 @@ def test_mid_replace_rollback(tmp_path: Path) -> None:
     original_replace = Path.replace
 
     def flaky_replace(self: Path, target: Path) -> None:
+        """Flaky replace."""
         calls["count"] += 1
-        if calls["count"] == 3:
+        if calls["count"] == 2:
             raise PermissionError("blocked")
         original_replace(self, target)
 
@@ -268,6 +282,7 @@ def test_mid_replace_rollback(tmp_path: Path) -> None:
 
 
 def test_failure_logs_contain_no_paths(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
+    """Exercise failure logs contain no paths."""
     caplog.set_level(logging.DEBUG)
     shipped = tmp_path / "shipped"
     library = tmp_path / "library"
@@ -280,6 +295,7 @@ def test_failure_logs_contain_no_paths(tmp_path: Path, caplog: pytest.LogCapture
 
 
 def test_rejects_bad_crc_stored_member(tmp_path: Path) -> None:
+    """Exercise rejects bad crc stored member."""
     shipped = tmp_path / "shipped"
     library = tmp_path / "library"
     body = tiny_stl_body()
@@ -298,6 +314,7 @@ def test_rejects_bad_crc_stored_member(tmp_path: Path) -> None:
 
 
 def test_rejects_unsupported_compression(tmp_path: Path) -> None:
+    """Exercise rejects unsupported compression."""
     shipped = tmp_path / "shipped"
     library = tmp_path / "library"
     body = tiny_stl_body()
@@ -313,7 +330,8 @@ def test_rejects_unsupported_compression(tmp_path: Path) -> None:
         _install(raw, shipped=shipped, library=library, manifest=manifest)
 
 
-def test_failure_before_first_replace_removes_created_library(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_failure_before_first_replace_leaves_library_root_with_lock(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Exercise failure before first replace leaves library root with lock."""
     shipped = tmp_path / "shipped"
     library = tmp_path / "library"
     body = tiny_stl_body()
@@ -322,6 +340,7 @@ def test_failure_before_first_replace_removes_created_library(tmp_path: Path, mo
     original_mkdir = Path.mkdir
 
     def fail_mkdir(self: Path, *args, **kwargs):
+        """Fail mkdir."""
         if self.name.startswith(".incoming-"):
             raise OSError("no stage")
         return original_mkdir(self, *args, **kwargs)
@@ -331,7 +350,8 @@ def test_failure_before_first_replace_removes_created_library(tmp_path: Path, mo
     raw = pack_zip_bytes(manifest, files)
     with pytest.raises(PhantomPackError):
         _install(raw, shipped=shipped, library=library, manifest=manifest)
-    assert not library.exists()
+    assert library.is_dir()
+    assert [p.name for p in library.iterdir()] == [".install.lock"]
 
 
 def test_accepts_members_with_regular_unix_mode(tmp_path: Path) -> None:
@@ -353,6 +373,7 @@ def test_accepts_members_with_regular_unix_mode(tmp_path: Path) -> None:
 
 
 def test_orphan_backup_restored_when_destination_missing(tmp_path: Path) -> None:
+    """Exercise orphan backup restored when destination missing."""
     shipped = tmp_path / "shipped"
     library = tmp_path / "library"
     library.mkdir()
@@ -366,6 +387,7 @@ def test_orphan_backup_restored_when_destination_missing(tmp_path: Path) -> None
 
 
 def test_sweep_unlinks_stale_incoming_symlink_without_touching_target(tmp_path: Path) -> None:
+    """Exercise sweep unlinks stale incoming symlink without touching target."""
     from guiskindose.phantom_pack_install import _sweep_library_artifacts
 
     victim = tmp_path / "outside"
@@ -382,6 +404,7 @@ def test_sweep_unlinks_stale_incoming_symlink_without_touching_target(tmp_path: 
 
 
 def test_stale_incoming_with_subdir_does_not_block_later_install(tmp_path: Path) -> None:
+    """Exercise stale incoming with subdir does not block later install."""
     from guiskindose.phantom_pack_install import _sweep_library_artifacts
 
     library = tmp_path / "library"
@@ -399,9 +422,11 @@ def test_stale_incoming_with_subdir_does_not_block_later_install(tmp_path: Path)
 def test_source_stream_oserror_is_install_failed(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """Exercise source stream oserror is install failed."""
     from guiskindose.phantom_pack_install import _INSTALL_FAILED, install_phantom_pack
 
     def _broken_read(*_args, **_kwargs):
+        """Broken read."""
         raise OSError("broken stream")
 
     monkeypatch.setattr("guiskindose.phantom_pack_install._read_zip_body", _broken_read)
@@ -423,6 +448,7 @@ def test_source_stream_oserror_is_install_failed(
 
 
 def test_non_directory_library_parent_install_failed(tmp_path: Path) -> None:
+    """Exercise non directory library parent install failed."""
     from guiskindose.phantom_pack_install import _INSTALL_FAILED, install_phantom_pack
 
     shipped = tmp_path / "shipped"
@@ -445,6 +471,7 @@ def test_non_directory_library_parent_install_failed(tmp_path: Path) -> None:
 
 @pytest.mark.skipif(os.name == "nt", reason="POSIX permissions")
 def test_readonly_library_install_failed(tmp_path: Path) -> None:
+    """Exercise readonly library install failed."""
     import os
 
     from guiskindose.phantom_pack_install import _INSTALL_FAILED, install_phantom_pack
@@ -487,3 +514,126 @@ def test_sweep_does_not_descend_into_a_junction(tmp_path: Path, monkeypatch: pyt
     )
     install_mod._sweep_incoming_dirs(library, keep_stage=None)
     assert victim.read_bytes() == b"keep"
+
+
+def test_zip_eocd_member_count_rejected_before_zipfile(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Exercise zip eocd member count rejected before zipfile."""
+    import io
+    import struct
+    import zipfile
+
+    from guiskindose.phantom_pack_install import install_phantom_pack
+
+    # Minimal zip EOCD claiming 129 entries (invalid payload; must fail in pre-check).
+    eocd = struct.pack("<4s4H2I", b"PK\x05\x06", 0, 0, 129, 129, 0, 0)
+    payload = eocd
+
+    def _fail_if_opened(*_args, **_kwargs):
+        """Fail if opened."""
+        raise AssertionError("ZipFile should not be constructed")
+
+    monkeypatch.setattr(zipfile.ZipFile, "__init__", _fail_if_opened)
+    shipped = tmp_path / "shipped"
+    library = tmp_path / "library"
+    with pytest.raises(PhantomPackError):
+        install_phantom_pack(
+            io.BytesIO(payload),
+            user_library_dir=library,
+            shipped_dir=shipped,
+            expected_manifest_sha256="a" * 64,
+            app_version="1.1.1",
+        )
+
+
+def test_oversized_stream_rejected_before_zipfile(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Exercise oversized stream rejected before zipfile."""
+    import io
+    import zipfile
+
+    from guiskindose.phantom_pack_install import _MAX_COMPRESSED_BYTES, install_phantom_pack
+
+    def _fail_if_opened(*_args, **_kwargs):
+        """Fail if opened."""
+        raise AssertionError("ZipFile should not be constructed")
+
+    monkeypatch.setattr(zipfile.ZipFile, "__init__", _fail_if_opened)
+    shipped = tmp_path / "shipped"
+    library = tmp_path / "library"
+    with pytest.raises(PhantomPackError):
+        install_phantom_pack(
+            io.BytesIO(b"\x00" * (_MAX_COMPRESSED_BYTES + 1)),
+            user_library_dir=library,
+            shipped_dir=shipped,
+            expected_manifest_sha256="a" * 64,
+            app_version="1.1.1",
+        )
+
+
+def test_read_zip_body_rejects_per_member_cap(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """Exercise read zip body rejects per member cap."""
+    import zipfile
+
+    from guiskindose.phantom_pack_install import _MAX_MEMBER_BYTES, _read_zip_body
+
+    body = tiny_stl_body()
+    manifest = manifest_for_files({"senior_male": body})
+    raw = pack_zip_bytes(manifest, {"senior_male": body})
+
+    class _HugeReader:
+        """HugeReader."""
+        def read(self, size: int = -1) -> bytes:
+            """Read."""
+            return b"x" * (_MAX_MEMBER_BYTES + 1)
+
+        def __enter__(self):
+            """Acquire the context resource."""
+            return self
+
+        def __exit__(self, *_args) -> None:
+            """Release the context resource."""
+            return None
+
+    def _open_lie(self, info, mode="r"):
+        """Open lie."""
+        return _HugeReader()
+
+    monkeypatch.setattr(zipfile.ZipFile, "open", _open_lie)
+    with zipfile.ZipFile(io.BytesIO(raw)) as zf:
+        info = next(i for i in zf.infolist() if i.filename.endswith(".stl"))
+        with pytest.raises(PhantomPackError):
+            _read_zip_body(zf, info, running_total=0)
+
+
+def test_read_zip_body_rejects_cumulative_cap(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """Exercise read zip body rejects cumulative cap."""
+    import zipfile
+
+    from guiskindose.phantom_pack_install import _MAX_DECOMPRESSED_TOTAL, _read_zip_body
+
+    body = tiny_stl_body()
+    manifest = manifest_for_files({"senior_male": body})
+    raw = pack_zip_bytes(manifest, {"senior_male": body})
+
+    class _ChunkReader:
+        """ChunkReader."""
+        def read(self, size: int = -1) -> bytes:
+            """Read."""
+            return b"x" * 65536
+
+        def __enter__(self):
+            """Acquire the context resource."""
+            return self
+
+        def __exit__(self, *_args) -> None:
+            """Release the context resource."""
+            return None
+
+    def _open_lie(self, info, mode="r"):
+        """Open lie."""
+        return _ChunkReader()
+
+    monkeypatch.setattr(zipfile.ZipFile, "open", _open_lie)
+    with zipfile.ZipFile(io.BytesIO(raw)) as zf:
+        info = next(i for i in zf.infolist() if i.filename.endswith(".stl"))
+        with pytest.raises(PhantomPackError):
+            _read_zip_body(zf, info, running_total=_MAX_DECOMPRESSED_TOTAL - 1)

@@ -548,6 +548,7 @@ def _patch_tqdm(progress_cb, total: int) -> Callable[[], None]:
         return lambda: None
 
     def restore() -> None:
+        """Restore."""
         # Only unwind our own hook: if another patch was layered on top since,
         # clobbering it would strip that run's hook or reinstall a stale one.
         if tqdm_module.tqdm.update is new_update:
@@ -605,6 +606,10 @@ def mesh_stem_is_installed(
         return False
     shipped_dir = (phantom_data_dir or package_phantom_data_dir()).resolve()
     library_dir = user_library_dir if user_library_dir is not None else default_user_library_dir()
+    from guiskindose.phantom_mesh_names import DEMO_HUMAN_MESHES
+
+    if canonical in DEMO_HUMAN_MESHES:
+        return shipped_mesh_stl_path(canonical, shipped_dir=shipped_dir) is not None
     if shipped_mesh_stl_path(canonical, shipped_dir=shipped_dir) is not None:
         return True
     if library_dir is None:
@@ -666,16 +671,23 @@ def get_human_mesh_options(
 def canonicalize_human_mesh_selection(stem: str, mesh_options: dict[str, str]) -> str:
     """Map a saved/legacy stem to a selectable canonical option key.
 
-    Resolves aliases first. If the result is missing from ``mesh_options``
-    (a Light starter set, demos gated off, a preview suffix, or an unknown
-    stem), prefer ``hudfrid`` when that mesh is installed. Otherwise use the
-    first clinical option, or ``hudfrid`` when the list is empty.
+    Resolves aliases first. When the saved stem is missing from ``mesh_options``,
+    never return an uninstalled clinical mesh: prefer ``hudfrid`` or ``adult_male``
+    when installed, else the first installed clinical entry, else the first option.
     """
     canonical = resolve_human_mesh_stem(stem or "")
-    if canonical in mesh_options and canonical != DEMO_MESH_SECTION_KEY:
+    if (
+        canonical in mesh_options
+        and canonical != DEMO_MESH_SECTION_KEY
+        and mesh_stem_is_installed(canonical)
+    ):
         return canonical
-    if "hudfrid" in mesh_options:
-        return "hudfrid"
+    for preferred in ("hudfrid", "adult_male"):
+        if preferred in mesh_options and mesh_stem_is_installed(preferred):
+            return preferred
+    for key in mesh_options:
+        if key != DEMO_MESH_SECTION_KEY and mesh_stem_is_installed(key):
+            return key
     return next((k for k in mesh_options if k != DEMO_MESH_SECTION_KEY), "hudfrid")
 
 

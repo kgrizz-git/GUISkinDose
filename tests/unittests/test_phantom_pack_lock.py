@@ -15,12 +15,14 @@ from tests.unittests.phantom_pack_test_helpers import manifest_for_files, pack_z
 
 
 def _pin_for(manifest: dict) -> str:
+    """Pin for."""
     from guiskindose.phantom_pack import manifest_sha256
 
     return manifest_sha256(manifest)
 
 
 def test_library_lock_refused_then_acquired(tmp_path: Path) -> None:
+    """Exercise library lock refused then acquired."""
     library = tmp_path / "library"
     library.mkdir()
     first = LibraryInstallLock(library)
@@ -34,6 +36,7 @@ def test_library_lock_refused_then_acquired(tmp_path: Path) -> None:
 
 
 def test_install_lock_file_persists(tmp_path: Path) -> None:
+    """Exercise install lock file persists."""
     from guiskindose.phantom_pack_install import InstallResult, install_phantom_pack
 
     shipped = tmp_path / "shipped"
@@ -54,6 +57,7 @@ def test_install_lock_file_persists(tmp_path: Path) -> None:
 
 @pytest.mark.skipif(not hasattr(os, "O_NOFOLLOW"), reason="O_NOFOLLOW required")
 def test_symlinked_lock_path_refused_on_posix(tmp_path: Path) -> None:
+    """Exercise symlinked lock path refused on posix."""
     library = tmp_path / "library"
     library.mkdir()
     real_lock = tmp_path / "real.lock"
@@ -64,13 +68,28 @@ def test_symlinked_lock_path_refused_on_posix(tmp_path: Path) -> None:
         lock.__enter__()
 
 
-def test_concurrent_installs_serialized(tmp_path: Path) -> None:
+def test_concurrent_installs_serialized(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Exercise concurrent installs serialized."""
+    import guiskindose.phantom_pack_install as install_mod
+
     shipped = tmp_path / "shipped"
     library = tmp_path / "library"
     body = tiny_stl_body()
     errors: list[BaseException] = []
+    first_inside = threading.Event()
+    release = threading.Event()
+    original = install_mod._publish_all
 
-    def _run(stem: str) -> None:
+    def _blocking_publish(*args, **kwargs):
+        """Blocking publish."""
+        first_inside.set()
+        assert release.wait(timeout=10)
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(install_mod, "_publish_all", _blocking_publish)
+
+    def _run(stem: str, done: threading.Event) -> None:
+        """Run."""
         manifest = manifest_for_files({stem: body})
         raw = pack_zip_bytes(manifest, {stem: body})
         try:
@@ -83,22 +102,30 @@ def test_concurrent_installs_serialized(tmp_path: Path) -> None:
             )
         except BaseException as exc:
             errors.append(exc)
+        finally:
+            done.set()
 
-    threads = [
-        threading.Thread(target=_run, args=("junior_male",)),
-        threading.Thread(target=_run, args=("senior_male",)),
-    ]
-    for thread in threads:
-        thread.start()
-    for thread in threads:
-        thread.join(timeout=30)
+    done1 = threading.Event()
+    done2 = threading.Event()
+    first = threading.Thread(target=_run, args=("junior_male", done1))
+    second = threading.Thread(target=_run, args=("senior_male", done2))
+    first.start()
+    assert first_inside.wait(timeout=10)
+    assert not done2.wait(timeout=0.2)
+    release.set()
+    first.join(timeout=30)
+    second.start()
+    second.join(timeout=30)
     assert not errors
+    assert not first.is_alive()
+    assert not second.is_alive()
     assert (library / "junior_male.stl").exists()
     assert (library / "senior_male.stl").exists()
 
 
 @pytest.mark.skipif(os.name == "nt", reason="uses POSIX flock to hold the lock externally")
 def test_external_lock_reports_busy(tmp_path: Path) -> None:
+    """Exercise external lock reports busy."""
     import fcntl
 
     shipped = tmp_path / "shipped"

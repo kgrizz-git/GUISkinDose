@@ -32,12 +32,14 @@ class PhantomLibraryUnavailableError(UserFacingInputError):
 
 
 def _win32_file_attributes(path: Path) -> int:
+    """Win32 file attributes."""
     import ctypes
 
     return int(ctypes.windll.kernel32.GetFileAttributesW(str(path)))  # type: ignore[attr-defined]
 
 
 def _win32_has_reparse_point(path: Path) -> bool:
+    """Win32 has reparse point."""
     try:
         attrs = _win32_file_attributes(path)
     except (AttributeError, OSError):
@@ -55,7 +57,7 @@ def _path_is_library_link(path: Path, platform: str | None = None) -> bool:
     if plat != "win32" or not path.exists():
         return False
     is_junction = getattr(os.path, "isjunction", None)
-    if sys.platform == "win32" and plat == "win32" and callable(is_junction):
+    if plat == "win32" and callable(is_junction):
         return bool(is_junction(path))
     if plat == "win32":
         return _win32_has_reparse_point(path)
@@ -102,17 +104,32 @@ def default_user_library_dir() -> Path | None:
         return None
 
 
+def _clinical_base_stem(stem: str) -> str:
+    """Strip preview reduced suffixes so demo/hidden rules apply to companions."""
+    for suffix in _PREVIEW_REDUCED_SUFFIXES:
+        if stem.endswith(suffix):
+            return stem[: -len(suffix)]
+    return stem
+
+
 def _regular_stl_in_root(root: Path, stem: str) -> Path | None:
-    root = root.resolve()
+    """Regular stl in root."""
     try:
         assert_safe_human_mesh_stem(stem)
     except ValueError:
         return None
-    candidate = (root / f"{stem}.stl").resolve()
-    if not candidate.is_relative_to(root):
+    path = root / f"{stem}.stl"
+    if path.is_symlink():
         return None
-    if candidate.is_file() and not candidate.is_symlink():
-        return candidate
+    try:
+        root_resolved = root.resolve()
+        candidate = path.resolve()
+        if not candidate.is_relative_to(root_resolved):
+            return None
+        if candidate.is_file() and not candidate.is_symlink():
+            return candidate
+    except OSError:
+        return None
     return None
 
 
@@ -141,8 +158,9 @@ def resolve_mesh_stl_path(
     """
     resolved = resolve_human_mesh_stem(stem)
     assert_safe_human_mesh_stem(resolved)
+    base_stem = _clinical_base_stem(resolved)
 
-    is_demo_or_hidden = resolved in DEMO_HUMAN_MESHES or resolved in GUI_HIDDEN_HUMAN_MESHES
+    is_demo_or_hidden = base_stem in DEMO_HUMAN_MESHES or base_stem in GUI_HIDDEN_HUMAN_MESHES
     if not is_demo_or_hidden:
         shipped = shipped_mesh_stl_path(resolved, shipped_dir=shipped_dir)
         if shipped is not None:
@@ -168,6 +186,7 @@ class _MissingClinicalMesh(Exception):
     """Internal signal that a clinical stem has no STL in either root."""
 
     def __init__(self, stem: str) -> None:
+        """Initialize the instance."""
         self.stem = stem
 
 
@@ -188,7 +207,8 @@ def prefer_reduced_stem_for_preview(
         candidate = f"{stem}{suffix}"
         if shipped_mesh_stl_path(candidate, shipped_dir=shipped_dir) is not None:
             return candidate
-        if user_library_mesh_stl_path(candidate, user_library_dir=user_library_dir) is not None:
+        in_library = user_library_mesh_stl_path(candidate, user_library_dir=user_library_dir) is not None
+        if in_library and is_clinical_catalog_stem(_clinical_base_stem(candidate)):
             return candidate
     return stem
 

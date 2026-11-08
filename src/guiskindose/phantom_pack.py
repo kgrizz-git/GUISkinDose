@@ -82,6 +82,7 @@ def is_allowed_pack_stem(stem: str) -> bool:
 
 
 def _parse_manifest_object_pairs(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    """Parse manifest object pairs."""
     keys = [k for k, _ in pairs]
     if len(keys) != len(set(keys)):
         raise PhantomPackError(_PHANTOM_PACK_DUPLICATE_KEYS)
@@ -108,7 +109,7 @@ def parse_pack_manifest(raw: bytes) -> dict[str, Any]:
         manifest = json.loads(text, object_pairs_hook=_parse_manifest_object_pairs)
     except PhantomPackError:
         raise
-    except json.JSONDecodeError as exc:
+    except (json.JSONDecodeError, ValueError, RecursionError) as exc:
         raise PhantomPackError(_PHANTOM_PACK_BAD_FORMAT) from exc
     if not isinstance(manifest, dict):
         raise PhantomPackError(_PHANTOM_PACK_BAD_FORMAT)
@@ -116,6 +117,7 @@ def parse_pack_manifest(raw: bytes) -> dict[str, Any]:
 
 
 def _validate_manifest_top(manifest: dict[str, Any], app_version: str) -> None:
+    """Validate manifest top."""
     verify_pack_signature(manifest)
     if manifest.get("format") != 1:
         raise PhantomPackError(_PHANTOM_PACK_BAD_FORMAT)
@@ -137,6 +139,7 @@ def _validate_manifest_top(manifest: dict[str, Any], app_version: str) -> None:
 
 
 def _validate_file_entry(entry: Any) -> dict[str, Any]:
+    """Validate file entry."""
     if not isinstance(entry, dict):
         raise PhantomPackError(_PHANTOM_PACK_BAD_FORMAT)
     for key in entry:

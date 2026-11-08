@@ -30,6 +30,7 @@ pytestmark = pytest.mark.nicegui_main_file("tests/gui/nicegui_main.py")
 
 @pytest.fixture
 def two_root_dirs(tmp_path, monkeypatch):
+    """Two root dirs."""
     shipped = tmp_path / "shipped"
     library = tmp_path / "library"
     shipped.mkdir()
@@ -37,6 +38,7 @@ def two_root_dirs(tmp_path, monkeypatch):
     (shipped / "adult_male.stl").write_bytes(tiny_stl_body())
     (library / "senior_male.stl").write_bytes(tiny_stl_body())
     def _shipped_dir() -> Path:
+        """Shipped dir."""
         return shipped
 
     monkeypatch.setattr("guiskindose.phantom_mesh_names.package_phantom_data_dir", _shipped_dir)
@@ -53,12 +55,14 @@ def two_root_dirs(tmp_path, monkeypatch):
 
 
 def test_catalog_install_status_two_root(two_root_dirs) -> None:
+    """Exercise catalog install status two root."""
     assert mesh_stem_is_installed("adult_male")
     assert mesh_stem_is_installed("senior_male")
     assert not mesh_stem_is_installed("junior_male")
 
 
 def test_missing_catalog_stem_stays_selected(two_root_dirs, monkeypatch) -> None:
+    """Exercise missing catalog stem stays selected."""
     options = get_human_mesh_options()
     monkeypatch.setattr(state, "human_mesh", "junior_male")
     note = settings_tab._select_installed_mesh(options)
@@ -68,6 +72,7 @@ def test_missing_catalog_stem_stays_selected(two_root_dirs, monkeypatch) -> None
 
 
 def test_pack_install_from_bytes_clears_measurement_cache(two_root_dirs, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Exercise pack install from bytes clears measurement cache."""
     from guiskindose import __version__
     from guiskindose.gui.tabs import _phantom_catalog as catalog
     from guiskindose.phantom_pack import manifest_sha256
@@ -100,6 +105,7 @@ def test_pack_install_from_bytes_clears_measurement_cache(two_root_dirs, monkeyp
 
 @pytest.mark.asyncio
 async def test_catalog_upload_good_zip_production_wiring(two_root_dirs, monkeypatch) -> None:
+    """Exercise catalog upload good zip production wiring."""
     import guiskindose.phantom_pack_pin as pin_mod
     from guiskindose import __version__
     from guiskindose.gui.tabs import _phantom_catalog as catalog
@@ -114,6 +120,7 @@ async def test_catalog_upload_good_zip_production_wiring(two_root_dirs, monkeypa
     monkeypatch.setattr(catalog.ui, "notify", lambda *_a, **_k: None)
 
     async def _io_bound(fn, *args, **kwargs):
+        """Io bound."""
         return fn(*args, **kwargs)
 
     monkeypatch.setattr(catalog.run, "io_bound", _io_bound)
@@ -121,15 +128,61 @@ async def test_catalog_upload_good_zip_production_wiring(two_root_dirs, monkeypa
     section.status_label = type("L", (), {"set_text": lambda self, _t: None})()
 
     class _Upload:
+        """Upload."""
         async def iterate(self):
+            """Iterate."""
             yield raw
 
     await section.install_upload(type("E", (), {"file": _Upload()})())
     assert mesh_stem_is_installed("junior_male", phantom_data_dir=shipped, user_library_dir=library)
 
 
+def test_demo_stem_not_installed_from_user_library_only(two_root_dirs) -> None:
+    """Exercise demo stem not installed from user library only."""
+    shipped, library = two_root_dirs
+    (library / "demo_cosmic_buddha.stl").write_bytes(tiny_stl_body())
+    assert not mesh_stem_is_installed("demo_cosmic_buddha", phantom_data_dir=shipped, user_library_dir=library)
+
+
+@pytest.mark.asyncio
+async def test_install_upload_cumulative_cap_closes_spool(two_root_dirs, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Exercise install upload cumulative cap closes spool."""
+    from guiskindose.gui.tabs import _phantom_catalog as catalog
+
+    shipped, library = two_root_dirs
+    section = catalog._PhantomCatalogSection(mesh_select=type("S", (), {"options": {}, "update": lambda self: None})(), on_change=lambda: None)
+    section.status_label = type("L", (), {"set_text": lambda self, _t: None})()
+    committed: list[bool] = []
+
+    async def _commit(stream):
+        """Commit."""
+        committed.append(True)
+
+    section.commit_install = _commit  # type: ignore[method-assign]
+    monkeypatch.setattr(catalog.ui, "notify", lambda *_a, **_k: None)
+
+    async def _io_bound(fn, *args, **kwargs):
+        """Io bound."""
+        return fn(*args, **kwargs)
+
+    monkeypatch.setattr(catalog.run, "io_bound", _io_bound)
+    chunk = b"x" * (1024 * 1024)
+
+    class _Upload:
+        """Upload."""
+        async def iterate(self):
+            """Iterate."""
+            for _ in range(81):
+                yield chunk
+
+    await section.install_upload(type("E", (), {"file": _Upload()})())
+    assert not committed
+    assert not mesh_stem_is_installed("junior_male", phantom_data_dir=shipped, user_library_dir=library)
+
+
 @pytest.mark.asyncio
 async def test_catalog_upload_tampered_zip_leaves_not_installed(two_root_dirs, monkeypatch) -> None:
+    """Exercise catalog upload tampered zip leaves not installed."""
     import guiskindose.phantom_pack_pin as pin_mod
     from guiskindose import __version__
     from guiskindose.gui.tabs import _phantom_catalog as catalog
@@ -145,6 +198,7 @@ async def test_catalog_upload_tampered_zip_leaves_not_installed(two_root_dirs, m
     monkeypatch.setattr(catalog.ui, "notify", lambda message, **_k: messages.append(str(message)))
 
     async def _io_bound(fn, *args, **kwargs):
+        """Io bound."""
         return fn(*args, **kwargs)
 
     monkeypatch.setattr(catalog.run, "io_bound", _io_bound)
@@ -153,7 +207,9 @@ async def test_catalog_upload_tampered_zip_leaves_not_installed(two_root_dirs, m
     section.status_label = type("L", (), {"set_text": lambda self, text: status_text.append(str(text))})()
 
     class _Upload:
+        """Upload."""
         async def iterate(self):
+            """Iterate."""
             yield raw
 
     await section.install_upload(type("E", (), {"file": _Upload()})())

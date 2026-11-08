@@ -35,9 +35,12 @@ def load_settings_example_json() -> dict:
 
 def print_available_human_phantoms():
     """Print installed human phantom STL stems to stdout."""
-    from guiskindose.gui.helpers import get_human_mesh_names
+    from guiskindose.phantom_library import default_user_library_dir, installed_full_clinical_stems
+    from guiskindose.phantom_mesh_names import package_phantom_data_dir
 
-    for phantom in get_human_mesh_names():
+    shipped = package_phantom_data_dir().resolve()
+    library = default_user_library_dir()
+    for phantom in installed_full_clinical_stems(shipped_dir=shipped, user_library_dir=library):
         print(phantom)
 
 

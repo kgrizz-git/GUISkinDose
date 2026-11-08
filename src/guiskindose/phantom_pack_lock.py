@@ -22,6 +22,7 @@ def install_process_lock():
 
 
 def _lock_contention(exc: BaseException) -> bool:
+    """Lock contention."""
     if isinstance(exc, BlockingIOError):
         return True
     if not isinstance(exc, OSError):
@@ -37,10 +38,12 @@ class LibraryInstallLock:
     """Exclusive lock file under the user mesh library directory."""
 
     def __init__(self, library_root: Path) -> None:
+        """Initialize the instance."""
         self._path = library_root / ".install.lock"
         self._handle: int | None = None
 
     def __enter__(self) -> Self:
+        """Acquire the context resource."""
         if not self._path.parent.is_dir():
             raise OSError("phantom library root is missing")
         if sys.platform == "win32":
@@ -75,6 +78,7 @@ class LibraryInstallLock:
             raise
 
     def __exit__(self, exc_type, exc, tb) -> None:
+        """Release the context resource."""
         if self._handle is not None:
             try:
                 if sys.platform == "win32":

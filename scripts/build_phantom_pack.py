@@ -5,8 +5,8 @@ from __future__ import annotations
 
 import argparse
 import hashlib
-import json
 import sys
+import tomllib
 import zipfile
 from pathlib import Path
 
@@ -15,13 +15,16 @@ PHANTOM_DATA = REPO_ROOT / "src" / "guiskindose" / "phantom_data"
 
 
 def _load_version() -> str:
-    sys.path.insert(0, str(REPO_ROOT / "src"))
-    import guiskindose
-
-    return guiskindose.__version__
+    """Read the wheel version from ``pyproject.toml`` (no import of ``guiskindose``)."""
+    data = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    version = data.get("project", {}).get("version")
+    if not isinstance(version, str) or not version:
+        raise SystemExit("pyproject.toml is missing [project].version")
+    return version
 
 
 def _pack_stl_paths() -> list[Path]:
+    """Pack stl paths."""
     from guiskindose.edition import light_phantom_stl_names
 
     light_names = set(light_phantom_stl_names())
@@ -36,6 +39,7 @@ def _pack_stl_paths() -> list[Path]:
 
 
 def build_pack_manifest(paths: list[Path], *, app_version: str) -> dict:
+    """Build pack manifest."""
     files = []
     for path in paths:
         data = path.read_bytes()
@@ -56,6 +60,7 @@ def build_pack_manifest(paths: list[Path], *, app_version: str) -> dict:
 
 
 def write_pack_zip(manifest: dict, paths: list[Path], out_zip: Path) -> None:
+    """Write pack zip."""
     from guiskindose.phantom_pack import canonical_manifest_bytes
 
     out_zip.parent.mkdir(parents=True, exist_ok=True)
@@ -67,6 +72,7 @@ def write_pack_zip(manifest: dict, paths: list[Path], out_zip: Path) -> None:
 
 
 def _parse_args() -> argparse.Namespace:
+    """Parse args."""
     parser = argparse.ArgumentParser(description="Build or verify the phantom pack zip.")
     parser.add_argument(
         "--check",
@@ -83,6 +89,7 @@ def _parse_args() -> argparse.Namespace:
 
 
 def main() -> int:
+    """Main."""
     args = _parse_args()
     app_version = _load_version()
     paths = _pack_stl_paths()

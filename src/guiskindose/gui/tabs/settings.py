@@ -110,12 +110,25 @@ def build(ctx: PageContext) -> None:
         _build_visual_section()
 
 
+def _full_clinical_stem_for_ui(stem: str) -> str:
+    """Map preview-only reduced stems to their clinical catalog key for install hints."""
+    canonical = resolve_human_mesh_stem(stem or "")
+    from guiskindose.phantom_mesh_names import _PREVIEW_REDUCED_SUFFIXES
+
+    for suffix in _PREVIEW_REDUCED_SUFFIXES:
+        if canonical.endswith(suffix):
+            return canonical[: -len(suffix)]
+    return canonical
+
+
 def _select_installed_mesh(mesh_options: dict[str, str]) -> str | None:
     """Resolve aliases only; keep a missing clinical stem selected and return its hint."""
     saved = state.human_mesh or ""
     canonical = resolve_human_mesh_stem(saved)
-    if canonical in mesh_options or is_clinical_catalog_stem(canonical):
-        state.human_mesh = canonical
+    catalog_key = _full_clinical_stem_for_ui(saved)
+    if canonical in mesh_options or is_clinical_catalog_stem(catalog_key):
+        if canonical in mesh_options:
+            state.human_mesh = canonical
     else:
         state.human_mesh = canonicalize_human_mesh_selection(saved, mesh_options)
     missing = human_mesh_not_installed_message(state.human_mesh)
@@ -127,16 +140,22 @@ def _select_installed_mesh(mesh_options: dict[str, str]) -> str | None:
     return None
 
 
-def _wire_human_mesh_controls(mesh_select: Any, on_change: Callable[[], None]) -> Callable[[], None]:
+def _wire_human_mesh_controls(
+    mesh_select: Any,
+    on_change: Callable[[], None],
+    ctx: PageContext | None = None,
+) -> Callable[[], None]:
     """Bind mesh selector + install-note refresh; return post-catalog refresh callback."""
 
     @ui.refreshable
     def _human_mesh_install_note() -> None:
+        """Human mesh install note."""
         note = _select_installed_mesh(get_human_mesh_options())
         if note:
             ui.label(note).classes("text-caption text-warning")
 
     def _refresh_human_mesh_ui() -> None:
+        """Refresh human mesh ui."""
         mesh_select.options = get_human_mesh_options()
         mesh_select.update()
         _human_mesh_install_note.refresh()
@@ -155,8 +174,11 @@ def _wire_human_mesh_controls(mesh_select: Any, on_change: Callable[[], None]) -
 
     mesh_select.on(_MODEL_VALUE_EVENT, _on_human_mesh_change)
     _human_mesh_install_note()
+    if ctx is not None:
+        ctx.refresh_human_mesh_install_note = _human_mesh_install_note.refresh
 
     def _after_catalog_change() -> None:
+        """After catalog change."""
         on_change()
         _refresh_human_mesh_ui()
 
@@ -188,12 +210,15 @@ def _build_phantom_section(ctx: PageContext, on_change: Callable[[], None]) -> N
                     state, "phantom_model"
                 ).on(_MODEL_VALUE_EVENT, on_change).classes("grow")
 
+                mesh_options = get_human_mesh_options()
+                if state.human_mesh not in mesh_options:
+                    state.human_mesh = canonicalize_human_mesh_selection(state.human_mesh or "", mesh_options)
                 mesh_select = (
-                    ui.select(get_human_mesh_options(), label="Human mesh", value=state.human_mesh)
+                    ui.select(mesh_options, label="Human mesh", value=state.human_mesh)
                     .bind_value(state, "human_mesh")
                     .classes("grow")
                 )
-                _after_catalog_change = _wire_human_mesh_controls(mesh_select, on_change)
+                _after_catalog_change = _wire_human_mesh_controls(mesh_select, on_change, ctx)
 
             catalog_block = ui.column().classes("w-full")
             catalog_block.bind_visibility_from(state, "phantom_model", backward=lambda v: v == "human")
