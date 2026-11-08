@@ -9,22 +9,23 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     exit 2
 fi
 
+# Replace the assessed path, absolute or relative, with <app>.
 _macos_spctl_sanitize_output() {
     local raw="$1"
+    local app="$2"
     local line
     while IFS= read -r line || [[ -n "$line" ]]; do
-        if [[ "$line" == /*:* ]]; then
-            line="${line#*: }"
-        fi
+        line="${line//"$app"/<app>}"
         printf '%s\n' "$line"
     done <<<"$raw"
 }
 
 _macos_spctl_report_failure() {
     local raw="$1"
-    local context="${2:-spctl}"
+    local app="$2"
+    local context="${3:-spctl}"
     local sanitized
-    sanitized="$(_macos_spctl_sanitize_output "$raw")"
+    sanitized="$(_macos_spctl_sanitize_output "$raw" "$app")"
     echo "${context}: assessment did not report Notarized Developer ID" >&2
     printf '%s\n' "$sanitized" >&2
     if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
@@ -50,6 +51,6 @@ macos_spctl_assert_notarized() {
         fi
         return 0
     fi
-    _macos_spctl_report_failure "$spctl_out" "$context"
+    _macos_spctl_report_failure "$spctl_out" "$app" "$context"
     return 1
 }
