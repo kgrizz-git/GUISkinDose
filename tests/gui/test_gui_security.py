@@ -166,6 +166,7 @@ def test_static_registration_is_idempotent(monkeypatch) -> None:
 def test_run_gui_registers_security_middleware_and_token_url(monkeypatch, capsys) -> None:
     """Browser mode installs Host/Origin/token controls and opens the token URL."""
     from guiskindose.gui.loopback_security import LoopbackSecurityMiddleware
+    from guiskindose.gui.upload_body_limit_middleware import UploadBodyLimitMiddleware
 
     captured: dict = {}
     middlewares: list[type] = []
@@ -175,6 +176,7 @@ def test_run_gui_registers_security_middleware_and_token_url(monkeypatch, capsys
     monkeypatch.setattr(gui_app, "_open_browser_when_ready", lambda url, **_kw: opened.append(url))
     gui_app.run_gui(native=False)
     assert LoopbackSecurityMiddleware in middlewares
+    assert UploadBodyLimitMiddleware in middlewares
     assert captured["show"] is False
     assert captured["port"] == 8765
     assert len(opened) == 1

@@ -41,6 +41,10 @@ def _declared_length_too_large(scope: dict) -> bool:
         return True
 
 
+class _UploadBodyTooLarge(Exception):
+    """Raised from receive() to abort multipart parsing once the 413 has gone out."""
+
+
 class UploadBodyLimitMiddleware:
     """Reject oversized bodies on NiceGUI upload routes before handlers run."""
 
@@ -72,8 +76,8 @@ class UploadBodyLimitMiddleware:
                 if seen > MAX_GUI_UPLOAD_BODY_BYTES:
                     rejected = True
                     await _reject_413(send)
-                    # Ending the body makes the handler stop reading.
-                    return {"type": "http.request", "body": b"", "more_body": False}
+                    # Raising aborts form parsing, so the upload callback never runs.
+                    raise _UploadBodyTooLarge
             return message
 
         async def guarded_send(message: dict) -> None:
@@ -81,4 +85,8 @@ class UploadBodyLimitMiddleware:
             if not rejected:
                 await send(message)
 
-        await self.app(scope, capped_receive, guarded_send)
+        try:
+            await self.app(scope, capped_receive, guarded_send)
+        except _UploadBodyTooLarge:
+            # The 413 is already sent; an inner handler may also have swallowed this.
+            return

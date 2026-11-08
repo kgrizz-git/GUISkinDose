@@ -215,3 +215,23 @@ def test_demo_stl_in_user_library_alone_is_not_shipped_mesh(tmp_path: Path) -> N
     (library / "demo_cosmic_buddha.stl").write_bytes(b"solid t\nendsolid t\n")
     assert user_library_mesh_stl_path("demo_cosmic_buddha", user_library_dir=library) is not None
     assert shipped_mesh_stl_path("demo_cosmic_buddha", shipped_dir=shipped) is None
+
+
+def test_reduced_companion_of_enabled_demo_resolves_from_shipped(tmp_path: Path) -> None:
+    """A shipped _reduced_3000t of an enabled demo resolves; the user library still never serves demos."""
+    shipped = tmp_path / "shipped"
+    _write_stl(shipped, "demo_cosmic_buddha_reduced_3000t")
+    path = resolve_human_mesh_stl_path(
+        "demo_cosmic_buddha_reduced_3000t",
+        phantom_data_dir=shipped,
+        user_library_dir=None,
+        show_demo_phantoms=True,
+    )
+    assert path.name == "demo_cosmic_buddha_reduced_3000t.stl"
+    with pytest.raises(ValueError, match="Unknown human mesh"):
+        resolve_human_mesh_stl_path(
+            "demo_cosmic_buddha_reduced_3000t",
+            phantom_data_dir=shipped,
+            user_library_dir=None,
+            show_demo_phantoms=False,
+        )

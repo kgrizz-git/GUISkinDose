@@ -93,7 +93,7 @@ def test_concurrent_installs_serialized(tmp_path: Path, monkeypatch: pytest.Monk
                 expected_manifest_sha256=_pin_for(manifest),
                 app_version="1.1.1",
             )
-        except BaseException as exc:
+        except Exception as exc:
             errors.append(exc)
         finally:
             done.set()

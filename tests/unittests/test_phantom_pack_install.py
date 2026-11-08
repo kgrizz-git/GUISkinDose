@@ -154,7 +154,6 @@ def test_rejects_bad_archives(tmp_path: Path, builder: str, monkeypatch: pytest.
             zf.writestr("manifest.json", canonical_manifest_bytes(manifest))
     elif builder == "alias_stem":
         manifest = manifest_for_files({"pediatric_5y_male": body})
-        files = {"pediatric_5y_male": body}
         with zipfile.ZipFile(buf, "w") as zf:
             zf.writestr("pediatric_5y_male.stl", body)
             zf.writestr("manifest.json", canonical_manifest_bytes(manifest))
@@ -446,7 +445,6 @@ def test_non_directory_library_parent_install_failed(tmp_path: Path) -> None:
 
 @pytest.mark.skipif(os.name == "nt", reason="POSIX permissions")
 def test_readonly_library_install_failed(tmp_path: Path) -> None:
-    import os
 
     from guiskindose.phantom_pack_install import _INSTALL_FAILED, install_phantom_pack
 
@@ -491,9 +489,7 @@ def test_sweep_does_not_descend_into_a_junction(tmp_path: Path, monkeypatch: pyt
 
 
 def test_zip_eocd_member_count_rejected_before_zipfile(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    import io
     import struct
-    import zipfile
 
     from guiskindose.phantom_pack_install import install_phantom_pack
 
@@ -519,8 +515,6 @@ def test_zip_eocd_member_count_rejected_before_zipfile(tmp_path: Path, monkeypat
 
 
 def test_oversized_stream_rejected_before_zipfile(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    import io
-    import zipfile
 
     from guiskindose.phantom_pack_install import _MAX_COMPRESSED_BYTES, install_phantom_pack
 
@@ -542,7 +536,6 @@ def test_oversized_stream_rejected_before_zipfile(tmp_path: Path, monkeypatch: p
 
 
 def test_read_zip_body_rejects_per_member_cap(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    import zipfile
 
     from guiskindose.phantom_pack_install import _MAX_MEMBER_BYTES, _read_zip_body
 
@@ -571,7 +564,6 @@ def test_read_zip_body_rejects_per_member_cap(monkeypatch: pytest.MonkeyPatch, t
 
 
 def test_read_zip_body_rejects_cumulative_cap(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    import zipfile
 
     from guiskindose.phantom_pack_install import _MAX_DECOMPRESSED_TOTAL, _read_zip_body
 

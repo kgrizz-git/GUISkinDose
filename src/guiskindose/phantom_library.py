@@ -166,7 +166,8 @@ def resolve_mesh_stl_path(
             return shipped
 
     if is_demo_or_hidden:
-        if resolved in DEMO_HUMAN_MESHES and show_demo_phantoms:
+        # A shipped reduced companion of an enabled demo belongs to that demo.
+        if base_stem in DEMO_HUMAN_MESHES and show_demo_phantoms:
             demo_shipped = shipped_mesh_stl_path(resolved, shipped_dir=shipped_dir)
             if demo_shipped is not None:
                 return demo_shipped
