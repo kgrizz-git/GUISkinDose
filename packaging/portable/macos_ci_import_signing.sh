@@ -4,7 +4,7 @@
 # Required environment (typically from macos-release secrets):
 #   DEVELOPER_ID_P12_BASE64, DEVELOPER_ID_P12_PASSWORD
 #   NOTARY_KEY_P8, NOTARY_KEY_ID, NOTARY_ISSUER
-# Optional: GITHUB_ENV, GITHUB_OUTPUT for CI wiring.
+# Optional: GITHUB_OUTPUT for CI wiring (sign identity and notary paths; never GITHUB_ENV).
 #
 # Never prints secret values or absolute paths.
 set -euo pipefail
@@ -77,13 +77,16 @@ if [[ "$COUNT" != 1 ]]; then
 fi
 IDENTITY="$(printf '%s\n' "$ID_LINES" | sed -n 's/.*"\(Developer ID Application: [^"]*\)".*/\1/p' | head -n 1)"
 [[ -n "$IDENTITY" ]] || { echo "could not resolve signing identity" >&2; exit 1; }
+TEAM_ID="$(printf '%s' "$IDENTITY" | sed -n 's/.*(\([^)]*\))$/\1/p')"
+[[ -n "$TEAM_ID" ]] || { echo "could not resolve team id from signing identity" >&2; exit 1; }
 
-if [[ -n "${GITHUB_ENV:-}" ]]; then
+if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
     {
-        echo "GUISKINDOSE_SIGN_IDENTITY=${IDENTITY}"
-        echo "GUISKINDOSE_NOTARY_KEY=${P8}"
-        echo "GUISKINDOSE_NOTARY_KEY_ID=${NOTARY_KEY_ID}"
-        echo "GUISKINDOSE_NOTARY_ISSUER=${NOTARY_ISSUER}"
-    } >>"$GITHUB_ENV"
+        echo "sign_identity=${IDENTITY}"
+        echo "team_id=${TEAM_ID}"
+        echo "notary_key_path=${P8}"
+        echo "notary_key_id=${NOTARY_KEY_ID}"
+        echo "notary_issuer=${NOTARY_ISSUER}"
+    } >>"$GITHUB_OUTPUT"
 fi
-echo "signing_import=ok"
+echo "signing_import=ok team_id_set=true"

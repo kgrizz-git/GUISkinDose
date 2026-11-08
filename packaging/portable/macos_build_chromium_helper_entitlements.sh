@@ -4,9 +4,7 @@
 # Usage (repository root):
 #   packaging/portable/macos_build_chromium_helper_entitlements.sh <GUISkinDose.app> <out.plist>
 #
-# Logs upstream entitlement key names only (never values). The output plist keeps
-# com.apple.security.cs.allow-jit and optionally allow-unsigned-executable-memory per
-# PORTABLE_MACOS_RELEASE_SIGNING_PLAN.md.
+# Writes <out.plist>.chromium_main_jit with 0 or 1. Logs upstream key names per role only.
 set -euo pipefail
 set +x
 
@@ -31,49 +29,56 @@ from pathlib import Path
 app = Path(sys.argv[1])
 out = Path(sys.argv[2])
 chromium = app / "Contents/Helpers/Chromium.app"
-targets: list[Path] = []
 main = chromium / "Contents/MacOS/Chromium"
+targets: list[tuple[str, Path]] = []
 if main.is_file():
-    targets.append(main)
+    targets.append(("chromium_main", main))
 for helper_app in chromium.rglob("*.app"):
+    if helper_app == chromium:
+        continue
     macos = helper_app / "Contents/MacOS"
     if not macos.is_dir():
         continue
     for exe in sorted(macos.iterdir()):
         if exe.is_file() and not exe.name.startswith("."):
-            targets.append(exe)
+            targets.append(("chromium_helper", exe))
             break
 
-seen_jit = False
-seen_unsigned = False
-for exe in targets:
+def dump_keys(exe: Path) -> set[str]:
     proc = subprocess.run(
         ["codesign", "-d", "--entitlements", "-", str(exe)],
         capture_output=True,
     )
     if proc.returncode != 0 or not proc.stdout.strip():
-        continue
+        return set()
     try:
         data = plistlib.loads(proc.stdout)
     except Exception:
-        continue
-    for key in data:
-        print(f"upstream_entitlement_key={key}")
-        if key == "com.apple.security.cs.allow-jit":
-            seen_jit = True
-        if key == "com.apple.security.cs.allow-unsigned-executable-memory":
-            seen_unsigned = True
+        return set()
+    return set(data) if isinstance(data, dict) else set()
 
-ent: dict[str, bool] = {"com.apple.security.cs.allow-jit": True}
+jit = "com.apple.security.cs.allow-jit"
+unsigned = "com.apple.security.cs.allow-unsigned-executable-memory"
+seen_unsigned = False
+main_has_jit = False
+for role, exe in targets:
+    keys = dump_keys(exe)
+    print(f"upstream_entitlement_keys_role={role} count={len(keys)}")
+    for key in sorted(keys):
+        print(f"upstream_entitlement_key={key}")
+    if role == "chromium_main" and jit in keys:
+        main_has_jit = True
+    if unsigned in keys:
+        seen_unsigned = True
+
+ent: dict[str, bool] = {jit: True}
 if seen_unsigned:
-    ent["com.apple.security.cs.allow-unsigned-executable-memory"] = True
-if not seen_jit and not seen_unsigned:
-    # Renderer hardened-runtime failure without a JIT key; allow-jit already set.
-    pass
+    ent[unsigned] = True
 
 out.parent.mkdir(parents=True, exist_ok=True)
 out.write_bytes(plistlib.dumps(ent))
+Path(f"{out}.chromium_main_jit").write_text("1" if main_has_jit else "0", encoding="utf-8")
 PY
 
-chmod 600 "$OUT"
+chmod 600 "$OUT" "${OUT}.chromium_main_jit"
 echo "chromium_helper_entitlements=built"

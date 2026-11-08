@@ -10,21 +10,25 @@ from pathlib import Path
 RUNNER_TEMP = Path(os.environ["RUNNER_TEMP"])
 
 
-def write_exclusive(path: Path, data: bytes) -> None:
+def _write_exclusive_bytes(path: Path, data: bytes) -> None:
     fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
-    try:
-        os.write(fd, data)
-    finally:
-        os.close(fd)
+    with os.fdopen(fd, "wb") as handle:
+        handle.write(data)
+
+
+def _write_exclusive_text(path: Path, text: str) -> None:
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    with os.fdopen(fd, "w", encoding="utf-8") as handle:
+        handle.write(text)
 
 
 def write_p12() -> None:
-    raw = os.environ["DEVELOPER_ID_P12_BASE64"].strip()
+    raw = "".join(os.environ["DEVELOPER_ID_P12_BASE64"].split())
     try:
         payload = base64.b64decode(raw, validate=True)
     except Exception:
         raise SystemExit(1) from None
-    write_exclusive(RUNNER_TEMP / "developer-id.p12", payload)
+    _write_exclusive_bytes(RUNNER_TEMP / "developer-id.p12", payload)
 
 
 def write_notary_p8() -> None:
@@ -32,13 +36,14 @@ def write_notary_p8() -> None:
     if "BEGIN" in raw:
         text = raw
     else:
+        compact = "".join(raw.split())
         try:
-            text = base64.b64decode(raw).decode("utf-8")
+            text = base64.b64decode(compact).decode("utf-8")
         except Exception:
             raise SystemExit(1) from None
     if "BEGIN PRIVATE KEY" not in text and "BEGIN EC PRIVATE KEY" not in text:
         raise SystemExit(1)
-    write_exclusive(RUNNER_TEMP / "AuthKey.p8", text.encode("utf-8"))
+    _write_exclusive_text(RUNNER_TEMP / "AuthKey.p8", text)
 
 
 def main() -> None:

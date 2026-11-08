@@ -56,6 +56,8 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 OUTER_ENT="${GUISKINDOSE_ENTITLEMENTS:-$HERE/macos_entitlements.plist}"
 CHROMIUM_HELPER_ENT="${GUISKINDOSE_CHROMIUM_HELPER_ENTITLEMENTS:-}"
 CHROMIUM_APP="${APP}/Contents/Helpers/Chromium.app"
+CHROMIUM_MAIN="${CHROMIUM_APP}/Contents/MacOS/Chromium"
+CHROMIUM_MAIN_NEEDS_JIT="${GUISKINDOSE_CHROMIUM_MAIN_NEEDS_JIT:-0}"
 PROFILE="${GUISKINDOSE_NOTARY_PROFILE:-guiskindose-notary}"
 NOTARY_ENV="${GUISKINDOSE_NOTARY_ENV:-$HOME/.appstoreconnect/notary.env}"
 
@@ -235,7 +237,12 @@ is_chromium_tree_main_executable() {
     local parent="${1%/*}"
     [[ "$(basename "$parent")" == "MacOS" ]] || return 1
     local app_bundle="${parent%/Contents/MacOS}"
-    [[ "$app_bundle" == *.app ]]
+    [[ "$app_bundle" == *.app ]] || return 1
+    if [[ "$1" == "$CHROMIUM_MAIN" ]]; then
+        [[ "$CHROMIUM_MAIN_NEEDS_JIT" == "1" ]]
+        return
+    fi
+    [[ "$app_bundle" != "$CHROMIUM_APP" ]]
 }
 
 entitlements_for_macho() {
@@ -265,7 +272,9 @@ entitlements_for_bundle() {
     fi
     if [[ -n "$CHROMIUM_HELPER_ENT" && -f "$CHROMIUM_HELPER_ENT" ]]; then
         if [[ "$bundle" == "$CHROMIUM_APP" ]]; then
-            echo "$CHROMIUM_HELPER_ENT"
+            if [[ "$CHROMIUM_MAIN_NEEDS_JIT" == "1" ]]; then
+                echo "$CHROMIUM_HELPER_ENT"
+            fi
             return
         fi
         if [[ "$bundle" == "${CHROMIUM_APP}/"* && "$bundle" == *".app" ]]; then

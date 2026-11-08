@@ -23,7 +23,7 @@ The local proof froze Python 3.12. `portable-spike.yml` freezes Python 3.14. The
 
 Upstream Chromium on the pinned disk image is already signed by `Developer ID Application: Qian Qian (B9A88FL5XJ)`, with flags `kill,restrict,library-validation,runtime` and a stapled ticket. Helper apps sit inside `Chromium.app` at `Contents/Frameworks/Chromium Framework.framework/.../Helpers/`. `ditto` of the whole `.app` carries them. That Team ID must not remain on the zip we publish. The release job re-signs those helpers with our identity.
 
-`macos_sign_notarize.sh` is not wired to CI. Its `sign` function passes `--entitlements` to every Mach-O, every framework, and the app. Its default zip name is `GUISkinDose-macos-<uname -m>.zip`, which drops the edition. The notary work directory is created inside the output directory. `GUISKINDOSE_SKIP_NOTARIZE=1` writes an unstapled zip and exits 0. The release job must not use that switch. The repo has no dump of the pinned Chromium helper entitlement keys. The archived CI plan records only the upstream signature flags.
+`portable-macos-release.yml` wires `macos_sign_notarize.sh` for Developer ID release builds. The script signs inside-out with selective entitlements, `GUISKINDOSE_SIGN_ONLY` / `GUISKINDOSE_NOTARIZE_ONLY`, edition zip names, and a private notary work directory under `$RUNNER_TEMP`. `macos_ci_import_signing.sh` keeps notary material on step outputs until the notarize step. Chromium helper plist keys are captured at build time from upstream dumps. Ad-hoc spikes stay in `portable-spike.yml`.
 
 ## Workflow, job, and trigger
 
