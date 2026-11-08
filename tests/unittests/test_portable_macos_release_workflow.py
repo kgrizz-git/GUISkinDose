@@ -31,7 +31,8 @@ def _named_steps(job: dict) -> list[str]:
 def test_portable_macos_release_triggers_and_environment() -> None:
     wf = _load(RELEASE_WF)
     on = wf.get(True) or wf["on"]
-    assert "release" in on and on["release"]["types"] == ["published"]
+    assert "release" in on
+    assert on["release"]["types"] == ["published"]
     assert "workflow_dispatch" in on
     assert "pull_request" not in on
     assert "push" not in on
@@ -88,7 +89,8 @@ def test_sign_macos_step_order_and_conditions() -> None:
     attach = next(s for s in steps if s.get("name") == "Attach to GitHub Release")
     teardown = next(s for s in steps if s.get("name") == "Restore keychain and delete secrets from disk")
     assert upload.get("if") == "success()"
-    assert attach.get("if") is not None and "success()" in attach["if"]
+    assert attach.get("if") is not None
+    assert "success()" in attach["if"]
     assert teardown.get("if") == "always()"
 
     notarize = next(s for s in steps if s.get("name") == "Notarize, staple, and write release zip")
