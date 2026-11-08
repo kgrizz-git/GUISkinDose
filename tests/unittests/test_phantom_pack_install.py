@@ -507,9 +507,10 @@ def test_zip_eocd_member_count_rejected_before_zipfile(tmp_path: Path, monkeypat
     monkeypatch.setattr(zipfile.ZipFile, "__init__", _fail_if_opened)
     shipped = tmp_path / "shipped"
     library = tmp_path / "library"
+    stream = io.BytesIO(payload)
     with pytest.raises(PhantomPackError):
         install_phantom_pack(
-            io.BytesIO(payload),
+            stream,
             user_library_dir=library,
             shipped_dir=shipped,
             expected_manifest_sha256="a" * 64,
@@ -529,9 +530,10 @@ def test_oversized_stream_rejected_before_zipfile(tmp_path: Path, monkeypatch: p
     monkeypatch.setattr(zipfile.ZipFile, "__init__", _fail_if_opened)
     shipped = tmp_path / "shipped"
     library = tmp_path / "library"
+    stream = io.BytesIO(b"\x00" * (_MAX_COMPRESSED_BYTES + 1))
     with pytest.raises(PhantomPackError):
         install_phantom_pack(
-            io.BytesIO(b"\x00" * (_MAX_COMPRESSED_BYTES + 1)),
+            stream,
             user_library_dir=library,
             shipped_dir=shipped,
             expected_manifest_sha256="a" * 64,

@@ -85,9 +85,10 @@ def test_empty_pin_leaves_library_unchanged(tmp_path: Path) -> None:
     body = tiny_stl_body()
     manifest = manifest_for_files({"senior_male": body})
     raw = pack_zip_bytes(manifest, {"senior_male": body})
+    stream = io.BytesIO(raw)
     with pytest.raises(PhantomPackError):
         install_phantom_pack(
-            io.BytesIO(raw),
+            stream,
             user_library_dir=library,
             shipped_dir=shipped,
             expected_manifest_sha256="",
@@ -106,9 +107,10 @@ def test_mismatched_pin_leaves_library_unchanged(tmp_path: Path) -> None:
     body = tiny_stl_body()
     manifest = manifest_for_files({"senior_male": body})
     raw = pack_zip_bytes(manifest, {"senior_male": body})
+    stream = io.BytesIO(raw)
     with pytest.raises(PhantomPackError):
         install_phantom_pack(
-            io.BytesIO(raw),
+            stream,
             user_library_dir=library,
             shipped_dir=shipped,
             expected_manifest_sha256="f" * 64,
