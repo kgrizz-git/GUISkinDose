@@ -44,6 +44,10 @@ def _write_stub_codesign(bin_dir: Path) -> None:
               exit 0
             fi
             if [[ "${1:-}" == "-d" && "${2:-}" == "--entitlements" ]]; then
+              if ! [[ " $* " == *" --xml "* ]]; then
+                echo "stub codesign requires --xml for entitlements dump" >&2
+                exit 2
+              fi
               target="${!#}"
               if [[ -f "${target}.abstract_ent" ]]; then
                 printf '[Dict]\n'
@@ -82,15 +86,12 @@ def _write_stub_codesign(bin_dir: Path) -> None:
 
 def _write_stub_file(bin_dir: Path, *, macho: bool = True) -> None:
     script = bin_dir / "file"
+    line = "Mach-O 64-bit executable arm64" if macho else "ASCII text"
     script.write_text(
         textwrap.dedent(
-            """\
+            f"""\
             #!/usr/bin/env bash
-            target="${!#}"
-            case "$target" in
-              *nomacho*) echo "ASCII text" ;;
-              *) echo "Mach-O 64-bit executable arm64" ;;
-            esac
+            echo "{line}"
             """
         ).lstrip(),
         encoding="utf-8",
@@ -98,7 +99,7 @@ def _write_stub_file(bin_dir: Path, *, macho: bool = True) -> None:
     script.chmod(stat.S_IRWXU)
 
 
-def _bundle_root(tmp_path: Path, *, chromium: bool = True, nomacho: bool = False) -> Path:
+def _bundle_root(tmp_path: Path, *, chromium: bool = True) -> Path:
     app = tmp_path / "GUISkinDose.app"
     main = app / "Contents/MacOS/GUISkinDose"
     main.parent.mkdir(parents=True)
@@ -111,8 +112,6 @@ def _bundle_root(tmp_path: Path, *, chromium: bool = True, nomacho: bool = False
         helper = chrom.parent.parent / "Helpers/Chromium Helper.app/Contents/MacOS/Chromium Helper"
         helper.parent.mkdir(parents=True)
         helper.write_bytes(b"\xcf\xfa\xed\xfe")
-    if nomacho:
-        (app / "Contents/Resources/nomacho.txt").write_text("x", encoding="utf-8")
     return app
 
 

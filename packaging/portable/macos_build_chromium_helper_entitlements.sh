@@ -44,20 +44,20 @@ for helper_app in chromium.rglob("*.app"):
             targets.append(("chromium_helper", exe))
             break
 
-def dump_keys(exe: Path) -> set[str]:
+def dump_keys(role: str, exe: Path) -> set[str]:
     proc = subprocess.run(
         ["codesign", "-d", "--entitlements", "-", "--xml", str(exe)],
         capture_output=True,
     )
     if proc.returncode != 0:
-        print(f"upstream_entitlements_dump_failed role=target", file=sys.stderr)
+        print(f"upstream_entitlements_dump_failed role={role}", file=sys.stderr)
         sys.exit(1)
     if not proc.stdout.strip():
         return set()
     try:
         data = plistlib.loads(proc.stdout)
     except Exception:
-        print(f"upstream_entitlements_parse_failed role=target", file=sys.stderr)
+        print(f"upstream_entitlements_parse_failed role={role}", file=sys.stderr)
         sys.exit(1)
     return set(data) if isinstance(data, dict) else set()
 
@@ -66,7 +66,7 @@ unsigned = "com.apple.security.cs.allow-unsigned-executable-memory"
 seen_unsigned = False
 main_has_jit = False
 for role, exe in targets:
-    keys = dump_keys(exe)
+    keys = dump_keys(role, exe)
     print(f"upstream_entitlement_keys_role={role} count={len(keys)}")
     for key in sorted(keys):
         print(f"upstream_entitlement_key={key}")

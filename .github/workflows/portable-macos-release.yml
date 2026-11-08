@@ -171,13 +171,11 @@ jobs:
           GUISKINDOSE_PORTABLE_EDITION: ${{ matrix.edition }}
         run: |
           set -euo pipefail
+          # shellcheck source=packaging/portable/macos_spctl_assess.sh
+          source packaging/portable/macos_spctl_assess.sh
           codesign --verify --deep --strict "$APP_BUNDLE"
           xcrun stapler validate "$APP_BUNDLE"
-          spctl_out="$(spctl -a -t exec -vv "$APP_BUNDLE" 2>&1)" || true
-          if ! grep -q 'source=Notarized Developer ID' <<<"$spctl_out"; then
-            echo "spctl did not report Notarized Developer ID" >&2
-            exit 1
-          fi
+          macos_spctl_assert_notarized "$APP_BUNDLE" "Post-release spctl" || exit 1
           if command -v /usr/sbin/syspolicy_check >/dev/null 2>&1; then
             /usr/sbin/syspolicy_check distribution "$APP_BUNDLE"
           fi
@@ -190,17 +188,15 @@ jobs:
           GUISKINDOSE_PORTABLE_EDITION: ${{ matrix.edition }}
         run: |
           set -euo pipefail
+          # shellcheck source=packaging/portable/macos_spctl_assess.sh
+          source packaging/portable/macos_spctl_assess.sh
           mkdir -p "${RUNNER_TEMP}/expand"
           ditto -x -k "out/${ZIP_NAME}" "${RUNNER_TEMP}/expand"
           EXPANDED="${RUNNER_TEMP}/expand/GUISkinDose.app"
           test -d "$EXPANDED"
           codesign --verify --deep --strict "$EXPANDED"
           xcrun stapler validate "$EXPANDED"
-          spctl_out="$(spctl -a -t exec -vv "$EXPANDED" 2>&1)" || true
-          if ! grep -q 'source=Notarized Developer ID' <<<"$spctl_out"; then
-            echo "spctl on expanded app did not report Notarized Developer ID" >&2
-            exit 1
-          fi
+          macos_spctl_assert_notarized "$EXPANDED" "Stapled zip expand spctl" || exit 1
           packaging/portable/macos_verify_developer_id_signing.sh "$EXPANDED"
           QUARANTINE_ZIP="${RUNNER_TEMP}/quarantine.zip"
           cp "out/${ZIP_NAME}" "$QUARANTINE_ZIP"
@@ -209,11 +205,7 @@ jobs:
           mkdir -p "${RUNNER_TEMP}/quarantine-expand"
           ditto -x -k "$QUARANTINE_ZIP" "${RUNNER_TEMP}/quarantine-expand"
           QAPP="${RUNNER_TEMP}/quarantine-expand/GUISkinDose.app"
-          spctl_out="$(spctl -a -t exec -vv "$QAPP" 2>&1)" || true
-          if ! grep -q 'source=Notarized Developer ID' <<<"$spctl_out"; then
-            echo "spctl on quarantine expand did not report Notarized Developer ID" >&2
-            exit 1
-          fi
+          macos_spctl_assert_notarized "$QAPP" "Quarantine expand spctl" || exit 1
           xcrun stapler validate "$QAPP"
           if [ "$GUISKINDOSE_PORTABLE_EDITION" = full ]; then
             export APP_EXE="${EXPANDED}/Contents/MacOS/GUISkinDose"
@@ -410,17 +402,15 @@ jobs:
           GUISKINDOSE_PORTABLE_EDITION: full
         run: |
           set -euo pipefail
+          # shellcheck source=packaging/portable/macos_spctl_assess.sh
+          source packaging/portable/macos_spctl_assess.sh
           mkdir -p "${RUNNER_TEMP}/intel-expand"
           ditto -x -k "out/${ZIP_NAME}" "${RUNNER_TEMP}/intel-expand"
           EXPANDED="${RUNNER_TEMP}/intel-expand/GUISkinDose.app"
           test -d "$EXPANDED"
           codesign --verify --deep --strict "$EXPANDED"
           xcrun stapler validate "$EXPANDED"
-          spctl_out="$(spctl -a -t exec -vv "$EXPANDED" 2>&1)" || true
-          if ! grep -q 'source=Notarized Developer ID' <<<"$spctl_out"; then
-            echo "spctl on expanded app did not report Notarized Developer ID" >&2
-            exit 1
-          fi
+          macos_spctl_assert_notarized "$EXPANDED" "Intel stapled zip expand spctl" || exit 1
           packaging/portable/macos_verify_developer_id_signing.sh "$EXPANDED"
           export APP_EXE="${EXPANDED}/Contents/MacOS/GUISkinDose"
           export PNG_CHECK_LABEL=from_stapled_zip

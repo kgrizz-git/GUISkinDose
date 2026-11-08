@@ -415,12 +415,8 @@ xcrun stapler staple "$APP"
 xcrun stapler validate "$APP"
 rm -f "$ZIP"
 ditto -c -k --keepParent "$APP" "$ZIP"
-spctl_out="$(spctl -a -t exec -vv "$APP" 2>&1)" || true
-if grep -q 'source=Notarized Developer ID' <<<"$spctl_out"; then
-    echo "spctl: accepted"
-else
-    echo "spctl: rejected" >&2
-    exit 1
-fi
+# shellcheck source=./macos_spctl_assess.sh disable=SC1091
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/macos_spctl_assess.sh"
+macos_spctl_assert_notarized "$APP" "Release spctl" 1 || exit 1
 NOTARY_DONE=1
 echo "release zip: $(basename "$ZIP")"
