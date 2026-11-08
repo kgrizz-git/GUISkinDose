@@ -228,7 +228,7 @@ The job summary lists edition, arch, zip size, sha256, notary status, verify, `s
 
 The published-release matrix is arm64 Light and arm64 Full on `macos-15`. PyInstaller does not cross-compile. Phase 0b ruled out universal2.
 
-Intel is a separate job, `runs-on: macos-15-intel`, `if: github.event_name == 'workflow_dispatch' && inputs.macos_intel`. It sets `environment: macos-release`, the same `contents: write` and `actions: read` permissions, `fetch-depth: 0`, and the same `GH_TOKEN` gate. Without the environment the job cannot read the certificate or the notary key. It signs Full with the spike's x86_64 pin (sha256 `152f0d67ab9301a2e6fa4d38b25e1382c0c74c72772d533ce7c4390e599a1db4`) and the same helper-plist rule, dumping the x86_64 artifact's own entitlements rather than reusing the arm64 key list unread. It does not run on `release: published`. Light Intel can follow the same way. The open Intel spike in the parent plan stays open until that dispatch is green. It is not a gate for the arm64 assets.
+Intel is a separate job, `runs-on: macos-15-intel`, `if: github.event_name == 'workflow_dispatch' && inputs.macos_intel`. It sets `environment: macos-release`, `contents: read` and `actions: read` permissions (it never uploads to a release), `fetch-depth: 0`, and the same `GH_TOKEN` gate. Without the environment the job cannot read the certificate or the notary key. It signs Full with the spike's x86_64 pin (sha256 `152f0d67ab9301a2e6fa4d38b25e1382c0c74c72772d533ce7c4390e599a1db4`) and the same helper-plist rule, dumping the x86_64 artifact's own entitlements rather than reusing the arm64 key list unread. It does not run on `release: published`. Light Intel can follow the same way. The open Intel spike in the parent plan stays open until that dispatch is green. It is not a gate for the arm64 assets.
 
 ## Local versus CI
 
@@ -248,7 +248,7 @@ Add `tests/unittests/test_portable_macos_release_workflow.py`. It loads the work
 
 - Triggers are `release` published and `workflow_dispatch` only.
 - `sign-macos` and the Intel job both set `environment: macos-release`.
-- Both jobs set `contents: write` and `actions: read`. Checkout sets `fetch-depth: 0`.
+- The arm64 job sets `contents: write` and `actions: read`. The Intel job sets `contents: read` and `actions: read`. Checkout sets `fetch-depth: 0`.
 - The CI gate step and the upload step both set `GH_TOKEN`.
 - The secret names in the file are only `DEVELOPER_ID_P12_BASE64`, `DEVELOPER_ID_P12_PASSWORD`, `NOTARY_KEY_P8`, `NOTARY_KEY_ID`, and `NOTARY_ISSUER`.
 - `GUISKINDOSE_SKIP_NOTARIZE` does not appear.

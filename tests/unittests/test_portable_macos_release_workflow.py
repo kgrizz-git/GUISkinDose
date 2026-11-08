@@ -54,7 +54,7 @@ def test_portable_macos_release_triggers_and_environment() -> None:
 
     for job_name in ("sign-macos", "macos-intel-full"):
         names = _named_steps(wf["jobs"][job_name])
-        assert "Reject workflow_dispatch off main" in names
+        assert "Require dispatch from main or a v* tag" in names
 
 
 def test_portable_macos_release_secrets_and_skip_notarize() -> None:

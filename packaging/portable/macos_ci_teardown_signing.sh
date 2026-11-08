@@ -9,13 +9,14 @@ RT="${RUNNER_TEMP:-}"
 run_cleanup() {
     local name="$1"
     shift
-    if ! "$@" 2>/dev/null; then
-        echo "$name" >&2
+    if ! "$@"; then
+        echo "cleanup failed: $name" >&2
         FAILED=1
     fi
 }
 
-if [[ -n "${KEYCHAIN_PATH:-}" ]]; then
+# The import step records the path before creating the keychain, so it may not exist.
+if [[ -n "${KEYCHAIN_PATH:-}" && -f "$KEYCHAIN_PATH" ]]; then
     run_cleanup delete-keychain security delete-keychain "$KEYCHAIN_PATH"
 fi
 run_cleanup remove-signing-artifacts rm -f "${RT}/AuthKey.p8" "${RT}/developer-id.p12"

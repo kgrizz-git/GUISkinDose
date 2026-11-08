@@ -61,13 +61,17 @@ jobs:
           SUCCESSFUL_RUNS="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow ci.yml --commit "$TARGET" --status completed --json conclusion --jq 'map(select(.conclusion == "success")) | length')"
           test "$SUCCESSFUL_RUNS" -ge 1
 
-      - name: Reject workflow_dispatch off main
+      - name: Require dispatch from main or a v* tag
         if: github.event_name == 'workflow_dispatch'
         env:
           WORKFLOW_REF: ${{ github.ref }}
         run: |
           set -euo pipefail
-          test "$WORKFLOW_REF" = refs/heads/main
+          # A retry for an existing release dispatches on its v* tag, since main has usually moved on.
+          if [[ "$WORKFLOW_REF" != refs/heads/main && ! "$WORKFLOW_REF" =~ ^refs/tags/v[0-9][0-9A-Za-z.+-]*$ ]]; then
+            echo "dispatch only from main or a v* tag" >&2
+            exit 1
+          fi
 
       - name: Require attach tag commit matches checkout
         if: github.event_name == 'workflow_dispatch' && inputs.attach_to_tag != ''
@@ -337,13 +341,17 @@ jobs:
           SUCCESSFUL_RUNS="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow ci.yml --commit "$TARGET" --status completed --json conclusion --jq 'map(select(.conclusion == "success")) | length')"
           test "$SUCCESSFUL_RUNS" -ge 1
 
-      - name: Reject workflow_dispatch off main
+      - name: Require dispatch from main or a v* tag
         if: github.event_name == 'workflow_dispatch'
         env:
           WORKFLOW_REF: ${{ github.ref }}
         run: |
           set -euo pipefail
-          test "$WORKFLOW_REF" = refs/heads/main
+          # A retry for an existing release dispatches on its v* tag, since main has usually moved on.
+          if [[ "$WORKFLOW_REF" != refs/heads/main && ! "$WORKFLOW_REF" =~ ^refs/tags/v[0-9][0-9A-Za-z.+-]*$ ]]; then
+            echo "dispatch only from main or a v* tag" >&2
+            exit 1
+          fi
 
       - name: Require x86_64 runner
         run: test "$(uname -m)" = x86_64
