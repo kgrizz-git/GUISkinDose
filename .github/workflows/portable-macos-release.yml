@@ -1,0 +1,366 @@
+# Developer ID sign, notarize, and staple for macOS Light and Full release zips.
+# Ad-hoc spikes stay in portable-spike.yml. PyPI stays in release.yml.
+# Secrets live only in the macos-release environment (main branch and v* tags).
+name: portable-macos-release
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      attach_to_tag:
+        description: Existing v* tag to receive assets. Empty keeps artifacts off the release.
+        type: string
+        default: ""
+      macos_intel:
+        description: Also sign Full on macos-15-intel
+        type: boolean
+        default: false
+
+concurrency:
+  group: portable-macos-release-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  sign-macos:
+    name: sign-${{ matrix.edition }}-arm64
+    runs-on: macos-15
+    timeout-minutes: 180
+    environment: macos-release
+    permissions:
+      contents: write
+      actions: read
+    strategy:
+      fail-fast: false
+      matrix:
+        edition: [light, full]
+    env:
+      APP_BUNDLE: tmp/portable/dist/GUISkinDose.app
+      APP_EXE: tmp/portable/dist/GUISkinDose.app/Contents/MacOS/GUISkinDose
+      GUISKINDOSE_PORTABLE_EDITION: ${{ matrix.edition }}
+      SC_SUB: guiskindose-selfcheck
+      ZIP_NAME: GUISkinDose-${{ matrix.edition }}-macos-arm64.zip
+      CHROMIUM_VERSION: 156.0.8078.79-1.1
+      CHROMIUM_URL: https://github.com/ungoogled-software/ungoogled-chromium-macos/releases/download/156.0.8078.79-1.1/ungoogled-chromium_156.0.8078.79-1.1_arm64-macos.dmg
+      CHROMIUM_SHA256: 4ff3b084c49d2391aecdd3924ebd1bd7417fb1dd88e3da45891bee73f8e5c173
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Require ancestor of main with successful CI
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TARGET="$(git rev-parse "$GITHUB_SHA^{commit}")"
+          git fetch origin main
+          git merge-base --is-ancestor "$TARGET" origin/main
+          SUCCESSFUL_RUNS="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow ci.yml --commit "$TARGET" --status completed --json conclusion --jq 'map(select(.conclusion == "success")) | length')"
+          test "$SUCCESSFUL_RUNS" -ge 1
+
+      - name: Require attach tag commit matches checkout
+        if: github.event_name == 'workflow_dispatch' && inputs.attach_to_tag != ''
+        env:
+          ATTACH_TO_TAG: ${{ inputs.attach_to_tag }}
+        run: |
+          set -euo pipefail
+          if ! printf '%s' "$ATTACH_TO_TAG" | grep -Eq '^v[0-9][0-9A-Za-z.+-]*$'; then
+            echo "attach_to_tag must match ^v[0-9][0-9A-Za-z.+-]*$" >&2
+            exit 1
+          fi
+          TAG_COMMIT="$(git rev-parse "${ATTACH_TO_TAG}^{commit}")"
+          CHECKOUT="$(git rev-parse "$GITHUB_SHA^{commit}")"
+          test "$TAG_COMMIT" = "$CHECKOUT"
+
+      - name: Setup python 3.14
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
+        with:
+          python-version: "3.14"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e  # v10.3.2
+        with:
+          version: "0.11.25"
+
+      - name: Install locked runtime + freeze toolchain
+        run: uv sync --locked --extra gui-native --group portable
+
+      - name: Freeze PyInstaller app bundle
+        run: |
+          set -euo pipefail
+          uv run --no-sync pyinstaller packaging/portable/guiskindose.spec --noconfirm \
+            --distpath tmp/portable/dist --workpath tmp/portable/work
+          rm -rf tmp/portable/work
+
+      - name: Light must not bundle Chromium.app
+        if: matrix.edition == 'light'
+        run: test ! -d "${APP_BUNDLE}/Contents/Helpers/Chromium.app"
+
+      - name: Bundle Chromium for Full (no ad-hoc re-sign)
+        if: matrix.edition == 'full'
+        env:
+          GUISKINDOSE_SKIP_ADHOC_RESIGN: "1"
+        run: packaging/portable/macos_bundle_chromium.sh
+
+      - name: Build Chromium helper entitlements (Full)
+        if: matrix.edition == 'full'
+        id: helper_ent
+        run: |
+          set -euo pipefail
+          ENT="${RUNNER_TEMP}/chromium-helper-entitlements.plist"
+          packaging/portable/macos_build_chromium_helper_entitlements.sh "$APP_BUNDLE" "$ENT"
+          echo "GUISKINDOSE_CHROMIUM_HELPER_ENTITLEMENTS=${ENT}" >> "$GITHUB_ENV"
+          echo "path=${ENT}" >> "$GITHUB_OUTPUT"
+
+      - name: Import signing certificate and notary key
+        id: keychain
+        env:
+          DEVELOPER_ID_P12_BASE64: ${{ secrets.DEVELOPER_ID_P12_BASE64 }}
+          DEVELOPER_ID_P12_PASSWORD: ${{ secrets.DEVELOPER_ID_P12_PASSWORD }}
+          NOTARY_KEY_P8: ${{ secrets.NOTARY_KEY_P8 }}
+          NOTARY_KEY_ID: ${{ secrets.NOTARY_KEY_ID }}
+          NOTARY_ISSUER: ${{ secrets.NOTARY_ISSUER }}
+        run: packaging/portable/macos_ci_import_signing.sh
+
+      - name: Developer ID sign (sign-only)
+        env:
+          GUISKINDOSE_SIGN_ONLY: "1"
+          GUISKINDOSE_ZIP_NAME: ${{ env.ZIP_NAME }}
+        run: |
+          set -euo pipefail
+          mkdir -p out
+          packaging/portable/macos_sign_notarize.sh "$APP_BUNDLE" out
+
+      - name: Full PNG check after Developer ID sign
+        if: matrix.edition == 'full'
+        env:
+          PNG_CHECK_LABEL: post_dev_id
+          BROWSER_REL: Helpers/Chromium.app/Contents/MacOS/Chromium
+          GUISKINDOSE_CI_OUT: out
+        run: packaging/portable/macos_frozen_png_check.sh
+
+      - name: Notarize, staple, and write release zip
+        env:
+          GUISKINDOSE_NOTARIZE_ONLY: "1"
+          GUISKINDOSE_ZIP_NAME: ${{ env.ZIP_NAME }}
+        run: packaging/portable/macos_sign_notarize.sh "$APP_BUNDLE" out
+
+      - name: Post-release verification on stapled app
+        run: |
+          set -euo pipefail
+          codesign --verify --deep --strict --verbose=2 "$APP_BUNDLE"
+          codesign -dv --verbose=4 "$APP_BUNDLE" 2>&1 | grep -q 'runtime'
+          xcrun stapler validate "$APP_BUNDLE"
+          SPCTL_OUT="${RUNNER_TEMP}/spctl-arm64.out"
+          spctl -a -t exec -vv "$APP_BUNDLE" 2>&1 | tee "$SPCTL_OUT"
+          grep -q 'source=Notarized Developer ID' "$SPCTL_OUT"
+          if command -v /usr/sbin/syspolicy_check >/dev/null 2>&1; then
+            /usr/sbin/syspolicy_check distribution "$APP_BUNDLE"
+          fi
+          ENT_DUMP="$(mktemp)"
+          codesign -d --entitlements - "$APP_EXE" 2>/dev/null >"$ENT_DUMP" || true
+          ! grep -q 'get-task-allow' "$ENT_DUMP"
+
+      - name: Verify stapled zip expansion and quarantine round-trip
+        run: |
+          set -euo pipefail
+          mkdir -p "${RUNNER_TEMP}/expand"
+          ditto -x -k "out/${ZIP_NAME}" "${RUNNER_TEMP}/expand"
+          EXPANDED="${RUNNER_TEMP}/expand/GUISkinDose.app"
+          test -d "$EXPANDED"
+          codesign --verify --deep --strict "$EXPANDED"
+          xcrun stapler validate "$EXPANDED"
+          spctl -a -t exec -vv "$EXPANDED"
+          QUARANTINE_ZIP="${RUNNER_TEMP}/quarantine.zip"
+          cp "out/${ZIP_NAME}" "$QUARANTINE_ZIP"
+          xattr -w com.apple.quarantine "0081;$(date +%s);GH;|" "$QUARANTINE_ZIP"
+          rm -rf "${RUNNER_TEMP}/quarantine-expand"
+          mkdir -p "${RUNNER_TEMP}/quarantine-expand"
+          ditto -x -k "$QUARANTINE_ZIP" "${RUNNER_TEMP}/quarantine-expand"
+          QAPP="${RUNNER_TEMP}/quarantine-expand/GUISkinDose.app"
+          spctl -a -t exec -vv "$QAPP"
+          xcrun stapler validate "$QAPP"
+          if [ "$GUISKINDOSE_PORTABLE_EDITION" = full ]; then
+            export APP_EXE="${EXPANDED}/Contents/MacOS/GUISkinDose"
+            export PNG_CHECK_LABEL=from_stapled_zip
+            export BROWSER_REL=Helpers/Chromium.app/Contents/MacOS/Chromium
+            packaging/portable/macos_frozen_png_check.sh
+          else
+            # shellcheck source=packaging/portable/strip_git_from_path.sh
+            source packaging/portable/strip_git_from_path.sh
+            strip_git_from_path
+            export APP_EXE="${EXPANDED}/Contents/MacOS/GUISkinDose"
+            out="${RUNNER_TEMP}/light-selfcheck"
+            "$APP_EXE" --self-check "$out"
+            python3 -c 'import json,sys; r=json.load(open(sys.argv[1])); assert r["passed"] and r["frozen"]' \
+              "${out}/${SC_SUB}/selfcheck_report.json"
+          fi
+
+      - name: Write sha256 sidecar
+        run: |
+          set -euo pipefail
+          (cd out && shasum -a 256 "${ZIP_NAME}" > "${ZIP_NAME}.sha256")
+
+      - name: Job summary
+        if: success()
+        run: |
+          set -euo pipefail
+          SHA="$(awk '{print $1}' "out/${ZIP_NAME}.sha256")"
+          BYTES="$(stat -f%z "out/${ZIP_NAME}")"
+          {
+            echo "## macOS release (${GUISKINDOSE_PORTABLE_EDITION}, arm64)"
+            echo "| Field | Value |"
+            echo "|---|---|"
+            echo "| edition | ${GUISKINDOSE_PORTABLE_EDITION} |"
+            echo "| arch | arm64 |"
+            echo "| zip | ${ZIP_NAME} |"
+            echo "| bytes | ${BYTES} |"
+            echo "| sha256 | ${SHA} |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload stapled zip and checksum
+        if: success()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
+        with:
+          name: guiskindose-${{ matrix.edition }}-macos-arm64-signed
+          path: |
+            out/${{ env.ZIP_NAME }}
+            out/${{ env.ZIP_NAME }}.sha256
+          retention-days: 14
+          if-no-files-found: error
+
+      - name: Attach to GitHub Release
+        if: >-
+          success() && (
+          github.event_name == 'release' ||
+          (github.event_name == 'workflow_dispatch' && inputs.attach_to_tag != '')
+          )
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+          ATTACH_TO_TAG: ${{ inputs.attach_to_tag }}
+        run: |
+          set -euo pipefail
+          if [ "$GITHUB_EVENT_NAME" = release ]; then
+            TAG="$GITHUB_REF_NAME"
+          else
+            TAG="$ATTACH_TO_TAG"
+          fi
+          if ! printf '%s' "$TAG" | grep -Eq '^v[0-9][0-9A-Za-z.+-]*$'; then
+            echo "release tag must match ^v[0-9][0-9A-Za-z.+-]*$" >&2
+            exit 1
+          fi
+          gh release upload "$TAG" "out/${ZIP_NAME}" "out/${ZIP_NAME}.sha256" --clobber --repo "$GITHUB_REPOSITORY"
+
+      - name: Restore keychain and delete secrets from disk
+        if: always()
+        env:
+          KEYCHAIN_PATH: ${{ steps.keychain.outputs.KEYCHAIN_PATH }}
+          PREV_KEYCHAINS: ${{ steps.keychain.outputs.PREV_KEYCHAINS }}
+        run: packaging/portable/macos_ci_teardown_signing.sh
+
+  macos-intel-full:
+    if: github.event_name == 'workflow_dispatch' && inputs.macos_intel
+    name: sign-full-x64
+    runs-on: macos-15-intel
+    timeout-minutes: 180
+    environment: macos-release
+    permissions:
+      contents: write
+      actions: read
+    env:
+      APP_BUNDLE: tmp/portable/dist/GUISkinDose.app
+      APP_EXE: tmp/portable/dist/GUISkinDose.app/Contents/MacOS/GUISkinDose
+      GUISKINDOSE_PORTABLE_EDITION: full
+      SC_SUB: guiskindose-selfcheck
+      ZIP_NAME: GUISkinDose-full-macos-x64.zip
+      CHROMIUM_VERSION: 156.0.8078.79-1.1
+      CHROMIUM_URL: https://github.com/ungoogled-software/ungoogled-chromium-macos/releases/download/156.0.8078.79-1.1/ungoogled-chromium_156.0.8078.79-1.1_x86_64-macos.dmg
+      CHROMIUM_SHA256: 152f0d67ab9301a2e6fa4d38b25e1382c0c74c72772d533ce7c4390e599a1db4
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Require ancestor of main with successful CI
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TARGET="$(git rev-parse "$GITHUB_SHA^{commit}")"
+          git fetch origin main
+          git merge-base --is-ancestor "$TARGET" origin/main
+          SUCCESSFUL_RUNS="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow ci.yml --commit "$TARGET" --status completed --json conclusion --jq 'map(select(.conclusion == "success")) | length')"
+          test "$SUCCESSFUL_RUNS" -ge 1
+
+      - name: Require x86_64 runner
+        run: test "$(uname -m)" = x86_64
+
+      - name: Setup python 3.14
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
+        with:
+          python-version: "3.14"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e  # v10.3.2
+        with:
+          version: "0.11.25"
+
+      - name: Install locked runtime + freeze toolchain
+        run: uv sync --locked --extra gui-native --group portable
+
+      - name: Freeze and bundle Chromium
+        run: |
+          set -euo pipefail
+          uv run --no-sync pyinstaller packaging/portable/guiskindose.spec --noconfirm \
+            --distpath tmp/portable/dist --workpath tmp/portable/work
+          rm -rf tmp/portable/work
+          GUISKINDOSE_SKIP_ADHOC_RESIGN=1 packaging/portable/macos_bundle_chromium.sh
+          ENT="${RUNNER_TEMP}/chromium-helper-entitlements.plist"
+          packaging/portable/macos_build_chromium_helper_entitlements.sh "$APP_BUNDLE" "$ENT"
+          echo "GUISKINDOSE_CHROMIUM_HELPER_ENTITLEMENTS=${ENT}" >> "$GITHUB_ENV"
+
+      - name: Import signing certificate and notary key
+        id: keychain
+        env:
+          DEVELOPER_ID_P12_BASE64: ${{ secrets.DEVELOPER_ID_P12_BASE64 }}
+          DEVELOPER_ID_P12_PASSWORD: ${{ secrets.DEVELOPER_ID_P12_PASSWORD }}
+          NOTARY_KEY_P8: ${{ secrets.NOTARY_KEY_P8 }}
+          NOTARY_KEY_ID: ${{ secrets.NOTARY_KEY_ID }}
+          NOTARY_ISSUER: ${{ secrets.NOTARY_ISSUER }}
+        run: packaging/portable/macos_ci_import_signing.sh
+
+      - name: Sign, notarize, and verify
+        env:
+          GUISKINDOSE_SIGN_ONLY: "1"
+          GUISKINDOSE_ZIP_NAME: ${{ env.ZIP_NAME }}
+        run: |
+          mkdir -p out
+          packaging/portable/macos_sign_notarize.sh "$APP_BUNDLE" out
+          PNG_CHECK_LABEL=post_dev_id BROWSER_REL=Helpers/Chromium.app/Contents/MacOS/Chromium \
+            GUISKINDOSE_CI_OUT=out packaging/portable/macos_frozen_png_check.sh
+          GUISKINDOSE_NOTARIZE_ONLY=1 GUISKINDOSE_ZIP_NAME="${ZIP_NAME}" \
+            packaging/portable/macos_sign_notarize.sh "$APP_BUNDLE" out
+          (cd out && shasum -a 256 "${ZIP_NAME}" > "${ZIP_NAME}.sha256")
+
+      - name: Upload stapled zip
+        if: success()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
+        with:
+          name: guiskindose-full-macos-x64-signed
+          path: |
+            out/${{ env.ZIP_NAME }}
+            out/${{ env.ZIP_NAME }}.sha256
+          retention-days: 14
+          if-no-files-found: error
+
+      - name: Restore keychain and delete secrets from disk
+        if: always()
+        env:
+          KEYCHAIN_PATH: ${{ steps.keychain.outputs.KEYCHAIN_PATH }}
+          PREV_KEYCHAINS: ${{ steps.keychain.outputs.PREV_KEYCHAINS }}
+        run: packaging/portable/macos_ci_teardown_signing.sh

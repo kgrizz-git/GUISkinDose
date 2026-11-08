@@ -11,8 +11,13 @@
 #   GUISKINDOSE_NOTARY_KEY_ID    its key ID                              } all three are set;
 #   GUISKINDOSE_NOTARY_ISSUER    its issuer ID                           } a partial set fails
 #   GUISKINDOSE_NOTARY_ENV       env file for fallback 3 (default: $HOME/.appstoreconnect/notary.env)
-#   GUISKINDOSE_SKIP_NOTARIZE=1  sign and verify only; no notary auth is resolved
+#   GUISKINDOSE_SKIP_NOTARIZE=1  sign and verify only; no notary auth is resolved (unstapled zip)
 #   GUISKINDOSE_NOTARY_DRY_RUN=1 resolve auth, print the mode and redacted arguments, then exit
+#   GUISKINDOSE_SIGN_ONLY=1      sign and verify only; no zip and no notarytool (CI split path)
+#   GUISKINDOSE_NOTARIZE_ONLY=1  skip the sign walk; require existing signature; notarize and zip
+#   GUISKINDOSE_ZIP_NAME         stapled archive file name under OUT (else GUISkinDose-macos-<arch>.zip)
+#   GUISKINDOSE_ENTITLEMENTS     outer app main executable plist (default: macos_entitlements.plist)
+#   GUISKINDOSE_CHROMIUM_HELPER_ENTITLEMENTS  helper main executables and Chromium.app seals (Full)
 #
 # Notary auth order (resolved before signing, so a bad setup fails fast):
 #   1. API key: all three GUISKINDOSE_NOTARY_* variables already set. notarytool gets
@@ -33,7 +38,8 @@
 #
 # Every nested Mach-O is signed inside-out with the hardened runtime and a secure
 # timestamp, deepest paths first, then each nested bundle, then the app. No --deep.
-# The output directory receives GUISkinDose-macos-<arch>.zip (stapled app, ditto zip).
+# Entitlements attach only to main executables and matching .app seals, not dylibs.
+# GUISKINDOSE_SIGN_ONLY or GUISKINDOSE_NOTARIZE_ONLY split that walk from notary work on CI.
 set -euo pipefail
 set +x
 
@@ -47,10 +53,16 @@ OUT="$2"
 mkdir -p "$OUT"
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ENTITLEMENTS="$HERE/macos_entitlements.plist"
+OUTER_ENT="${GUISKINDOSE_ENTITLEMENTS:-$HERE/macos_entitlements.plist}"
+CHROMIUM_HELPER_ENT="${GUISKINDOSE_CHROMIUM_HELPER_ENTITLEMENTS:-}"
+CHROMIUM_APP="${APP}/Contents/Helpers/Chromium.app"
 PROFILE="${GUISKINDOSE_NOTARY_PROFILE:-guiskindose-notary}"
-
 NOTARY_ENV="${GUISKINDOSE_NOTARY_ENV:-$HOME/.appstoreconnect/notary.env}"
+
+if [[ "${GUISKINDOSE_SIGN_ONLY:-0}" == "1" && "${GUISKINDOSE_NOTARIZE_ONLY:-0}" == "1" ]]; then
+    echo "cannot set both GUISKINDOSE_SIGN_ONLY and GUISKINDOSE_NOTARIZE_ONLY" >&2
+    exit 1
+fi
 
 count_key_vars() {
     local count=0 value
@@ -191,16 +203,17 @@ resolve_notary_auth() {
 NOTARY_AUTH=()
 AUTH_MODE="none"
 REDACTED_AUTH=""
-if [[ "${GUISKINDOSE_SKIP_NOTARIZE:-0}" != "1" ]]; then
+if [[ "${GUISKINDOSE_SKIP_NOTARIZE:-0}" != "1" && "${GUISKINDOSE_SIGN_ONLY:-0}" != "1" ]]; then
     resolve_notary_auth
 fi
 if [[ "${GUISKINDOSE_NOTARY_DRY_RUN:-0}" == "1" ]]; then
     echo "notary auth: $AUTH_MODE"
-    echo "submit: xcrun notarytool submit <zip> $REDACTED_AUTH --wait --output-format plist"
+    echo "submit: xcrun notarytool submit <zip> $REDACTED_AUTH --wait --timeout 45m --output-format plist"
     echo "log:    xcrun notarytool log <id> $REDACTED_AUTH <file>"
     echo "auth argument count: ${#NOTARY_AUTH[@]}"
     exit 0
 fi
+
 IDENTITY="${GUISKINDOSE_SIGN_IDENTITY:-}"
 if [[ -z "$IDENTITY" ]]; then
     IDENTITY="$(security find-identity -v -p codesigning \
@@ -208,51 +221,133 @@ if [[ -z "$IDENTITY" ]]; then
 fi
 [[ -n "$IDENTITY" ]] || { echo "no Developer ID Application identity found" >&2; exit 1; }
 
-sign() {
-    codesign --force --timestamp --options runtime --entitlements "$ENTITLEMENTS" \
-        --sign "$IDENTITY" "$1"
-}
-
 is_macho() {
     file -b "$1" | grep -q 'Mach-O'
 }
 
-start=$(date +%s)
-# 1. Loose Mach-O files (dylibs, .so extensions, executables). Order does not matter
-#    here; only the bundle seals in step 2 depend on what these files contain.
-count=0
-while IFS= read -r -d '' path; do
-    if is_macho "$path"; then
-        sign "$path" >/dev/null 2>&1 || { echo "codesign failed on a nested file" >&2; sign "$path"; }
-        count=$((count + 1))
+is_outer_main_executable() {
+    [[ "$1" == "$APP/Contents/MacOS/GUISkinDose" ]]
+}
+
+is_chromium_tree_main_executable() {
+    [[ -n "$CHROMIUM_HELPER_ENT" && -f "$CHROMIUM_HELPER_ENT" ]] || return 1
+    [[ "$1" == "${CHROMIUM_APP}/"* ]] || return 1
+    local parent="${1%/*}"
+    [[ "$(basename "$parent")" == "MacOS" ]] || return 1
+    local app_bundle="${parent%/Contents/MacOS}"
+    [[ "$app_bundle" == *.app ]]
+}
+
+entitlements_for_macho() {
+    if is_outer_main_executable "$1"; then
+        echo "$OUTER_ENT"
+    elif is_chromium_tree_main_executable "$1"; then
+        echo "$CHROMIUM_HELPER_ENT"
     fi
-done < <(find "$APP/Contents" -type f ! -path '*/_CodeSignature/*' -print0)
-echo "signed $count Mach-O files"
+}
 
-# 2. Nested bundles (frameworks, helper apps). find -depth lists children before
-#    parents, so inner seals exist before an outer bundle is sealed.
-while IFS= read -r -d '' bundle; do
-    sign "$bundle" >/dev/null
-done < <(find "$APP/Contents" -depth -type d \( -name '*.framework' -o -name '*.app' -o -name '*.xpc' \) -print0)
+sign_macho() {
+    local path="$1" ent
+    ent="$(entitlements_for_macho "$path")"
+    if [[ -n "$ent" ]]; then
+        codesign --force --timestamp --options runtime --entitlements "$ent" \
+            --sign "$IDENTITY" "$path"
+    else
+        codesign --force --timestamp --options runtime --sign "$IDENTITY" "$path"
+    fi
+}
 
-# 3. The app itself.
-sign "$APP"
-echo "signing took $(( $(date +%s) - start )) s"
+entitlements_for_bundle() {
+    local bundle="$1"
+    if [[ "$bundle" == "$APP" ]]; then
+        echo "$OUTER_ENT"
+        return
+    fi
+    if [[ -n "$CHROMIUM_HELPER_ENT" && -f "$CHROMIUM_HELPER_ENT" ]]; then
+        if [[ "$bundle" == "$CHROMIUM_APP" ]]; then
+            echo "$CHROMIUM_HELPER_ENT"
+            return
+        fi
+        if [[ "$bundle" == "${CHROMIUM_APP}/"* && "$bundle" == *".app" ]]; then
+            echo "$CHROMIUM_HELPER_ENT"
+            return
+        fi
+    fi
+}
 
-codesign --verify --deep --strict "$APP"
-echo "codesign --verify --deep --strict: ok"
+sign_bundle() {
+    local bundle="$1" ent
+    ent="$(entitlements_for_bundle "$bundle")"
+    if [[ -n "$ent" ]]; then
+        codesign --force --timestamp --options runtime --entitlements "$ent" \
+            --sign "$IDENTITY" "$bundle"
+    else
+        codesign --force --timestamp --options runtime --sign "$IDENTITY" "$bundle"
+    fi
+}
 
-ZIP="$OUT/GUISkinDose-macos-$(uname -m).zip"
+run_sign_walk() {
+    local start count=0 path bundle
+    start=$(date +%s)
+    # 1. Loose Mach-O files (dylibs, .so extensions, executables). Order does not matter
+    #    here; only the bundle seals in step 2 depend on what these files contain.
+    while IFS= read -r -d '' path; do
+        if is_macho "$path"; then
+            sign_macho "$path" >/dev/null 2>&1 \
+                || { echo "codesign failed on a nested file" >&2; sign_macho "$path"; }
+            count=$((count + 1))
+        fi
+    done < <(find "$APP/Contents" -type f ! -path '*/_CodeSignature/*' -print0)
+    echo "signed $count Mach-O files"
+
+    # 2. Nested bundles (frameworks, helper apps). find -depth lists children before
+    #    parents, so inner seals exist before an outer bundle is sealed.
+    while IFS= read -r -d '' bundle; do
+        sign_bundle "$bundle" >/dev/null
+    done < <(find "$APP/Contents" -depth -type d \( -name '*.framework' -o -name '*.app' -o -name '*.xpc' \) -print0)
+
+    # 3. The app itself.
+    sign_bundle "$APP"
+    echo "signing took $(( $(date +%s) - start )) s"
+    codesign --verify --deep --strict "$APP"
+    echo "codesign --verify --deep --strict: ok"
+}
+
+if [[ "${GUISKINDOSE_NOTARIZE_ONLY:-0}" == "1" ]]; then
+    codesign --verify --deep --strict "$APP"
+    echo "codesign --verify --deep --strict: ok (notarize-only)"
+else
+    run_sign_walk
+fi
+
+if [[ "${GUISKINDOSE_SIGN_ONLY:-0}" == "1" ]]; then
+    exit 0
+fi
+
+if [[ -n "${GUISKINDOSE_ZIP_NAME:-}" ]]; then
+    ZIP="$OUT/${GUISKINDOSE_ZIP_NAME}"
+else
+    ZIP="$OUT/GUISkinDose-macos-$(uname -m).zip"
+fi
+
 if [[ "${GUISKINDOSE_SKIP_NOTARIZE:-0}" == "1" ]]; then
     ditto -c -k --keepParent "$APP" "$ZIP"
     echo "notarization skipped; unstapled zip written"
     exit 0
 fi
 
+if [[ "${#NOTARY_AUTH[@]}" -eq 0 ]]; then
+    resolve_notary_auth
+fi
+
 # notarytool output can carry account identifiers. All notary intermediates live in a
-# fresh private directory (mktemp -d, mode 700) inside OUT, written under umask 077.
-# It is removed on success and kept on failure for diagnostics; only its name is printed.
-WORK="$(mktemp -d "$OUT/.notary-work.XXXXXX")"
+# fresh private directory (mktemp -d, mode 700) under $RUNNER_TEMP when set, else -t.
+# On success the directory is removed; on failure only its basename is printed.
+if [[ -n "${RUNNER_TEMP:-}" ]]; then
+    WORK="$(mktemp -d "${RUNNER_TEMP}/.notary-work.XXXXXX")"
+else
+    WORK="$(mktemp -d -t guiskindose-notary)"
+fi
 WORK_NAME="$(basename "$WORK")"
 if [[ -L "$WORK" || "$(stat -f %Lp "$WORK")" != 700 || "$(stat -f %u "$WORK")" != "$(id -u)" ]]; then
     echo "private notary work directory is not a mode-700 directory owned by this user" >&2
@@ -263,7 +358,7 @@ cleanup_work() {
     if [[ "$NOTARY_DONE" == 1 ]]; then
         rm -rf "$WORK"
     else
-        echo "kept the private notary work directory $WORK_NAME in the output directory" >&2
+        echo "kept the private notary work directory $WORK_NAME" >&2
     fi
 }
 trap cleanup_work EXIT
@@ -277,7 +372,7 @@ LOG_ERR="$WORK/notary-log.stderr"
 
 ( umask 077; ditto -c -k --keepParent "$APP" "$SUBMIT_ZIP" )
 start=$(date +%s)
-( umask 077; xcrun notarytool submit "$SUBMIT_ZIP" "${NOTARY_AUTH[@]}" --wait \
+( umask 077; xcrun notarytool submit "$SUBMIT_ZIP" "${NOTARY_AUTH[@]}" --wait --timeout 45m \
     --output-format plist > "$RESULT" 2> "$SUBMIT_ERR" ) || true
 echo "notarization took $(( $(date +%s) - start )) s"
 STATUS="$(/usr/libexec/PlistBuddy -c 'Print :status' "$RESULT" 2>/dev/null || echo unknown)"
@@ -313,4 +408,4 @@ rm -f "$ZIP"
 ditto -c -k --keepParent "$APP" "$ZIP"
 spctl -a -t exec -vv "$APP"
 NOTARY_DONE=1
-echo "release zip: $ZIP"
+echo "release zip: $(basename "$ZIP")"

@@ -8,6 +8,17 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ## [Unreleased]
 
+- **macOS release signing workflow (implementation)** — Added `.github/workflows/portable-macos-release.yml`
+  (`sign-macos` arm64 Light/Full matrix plus optional Intel Full dispatch), extended
+  `packaging/portable/macos_sign_notarize.sh` (sign-only / notarize-only split, selective entitlements,
+  `RUNNER_TEMP` notary workdir, `notarytool --timeout 45m`), `macos_bundle_chromium.sh`
+  (`GUISKINDOSE_SKIP_ADHOC_RESIGN`), and `macos_build_chromium_helper_entitlements.sh`. Unit coverage:
+  `tests/unittests/test_portable_macos_release_workflow.py`. Secrets stay in the `macos-release` environment;
+  the job imports the `.p12` into a throwaway keychain and restores the search list on `if: always()` teardown.
+  A green `workflow_dispatch` run id is still required before the parent Phase 1 checkbox and release asset attach.
+
+- **macOS release signing plan** — Execution plan for Developer ID sign, notarize, and staple of Light and Full arm64 zips: [plans/PORTABLE_MACOS_RELEASE_SIGNING_PLAN.md](plans/PORTABLE_MACOS_RELEASE_SIGNING_PLAN.md).
+
 - **Phantom packs Phase 2 (Steps 0–7)** — Two-root STL resolution, manifest/pin/install pipeline, CLI and Settings install, catalog rows, docs/help registries, `scripts/build_phantom_pack.py`, and unit/GUI/e2e tests (`test_phantom_pack_*`).
 
 - **Portable-spike run 42339804464** (2026-11-07, commit `526d45af`) — All default `portable-spike.yml`
