@@ -135,7 +135,7 @@ def _run_verify(
     app: Path,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
-  *,
+    *,
     edition: str = "full",
     chromium_main_jit: str = "1",
     macho: bool = True,
@@ -279,6 +279,17 @@ def test_jit_must_be_boolean_true(tmp_path: Path, monkeypatch: pytest.MonkeyPatc
     Path(f"{helper}.jit_false").write_text("1", encoding="utf-8")
     proc = _run_verify(app, tmp_path, monkeypatch, chromium_main_jit="1")
     assert proc.returncode != 0
+    assert _counter(proc.stdout, "helper_jit_missing_count") >= 1
+
+
+def test_helper_with_no_entitlements_fails(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    app = _bundle_root(tmp_path)
+    chrom_macos = app / "Contents/Helpers/Chromium.app/Contents/MacOS"
+    helper = chrom_macos.parent.parent / "Helpers/Chromium Helper.app/Contents/MacOS/Chromium Helper"
+    Path(f"{helper}.empty_ent").write_text("1", encoding="utf-8")
+    proc = _run_verify(app, tmp_path, monkeypatch, chromium_main_jit="1")
+    assert proc.returncode != 0
+    assert "Traceback" not in proc.stderr
     assert _counter(proc.stdout, "helper_jit_missing_count") >= 1
 
 

@@ -29,11 +29,14 @@ def test_notary_key_accepts_pem_or_base64(tmp_path: Path, monkeypatch: pytest.Mo
 
 def test_notary_wrapped_base64(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     pem = "-----BEGIN EC PRIVATE KEY-----\nMHQCAQEEI\n-----END EC PRIVATE KEY-----\n"
-    wrapped = "\n".join(base64.b64encode(pem.encode()).decode()[i : i + 24] for i in range(0, 40, 24))
+    encoded = base64.b64encode(pem.encode()).decode()
+    wrapped = "\n".join(encoded[i : i + 24] for i in range(0, len(encoded), 24))
     monkeypatch.setenv("RUNNER_TEMP", str(tmp_path))
     monkeypatch.setenv("NOTARY_KEY_P8", wrapped)
-    (tmp_path / "AuthKey.p8").unlink(missing_ok=True)
+    out = tmp_path / "AuthKey.p8"
+    out.unlink(missing_ok=True)
     subprocess.run([sys.executable, str(DECODE), "notary"], check=True)
+    assert out.read_text(encoding="utf-8") == pem
 
 
 def test_p12_accepts_wrapped_base64(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

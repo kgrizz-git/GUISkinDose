@@ -32,6 +32,7 @@ def _team_identifier(target: Path) -> tuple[str | None, bool]:
 
 
 def _entitlement_plist(target: Path) -> dict:
+    """Read entitlements via --xml; without it codesign prints a non-plist [Dict] dump."""
     proc = subprocess.run(
         ["codesign", "-d", "--entitlements", "-", "--xml", str(target)],
         capture_output=True,
@@ -40,7 +41,7 @@ def _entitlement_plist(target: Path) -> dict:
         raise EntitlementsParseError("codesign entitlements dump failed")
     raw = proc.stdout.strip()
     if not raw:
-        return set()
+        return {}
     try:
         data = plistlib.loads(proc.stdout)
     except Exception as exc:
@@ -61,6 +62,7 @@ def _record_team(
     tid: str | None,
     dv_ok: bool,
 ) -> tuple[int, int]:
+    """Count a failed display or a missing Team ID as a mismatch, not as unknown."""
     if not dv_ok or tid is None or tid != expected:
         team_mismatch += 1
     if tid in forbidden:

@@ -213,6 +213,12 @@ jobs:
           mkdir -p "${RUNNER_TEMP}/quarantine-expand"
           ditto -x -k "$QUARANTINE_ZIP" "${RUNNER_TEMP}/quarantine-expand"
           QAPP="${RUNNER_TEMP}/quarantine-expand/GUISkinDose.app"
+          # A browser download extracted by Archive Utility carries quarantine on the app.
+          # ditto may not propagate it, so set it when absent, then assess as Gatekeeper would.
+          if ! xattr -p com.apple.quarantine "$QAPP" >/dev/null 2>&1; then
+            xattr -w com.apple.quarantine "0081;$(date +%s);GH;|" "$QAPP"
+          fi
+          xattr -p com.apple.quarantine "$QAPP" >/dev/null
           macos_spctl_assert_notarized "$QAPP" "Quarantine expand spctl" || exit 1
           xcrun stapler validate "$QAPP"
           if [ "$GUISKINDOSE_PORTABLE_EDITION" = full ]; then
