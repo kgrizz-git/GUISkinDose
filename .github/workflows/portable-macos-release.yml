@@ -143,6 +143,7 @@ jobs:
         env:
           GUISKINDOSE_EXPECTED_TEAM_ID: ${{ steps.keychain.outputs.team_id }}
           GUISKINDOSE_CHROMIUM_MAIN_NEEDS_JIT: ${{ env.GUISKINDOSE_CHROMIUM_MAIN_NEEDS_JIT }}
+          GUISKINDOSE_PORTABLE_EDITION: ${{ matrix.edition }}
         run: packaging/portable/macos_verify_developer_id_signing.sh "$APP_BUNDLE"
 
       - name: Full PNG check after Developer ID sign
@@ -167,11 +168,13 @@ jobs:
         env:
           GUISKINDOSE_EXPECTED_TEAM_ID: ${{ steps.keychain.outputs.team_id }}
           GUISKINDOSE_CHROMIUM_MAIN_NEEDS_JIT: ${{ env.GUISKINDOSE_CHROMIUM_MAIN_NEEDS_JIT }}
+          GUISKINDOSE_PORTABLE_EDITION: ${{ matrix.edition }}
         run: |
           set -euo pipefail
           codesign --verify --deep --strict "$APP_BUNDLE"
           xcrun stapler validate "$APP_BUNDLE"
-          if ! spctl -a -t exec -vv "$APP_BUNDLE" 2>&1 | grep -q 'source=Notarized Developer ID'; then
+          spctl_out="$(spctl -a -t exec -vv "$APP_BUNDLE" 2>&1)" || true
+          if ! grep -q 'source=Notarized Developer ID' <<<"$spctl_out"; then
             echo "spctl did not report Notarized Developer ID" >&2
             exit 1
           fi
@@ -184,6 +187,7 @@ jobs:
         env:
           GUISKINDOSE_EXPECTED_TEAM_ID: ${{ steps.keychain.outputs.team_id }}
           GUISKINDOSE_CHROMIUM_MAIN_NEEDS_JIT: ${{ env.GUISKINDOSE_CHROMIUM_MAIN_NEEDS_JIT }}
+          GUISKINDOSE_PORTABLE_EDITION: ${{ matrix.edition }}
         run: |
           set -euo pipefail
           mkdir -p "${RUNNER_TEMP}/expand"
@@ -192,7 +196,8 @@ jobs:
           test -d "$EXPANDED"
           codesign --verify --deep --strict "$EXPANDED"
           xcrun stapler validate "$EXPANDED"
-          if ! spctl -a -t exec -vv "$EXPANDED" 2>&1 | grep -q 'source=Notarized Developer ID'; then
+          spctl_out="$(spctl -a -t exec -vv "$EXPANDED" 2>&1)" || true
+          if ! grep -q 'source=Notarized Developer ID' <<<"$spctl_out"; then
             echo "spctl on expanded app did not report Notarized Developer ID" >&2
             exit 1
           fi
@@ -204,7 +209,8 @@ jobs:
           mkdir -p "${RUNNER_TEMP}/quarantine-expand"
           ditto -x -k "$QUARANTINE_ZIP" "${RUNNER_TEMP}/quarantine-expand"
           QAPP="${RUNNER_TEMP}/quarantine-expand/GUISkinDose.app"
-          if ! spctl -a -t exec -vv "$QAPP" 2>&1 | grep -q 'source=Notarized Developer ID'; then
+          spctl_out="$(spctl -a -t exec -vv "$QAPP" 2>&1)" || true
+          if ! grep -q 'source=Notarized Developer ID' <<<"$spctl_out"; then
             echo "spctl on quarantine expand did not report Notarized Developer ID" >&2
             exit 1
           fi
@@ -377,6 +383,7 @@ jobs:
         env:
           GUISKINDOSE_EXPECTED_TEAM_ID: ${{ steps.keychain.outputs.team_id }}
           GUISKINDOSE_CHROMIUM_MAIN_NEEDS_JIT: ${{ env.GUISKINDOSE_CHROMIUM_MAIN_NEEDS_JIT }}
+          GUISKINDOSE_PORTABLE_EDITION: full
         run: packaging/portable/macos_verify_developer_id_signing.sh "$APP_BUNDLE"
 
       - name: Full PNG check after Developer ID sign
@@ -400,6 +407,7 @@ jobs:
         env:
           GUISKINDOSE_EXPECTED_TEAM_ID: ${{ steps.keychain.outputs.team_id }}
           GUISKINDOSE_CHROMIUM_MAIN_NEEDS_JIT: ${{ env.GUISKINDOSE_CHROMIUM_MAIN_NEEDS_JIT }}
+          GUISKINDOSE_PORTABLE_EDITION: full
         run: |
           set -euo pipefail
           mkdir -p "${RUNNER_TEMP}/intel-expand"
@@ -408,7 +416,8 @@ jobs:
           test -d "$EXPANDED"
           codesign --verify --deep --strict "$EXPANDED"
           xcrun stapler validate "$EXPANDED"
-          if ! spctl -a -t exec -vv "$EXPANDED" 2>&1 | grep -q 'source=Notarized Developer ID'; then
+          spctl_out="$(spctl -a -t exec -vv "$EXPANDED" 2>&1)" || true
+          if ! grep -q 'source=Notarized Developer ID' <<<"$spctl_out"; then
             echo "spctl on expanded app did not report Notarized Developer ID" >&2
             exit 1
           fi

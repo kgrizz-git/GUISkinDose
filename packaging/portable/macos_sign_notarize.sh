@@ -415,6 +415,12 @@ xcrun stapler staple "$APP"
 xcrun stapler validate "$APP"
 rm -f "$ZIP"
 ditto -c -k --keepParent "$APP" "$ZIP"
-spctl -a -t exec -vv "$APP"
+spctl_out="$(spctl -a -t exec -vv "$APP" 2>&1)" || true
+if grep -q 'source=Notarized Developer ID' <<<"$spctl_out"; then
+    echo "spctl: accepted"
+else
+    echo "spctl: rejected" >&2
+    exit 1
+fi
 NOTARY_DONE=1
 echo "release zip: $(basename "$ZIP")"

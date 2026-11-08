@@ -46,15 +46,19 @@ for helper_app in chromium.rglob("*.app"):
 
 def dump_keys(exe: Path) -> set[str]:
     proc = subprocess.run(
-        ["codesign", "-d", "--entitlements", "-", str(exe)],
+        ["codesign", "-d", "--entitlements", "-", "--xml", str(exe)],
         capture_output=True,
     )
-    if proc.returncode != 0 or not proc.stdout.strip():
+    if proc.returncode != 0:
+        print(f"upstream_entitlements_dump_failed role=target", file=sys.stderr)
+        sys.exit(1)
+    if not proc.stdout.strip():
         return set()
     try:
         data = plistlib.loads(proc.stdout)
     except Exception:
-        return set()
+        print(f"upstream_entitlements_parse_failed role=target", file=sys.stderr)
+        sys.exit(1)
     return set(data) if isinstance(data, dict) else set()
 
 jit = "com.apple.security.cs.allow-jit"
