@@ -10,10 +10,14 @@ Coordinate conventions for geometry and plotting are defined in [`VENDOR_COORDIN
 
 ## Currently shipped meshes
 
-Human meshes live in `src/guiskindose/phantom_data/` as `{name}.stl`. Discovery (CLI and GUI)
-globs `*.stl` and **excludes** any `*_reduced_*` preview variants. Prefer the runtime mesh list
-(or `get_human_mesh_names()`) over treating any table here as a frozen census — stems may be
-trimmed as the catalog settles.
+Human meshes ship under `src/guiskindose/phantom_data/` as `{name}.stl`. **Full** editions
+bundle the clinical catalog; **Light** bundles a starter subset. Additional clinical stems
+resolve from a per-OS **user mesh library** (see `phantom_library.py` and GUI help
+`phantom_packs.md`) after a phantom pack zip install or a manual copy. Runtime lookup uses
+the shipped tree first, then the user library; the GUI mesh selector lists the full clinical
+catalog with “(not installed)” when files are missing. `get_human_mesh_names()` still reflects
+**installed** stems only (shipped plus user library). Prefer that call or the in-app list over
+treating any table here as a frozen census — stems may be trimmed as the catalog settles.
 
 **Families (not an exhaustive id list):**
 

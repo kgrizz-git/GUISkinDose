@@ -24,7 +24,7 @@ equal to calculation bounds.
 
 - Plane and cylinder models show a short “preview available for human mesh” note instead of a plot.
 - This panel does not replace the Geometry tab event/setup preview (which needs RDSR data).
-- Non-clinical demo meshes are **not** shipped with the package. The Settings mesh list is
-  clinical-only (filesystem-discovered from `phantom_data/`).
+- Non-clinical demo meshes are **not** shipped with the package. The Settings catalog lists
+  every clinical mesh and marks each as installed or not (shipped bundle plus optional user library).
 
 Related: [Phantom positioning and offsets](positioning_offsets.md).

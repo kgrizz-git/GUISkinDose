@@ -8,6 +8,8 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ## [Unreleased]
 
+- **Phantom packs Phase 2 (Steps 0–7)** — Two-root STL resolution, manifest/pin/install pipeline, CLI and Settings install, catalog rows, docs/help registries, `scripts/build_phantom_pack.py`, and unit/GUI/e2e tests (`test_phantom_pack_*`).
+
 - **Portable-spike run 42339804464** (2026-11-07, commit `526d45af`) — All default `portable-spike.yml`
   legs passed: Windows, macOS arm64, and Linux x86_64 Light and Full, including frozen Full
   `--png-check` on macOS (pre- and post-resign) and Linux. Findings: fd 3 held by `base_library.zip`

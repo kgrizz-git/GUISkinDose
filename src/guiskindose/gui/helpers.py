@@ -20,6 +20,10 @@ import numpy as np
 import pandas as pd
 from stl import mesh as stl_mesh
 
+from guiskindose.mesh_measurement_cache import (
+    _MESH_EXTENT_CACHE,
+    _MESH_TORSO_WIDTH_CACHE,
+)
 from guiskindose.phantom_mesh_names import (
     DEMO_HUMAN_MESHES,
     DEMO_MESH_SECTION_KEY,
@@ -88,8 +92,7 @@ from .table_origins import detected_table_origin, effective_table_origin, stage_
 
 _PHANTOM_DATA_DIR = Path(__file__).parent.parent / "phantom_data"
 _FUN_MESH_MANIFEST_PATH = Path(__file__).resolve().parents[3] / "scripts" / "phantom_gen" / "fun_mesh_manifest.json"
-_MESH_EXTENT_CACHE: dict[str, tuple[float, float, float]] = {}
-_MESH_TORSO_WIDTH_CACHE: dict[str, float] = {}
+
 _TORSO_WIDTH_Z_FRACTION_RANGE = (0.20, 0.65)
 _ZERO_LONGITUDINAL_SPAN_TOLERANCE_CM = 1e-9
 _gui_logger = logging.getLogger("guiskindose.gui.helpers")
@@ -568,16 +571,57 @@ def get_example_tabular_files() -> list[Path]:
     return sorted(get_path_to_example_tabular_files().glob("*.csv"))
 
 
-def get_human_mesh_names() -> list[str]:
-    """Return available human mesh names (full-resolution only, canonical stems)."""
-    return sorted(
-        p.stem
-        for p in _PHANTOM_DATA_DIR.glob("*.stl")
-        if "_reduced_" not in p.stem
+def get_human_mesh_names(
+    *,
+    phantom_data_dir: Path | None = None,
+    user_library_dir: Path | None = None,
+) -> list[str]:
+    """Return installed human mesh names (full-resolution clinical stems only)."""
+    from guiskindose.phantom_library import default_user_library_dir, installed_full_clinical_stems
+    from guiskindose.phantom_mesh_names import package_phantom_data_dir
+
+    shipped = (phantom_data_dir or package_phantom_data_dir()).resolve()
+    library = user_library_dir if user_library_dir is not None else default_user_library_dir()
+    return installed_full_clinical_stems(shipped_dir=shipped, user_library_dir=library)
+
+
+def mesh_stem_is_installed(
+    stem: str,
+    *,
+    phantom_data_dir: Path | None = None,
+    user_library_dir: Path | None = None,
+) -> bool:
+    """True when *stem* resolves to an STL in the shipped tree or user library."""
+    from guiskindose.phantom_library import (
+        default_user_library_dir,
+        shipped_mesh_stl_path,
+        user_library_mesh_stl_path,
     )
+    from guiskindose.phantom_mesh_names import package_phantom_data_dir, resolve_human_mesh_stem
+
+    try:
+        canonical = resolve_human_mesh_stem(stem)
+    except ValueError:
+        return False
+    shipped_dir = (phantom_data_dir or package_phantom_data_dir()).resolve()
+    library_dir = user_library_dir if user_library_dir is not None else default_user_library_dir()
+    from guiskindose.phantom_mesh_names import DEMO_HUMAN_MESHES
+
+    if canonical in DEMO_HUMAN_MESHES:
+        return shipped_mesh_stl_path(canonical, shipped_dir=shipped_dir) is not None
+    if shipped_mesh_stl_path(canonical, shipped_dir=shipped_dir) is not None:
+        return True
+    if library_dir is None:
+        return False
+    return user_library_mesh_stl_path(canonical, user_library_dir=library_dir.resolve()) is not None
 
 
-def get_human_mesh_options(*, include_demos: bool | None = None) -> dict[str, str]:
+def get_human_mesh_options(
+    *,
+    include_demos: bool | None = None,
+    phantom_data_dir: Path | None = None,
+    user_library_dir: Path | None = None,
+) -> dict[str, str]:
     """Return NiceGUI ``ui.select`` options as ``{stem: display_label}``.
 
     Dict **keys** are the bound values (canonical file stems under ``phantom_data/``).
@@ -590,20 +634,32 @@ def get_human_mesh_options(*, include_demos: bool | None = None) -> dict[str, st
     label→stem — that would bind
     the label string into ``state.human_mesh`` and break STL paths.
     """
+    from guiskindose.phantom_mesh_names import _CLINICAL_SORT_ORDER, _PREVIEW_REDUCED_SUFFIXES
+
+    from .ui_copy import copy_text
     from .window_prefs import show_demo_phantoms_enabled
 
     if include_demos is None:
         include_demos = show_demo_phantoms_enabled()
 
-    names = get_human_mesh_names()
-    clinical = sort_clinical_mesh_stems(
-        stem for stem in names if stem not in DEMO_HUMAN_MESHES and stem not in GUI_HIDDEN_HUMAN_MESHES
-    )
-    demos = sorted(stem for stem in names if stem in DEMO_HUMAN_MESHES) if include_demos else []
-
+    catalog_stems = [
+        stem
+        for stem in _CLINICAL_SORT_ORDER
+        if not any(stem.endswith(suffix) for suffix in _PREVIEW_REDUCED_SUFFIXES)
+    ]
+    clinical = sort_clinical_mesh_stems(catalog_stems)
+    not_installed_suffix = copy_text("settings.phantom_catalog.not_installed_suffix")
     options: dict[str, str] = {}
     for stem in clinical:
-        options[stem] = human_mesh_display_label(stem)
+        label = human_mesh_display_label(stem)
+        if not mesh_stem_is_installed(stem, phantom_data_dir=phantom_data_dir, user_library_dir=user_library_dir):
+            label = f"{label}{not_installed_suffix}"
+        options[stem] = label
+    demos = []
+    if include_demos:
+        for stem in sorted(DEMO_HUMAN_MESHES):
+            if mesh_stem_is_installed(stem, phantom_data_dir=phantom_data_dir, user_library_dir=user_library_dir):
+                demos.append(stem)
     if demos:
         options[DEMO_MESH_SECTION_KEY] = DEMO_MESH_SECTION_LABEL
         for stem in demos:
@@ -614,16 +670,23 @@ def get_human_mesh_options(*, include_demos: bool | None = None) -> dict[str, st
 def canonicalize_human_mesh_selection(stem: str, mesh_options: dict[str, str]) -> str:
     """Map a saved/legacy stem to a selectable canonical option key.
 
-    Resolves aliases first. If the result is missing from ``mesh_options``
-    (a Light starter set, demos gated off, a preview suffix, or an unknown
-    stem), prefer ``hudfrid`` when that mesh is installed. Otherwise use the
-    first clinical option, or ``hudfrid`` when the list is empty.
+    Resolves aliases first. When the saved stem is missing from ``mesh_options``,
+    never return an uninstalled clinical mesh: prefer ``hudfrid`` or ``adult_male``
+    when installed, else the first installed clinical entry, else the first option.
     """
     canonical = resolve_human_mesh_stem(stem or "")
-    if canonical in mesh_options and canonical != DEMO_MESH_SECTION_KEY:
+    if (
+        canonical in mesh_options
+        and canonical != DEMO_MESH_SECTION_KEY
+        and mesh_stem_is_installed(canonical)
+    ):
         return canonical
-    if "hudfrid" in mesh_options:
-        return "hudfrid"
+    for preferred in ("hudfrid", "adult_male"):
+        if preferred in mesh_options and mesh_stem_is_installed(preferred):
+            return preferred
+    for key in mesh_options:
+        if key != DEMO_MESH_SECTION_KEY and mesh_stem_is_installed(key):
+            return key
     return next((k for k in mesh_options if k != DEMO_MESH_SECTION_KEY), "hudfrid")
 
 
@@ -655,8 +718,13 @@ def _cache_mesh_baseline_measurements(mesh_name: str) -> None:
     if mesh_name in _MESH_EXTENT_CACHE and mesh_name in _MESH_TORSO_WIDTH_CACHE:
         return
 
-    phantom_path = _PHANTOM_DATA_DIR / f"{mesh_name}.stl"
-    if not phantom_path.exists():
+    from guiskindose.phantom_mesh_names import HumanMeshNotInstalledError, resolve_human_mesh_stl_path
+
+    try:
+        phantom_path = resolve_human_mesh_stl_path(mesh_name, phantom_data_dir=_PHANTOM_DATA_DIR)
+    except (ValueError, OSError, HumanMeshNotInstalledError):
+        phantom_path = None
+    if phantom_path is None or not phantom_path.exists():
         _MESH_EXTENT_CACHE[mesh_name] = (0.0, 0.0, 0.0)
         _MESH_TORSO_WIDTH_CACHE[mesh_name] = 0.0
         return

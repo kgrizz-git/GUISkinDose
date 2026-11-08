@@ -34,15 +34,13 @@ def load_settings_example_json() -> dict:
 
 
 def print_available_human_phantoms():
-    """Print the bundled human phantom STL stems to stdout."""
-    from pathlib import Path
+    """Print installed human phantom STL stems to stdout."""
+    from guiskindose.phantom_library import default_user_library_dir, installed_full_clinical_stems
+    from guiskindose.phantom_mesh_names import package_phantom_data_dir
 
-    phantom_data_dir = Path(__file__).parent / "phantom_data"
-    phantoms = [
-        phantom.stem for phantom in phantom_data_dir.glob("*.stl") if "_reduced_" not in phantom.stem
-    ]
-
-    for phantom in phantoms:
+    shipped = package_phantom_data_dir().resolve()
+    library = default_user_library_dir()
+    for phantom in installed_full_clinical_stems(shipped_dir=shipped, user_library_dir=library):
         print(phantom)
 
 

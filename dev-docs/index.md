@@ -46,6 +46,7 @@ Catalog of every file under `dev-docs/`. Start from [AGENTS.md](../AGENTS.md) fo
 | [references/LOCAL_PII_MODELS.md](references/LOCAL_PII_MODELS.md) | Local advisory PII/PHI model comparison, macOS/LM Studio boundaries, and synthetic-fixture evaluation protocol. |
 | [references/PORTABLE_CHROMIUM_ARTIFACT.md](references/PORTABLE_CHROMIUM_ARTIFACT.md) | Portable Full build: pinned Chromium artifact, licences and notices, snapshot vs ungoogled-chromium comparison. |
 | [references/PORTABLE_EXECUTABLE_PACKAGING.md](references/PORTABLE_EXECUTABLE_PACKAGING.md) | Research note: Windows PyInstaller onedir freeze, edition payloads, and Java-wrap non-goals. Execution plan: [plans/PORTABLE_APP_PLAN.md](plans/PORTABLE_APP_PLAN.md). |
+| [references/WINDOWS_CODE_SIGNING.md](references/WINDOWS_CODE_SIGNING.md) | Research note (2026-11-07): free and paid Windows signing (SignPath Foundation, Artifact Signing, Store/MSIX, CAs, winget) with sourced prices, MSIX packaging of the onedir, and winget submission and SmartScreen behaviour. For Phase 5 of [plans/PORTABLE_APP_PLAN.md](plans/PORTABLE_APP_PLAN.md). |
 | [SONARQUBE_LOCAL.md](SONARQUBE_LOCAL.md) | Optional loopback-only SonarQube Community Build runner, private result tracking, and local quality-gate workflow. |
 | [../scripts/check_help_registry.py](../scripts/check_help_registry.py) | Validates `dev-docs/help_registry.json`, source GUI help pages, mirrored bundled help files, GUI `HelpButton` references, and orphaned help files. |
 | [../scripts/check_ui_copy.py](../scripts/check_ui_copy.py) | Validates `dev-docs/ui_copy.json` and `dev-docs/glossary.json`; checks `copy_text()` usage and terminology warnings. |
@@ -97,6 +98,7 @@ Long-lived topic source-of-truth plans. Convention: [HARNESS_ENGINEERING.md](HAR
 | [plans/RICH_EXPORT_PLAN.md](plans/RICH_EXPORT_PLAN.md) | **Source of truth** — rich report export scope, payload architecture, writer phases, GUI/browser/native save UX, and CLI rollout. |
 | [plans/TABULAR_RDSR_INPUT_PLAN.md](plans/TABULAR_RDSR_INPUT_PLAN.md) | Staged plan for CSV/TSV/XLSX exported event-table inputs (Radimetrics, DoseTrack, etc.). Phases 1–5 shipped; Phase 5+ vendor stubs documented in-plan. |
 | [plans/PORTABLE_APP_PLAN.md](plans/PORTABLE_APP_PLAN.md) | **In progress (Phase 0 spike)** — per-OS double-click app via NiceGUI pack / PyInstaller. Light has a small phantom set and no PNG/Chrome; Full has the clinical library and a bundled Chromium for Kaleido. In-app phantom packs are later phases. |
+| [plans/PORTABLE_PHANTOM_PACKS_PLAN.md](plans/PORTABLE_PHANTOM_PACKS_PLAN.md) | **In progress** — user phantom library, pack manifest, zip install (Phase 2 of portable app). |
 
 ---
 

@@ -139,8 +139,10 @@ Today the mesh list comes from globbing the package directory, and at least four
 
 Lookup order, confined to known roots and safe stems:
 
-1. User library (writable, outside the bundle).
-2. Shipped payload inside the bundle (`phantom_data/` or the frozen equivalent).
+1. Shipped payload inside the bundle (`phantom_data/` or the frozen equivalent).
+2. User library (writable, outside the bundle), only for a clinical catalog stem this payload does not already contain.
+
+A user-library file never shadows a shipped file of the same stem.
 
 The user library for extra phantoms lives outside the bundle. Window geometry and the equipment-profile store already use `~/.guiskindose/` (`gui.json`, the profile store). Keep that directory. Do not invent a second scheme for those files. Uninstall notes name both `~/.guiskindose/` and the phantom directory.
 
@@ -320,12 +322,12 @@ The Light app is now reproduced from committed files. `guiskindose.spec` writes 
 
 ### Phase 2 — User library and offline pack
 
-- [ ] Add the canonical catalog and one resolution entry point (user library, then shipped payload, with stem confinement). Move `Phantom`, the preview, mesh measurement, and the selector onto it. Remove the selector's silent fallback.
-- [ ] "Install phantom pack" picks a local zip, verifies the manifest, and copies only allow-listed STLs into the user library. Extract entry by entry into a temp directory with a running decompressed-byte cap, because central-directory sizes can lie. Reject symlinks, hardlinks, directories, and names that collide after case folding. Move only allow-listed `.stl` files into place.
-- [ ] Settings shows installed and not-installed catalog rows.
-- [ ] A missing mesh blocks calculation with an install hint.
-- [ ] Unit tests use a temp library and a tiny synthetic STL. They do not download anything.
-- [ ] Help text states that packs are optional data and that Full already contains the catalog.
+- [x] Add the canonical catalog and one resolution entry point (shipped payload, then user library, with stem confinement). A shipped file cannot be shadowed. Move `Phantom`, the preview, mesh measurement, and the selector onto it. Remove the selector's silent fallback.
+- [x] "Install phantom pack" picks a local zip, verifies the manifest, and copies only allow-listed STLs into the user library. Extract entry by entry into a temp directory with a running decompressed-byte cap, because central-directory sizes can lie. Reject symlinks, hardlinks, directories, and names that collide after case folding. Move only allow-listed `.stl` files into place.
+- [x] Settings shows installed and not-installed catalog rows.
+- [x] A missing mesh blocks calculation with an install hint.
+- [x] Unit tests use a temp library and a tiny synthetic STL. They do not download anything.
+- [x] Help text states that packs are optional data and that Full already contains the catalog.
 
 **Acceptance:** a Light app plus a pack zip gains a mesh that was not in the Light payload, survives restart, and is used for a calculation. A tampered STL is rejected. An oversized zip is rejected before extraction finishes.
 
@@ -354,7 +356,7 @@ Light's missing-runtime message is Phase 1. This phase only adds the runtime to 
 
 ### Phase 5 — Signing, and not tripping the usual blocks
 
-- [ ] Windows: Authenticode on the executable users open. Since June 2023, code-signing keys must live on FIPS 140-2 hardware, so a `.pfx` in GitHub secrets is not allowed. Use a cloud signing service such as Azure Trusted Signing, DigiCert KeyLocker, or SSL.com eSigner, and record its cost and setup. macOS signing already runs from Phase 1; re-verify it here.
+- [ ] Windows: Authenticode on the executable users open. Since June 2023, code-signing keys must live on FIPS 140-2 hardware, so a `.pfx` in GitHub secrets is not allowed. Use a cloud signing service such as Azure Trusted Signing, DigiCert KeyLocker, or SSL.com eSigner, and record its cost and setup. Options, prices, and the recommendation (apply to SignPath Foundation first, Artifact Signing as the fallback) are in [../references/WINDOWS_CODE_SIGNING.md](../references/WINDOWS_CODE_SIGNING.md). macOS signing already runs from Phase 1; re-verify it here.
 - [ ] Document secret storage. Signing keys never enter the repo or the plan.
 - [ ] Re-smoke the signed artifact. Signing can break a PyInstaller layout.
 - [ ] On a clean Windows VM, scan the signed zip with Microsoft Defender and record the result. If it is blocked, fix the layout or the signature. Do not pack, obfuscate, or advise turning antivirus off.

@@ -97,6 +97,15 @@ def _add_top_level_args(parser: argparse.ArgumentParser) -> None:
     )
 
     parser.add_argument(
+        "--install-phantom-pack",
+        required=False,
+        type=Path,
+        default=None,
+        dest="install_phantom_pack",
+        help="Install a phantom pack zip and exit without running a dose calculation.",
+    )
+
+    parser.add_argument(
         "--output-format",
         required=False,
         choices=("json", "dict"),

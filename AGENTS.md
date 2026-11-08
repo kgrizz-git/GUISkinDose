@@ -88,8 +88,7 @@ Set `settings.output_format` to:
 | `"cylinder"` | Elliptic cylinder |
 | `"human"` | STL mesh (set `settings.phantom.human_mesh`) |
 
-Available human meshes live under `src/guiskindose/phantom_data/` and are discovered
-at runtime (Settings / CLI). The clinical library covers age bands (preschool through
+Clinical human meshes resolve **shipped `phantom_data/` first**, then an optional per-OS user library (phantom pack zips install there). Settings lists the full clinical catalog and marks installed vs not; missing stems are not rewritten to another body. Pack zips and `--install-phantom-pack` are documented in `docs/source/gui_help/phantom_packs.md`. Shipped STL files live under `src/guiskindose/phantom_data/`. The clinical library covers age bands (preschool through
 senior), sex variants, habitus families (ecto / endo / bariatric series), and optional
 `*_arms_down` twins for table-side posing. Exact stems may change as the catalog is
 trimmed; prefer the in-app mesh list or `get_human_mesh_names()` over hard-coded

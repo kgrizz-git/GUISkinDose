@@ -129,6 +129,7 @@ def _stub_ctx(calls: list[str]) -> PageContext:
     ctx.refresh_per_exam = lambda: calls.append("per_exam")
     ctx.refresh_geometry_tab = lambda: calls.append("geometry_tab")
     ctx.refresh_phantom_preview = lambda: calls.append("phantom_preview")
+    ctx.refresh_human_mesh_install_note = lambda: calls.append("human_mesh_install_note")
     return ctx
 
 
@@ -179,7 +180,15 @@ async def test_import_restores_state_invokes_refresh_and_clears_results(user: Us
     assert state.input_schema == "dosetrack"
     assert state.loaded_exam_meta[0]["flip_tx"] is True
     assert state.kerma_meter_in_memory_table == {("Acme", "TubeA"): 1.02}
-    assert calls == ["event_table", "exams_table", "import_preview", "per_exam", "geometry_tab", "phantom_preview"]
+    assert calls == [
+        "event_table",
+        "exams_table",
+        "import_preview",
+        "per_exam",
+        "geometry_tab",
+        "phantom_preview",
+        "human_mesh_install_note",
+    ]
     assert state.calculation_done is False
     assert state.output is None
     assert "1 exam" in status.text
@@ -304,7 +313,15 @@ async def test_import_count_mismatch_rolls_back_and_keeps_results(user: User) ->
     assert state.d_lon == 0.0
     assert state.calculation_done is True  # pre-import results stay valid
     assert state.output == {"psd": 1.0}
-    assert calls == ["event_table", "exams_table", "import_preview", "per_exam", "geometry_tab", "phantom_preview"]
+    assert calls == [
+        "event_table",
+        "exams_table",
+        "import_preview",
+        "per_exam",
+        "geometry_tab",
+        "phantom_preview",
+        "human_mesh_install_note",
+    ]
     assert not user.notify.contains("Run configuration loaded")
 
 
@@ -456,15 +473,14 @@ async def test_import_replaces_unavailable_mesh_after_reparse(user: User, monkey
     _patch_starter_mesh(monkeypatch)
     with _client(user):
         status = ui.label("")
-    await run_config_mod._do_load(_upload_event(_unavailable_mesh_document()), _stub_ctx([]), status)
-    assert state.human_mesh == "adult_male"
-    assert user.notify.contains("not installed")
-    assert user.notify.contains("Adult Male")
-    for _ in range(50):
-        if _select_by_label(user, "Human mesh").value == "adult_male":
+    ctx = _stub_ctx([])
+    await run_config_mod._do_load(_upload_event(_unavailable_mesh_document()), ctx, status)
+    for _ in range(40):
+        if state.human_mesh == "senior_male":
             break
-        await asyncio.sleep(0.1)
-    assert _select_by_label(user, "Human mesh").value == "adult_male"
+        await __import__("asyncio").sleep(0.05)
+    assert state.human_mesh == "senior_male"
+    assert user.notify.contains("missing")
 
 
 @pytest.mark.asyncio

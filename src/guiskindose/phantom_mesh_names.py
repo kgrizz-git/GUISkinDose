@@ -16,6 +16,8 @@ import re
 from collections.abc import Iterable
 from pathlib import Path
 
+from guiskindose.privacy import UserFacingInputError
+
 # Stems are package-relative basenames only (no separators, dots, or parent refs).
 _SAFE_HUMAN_MESH_STEM = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]*$")
 
@@ -198,7 +200,7 @@ def resolve_human_mesh_stem(stem: str) -> str:
     return canonical
 
 
-class HumanMeshNotInstalledError(ValueError):
+class HumanMeshNotInstalledError(UserFacingInputError):
     """A clinical catalog mesh that this build does not ship (for example in Light)."""
 
 
@@ -213,7 +215,12 @@ def is_clinical_catalog_stem(stem: str) -> bool:
     return base.removesuffix(_ARMS_DOWN_SUFFIX) in _CLINICAL_DISPLAY_LABELS
 
 
-def human_mesh_not_installed_message(stem: str, *, phantom_data_dir: Path | None = None) -> str | None:
+def human_mesh_not_installed_message(
+    stem: str,
+    *,
+    phantom_data_dir: Path | None = None,
+    user_library_dir: Path | None = None,
+) -> str | None:
     """Explain why a clinical catalog *stem* cannot load, or return ``None`` if it can.
 
     Returns ``None`` for stems outside the clinical catalog too; those are reported
@@ -222,69 +229,97 @@ def human_mesh_not_installed_message(stem: str, *, phantom_data_dir: Path | None
     """
     if not stem or not is_clinical_catalog_stem(stem):
         return None
+    from guiskindose.phantom_library import (
+        default_user_library_dir,
+        shipped_mesh_stl_path,
+        user_library_mesh_stl_path,
+    )
+
     canonical = resolve_human_mesh_stem(stem)
-    data_dir = (phantom_data_dir or package_phantom_data_dir()).resolve()
-    if (data_dir / f"{canonical}.stl").is_file():
+    shipped_dir = (phantom_data_dir or package_phantom_data_dir()).resolve()
+    library_dir = user_library_dir if user_library_dir is not None else default_user_library_dir()
+    if shipped_mesh_stl_path(canonical, shipped_dir=shipped_dir) is not None:
+        return None
+    if user_library_mesh_stl_path(canonical, user_library_dir=library_dir) is not None:
         return None
     from guiskindose.edition import is_light
 
+    pack_hint = "Install a phantom pack zip to add clinical meshes that are not bundled here."
     where = (
         "GUISkinDose Light ships a starter set of phantoms. Use the Full download for the whole clinical library."
         if is_light()
         else "Its STL file is missing from the installed package. Reinstall GUISkinDose to restore it."
     )
-    return f"Human mesh '{human_mesh_display_label(canonical)}' ({canonical}) is not installed in this build. {where}"
+    return (
+        f"Human mesh '{human_mesh_display_label(canonical)}' ({canonical}) is not installed in this build. "
+        f"{pack_hint} {where}"
+    )
 
 
-def resolve_human_mesh_stl_path(stem: str, *, phantom_data_dir: Path | None = None) -> Path:
-    """Resolve *stem* to an STL path confined under package ``phantom_data/``.
+def resolve_human_mesh_stl_path(
+    stem: str,
+    *,
+    phantom_data_dir: Path | None = None,
+    user_library_dir: Path | None = None,
+    show_demo_phantoms: bool | None = None,
+) -> Path:
+    """Resolve *stem* to an installed STL (shipped root first, then user library).
 
     Raises
     ------
     HumanMeshNotInstalledError
-        If *stem* names a clinical catalog mesh whose STL this build does not ship.
-        It is never replaced by another body.
+        If *stem* names a clinical catalog mesh with no STL in either root.
     ValueError
-        If *stem* contains path separators / parent references, resolves outside
-        ``phantom_data/``, or does not name an existing ``.stl`` file.
+        If *stem* is unsafe, names a demo mesh when demos are off, or is unknown.
     """
-    resolved = resolve_human_mesh_stem(stem)
-    assert_safe_human_mesh_stem(resolved)
-    data_dir = (phantom_data_dir or package_phantom_data_dir()).resolve()
-    candidate = (data_dir / f"{resolved}.stl").resolve()
-    if not candidate.is_relative_to(data_dir):
-        raise ValueError("human_mesh path escaped phantom_data/.")
-    if not candidate.is_file():
-        missing = human_mesh_not_installed_message(resolved, phantom_data_dir=data_dir)
-        if missing:
-            raise HumanMeshNotInstalledError(missing)
-        raise ValueError("Unknown human mesh stem.")
-    return candidate
+    from guiskindose.phantom_library import _MissingClinicalMesh, default_user_library_dir, resolve_mesh_stl_path
+
+    shipped_dir = (phantom_data_dir or package_phantom_data_dir()).resolve()
+    library_dir = user_library_dir if user_library_dir is not None else default_user_library_dir()
+    if show_demo_phantoms is None:
+        show_demo_phantoms = _show_demo_phantoms_for_resolution()
+    try:
+        return resolve_mesh_stl_path(
+            stem,
+            shipped_dir=shipped_dir,
+            user_library_dir=library_dir,
+            show_demo_phantoms=show_demo_phantoms,
+        )
+    except _MissingClinicalMesh as missing:
+        message = human_mesh_not_installed_message(
+            missing.stem,
+            phantom_data_dir=shipped_dir,
+            user_library_dir=library_dir,
+        )
+        if message:
+            raise HumanMeshNotInstalledError(message) from None
+        raise ValueError("Unknown human mesh stem.") from None
 
 
-def prefer_reduced_preview_stem(stem: str, *, phantom_data_dir: Path | None = None) -> str:
+def _show_demo_phantoms_for_resolution() -> bool:
+    try:
+        from guiskindose.gui.window_prefs import show_demo_phantoms_enabled
+    except ImportError:
+        return False
+    return show_demo_phantoms_enabled()
+
+
+def prefer_reduced_preview_stem(
+    stem: str,
+    *,
+    phantom_data_dir: Path | None = None,
+    user_library_dir: Path | None = None,
+) -> str:
     """Return the best available reduced companion for ``stem``, else the stem.
 
-    Prefers ``_reduced_3000t`` over ``_reduced_1000t`` when both exist under
-    package ``phantom_data/``. Existence checks stay confined under that root.
+    Prefers ``_reduced_3000t`` over legacy ``_reduced_1000t``. Shipped root is
+    checked before the optional user library.
     """
-    if not stem:
-        return stem
-    stem = resolve_human_mesh_stem(stem)
-    for suffix in _PREVIEW_REDUCED_SUFFIXES:
-        if stem.endswith(suffix):
-            return stem
-    data_dir = (phantom_data_dir or package_phantom_data_dir()).resolve()
-    for suffix in _PREVIEW_REDUCED_SUFFIXES:
-        candidate = f"{stem}{suffix}"
-        try:
-            assert_safe_human_mesh_stem(candidate)
-        except ValueError:
-            continue
-        path = (data_dir / f"{candidate}.stl").resolve()
-        if path.is_relative_to(data_dir) and path.is_file():
-            return candidate
-    return stem
+    from guiskindose.phantom_library import default_user_library_dir, prefer_reduced_stem_for_preview
+
+    shipped_dir = (phantom_data_dir or package_phantom_data_dir()).resolve()
+    library_dir = user_library_dir if user_library_dir is not None else default_user_library_dir()
+    return prefer_reduced_stem_for_preview(stem, shipped_dir=shipped_dir, user_library_dir=library_dir)
 
 
 def human_mesh_display_label(stem: str) -> str:

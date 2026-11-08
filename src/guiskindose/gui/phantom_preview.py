@@ -1,7 +1,8 @@
 """Settings-tab human phantom preview figure builder (no RDSR).
 
 Builds a Plotly figure of the selected human mesh on table+pad for the Settings
-UI. Prefer ``{stem}_reduced_3000t`` when present under package ``phantom_data/``.
+UI. Mesh files resolve from the shipped catalog first, then the per-user library;
+prefer ``{stem}_reduced_3000t`` when present in either root.
 Dose calculation continues to use the full logical mesh stem.
 
 Inputs
@@ -125,7 +126,7 @@ def resolve_preview_mesh(stem: str) -> str:
     """
     from guiskindose.phantom_mesh_names import prefer_reduced_preview_stem
 
-    return prefer_reduced_preview_stem(stem, phantom_data_dir=_PHANTOM_DATA_DIR)
+    return prefer_reduced_preview_stem(stem, phantom_data_dir=_PHANTOM_DATA_DIR, user_library_dir=None)
 
 
 def build_settings_from_snapshot(
@@ -167,7 +168,12 @@ def make_phantom_preview_fig(snapshot: PreviewSnapshot) -> dict | None:
         settings = build_settings_from_snapshot(snapshot)
         logical_stem = snapshot.logical_mesh_stem
         preview_mesh = resolve_preview_mesh(logical_stem)
-        mesh_path = _PHANTOM_DATA_DIR / f"{preview_mesh}.stl"
+        from guiskindose.phantom_mesh_names import resolve_human_mesh_stl_path
+
+        try:
+            mesh_path = resolve_human_mesh_stl_path(preview_mesh, phantom_data_dir=_PHANTOM_DATA_DIR)
+        except (ValueError, OSError):
+            return None
         if not mesh_path.is_file():
             return None
 

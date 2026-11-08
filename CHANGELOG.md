@@ -19,6 +19,14 @@ That keeps SemVer and contributor history organized.
 
 ## [Unreleased]
 
+### Added
+
+- Optional **phantom pack** zip install for clinical meshes (headless `--install-phantom-pack` and Settings catalog UI). Shipped meshes take precedence over the per-user library.
+
+### Fixed
+
+- Missing **clinical** catalog meshes stay selected with an install hint instead of substituting another body. Other unavailable selections (demos off, unknown stems, preview suffixes) still fall back to an installed replacement when possible.
+
 ### Changed
 
 - Portable Full builds for macOS and Linux can hand PNG export to bundled Chromium when a frozen build is

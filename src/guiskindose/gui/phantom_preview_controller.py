@@ -64,7 +64,12 @@ class PhantomPreviewController:
 
         if fig is None:
             self.plot.update_figure({})
-            self.status_label.set_text(copy_text("settings.phantom_preview.unavailable"))
+            from guiskindose.phantom_mesh_names import human_mesh_not_installed_message
+
+            missing = human_mesh_not_installed_message(snapshot.logical_mesh_stem)
+            self.status_label.set_text(
+                missing or copy_text("settings.phantom_preview.unavailable")
+            )
             return
 
         self.plot.update_figure(fig)

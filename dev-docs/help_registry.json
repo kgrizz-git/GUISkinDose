@@ -51,6 +51,16 @@
       "required": true
     },
     {
+      "id": "settings_phantom_packs",
+      "title": "Phantom packs",
+      "source": "phantom_packs.md",
+      "gui_files": [
+        "src/guiskindose/gui/tabs/settings.py",
+        "src/guiskindose/gui/tabs/_phantom_catalog.py"
+      ],
+      "required": true
+    },
+    {
       "id": "settings_below_floor_kvp",
       "title": "Below-floor kVp handling",
       "source": "below_floor_kvp.md",

@@ -60,6 +60,8 @@ class PageContext:
     # Settings tab registers this for the no-RDSR human-mesh preview; pose-changing
     # controls (Settings, Geometry offsets, per-exam offsets) call the same schedule.
     refresh_phantom_preview: Callable[[], None] = field(default=_noop)
+    # Settings tab registers the human-mesh install note after catalog/mesh wiring.
+    refresh_human_mesh_install_note: Callable[..., object] = field(default=_noop)
     # Refresh sliders and captions when the user navigates into this tab.
     # Default no-op — geometry.py wires it on build.
     refresh_geometry_tab: Callable[[], None] = field(default=_noop)

@@ -53,6 +53,8 @@ These serve different audiences.
 
 Use a release PR or written checklist. Condensed from [FORK_MAINTAINER_GUIDE.md](FORK_MAINTAINER_GUIDE.md) §6:
 
+When the library version in `pyproject.toml` changes, rebuild the maintainer phantom pack and refresh the committed pin: run `scripts/build_phantom_pack.py`, set `EXPECTED_PHANTOM_PACK_SHA256` in `phantom_pack_pin.py`, then confirm with `scripts/build_phantom_pack.py --check`.
+
 1. Compare/sync upstream intent; record in the fork guide if you sync.
 2. Confirm `main` is green for the exact commit you will tag.
 3. Bump the version on a `release/x.y.z` branch. The version lives only in `pyproject.toml`: the

@@ -682,6 +682,9 @@ def run_gui(native: bool = False, host: str | None = None, port: int | None = No
     else:
         launch_token, security_config = generate_launch_token(bind_port)
         configure_loopback_security(security_config)
+    from guiskindose.gui.upload_body_limit_middleware import UploadBodyLimitMiddleware
+
+    app.add_middleware(UploadBodyLimitMiddleware)
     app.add_middleware(LoopbackSecurityMiddleware)
 
     show_browser = native
