@@ -126,9 +126,11 @@ def _select_installed_mesh(mesh_options: dict[str, str]) -> str | None:
     saved = state.human_mesh or ""
     canonical = resolve_human_mesh_stem(saved)
     catalog_key = _full_clinical_stem_for_ui(saved)
-    if canonical in mesh_options or is_clinical_catalog_stem(catalog_key):
-        if canonical in mesh_options:
-            state.human_mesh = canonical
+    if canonical in mesh_options:
+        state.human_mesh = canonical
+    elif is_clinical_catalog_stem(catalog_key):
+        # A preview-only stem maps to its full mesh, never to a different body.
+        state.human_mesh = catalog_key
     else:
         state.human_mesh = canonicalize_human_mesh_selection(saved, mesh_options)
     missing = human_mesh_not_installed_message(state.human_mesh)
@@ -144,12 +146,19 @@ def _wire_human_mesh_controls(
     mesh_select: Any,
     on_change: Callable[[], None],
     ctx: PageContext | None = None,
+    initial_note: str | None = None,
 ) -> Callable[[], None]:
-    """Bind mesh selector + install-note refresh; return post-catalog refresh callback."""
+    """Bind mesh selector + install-note refresh; return post-catalog refresh callback.
+
+    *initial_note* is the note from normalizing the saved selection before the
+    selector was built. It is shown on the first render, because by then the
+    selection is already normalized and the reason would otherwise be lost.
+    """
+    pending_note = [initial_note]
 
     @ui.refreshable
     def _human_mesh_install_note() -> None:
-        note = _select_installed_mesh(get_human_mesh_options())
+        note = pending_note.pop() if pending_note else _select_installed_mesh(get_human_mesh_options())
         if note:
             ui.label(note).classes("text-caption text-warning")
 
@@ -208,14 +217,14 @@ def _build_phantom_section(ctx: PageContext, on_change: Callable[[], None]) -> N
                 ).on(_MODEL_VALUE_EVENT, on_change).classes("grow")
 
                 mesh_options = get_human_mesh_options()
-                if state.human_mesh not in mesh_options:
-                    state.human_mesh = canonicalize_human_mesh_selection(state.human_mesh or "", mesh_options)
+                # Normalize before building the select, which refuses a value missing from its options.
+                initial_mesh_note = _select_installed_mesh(mesh_options)
                 mesh_select = (
                     ui.select(mesh_options, label="Human mesh", value=state.human_mesh)
                     .bind_value(state, "human_mesh")
                     .classes("grow")
                 )
-                _after_catalog_change = _wire_human_mesh_controls(mesh_select, on_change, ctx)
+                _after_catalog_change = _wire_human_mesh_controls(mesh_select, on_change, ctx, initial_note=initial_mesh_note)
 
             catalog_block = ui.column().classes("w-full")
             catalog_block.bind_visibility_from(state, "phantom_model", backward=lambda v: v == "human")

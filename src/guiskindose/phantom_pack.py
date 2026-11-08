@@ -109,7 +109,7 @@ def parse_pack_manifest(raw: bytes) -> dict[str, Any]:
         manifest = json.loads(text, object_pairs_hook=_parse_manifest_object_pairs)
     except PhantomPackError:
         raise
-    except (json.JSONDecodeError, ValueError, RecursionError) as exc:
+    except (ValueError, RecursionError) as exc:  # JSONDecodeError is a ValueError
         raise PhantomPackError(_PHANTOM_PACK_BAD_FORMAT) from exc
     if not isinstance(manifest, dict):
         raise PhantomPackError(_PHANTOM_PACK_BAD_FORMAT)

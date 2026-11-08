@@ -12,6 +12,9 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 PHANTOM_DATA = REPO_ROOT / "src" / "guiskindose" / "phantom_data"
+# Run from a fresh clone without installing: import guiskindose from the checkout.
+if str(REPO_ROOT / "src") not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT / "src"))
 
 
 def _load_version() -> str:

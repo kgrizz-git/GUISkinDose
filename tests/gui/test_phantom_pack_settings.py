@@ -197,3 +197,12 @@ async def test_catalog_upload_tampered_zip_leaves_not_installed(two_root_dirs, m
     assert not mesh_stem_is_installed("junior_male", phantom_data_dir=shipped, user_library_dir=library)
     joined = " ".join(status_text + messages).lower()
     assert "install failed" in joined or "not valid" in joined
+
+
+def test_saved_preview_stem_maps_to_its_full_mesh(two_root_dirs, monkeypatch) -> None:
+    """A saved _reduced_3000t stem selects its own full mesh, never a different body."""
+    shipped, _library = two_root_dirs
+    (shipped / "senior_male_reduced_3000t.stl").write_bytes(tiny_stl_body())
+    monkeypatch.setattr(state, "human_mesh", "senior_male_reduced_3000t")
+    settings_tab._select_installed_mesh(get_human_mesh_options())
+    assert state.human_mesh == "senior_male"

@@ -498,7 +498,7 @@ def test_zip_eocd_member_count_rejected_before_zipfile(tmp_path: Path, monkeypat
     from guiskindose.phantom_pack_install import install_phantom_pack
 
     # Minimal zip EOCD claiming 129 entries (invalid payload; must fail in pre-check).
-    eocd = struct.pack("<4s4H2I", b"PK\x05\x06", 0, 0, 129, 129, 0, 0)
+    eocd = struct.pack("<4s4H2IH", b"PK\x05\x06", 0, 0, 129, 129, 0, 0, 0)
     payload = eocd
 
     def _fail_if_opened(*_args, **_kwargs):
@@ -595,3 +595,48 @@ def test_read_zip_body_rejects_cumulative_cap(monkeypatch: pytest.MonkeyPatch, t
         info = next(i for i in zf.infolist() if i.filename.endswith(".stl"))
         with pytest.raises(PhantomPackError):
             _read_zip_body(zf, info, running_total=_MAX_DECOMPRESSED_TOTAL - 1)
+
+
+def test_zip_signature_bytes_in_comment_do_not_reject_a_valid_pack(tmp_path: Path) -> None:
+    """A valid pack whose comment and member data hold zip signature bytes still installs.
+
+    Python's zipfile itself misreads an EOCD signature inside the comment, so the
+    comment carries only the ZIP64 locator signature that the old check rejected.
+    """
+    shipped = tmp_path / "shipped"
+    library = tmp_path / "library"
+    body = tiny_stl_body()
+    manifest = manifest_for_files({"senior_male": body})
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as zf:
+        zf.writestr("senior_male.stl", body)
+        zf.writestr("manifest.json", canonical_manifest_bytes(manifest))
+        zf.comment = b"note PK\x06\x07 inside the comment"
+    result = _install(buf.getvalue(), shipped=shipped, library=library, manifest=manifest)
+    assert result.installed == 1
+
+
+def test_tail_read_error_is_install_failed(tmp_path: Path) -> None:
+    """An OSError while reading the archive tail gives the install-failed sentence."""
+    from guiskindose.phantom_pack_install import _INSTALL_FAILED
+
+    body = tiny_stl_body()
+    manifest = manifest_for_files({"senior_male": body})
+    raw = pack_zip_bytes(manifest, {"senior_male": body})
+
+    class _BrokenRead(io.BytesIO):
+        """Seekable stream whose read always fails."""
+
+        def read(self, *_args: object) -> bytes:
+            raise OSError("disk gone")
+
+    pin = _pin_for(manifest)
+    stream = _BrokenRead(raw)
+    with pytest.raises(PhantomPackError, match=_INSTALL_FAILED):
+        install_phantom_pack(
+            stream,
+            user_library_dir=tmp_path / "library",
+            shipped_dir=tmp_path / "shipped",
+            expected_manifest_sha256=pin,
+            app_version="1.1.1",
+        )

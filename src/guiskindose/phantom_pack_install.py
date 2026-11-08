@@ -360,22 +360,46 @@ def _validate_zip_archive_stream(source: IO[bytes]) -> None:
     if compressed_size > _MAX_COMPRESSED_BYTES:
         _reject_archive()
     tail_start = max(0, compressed_size - _EOCD_SEARCH_MAX)
-    source.seek(tail_start)
-    tail = source.read()
-    source.seek(0)
-    eocd_idx = tail.rfind(b"PK\x05\x06")
-    if eocd_idx < 0:
+    tail = b""
+    try:
+        source.seek(tail_start)
+        tail = source.read()
+        source.seek(0)
+    except OSError as exc:
+        _reject_install(exc)
+    eocd_idx = _find_eocd(tail)
+    if eocd_idx is None:
         _reject_archive()
-    eocd = tail[eocd_idx:]
-    if len(eocd) < 22:
-        _reject_archive()
-    if b"PK\x06\x07" in tail:
-        _reject_archive()
+        return
+    eocd = tail[eocd_idx : eocd_idx + 22]
     total_entries = int.from_bytes(eocd[10:12], "little")
     cd_size = int.from_bytes(eocd[12:16], "little")
+    cd_offset = int.from_bytes(eocd[16:20], "little")
+    # 0xFFFF / 0xFFFFFFFF mean the real values live in a ZIP64 record, which packs never need.
+    if total_entries == 0xFFFF or cd_size == 0xFFFFFFFF or cd_offset == 0xFFFFFFFF:
+        _reject_archive()
     if total_entries > _MAX_MEMBERS or cd_size > _MAX_CENTRAL_DIRECTORY_BYTES:
         _reject_archive()
+    # The central directory must sit before the EOCD, so the counts cannot understate it.
+    if cd_offset + cd_size != tail_start + eocd_idx:
+        _reject_archive()
 
+
+def _find_eocd(tail: bytes) -> int | None:
+    """Return the offset of the real end-of-central-directory record in *tail*.
+
+    The record is 22 bytes plus its comment, and it ends the file. A signature
+    that only appears inside the comment or a member's data does not line up
+    with the end, so it is skipped.
+    """
+    pos = tail.rfind(b"PK\x05\x06")
+    while pos >= 0:
+        if pos + 22 <= len(tail):
+            comment_len = int.from_bytes(tail[pos + 20 : pos + 22], "little")
+            if pos + 22 + comment_len == len(tail):
+                return pos
+        pos = tail.rfind(b"PK\x05\x06", 0, pos)
+    return None
 
 def _plan_install(
     zf: zipfile.ZipFile,
@@ -447,7 +471,7 @@ def _commit_install(
     failed = False
     with install_process_lock():
         try:
-            library_root, _created_root = _prepare_library_root(user_library_dir)
+            library_root, _ = _prepare_library_root(user_library_dir)
         except PhantomPackError:
             raise
         except OSError as exc:

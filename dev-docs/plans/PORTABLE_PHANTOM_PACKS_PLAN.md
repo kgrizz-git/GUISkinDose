@@ -67,7 +67,7 @@ After `resolve_human_mesh_stem()` and `assert_safe_human_mesh_stem()`:
 
 `~/.guiskindose/` stays the home of `gui.json` and the equipment-profile store. Uninstall text names both that directory and the phantom directory. Deleting the app folder does not delete either one.
 
-If `LOCALAPPDATA` is unset on Windows, install and lookup fail with a fixed sentence. They do not invent a path and they do not echo the environment. Lookup does not create the directory. Install creates it, mode `0o700`, before it stages any file. Write STL files mode `0o600`. If `chmod` is unavailable, keep going and do not log the path. Refuse to install when the library path is a symlink. If this install created the directory and the install then fails, remove that empty directory so the machine matches the pre-install state.
+If `LOCALAPPDATA` is unset on Windows, install and lookup fail with a fixed sentence. They do not invent a path and they do not echo the environment. Lookup does not create the directory. Install creates it, mode `0o700`, before it stages any file. Write STL files mode `0o600`. If `chmod` is unavailable, keep going and do not log the path. Refuse to install when the library path is a symlink. If the install then fails, the directory and its `.install.lock` stay. Removing them after the lock is released would race another installer.
 
 ## Pack manifest
 
@@ -109,7 +109,7 @@ Reject the archive before any library file is replaced when any check fails.
 
 Also reject the whole archive for: directories, absolute paths, drive prefixes, backslashes, `.` and `..` parts, empty names, names other than `manifest.json` or `{stem}.stl` at the zip root, case-fold collisions, encrypted members, symlinks (Unix mode `0o120000`), and any other non-regular Unix file mode when the mode is non-zero. A Windows-written zip often stores mode 0. Accept mode 0 only after the name and size checks. A non-catalog stem, a legacy alias, or a demo stem also rejects the whole archive. A member whose canonical stem is already a file in the shipped root is skipped and counted. It is not a reason to reject the other members. Do not use `extract()` or `extractall()`. Read each member in 64 KiB chunks and count the bytes, because the central-directory size can lie. Stop reading when the cap is crossed.
 
-Create the library directory, mode `0o700`, before staging. Stage inside that directory (a child such as `library/.incoming-<token>/`) so `Path.replace()` stays on one volume. Publish one stem at a time: move the existing `library / f"{stem}.stl"` aside to a backup name, then `Path.replace()` the staged file onto the destination. On any failure, including `PermissionError` when Windows has the destination open, put every backup back, delete any file this install added, and delete the stage directory. The library then matches the pre-install bytes. On success, delete the backups and the stage directory. Do not report paths. A failure is `PhantomPackError`, defined in the next section.
+Create the library directory, mode `0o700`, before staging. Stage inside that directory (a child such as `library/.incoming-<token>/`) so `Path.replace()` stays on one volume. Publish one stem at a time: keep the existing `library / f"{stem}.stl"` in place and make a backup of it (a hard link, or a copy where links are unsupported), then `Path.replace()` the staged file onto the destination. The mesh is never missing during the swap. On any failure, including `PermissionError` when Windows has the destination open, put every backup back, delete any file this install added, and delete the stage directory. The library then matches the pre-install bytes. On success, delete the backups and the stage directory. Do not report paths. A failure is `PhantomPackError`, defined in the next section.
 
 ## Errors
 
@@ -186,7 +186,7 @@ Files:
 - [x] A zip that mixes one already-shipped stem with one missing clinical stem skips the shipped stem, counts that skip, installs the missing stem, and does not change the shipped file.
 - [x] Full edition: when the shipped dir already contains every stem in the zip, the result counts those stems as skipped, and the user library does not gain them. When the Full shipped dir is missing one catalog stem, that stem installs into the user library.
 - [x] Mid-replace rollback: monkeypatch `Path.replace` so the second file raises `PermissionError`. After `PhantomPackError`, every destination matches its pre-install bytes, backups are gone, and the stage directory is gone. Include a file that existed before the install and a stem this install would have added.
-- [ ] A failure before the first `Path.replace` leaves an existing library byte-for-byte as it started. If the install created the directory, that directory is removed.
+- [x] A failure before the first `Path.replace` leaves an existing library byte-for-byte as it started. A directory the install created is kept with only its lock file.
 - [x] Log capture for every failure case contains none of: the zip path, the library path, `tmp_path` text. The `PhantomPackError` message has no path.
 - [x] Tests live in `tests/unittests/test_phantom_pack_install.py`.
 
