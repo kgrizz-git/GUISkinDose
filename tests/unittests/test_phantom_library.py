@@ -235,3 +235,17 @@ def test_reduced_companion_of_enabled_demo_resolves_from_shipped(tmp_path: Path)
             user_library_dir=None,
             show_demo_phantoms=False,
         )
+
+
+@pytest.mark.parametrize("show_demo_phantoms", [True, False])
+def test_reduced_demo_only_in_user_library_is_refused(tmp_path: Path, show_demo_phantoms: bool) -> None:
+    """A reduced demo that exists only in the user library never resolves, demos on or off."""
+    library = tmp_path / "library"
+    _write_stl(library, "demo_cosmic_buddha_reduced_3000t")
+    with pytest.raises(ValueError, match="Unknown human mesh"):
+        resolve_human_mesh_stl_path(
+            "demo_cosmic_buddha_reduced_3000t",
+            phantom_data_dir=tmp_path / "missing_shipped",
+            user_library_dir=library,
+            show_demo_phantoms=show_demo_phantoms,
+        )
