@@ -63,7 +63,6 @@ def _is_excluded_artifact(path: Path) -> bool:
 
 
 def _digest(path: Path) -> str:
-    """Digest."""
     hasher = hashlib.sha256()
     with path.open("rb") as source:
         for chunk in iter(lambda: source.read(1024 * 1024), b""):
@@ -72,7 +71,6 @@ def _digest(path: Path) -> str:
 
 
 def _tracked_paths() -> set[Path]:
-    """Tracked paths."""
     result = subprocess.run(
         ["git", "ls-files", "-z"],
         cwd=_REPO_ROOT,
@@ -83,7 +81,6 @@ def _tracked_paths() -> set[Path]:
 
 
 def _workspace_snapshot() -> tuple[dict[Path, str], dict[Path, str]]:
-    """Workspace snapshot."""
     tracked_paths = _tracked_paths()
     tracked = {path: _digest(path) for path in tracked_paths if path.is_file()}
     other: dict[Path, str] = {}

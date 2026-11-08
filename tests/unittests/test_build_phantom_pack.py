@@ -12,7 +12,6 @@ from scripts.build_phantom_pack import _load_version, _pack_stl_paths, build_pac
 
 
 def test_committed_pin_matches_builder_manifest_digest() -> None:
-    """Exercise committed pin matches builder manifest digest."""
     paths = _pack_stl_paths()
     manifest = build_pack_manifest(paths, app_version=_load_version())
     digest = manifest_sha256(manifest)
@@ -21,7 +20,6 @@ def test_committed_pin_matches_builder_manifest_digest() -> None:
 
 
 def test_build_script_check_mode_passes() -> None:
-    """Exercise build script check mode passes."""
     root = Path(__file__).resolve().parents[2]
     completed = subprocess.run(
         [sys.executable, str(root / "scripts/build_phantom_pack.py"), "--check"],
@@ -34,7 +32,6 @@ def test_build_script_check_mode_passes() -> None:
 
 
 def test_is_allowed_pack_stem_rejects_unsafe_names() -> None:
-    """Exercise is allowed pack stem rejects unsafe names."""
     from guiskindose.phantom_pack import is_allowed_pack_stem
 
     assert not is_allowed_pack_stem("senior male")

@@ -14,7 +14,6 @@ PHANTOM_DATA = Path(__file__).resolve().parents[2] / "src" / "guiskindose" / "ph
 
 
 def test_build_script_zip_installs_via_installer(tmp_path: Path) -> None:
-    """Exercise build script zip installs via installer."""
     shipped = tmp_path / "shipped"
     library = tmp_path / "library"
     shipped.mkdir()

@@ -19,7 +19,6 @@ _UPLOAD_PATH = re.compile(r"/_nicegui/.*upload", re.IGNORECASE)
 
 
 async def _reject_413(send: Callable[..., Awaitable[None]]) -> None:
-    """Reject 413."""
     await send(
         {
             "type": "http.response.start",
@@ -46,11 +45,10 @@ class UploadBodyLimitMiddleware:
     """Reject oversized bodies on NiceGUI upload routes before handlers run."""
 
     def __init__(self, app: Callable[..., Awaitable[None]]) -> None:
-        """Initialize the instance."""
         self.app = app
 
     async def __call__(self, scope: dict, receive: Callable[..., Awaitable[dict]], send: Callable) -> None:
-        """Invoke the callable."""
+        """Pass non-upload requests through; for upload POSTs, enforce the cap on the declared length and on the streamed body."""
         if scope.get("type") != "http":
             await self.app(scope, receive, send)
             return

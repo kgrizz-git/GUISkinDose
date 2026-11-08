@@ -8,20 +8,16 @@ from guiskindose.gui.upload_body_limit_middleware import MAX_GUI_UPLOAD_BODY_BYT
 
 
 async def _noop_app(scope, receive, send) -> None:
-    """Noop app."""
     await send({"type": "http.response.start", "status": 200, "headers": []})
     await send({"type": "http.response.body", "body": b"ok", "more_body": False})
 
 
 def test_rejects_oversized_content_length() -> None:
-    """Exercise rejects oversized content length."""
     async def _exercise() -> list[dict]:
-        """Exercise."""
         middleware = UploadBodyLimitMiddleware(_noop_app)
         messages: list[dict] = []
 
         async def send(message: dict) -> None:
-            """Send."""
             messages.append(message)
 
         scope = {
@@ -32,7 +28,6 @@ def test_rejects_oversized_content_length() -> None:
         }
 
         async def receive() -> dict:
-            """Receive."""
             return {"type": "http.request", "body": b"", "more_body": False}
 
         await middleware(scope, receive, send)

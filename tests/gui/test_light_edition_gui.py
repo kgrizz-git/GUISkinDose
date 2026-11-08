@@ -19,20 +19,17 @@ pytestmark = pytest.mark.nicegui_main_file("tests/gui/nicegui_main.py")
 
 @pytest.fixture
 def light(monkeypatch):
-    """Light."""
     monkeypatch.setattr(_edition, "EDITION", EDITION_LIGHT)
 
 
 @pytest.fixture
 def notes(monkeypatch):
-    """Notes."""
     calls: list[str] = []
     monkeypatch.setattr(ui, "notify", lambda message, **_k: calls.append(str(message)))
     return calls
 
 
 async def _open_export_tab(user: User) -> None:
-    """Open export tab."""
     await user.open("/")
     await user.should_see("8 · Export", retries=20)
     user.find("8 · Export").click()
@@ -40,7 +37,6 @@ async def _open_export_tab(user: User) -> None:
 
 @pytest.mark.asyncio
 async def test_light_export_tab_hides_the_png_card(user: User, light) -> None:
-    """Exercise light export tab hides the png card."""
     await _open_export_tab(user)
     await user.should_see("Interactive HTML dose map")
     await user.should_see(copy_text("export.light_edition.no_png"))
@@ -49,18 +45,15 @@ async def test_light_export_tab_hides_the_png_card(user: User, light) -> None:
 
 @pytest.mark.asyncio
 async def test_full_export_tab_offers_the_png_card(user: User) -> None:
-    """Exercise full export tab offers the png card."""
     await _open_export_tab(user)
     await user.should_see("Download PNG")
     await user.should_not_see(copy_text("export.light_edition.no_png"))
 
 
 def test_light_make_dosemap_png_raises_before_building_a_figure(light, monkeypatch) -> None:
-    """Exercise light make dosemap png raises before building a figure."""
     from guiskindose.gui import figures
 
     def refuse(**_kwargs):
-        """Refuse."""
         raise AssertionError("figure built in Light")
 
     monkeypatch.setattr(figures, "make_dosemap_fig", refuse)
@@ -69,7 +62,6 @@ def test_light_make_dosemap_png_raises_before_building_a_figure(light, monkeypat
 
 
 def test_settings_reports_a_saved_mesh_that_is_not_installed(light, tmp_path, monkeypatch) -> None:
-    """Exercise settings reports a saved mesh that is not installed."""
     from guiskindose import phantom_mesh_names
     from guiskindose.gui.helpers import get_human_mesh_options
     from guiskindose.gui.tabs import settings as settings_tab
@@ -107,7 +99,6 @@ def test_full_reports_a_missing_mesh_as_reinstall(monkeypatch) -> None:
 
 
 def test_settings_stays_silent_for_an_installed_mesh(monkeypatch) -> None:
-    """Exercise settings stays silent for an installed mesh."""
     from guiskindose.gui.tabs import settings as settings_tab
 
     monkeypatch.setattr(state, "human_mesh", "adult_male")
@@ -138,7 +129,6 @@ def test_settings_explains_a_mesh_that_is_not_in_the_list(monkeypatch) -> None:
 
 
 def _starter_mesh_options() -> dict[str, str]:
-    """Starter mesh options."""
     return {"adult_male": "Adult Male"}
 
 
@@ -175,7 +165,6 @@ def test_import_stays_silent_for_an_installed_mesh(monkeypatch, notes) -> None:
 
 
 def test_calculate_refuses_a_mesh_that_is_not_installed(light, tmp_path, monkeypatch, notes) -> None:
-    """Exercise calculate refuses a mesh that is not installed."""
     from guiskindose import phantom_mesh_names
     from guiskindose.gui.tabs import calculate as calc_tab
 
@@ -196,7 +185,6 @@ def test_calculate_refuses_a_mesh_that_is_not_installed(light, tmp_path, monkeyp
 
 @pytest.mark.asyncio
 async def test_light_download_png_returns_early_with_the_light_notice(light, monkeypatch, notes) -> None:
-    """Exercise light download png returns early with the light notice."""
     from guiskindose.gui.tabs import export as export_tab
 
     monkeypatch.setattr(state, "calculation_done", True)

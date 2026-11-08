@@ -16,13 +16,11 @@ from guiskindose.gui.state import state
 
 
 def _controller() -> PhantomPreviewController:
-    """Controller."""
     return PhantomPreviewController(MagicMock(), MagicMock(), debounce_sec=0.01)
 
 
 @pytest.mark.asyncio
 async def test_run_refresh_clears_plot_for_non_human() -> None:
-    """Exercise run refresh clears plot for non human."""
     ctrl = _controller()
     state.phantom_model = "plane"
     await ctrl._run_refresh(ctrl.preview_request_id)
@@ -32,7 +30,6 @@ async def test_run_refresh_clears_plot_for_non_human() -> None:
 
 @pytest.mark.asyncio
 async def test_run_refresh_skips_stale_request() -> None:
-    """Exercise run refresh skips stale request."""
     ctrl = _controller()
     state.phantom_model = "human"
     ctrl.preview_request_id = 5
@@ -42,13 +39,11 @@ async def test_run_refresh_skips_stale_request() -> None:
 
 @pytest.mark.asyncio
 async def test_run_refresh_applies_figure(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Exercise run refresh applies figure."""
     ctrl = _controller()
     state.phantom_model = "human"
     fig = {"data": [], "layout": {}}
 
     async def _fake_io_bound(fn, *args, **kwargs):
-        """Fake io bound."""
         return fig
 
     monkeypatch.setattr(phantom_preview_controller, "capture_phantom_preview_snapshot", lambda st: {"mesh": "hudfrid"})
@@ -64,7 +59,6 @@ async def test_run_refresh_applies_figure(monkeypatch: pytest.MonkeyPatch) -> No
 async def test_run_refresh_unavailable_when_fig_none(
     monkeypatch: pytest.MonkeyPatch, tmp_path
 ) -> None:
-    """Exercise run refresh unavailable when fig none."""
     shipped = tmp_path / "shipped"
     library = tmp_path / "library"
     shipped.mkdir()
@@ -83,7 +77,6 @@ async def test_run_refresh_unavailable_when_fig_none(
     state.human_mesh = "senior_male"
 
     async def _fake_io_bound(fn, *args, **kwargs):
-        """Fake io bound."""
         return None
 
     snapshot = PreviewSnapshot(
@@ -109,7 +102,6 @@ async def test_run_refresh_unavailable_when_fig_none(
 
 
 def test_schedule_refresh_bumps_request_id(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Exercise schedule refresh bumps request id."""
     from nicegui import ui
 
     timers: list[object] = []

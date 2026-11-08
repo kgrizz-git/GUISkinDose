@@ -45,7 +45,6 @@ def _new_pack_spool() -> tempfile.SpooledTemporaryFile[bytes]:
 
 
 def _catalog_stems(*, include_demos: bool) -> list[str]:
-    """Catalog stems."""
     stems = [
         stem
         for stem in _CLINICAL_SORT_ORDER
@@ -58,26 +57,22 @@ def _catalog_stems(*, include_demos: bool) -> list[str]:
 
 
 def _notify_install_failure(status_label: Any) -> None:
-    """Notify install failure."""
     message = copy_text("settings.phantom_catalog.install_failure")
     status_label.set_text(message)
     ui.notify(message, type="negative", multi_line=True)
 
 
 def _notify_phantom_pack_error(status_label: Any, exc: PhantomPackError) -> None:
-    """Notify phantom pack error."""
     _notify_install_failure(status_label)
     ui.notify(exc.user_message(), type="negative", multi_line=True)
 
 
 def _notify_library_unavailable(status_label: Any) -> None:
-    """Notify library unavailable."""
     _notify_install_failure(status_label)
     ui.notify(_WINDOWS_LIBRARY_UNAVAILABLE, type="negative", multi_line=True)
 
 
 def _render_catalog_rows() -> None:
-    """Render catalog rows."""
     for stem in _catalog_stems(include_demos=show_demo_phantoms_enabled()):
         label = human_mesh_display_label(stem)
         key = (
@@ -98,13 +93,12 @@ class _PhantomCatalogSection:
     _refresh_catalog_rows: Callable[..., Any] = field(default=lambda: None, repr=False)
 
     def refresh_mesh_options(self) -> None:
-        """Refresh mesh options."""
         self.mesh_select.options = get_human_mesh_options()
         self.mesh_select.update()
         self._refresh_catalog_rows()
 
     def report_install_success(self, result: InstallResult) -> None:
-        """Report install success."""
+        """Show the install counts, drop cached measurements for the new meshes, and refresh the mesh list and rows."""
         assert self.status_label is not None
         clear_mesh_measurement_caches_for_stems(result.installed_stems)
         self.status_label.set_text(
@@ -117,7 +111,7 @@ class _PhantomCatalogSection:
         self.on_change()
 
     async def commit_install(self, stream: IO[bytes]) -> None:
-        """Commit install."""
+        """Install the pack from *stream* on a worker thread and report success or a fixed failure sentence. Always closes *stream*."""
         assert self.status_label is not None
         stream.seek(0)
         import guiskindose.phantom_pack_pin as pack_pin_module
@@ -144,7 +138,7 @@ class _PhantomCatalogSection:
             self.report_install_success(result)
 
     async def install_upload(self, event: Any) -> None:
-        """Install upload."""
+        """Stream a browser upload into a spool under the size cap, then install it."""
         assert self.status_label is not None
         # Stream into the spool chunk by chunk, so the cap holds before the whole body is in memory.
         spool = await run.io_bound(_new_pack_spool)
@@ -173,7 +167,7 @@ class _PhantomCatalogSection:
                 await run.io_bound(spool.close)
 
     async def native_install(self) -> None:
-        """Native install."""
+        """Open a pack through the native file dialog and install it; a cancelled dialog does nothing."""
         assert self.status_label is not None
         try:
             stream = await open_phantom_pack_stream()
@@ -186,7 +180,6 @@ class _PhantomCatalogSection:
         await self.commit_install(stream)
 
     def mount_install_control(self) -> None:
-        """Mount install control."""
         if _is_native_mode():
             ui.button(
                 copy_text("settings.phantom_catalog.install_button"),
@@ -215,7 +208,6 @@ def build_phantom_catalog_section(
 
     @ui.refreshable
     def _catalog_rows() -> None:
-        """Catalog rows."""
         _render_catalog_rows()
 
     section._refresh_catalog_rows = _catalog_rows.refresh

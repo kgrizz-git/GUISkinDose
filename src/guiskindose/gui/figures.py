@@ -91,7 +91,6 @@ def make_geometry_fig(
         original_show = go.Figure.show
 
         def _capture_show(self, *a, **kw):
-            """Capture show."""
             captured["fig"] = self
 
         go.Figure.show = _capture_show

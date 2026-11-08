@@ -548,7 +548,6 @@ def _patch_tqdm(progress_cb, total: int) -> Callable[[], None]:
         return lambda: None
 
     def restore() -> None:
-        """Restore."""
         # Only unwind our own hook: if another patch was layered on top since,
         # clobbering it would strip that run's hook or reinstall a stale one.
         if tqdm_module.tqdm.update is new_update:

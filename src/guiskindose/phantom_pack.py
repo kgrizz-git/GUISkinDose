@@ -82,7 +82,7 @@ def is_allowed_pack_stem(stem: str) -> bool:
 
 
 def _parse_manifest_object_pairs(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
-    """Parse manifest object pairs."""
+    """JSON object hook: reject duplicate keys and keys outside the manifest or file-entry schema."""
     keys = [k for k, _ in pairs]
     if len(keys) != len(set(keys)):
         raise PhantomPackError(_PHANTOM_PACK_DUPLICATE_KEYS)
@@ -117,7 +117,7 @@ def parse_pack_manifest(raw: bytes) -> dict[str, Any]:
 
 
 def _validate_manifest_top(manifest: dict[str, Any], app_version: str) -> None:
-    """Validate manifest top."""
+    """Check the format, versions, and file list of a manifest, and refuse a signature until Phase 3."""
     verify_pack_signature(manifest)
     if manifest.get("format") != 1:
         raise PhantomPackError(_PHANTOM_PACK_BAD_FORMAT)
@@ -139,7 +139,7 @@ def _validate_manifest_top(manifest: dict[str, Any], app_version: str) -> None:
 
 
 def _validate_file_entry(entry: Any) -> dict[str, Any]:
-    """Validate file entry."""
+    """Check one file entry's types, stem, byte count, and lowercase hex digest; return it normalized."""
     if not isinstance(entry, dict):
         raise PhantomPackError(_PHANTOM_PACK_BAD_FORMAT)
     for key in entry:

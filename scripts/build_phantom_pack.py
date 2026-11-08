@@ -24,7 +24,7 @@ def _load_version() -> str:
 
 
 def _pack_stl_paths() -> list[Path]:
-    """Pack stl paths."""
+    """Return the shipped STLs that belong in the pack: everything outside the Light starter set, minus legacy _reduced_1000t previews."""
     from guiskindose.edition import light_phantom_stl_names
 
     light_names = set(light_phantom_stl_names())
@@ -39,7 +39,7 @@ def _pack_stl_paths() -> list[Path]:
 
 
 def build_pack_manifest(paths: list[Path], *, app_version: str) -> dict:
-    """Build pack manifest."""
+    """Build the format-1 manifest for *paths*, with each file's byte count and SHA-256, sorted by stem."""
     files = []
     for path in paths:
         data = path.read_bytes()
@@ -60,7 +60,7 @@ def build_pack_manifest(paths: list[Path], *, app_version: str) -> dict:
 
 
 def write_pack_zip(manifest: dict, paths: list[Path], out_zip: Path) -> None:
-    """Write pack zip."""
+    """Write the canonical manifest and the STLs, named by stem, into a deflated zip at *out_zip*."""
     from guiskindose.phantom_pack import canonical_manifest_bytes
 
     out_zip.parent.mkdir(parents=True, exist_ok=True)
@@ -72,7 +72,6 @@ def write_pack_zip(manifest: dict, paths: list[Path], out_zip: Path) -> None:
 
 
 def _parse_args() -> argparse.Namespace:
-    """Parse args."""
     parser = argparse.ArgumentParser(description="Build or verify the phantom pack zip.")
     parser.add_argument(
         "--check",
@@ -89,7 +88,7 @@ def _parse_args() -> argparse.Namespace:
 
 
 def main() -> int:
-    """Main."""
+    """Build the pack zip, or with --check compare the committed pin to a freshly built manifest digest."""
     args = _parse_args()
     app_version = _load_version()
     paths = _pack_stl_paths()

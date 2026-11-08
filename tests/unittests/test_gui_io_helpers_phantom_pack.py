@@ -16,7 +16,6 @@ from guiskindose.gui import io_helpers
 
 @pytest.mark.asyncio
 async def test_open_phantom_pack_stream_cancelled_returns_none(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Exercise open phantom pack stream cancelled returns none."""
 
     class _MainWindow:
         async def create_file_dialog(self, *_args, **_kwargs):
@@ -37,7 +36,6 @@ async def test_open_phantom_pack_stream_cancelled_returns_none(monkeypatch: pyte
 
 @pytest.mark.asyncio
 async def test_open_phantom_pack_stream_open_failure_propagates(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Exercise open phantom pack stream open failure propagates."""
 
     class _MainWindow:
         async def create_file_dialog(self, *_args, **_kwargs):

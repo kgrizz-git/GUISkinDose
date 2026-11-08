@@ -62,21 +62,18 @@ class InstallResult:
 
 
 def _reject_archive(exc: BaseException | None = None) -> None:
-    """Reject archive."""
     if exc is not None:
         safe_error_event(_LOG, _OPERATION_INSTALL, exc)
     raise PhantomPackError(_BAD_ARCHIVE)
 
 
 def _reject_member(exc: BaseException | None = None) -> None:
-    """Reject member."""
     if exc is not None:
         safe_error_event(_LOG, _OPERATION_INSTALL, exc)
     raise PhantomPackError(_BAD_ARCHIVE_MEMBER)
 
 
 def _reject_install(exc: BaseException | None = None) -> None:
-    """Reject install."""
     if exc is not None:
         safe_error_event(_LOG, _OPERATION_INSTALL, exc)
     raise PhantomPackError(_INSTALL_FAILED)
@@ -107,7 +104,7 @@ def classify_member_name(name: str) -> str:
 
 
 def _validate_zip_info(info: zipfile.ZipInfo) -> None:
-    """Validate zip info."""
+    """Reject directories, links, encrypted members, and compression other than stored or deflated."""
     if info.is_dir():
         _reject_member()
     if info.compress_type not in (zipfile.ZIP_STORED, zipfile.ZIP_DEFLATED):
@@ -119,7 +116,7 @@ def _validate_zip_info(info: zipfile.ZipInfo) -> None:
 
 
 def _read_zip_body(zf: zipfile.ZipFile, info: zipfile.ZipInfo, *, running_total: int) -> bytes:
-    """Read zip body."""
+    """Read one member in chunks, enforcing the per-member and running totals on the bytes actually decompressed, not the header sizes."""
     buffer = bytearray()
     try:
         with zf.open(info, "r") as handle:
@@ -160,7 +157,7 @@ def read_member_with_cap(
 
 
 def _scan_zip_members(zf: zipfile.ZipFile) -> tuple[bytes, dict[str, bytes]]:
-    """Scan zip members."""
+    """Read the manifest and every STL body under the member, case, and size limits; return the raw manifest and bodies by stem."""
     names = zf.namelist()
     if len(names) > _MAX_MEMBERS:
         _reject_archive()
@@ -194,7 +191,6 @@ def _scan_zip_members(zf: zipfile.ZipFile) -> tuple[bytes, dict[str, bytes]]:
 
 
 def _chmod_best_effort(path: Path, mode: int) -> None:
-    """Chmod best effort."""
     try:
         os.chmod(path, mode)
     except OSError:
@@ -244,7 +240,6 @@ def _safe_remove_path(path: Path) -> None:
 
 
 def _sweep_incoming_dirs(library_root: Path, *, keep_stage: Path | None) -> None:
-    """Sweep incoming dirs."""
     for incoming in library_root.glob(".incoming-*"):
         if keep_stage is not None and incoming == keep_stage:
             continue
@@ -277,7 +272,6 @@ def _sweep_library_artifacts(library_root: Path, *, keep_stage: Path | None = No
 
 
 def _stage_path(library_root: Path) -> Path:
-    """Stage path."""
     token = secrets.token_hex(8)
     return library_root / f".incoming-{token}"
 
@@ -298,7 +292,7 @@ def _publish_staged_file(
     *,
     backups: dict[Path, Path | None],
 ) -> None:
-    """Publish staged file."""
+    """Move a staged STL over *destination* atomically, keeping a backup of any existing file in *backups* for rollback."""
     backup: Path | None = None
     if destination.exists():
         backup = _create_publish_backup(destination)
@@ -314,7 +308,7 @@ def _publish_staged_file(
 
 
 def _restore_backup(dest: Path, backup: Path | None, added: list[Path]) -> None:
-    """Restore backup."""
+    """Undo one publish: restore the backup over *dest*, or remove *dest* if this install created it."""
     try:
         if backup is not None and backup.exists():
             # replace() overwrites in one step, so the mesh is never missing.
@@ -326,12 +320,10 @@ def _restore_backup(dest: Path, backup: Path | None, added: list[Path]) -> None:
 
 
 def _remove_stage_dir(stage_dir: Path) -> None:
-    """Remove stage dir."""
     _safe_remove_path(stage_dir)
 
 
 def _delete_publish_backups(backups: dict[Path, Path | None]) -> None:
-    """Delete publish backups."""
     for backup in backups.values():
         if backup is None or backup.is_symlink():
             continue
@@ -347,7 +339,7 @@ def _rollback(
     added: list[Path],
     stage_dir: Path | None,
 ) -> None:
-    """Rollback."""
+    """Undo every publish this install made and remove its stage directory. The library root and lock file stay."""
     for dest, backup in backups.items():
         _restore_backup(dest, backup, added)
     if stage_dir is not None and stage_dir.exists():
@@ -392,7 +384,7 @@ def _plan_install(
     expected_manifest_sha256: str,
     app_version: str,
 ) -> tuple[list[tuple[str, bytes]], int]:
-    """Plan install."""
+    """Verify the pin, manifest, and every member's size and hash; return the meshes to install and the count skipped because they ship."""
     manifest_raw, stl_bodies = _scan_zip_members(zf)
     manifest = parse_pack_manifest(manifest_raw)
     verify_manifest_pin(manifest, expected_manifest_sha256)
@@ -444,7 +436,7 @@ def _commit_install(
     user_library_dir: Path,
     skipped: int,
 ) -> InstallResult:
-    """Commit install."""
+    """Publish the planned meshes under the process lock and the library file lock, rolling back on any filesystem error."""
     if not to_install:
         return InstallResult(installed=0, skipped_shipped=skipped)
     stems = tuple(stem for stem, _ in to_install)

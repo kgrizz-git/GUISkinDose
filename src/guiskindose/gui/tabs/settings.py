@@ -149,13 +149,11 @@ def _wire_human_mesh_controls(
 
     @ui.refreshable
     def _human_mesh_install_note() -> None:
-        """Human mesh install note."""
         note = _select_installed_mesh(get_human_mesh_options())
         if note:
             ui.label(note).classes("text-caption text-warning")
 
     def _refresh_human_mesh_ui() -> None:
-        """Refresh human mesh ui."""
         mesh_select.options = get_human_mesh_options()
         mesh_select.update()
         _human_mesh_install_note.refresh()
@@ -178,7 +176,6 @@ def _wire_human_mesh_controls(
         ctx.refresh_human_mesh_install_note = _human_mesh_install_note.refresh
 
     def _after_catalog_change() -> None:
-        """After catalog change."""
         on_change()
         _refresh_human_mesh_ui()
 

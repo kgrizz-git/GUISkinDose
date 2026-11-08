@@ -18,20 +18,17 @@ from tests.unittests.phantom_pack_test_helpers import manifest_for_files, pack_z
 
 
 def test_verify_pack_signature_rejects_present() -> None:
-    """Exercise verify pack signature rejects present."""
     with pytest.raises(PhantomPackError, match="Signed phantom packs"):
         verify_pack_signature({"signature": "abcd"})
 
 
 def test_duplicate_top_level_keys_rejected() -> None:
-    """Exercise duplicate top level keys rejected."""
     raw = b'{"format": 1, "format": 2, "pack_version": "1.1.1", "app_versions": ["1.1.1"], "files": []}'
     with pytest.raises(PhantomPackError):
         parse_pack_manifest(raw)
 
 
 def test_bad_format_version_and_stem_rules() -> None:
-    """Exercise bad format version and stem rules."""
     body = tiny_stl_body()
     base = manifest_for_files({"senior_male": body})
     cases = [
@@ -52,7 +49,6 @@ def test_bad_format_version_and_stem_rules() -> None:
 
 
 def test_byte_and_hash_mismatch() -> None:
-    """Exercise byte and hash mismatch."""
     body = tiny_stl_body()
     manifest = manifest_for_files({"senior_male": body})
     parsed = parse_pack_manifest(canonical_manifest_bytes(manifest))
@@ -72,7 +68,6 @@ def test_byte_and_hash_mismatch() -> None:
 
 
 def test_unknown_manifest_key_rejected() -> None:
-    """Exercise unknown manifest key rejected."""
     manifest = manifest_for_files({"senior_male": tiny_stl_body()})
     manifest["extra"] = 1
     raw = canonical_manifest_bytes(manifest)
@@ -81,7 +76,6 @@ def test_unknown_manifest_key_rejected() -> None:
 
 
 def test_empty_pin_leaves_library_unchanged(tmp_path: Path) -> None:
-    """Exercise empty pin leaves library unchanged."""
     import io
 
     from guiskindose.phantom_pack_install import install_phantom_pack
@@ -103,7 +97,6 @@ def test_empty_pin_leaves_library_unchanged(tmp_path: Path) -> None:
 
 
 def test_mismatched_pin_leaves_library_unchanged(tmp_path: Path) -> None:
-    """Exercise mismatched pin leaves library unchanged."""
     import io
 
     from guiskindose.phantom_pack_install import install_phantom_pack
@@ -125,7 +118,6 @@ def test_mismatched_pin_leaves_library_unchanged(tmp_path: Path) -> None:
 
 
 def test_injected_hash_round_trip() -> None:
-    """Exercise injected hash round trip."""
     body = tiny_stl_body()
     manifest = manifest_for_files({"senior_male": body}, app_version="1.1.1")
     digest = hashlib.sha256(canonical_manifest_bytes(manifest)).hexdigest()

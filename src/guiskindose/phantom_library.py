@@ -32,14 +32,13 @@ class PhantomLibraryUnavailableError(UserFacingInputError):
 
 
 def _win32_file_attributes(path: Path) -> int:
-    """Win32 file attributes."""
     import ctypes
 
     return int(ctypes.windll.kernel32.GetFileAttributesW(str(path)))  # type: ignore[attr-defined]
 
 
 def _win32_has_reparse_point(path: Path) -> bool:
-    """Win32 has reparse point."""
+    """True when Windows reports a reparse point (a junction or symlink) at *path*; False off Windows or on error."""
     try:
         attrs = _win32_file_attributes(path)
     except (AttributeError, OSError):
@@ -113,7 +112,7 @@ def _clinical_base_stem(stem: str) -> str:
 
 
 def _regular_stl_in_root(root: Path, stem: str) -> Path | None:
-    """Regular stl in root."""
+    """Return root/<stem>.stl when it is a regular, non-link file inside *root*, else None. Filesystem errors count as missing."""
     try:
         assert_safe_human_mesh_stem(stem)
     except ValueError:
@@ -186,7 +185,6 @@ class _MissingClinicalMesh(Exception):
     """Internal signal that a clinical stem has no STL in either root."""
 
     def __init__(self, stem: str) -> None:
-        """Initialize the instance."""
         self.stem = stem
 
 

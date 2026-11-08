@@ -15,7 +15,6 @@ logger = logging.getLogger(__name__)
 
 
 def _validate_scale(value: Any, name: str) -> float:
-    """Validate scale."""
     scale = float(value)
     if not 0.5 <= scale <= 2.0:
         logger.warning("%s=%s outside [0.5, 2.0]; clamping", name, scale)

@@ -184,7 +184,6 @@ def test_run_gui_registers_security_middleware_and_token_url(monkeypatch, capsys
 
 @pytest.mark.parametrize("port,expected", [(None, 8765), (9999, 9999)])
 def test_resolve_port_defaults_and_explicit(port: int | None, expected: int) -> None:
-    """Exercise resolve port defaults and explicit."""
     assert gui_app._resolve_port(port) == expected
 
 
@@ -211,7 +210,6 @@ def test_resolve_port_explicit_port_never_falls_back(monkeypatch) -> None:
 
 
 def test_loopback_port_is_free_detects_busy_port() -> None:
-    """Exercise loopback port is free detects busy port."""
     import socket
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as holder:
@@ -242,7 +240,6 @@ def test_run_gui_default_port_fallback_scopes_security(monkeypatch) -> None:
 
 
 def test_resolve_port_zero_picks_free_loopback_port() -> None:
-    """Exercise resolve port zero picks free loopback port."""
     port = gui_app._resolve_port(0)
     assert isinstance(port, int)
     assert 1 <= port <= 65535
@@ -250,7 +247,6 @@ def test_resolve_port_zero_picks_free_loopback_port() -> None:
 
 @pytest.mark.parametrize("port", [-1, 65536, 100000])
 def test_resolve_port_rejects_out_of_range(port: int) -> None:
-    """Exercise resolve port rejects out of range."""
     with pytest.raises(ValueError, match="gui_port_out_of_range"):
         gui_app._resolve_port(port)
 
@@ -350,7 +346,6 @@ def test_browser_auto_open_stays_quiet_without_server(monkeypatch, capsys) -> No
     assert capsys.readouterr().out == ""
 
     def _boom(_url: str) -> None:
-        """Boom."""
         raise RuntimeError("no browser")
 
     monkeypatch.setattr(gui_app, "_wait_for_port", lambda *args, **kwargs: True)
