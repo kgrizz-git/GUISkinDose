@@ -1,5 +1,8 @@
 """Static checks for the macOS release signing workflow (no codesign or notary on the runner)."""
 
+import shutil
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -52,9 +55,39 @@ def test_portable_macos_release_triggers_and_environment() -> None:
     assert checkout["uses"].startswith("actions/checkout@")
     assert checkout["with"]["fetch-depth"] == 0
 
-    for job_name in ("sign-macos", "macos-intel-full"):
-        names = _named_steps(wf["jobs"][job_name])
-        assert "Require dispatch from main or a v* tag" in names
+
+
+DISPATCH_GATE = "Require dispatch from main or a v* tag"
+
+
+@pytest.mark.skipif(sys.platform == "win32" or shutil.which("bash") is None, reason="runs the gate under bash")
+@pytest.mark.parametrize("job_name", ["sign-macos", "macos-intel-full"])
+@pytest.mark.parametrize(
+    ("ref", "admitted"),
+    [
+        ("refs/heads/main", True),
+        ("refs/tags/v1.2.3", True),
+        ("refs/tags/v1.2.3-rc.1", True),
+        ("refs/heads/feature", False),
+        ("refs/tags/foo", False),
+        ("refs/tags/V1.2.3", False),
+        ("refs/tags/v", False),
+        ("refs/pull/12/merge", False),
+        ("", False),
+    ],
+)
+def test_dispatch_gate_admits_main_and_version_tags(job_name: str, ref: str, admitted: bool) -> None:
+    wf = _load(RELEASE_WF)
+    gate = next(s for s in wf["jobs"][job_name]["steps"] if s.get("name") == DISPATCH_GATE)
+    assert gate["if"] == "github.event_name == 'workflow_dispatch'"
+    assert gate["env"]["WORKFLOW_REF"] == "${{ github.ref }}"
+    proc = subprocess.run(
+        ["bash", "-c", gate["run"]],
+        env={"WORKFLOW_REF": ref, "PATH": "/usr/bin:/bin"},
+        capture_output=True,
+        check=False,
+    )
+    assert (proc.returncode == 0) is admitted
 
 
 def test_portable_macos_release_secrets_and_skip_notarize() -> None:

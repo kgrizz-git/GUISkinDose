@@ -76,6 +76,10 @@ def _write_stub_codesign(bin_dir: Path) -> None:
                 python3 -c 'import plistlib; print(plistlib.dumps({"com.apple.security.cs.allow-jit": False}).decode())'
                 exit 0
               fi
+              if [[ -f "${target}.jit_int" ]]; then
+                python3 -c 'import plistlib; print(plistlib.dumps({"com.apple.security.cs.allow-jit": 1}).decode())'
+                exit 0
+              fi
               if [[ -f "${target}.outer_bad" ]]; then
                 python3 -c 'import plistlib; print(plistlib.dumps({"com.apple.security.get-task-allow": True}).decode())'
                 exit 0
@@ -272,11 +276,13 @@ def test_missing_team_identifier_counts_as_mismatch(tmp_path: Path, monkeypatch:
     assert _counter(proc.stdout, "team_mismatch_count") >= 1
 
 
-def test_jit_must_be_boolean_true(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+@pytest.mark.parametrize("marker", ["jit_false", "jit_int"])
+def test_jit_must_be_boolean_true(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, marker: str) -> None:
+    """A plist <false/> or <integer>1</integer> is not the <true/> the hardened runtime needs."""
     app = _bundle_root(tmp_path)
     chrom_macos = app / "Contents/Helpers/Chromium.app/Contents/MacOS"
     helper = chrom_macos.parent.parent / "Helpers/Chromium Helper.app/Contents/MacOS/Chromium Helper"
-    Path(f"{helper}.jit_false").write_text("1", encoding="utf-8")
+    Path(f"{helper}.{marker}").write_text("1", encoding="utf-8")
     proc = _run_verify(app, tmp_path, monkeypatch, chromium_main_jit="1")
     assert proc.returncode != 0
     assert _counter(proc.stdout, "helper_jit_missing_count") >= 1
