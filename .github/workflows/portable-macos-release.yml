@@ -61,6 +61,14 @@ jobs:
           SUCCESSFUL_RUNS="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow ci.yml --commit "$TARGET" --status completed --json conclusion --jq 'map(select(.conclusion == "success")) | length')"
           test "$SUCCESSFUL_RUNS" -ge 1
 
+      - name: Reject workflow_dispatch off main
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          WORKFLOW_REF: ${{ github.ref }}
+        run: |
+          set -euo pipefail
+          test "$WORKFLOW_REF" = refs/heads/main
+
       - name: Require attach tag commit matches checkout
         if: github.event_name == 'workflow_dispatch' && inputs.attach_to_tag != ''
         env:
@@ -294,7 +302,7 @@ jobs:
     timeout-minutes: 180
     environment: macos-release
     permissions:
-      contents: write
+      contents: read
       actions: read
     env:
       APP_BUNDLE: tmp/portable/dist/GUISkinDose.app
@@ -322,6 +330,14 @@ jobs:
           git merge-base --is-ancestor "$TARGET" origin/main
           SUCCESSFUL_RUNS="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow ci.yml --commit "$TARGET" --status completed --json conclusion --jq 'map(select(.conclusion == "success")) | length')"
           test "$SUCCESSFUL_RUNS" -ge 1
+
+      - name: Reject workflow_dispatch off main
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          WORKFLOW_REF: ${{ github.ref }}
+        run: |
+          set -euo pipefail
+          test "$WORKFLOW_REF" = refs/heads/main
 
       - name: Require x86_64 runner
         run: test "$(uname -m)" = x86_64

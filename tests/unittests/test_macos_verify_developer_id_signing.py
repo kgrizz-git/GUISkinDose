@@ -11,6 +11,11 @@ from pathlib import Path
 
 import pytest
 
+pytestmark = pytest.mark.skipif(
+    sys.platform not in ("darwin", "linux"),
+    reason="bash stub codesign/file tests require darwin or linux",
+)
+
 REPO = Path(__file__).resolve().parents[2]
 VERIFY = REPO / "packaging/portable/macos_verify_developer_id_signing.py"
 
@@ -34,6 +39,13 @@ def _write_stub_codesign(bin_dir: Path) -> None:
             fi
             if [[ "${1:-}" == "-dv" ]]; then
               target="${!#}"
+              if [[ -f "${target}.dv_fail" ]]; then
+                exit 1
+              fi
+              if [[ -f "${target}.missing_team" ]]; then
+                echo "Signature=adhoc" >&2
+                exit 0
+              fi
               if [[ -f "${target}.wrong_team" ]]; then
                 echo "TeamIdentifier=WRONGTEAM99" >&2
               elif [[ -f "${target}.forbidden_team" ]]; then
@@ -58,6 +70,10 @@ def _write_stub_codesign(bin_dir: Path) -> None:
               fi
               if [[ -f "${target}.no_jit" ]]; then
                 python3 -c 'import plistlib; print(plistlib.dumps({}).decode())'
+                exit 0
+              fi
+              if [[ -f "${target}.jit_false" ]]; then
+                python3 -c 'import plistlib; print(plistlib.dumps({"com.apple.security.cs.allow-jit": False}).decode())'
                 exit 0
               fi
               if [[ -f "${target}.outer_bad" ]]; then
@@ -234,6 +250,36 @@ def test_verify_failure_counter(tmp_path: Path, monkeypatch: pytest.MonkeyPatch)
     proc = _run_verify(app, tmp_path, monkeypatch)
     assert proc.returncode != 0
     assert _counter(proc.stdout, "verify_failures") >= 1
+
+
+def test_codesign_dv_fail_counts_as_team_mismatch(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    app = _bundle_root(tmp_path)
+    extra = app / "Contents/MacOS/dv_fail_macho"
+    extra.write_bytes(b"\xcf\xfa\xed\xfe")
+    Path(f"{extra}.dv_fail").write_text("1", encoding="utf-8")
+    proc = _run_verify(app, tmp_path, monkeypatch, edition="light", chromium_main_jit="0")
+    assert proc.returncode != 0
+    assert _counter(proc.stdout, "team_mismatch_count") >= 1
+
+
+def test_missing_team_identifier_counts_as_mismatch(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    app = _bundle_root(tmp_path, chromium=False)
+    extra = app / "Contents/MacOS/missing_team_macho"
+    extra.write_bytes(b"\xcf\xfa\xed\xfe")
+    Path(f"{extra}.missing_team").write_text("1", encoding="utf-8")
+    proc = _run_verify(app, tmp_path, monkeypatch, edition="light", chromium_main_jit="0")
+    assert proc.returncode != 0
+    assert _counter(proc.stdout, "team_mismatch_count") >= 1
+
+
+def test_jit_must_be_boolean_true(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    app = _bundle_root(tmp_path)
+    chrom_macos = app / "Contents/Helpers/Chromium.app/Contents/MacOS"
+    helper = chrom_macos.parent.parent / "Helpers/Chromium Helper.app/Contents/MacOS/Chromium Helper"
+    Path(f"{helper}.jit_false").write_text("1", encoding="utf-8")
+    proc = _run_verify(app, tmp_path, monkeypatch, chromium_main_jit="1")
+    assert proc.returncode != 0
+    assert _counter(proc.stdout, "helper_jit_missing_count") >= 1
 
 
 def test_outer_bad_entitlements(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

@@ -38,16 +38,23 @@ def test_portable_macos_release_triggers_and_environment() -> None:
     assert "push" not in on
 
     for job_name in ("sign-macos", "macos-intel-full"):
-        job = wf["jobs"][job_name]
-        assert job["environment"] == "macos-release"
-        perms = job["permissions"]
-        assert perms["contents"] == "write"
-        assert perms["actions"] == "read"
+        assert wf["jobs"][job_name]["environment"] == "macos-release"
+
+    arm_perms = wf["jobs"]["sign-macos"]["permissions"]
+    assert arm_perms["contents"] == "write"
+    assert arm_perms["actions"] == "read"
+    intel_perms = wf["jobs"]["macos-intel-full"]["permissions"]
+    assert intel_perms["contents"] == "read"
+    assert intel_perms["actions"] == "read"
 
     matrix_job = wf["jobs"]["sign-macos"]
     checkout = matrix_job["steps"][0]
     assert checkout["uses"].startswith("actions/checkout@")
     assert checkout["with"]["fetch-depth"] == 0
+
+    for job_name in ("sign-macos", "macos-intel-full"):
+        names = _named_steps(wf["jobs"][job_name])
+        assert "Reject workflow_dispatch off main" in names
 
 
 def test_portable_macos_release_secrets_and_skip_notarize() -> None:

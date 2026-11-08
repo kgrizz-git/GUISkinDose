@@ -22,7 +22,8 @@ def test_notary_key_accepts_pem_or_base64(tmp_path: Path, monkeypatch: pytest.Mo
         out.unlink(missing_ok=True)
         subprocess.run([sys.executable, str(DECODE), "notary"], check=True)
         assert out.is_file()
-        assert stat.S_IMODE(out.stat().st_mode) == 0o600
+        if sys.platform != "win32":
+            assert stat.S_IMODE(out.stat().st_mode) == 0o600
         assert "BEGIN PRIVATE KEY" in out.read_text(encoding="utf-8")
 
 
@@ -44,7 +45,8 @@ def test_p12_accepts_wrapped_base64(tmp_path: Path, monkeypatch: pytest.MonkeyPa
     out = tmp_path / "developer-id.p12"
     out.unlink(missing_ok=True)
     subprocess.run([sys.executable, str(DECODE), "p12"], check=True)
-    assert stat.S_IMODE(out.stat().st_mode) == 0o600
+    if sys.platform != "win32":
+        assert stat.S_IMODE(out.stat().st_mode) == 0o600
     assert out.read_bytes() == payload
 
 

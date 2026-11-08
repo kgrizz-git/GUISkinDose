@@ -3,13 +3,25 @@
 set +e
 set +x
 
+FAILED=0
 RT="${RUNNER_TEMP:-}"
+
+run_cleanup() {
+    local name="$1"
+    shift
+    if ! "$@" 2>/dev/null; then
+        echo "$name" >&2
+        FAILED=1
+    fi
+}
+
 if [[ -n "${KEYCHAIN_PATH:-}" ]]; then
-    security delete-keychain "$KEYCHAIN_PATH" 2>/dev/null
+    run_cleanup delete-keychain security delete-keychain "$KEYCHAIN_PATH"
 fi
-rm -f "${RT}/AuthKey.p8" "${RT}/developer-id.p12" 2>/dev/null
+run_cleanup remove-signing-artifacts rm -f "${RT}/AuthKey.p8" "${RT}/developer-id.p12"
 if [[ -n "${PREV_KEYCHAINS:-}" ]]; then
     # shellcheck disable=SC2086
-    security list-keychains -d user -s $PREV_KEYCHAINS 2>/dev/null
+    run_cleanup restore-keychains security list-keychains -d user -s $PREV_KEYCHAINS
 fi
-exit 0
+
+exit "$FAILED"

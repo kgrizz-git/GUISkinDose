@@ -216,12 +216,22 @@ if [[ "${GUISKINDOSE_NOTARY_DRY_RUN:-0}" == "1" ]]; then
     exit 0
 fi
 
-IDENTITY="${GUISKINDOSE_SIGN_IDENTITY:-}"
-if [[ -z "$IDENTITY" ]]; then
-    IDENTITY="$(security find-identity -v -p codesigning \
-        | sed -n 's/.*"\(Developer ID Application: [^"]*\)".*/\1/p' | head -n 1)"
+if [[ "${GUISKINDOSE_NOTARIZE_ONLY:-0}" == "1" ]]; then
+    :
+else
+    if [[ -d "$CHROMIUM_APP" ]]; then
+        if [[ -z "${GUISKINDOSE_CHROMIUM_HELPER_ENTITLEMENTS:-}" || ! -f "$CHROMIUM_HELPER_ENT" ]]; then
+            echo "Chromium.app is present; set GUISKINDOSE_CHROMIUM_HELPER_ENTITLEMENTS to a readable helper entitlements plist" >&2
+            exit 1
+        fi
+    fi
+    IDENTITY="${GUISKINDOSE_SIGN_IDENTITY:-}"
+    if [[ -z "$IDENTITY" ]]; then
+        IDENTITY="$(security find-identity -v -p codesigning \
+            | sed -n 's/.*"\(Developer ID Application: [^"]*\)".*/\1/p' | head -n 1)"
+    fi
+    [[ -n "$IDENTITY" ]] || { echo "no Developer ID Application identity found" >&2; exit 1; }
 fi
-[[ -n "$IDENTITY" ]] || { echo "no Developer ID Application identity found" >&2; exit 1; }
 
 is_macho() {
     file -b "$1" | grep -q 'Mach-O'

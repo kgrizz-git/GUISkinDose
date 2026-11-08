@@ -18,16 +18,20 @@ class EntitlementsParseError(RuntimeError):
     pass
 
 
-def _team_id(target: Path) -> str:
+def _team_identifier(target: Path) -> tuple[str | None, bool]:
+    """Return (team id or None, True when codesign -dv succeeded)."""
     proc = subprocess.run(["codesign", "-dv", str(target)], capture_output=True, text=True)
+    if proc.returncode != 0:
+        return None, False
     text = (proc.stderr or "") + (proc.stdout or "")
     for line in text.splitlines():
         if "TeamIdentifier=" in line:
-            return line.split("=", 1)[1].strip()
-    return ""
+            tid = line.split("=", 1)[1].strip()
+            return (tid or None), True
+    return None, False
 
 
-def _entitlement_keys(target: Path) -> set[str]:
+def _entitlement_plist(target: Path) -> dict:
     proc = subprocess.run(
         ["codesign", "-d", "--entitlements", "-", "--xml", str(target)],
         capture_output=True,
@@ -41,7 +45,27 @@ def _entitlement_keys(target: Path) -> set[str]:
         data = plistlib.loads(proc.stdout)
     except Exception as exc:
         raise EntitlementsParseError("entitlements xml parse failed") from exc
-    return set(data) if isinstance(data, dict) else set()
+    return data if isinstance(data, dict) else {}
+
+
+def _jit_required(ent: dict) -> bool:
+    return ent.get(JIT_KEY) is True
+
+
+def _record_team(
+    team_mismatch: int,
+    forbidden_hits: int,
+    *,
+    expected: str,
+    forbidden: set[str],
+    tid: str | None,
+    dv_ok: bool,
+) -> tuple[int, int]:
+    if not dv_ok or tid is None or tid != expected:
+        team_mismatch += 1
+    if tid in forbidden:
+        forbidden_hits += 1
+    return team_mismatch, forbidden_hits
 
 
 def main() -> int:
@@ -82,11 +106,15 @@ def main() -> int:
                 bundle_count += 1
                 if subprocess.run(["codesign", "--verify", "--strict", str(path)], capture_output=True).returncode != 0:
                     verify_fail += 1
-                tid = _team_id(path)
-                if tid and tid != expected:
-                    team_mismatch += 1
-                if tid in forbidden:
-                    forbidden_hits += 1
+                tid, dv_ok = _team_identifier(path)
+                team_mismatch, forbidden_hits = _record_team(
+                    team_mismatch,
+                    forbidden_hits,
+                    expected=expected,
+                    forbidden=forbidden,
+                    tid=tid,
+                    dv_ok=dv_ok,
+                )
             continue
         proc = subprocess.run(["file", "-b", str(path)], capture_output=True, text=True)
         if "Mach-O" not in (proc.stdout or ""):
@@ -94,11 +122,15 @@ def main() -> int:
         macho_count += 1
         if subprocess.run(["codesign", "--verify", "--strict", str(path)], capture_output=True).returncode != 0:
             verify_fail += 1
-        tid = _team_id(path)
-        if tid and tid != expected:
-            team_mismatch += 1
-        if tid in forbidden:
-            forbidden_hits += 1
+        tid, dv_ok = _team_identifier(path)
+        team_mismatch, forbidden_hits = _record_team(
+            team_mismatch,
+            forbidden_hits,
+            expected=expected,
+            forbidden=forbidden,
+            tid=tid,
+            dv_ok=dv_ok,
+        )
 
         if not has_chromium or path.parent.name != "MacOS":
             continue
@@ -108,25 +140,27 @@ def main() -> int:
         if app_bundle.suffix != ".app" or not str(path).startswith(str(chromium)):
             continue
         try:
-            keys = _entitlement_keys(path)
+            ent = _entitlement_plist(path)
         except EntitlementsParseError:
             entitlements_parse_fail += 1
             continue
+        ent_keys = set(ent)
         if app_bundle == chromium:
-            if chromium_main_jit and JIT_KEY not in keys:
+            if chromium_main_jit and not _jit_required(ent):
                 helper_jit_missing += 1
-            if not chromium_main_jit and (JIT_KEY in keys or UNSIGNED_KEY in keys):
+            if not chromium_main_jit and (JIT_KEY in ent_keys or UNSIGNED_KEY in ent_keys):
                 outer_bad_ent += 1
-        elif JIT_KEY not in keys:
+        elif not _jit_required(ent):
             helper_jit_missing += 1
 
     if outer_main.is_file():
         try:
-            keys = _entitlement_keys(outer_main)
+            ent = _entitlement_plist(outer_main)
         except EntitlementsParseError:
             entitlements_parse_fail += 1
-            keys = set()
-        if GET_TASK in keys or JIT_KEY in keys or UNSIGNED_KEY in keys:
+            ent = {}
+        ent_keys = set(ent)
+        if GET_TASK in ent_keys or JIT_KEY in ent_keys or UNSIGNED_KEY in ent_keys:
             outer_bad_ent += 1
 
     print(f"verify_macho_count={macho_count}")
