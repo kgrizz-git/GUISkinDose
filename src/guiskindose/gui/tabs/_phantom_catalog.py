@@ -140,7 +140,7 @@ class _PhantomCatalogSection:
     async def install_upload(self, event: Any) -> None:
         """Stream a browser upload into a spool under the size cap, then install it."""
         assert self.status_label is not None
-        # Stream into the spool chunk by chunk, so the cap holds before the whole body is in memory.
+        # NiceGUI has already buffered the upload; the server-side middleware caps that. This cap keeps the spool bounded.
         spool = await run.io_bound(_new_pack_spool)
         if spool is None:
             # run.io_bound returns None when the app is shutting down.

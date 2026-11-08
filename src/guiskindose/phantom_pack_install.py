@@ -380,7 +380,8 @@ def _validate_zip_archive_stream(source: IO[bytes]) -> None:
         _reject_archive()
     if total_entries > _MAX_MEMBERS or cd_size > _MAX_CENTRAL_DIRECTORY_BYTES:
         _reject_archive()
-    # The central directory must sit before the EOCD, so the counts cannot understate it.
+    # The central directory must end exactly at the EOCD, so the counts cannot understate it.
+    # This also refuses self-extracting stubs and trailing data, which the pack builder never writes.
     if cd_offset + cd_size != tail_start + eocd_idx:
         _reject_archive()
 
