@@ -56,7 +56,6 @@ def test_portable_macos_release_triggers_and_environment() -> None:
     assert checkout["with"]["fetch-depth"] == 0
 
 
-
 DISPATCH_GATE = "Require dispatch from main or a v* tag"
 
 
@@ -84,6 +83,62 @@ def test_dispatch_gate_admits_main_and_version_tags(job_name: str, ref: str, adm
     proc = subprocess.run(
         ["bash", "-c", gate["run"]],
         env={"WORKFLOW_REF": ref, "PATH": "/usr/bin:/bin"},
+        capture_output=True,
+        check=False,
+    )
+    assert (proc.returncode == 0) is admitted
+
+
+TAG_GATE = "Require attach tag commit matches checkout"
+
+
+def _git(repo: Path, *args: str) -> str:
+    return subprocess.run(["git", "-C", str(repo), *args], check=True, capture_output=True, text=True).stdout.strip()
+
+
+@pytest.fixture
+def two_commit_repo(tmp_path: Path) -> tuple[Path, str, str]:
+    """A repo whose v1.0.0 tag points at the first of two commits."""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _git(repo, "init", "-q")
+    for n in (1, 2):
+        (repo / "f.txt").write_text(str(n), encoding="utf-8")
+        _git(repo, "add", "f.txt")
+        _git(repo, "-c", "user.name=t", "-c", "user.email=test", "commit", "-q", "-m", f"c{n}")
+        if n == 1:
+            _git(repo, "tag", "v1.0.0")
+    return repo, _git(repo, "rev-parse", "HEAD~1"), _git(repo, "rev-parse", "HEAD")
+
+
+@pytest.mark.skipif(
+    sys.platform == "win32" or shutil.which("bash") is None or shutil.which("git") is None,
+    reason="runs the gate under bash against a scratch git repo",
+)
+@pytest.mark.parametrize(
+    ("tag", "checkout", "admitted"),
+    [
+        ("v1.0.0", "tagged", True),
+        ("v1.0.0", "later", False),
+        ("v9.9.9", "tagged", False),
+        ("not-a-tag", "tagged", False),
+    ],
+)
+def test_attach_tag_gate_requires_matching_commit(
+    two_commit_repo: tuple[Path, str, str], tag: str, checkout: str, admitted: bool
+) -> None:
+    repo, tagged, later = two_commit_repo
+    wf = _load(RELEASE_WF)
+    gate = next(s for s in wf["jobs"]["sign-macos"]["steps"] if s.get("name") == TAG_GATE)
+    assert gate["env"]["ATTACH_TO_TAG"] == "${{ inputs.attach_to_tag }}"
+    proc = subprocess.run(
+        ["bash", "-c", gate["run"]],
+        cwd=repo,
+        env={
+            "ATTACH_TO_TAG": tag,
+            "GITHUB_SHA": tagged if checkout == "tagged" else later,
+            "PATH": "/usr/bin:/bin:/usr/local/bin:/opt/homebrew/bin",
+        },
         capture_output=True,
         check=False,
     )

@@ -276,13 +276,17 @@ def test_missing_team_identifier_counts_as_mismatch(tmp_path: Path, monkeypatch:
     assert _counter(proc.stdout, "team_mismatch_count") >= 1
 
 
+@pytest.mark.parametrize("target", ["main", "helper"])
 @pytest.mark.parametrize("marker", ["jit_false", "jit_int"])
-def test_jit_must_be_boolean_true(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, marker: str) -> None:
+def test_jit_must_be_boolean_true(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, marker: str, target: str) -> None:
     """A plist <false/> or <integer>1</integer> is not the <true/> the hardened runtime needs."""
     app = _bundle_root(tmp_path)
     chrom_macos = app / "Contents/Helpers/Chromium.app/Contents/MacOS"
-    helper = chrom_macos.parent.parent / "Helpers/Chromium Helper.app/Contents/MacOS/Chromium Helper"
-    Path(f"{helper}.{marker}").write_text("1", encoding="utf-8")
+    if target == "main":
+        binary = chrom_macos / "Chromium"
+    else:
+        binary = chrom_macos.parent.parent / "Helpers/Chromium Helper.app/Contents/MacOS/Chromium Helper"
+    Path(f"{binary}.{marker}").write_text("1", encoding="utf-8")
     proc = _run_verify(app, tmp_path, monkeypatch, chromium_main_jit="1")
     assert proc.returncode != 0
     assert _counter(proc.stdout, "helper_jit_missing_count") >= 1
