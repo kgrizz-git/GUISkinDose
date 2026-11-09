@@ -1,6 +1,6 @@
 # macOS release signing plan
 
-_Status: complete. Actions run [42653026211](https://github.com/kgrizz-git/GUISkinDose/actions/runs/42653026211) on commit `151ca2ed` (2026-11-09) signed, notarized, and stapled Light arm64, Full arm64, and Full x64. A browser-downloaded Full arm64 zip opened from Finder after the standard quarantine prompt, then calculated and exported PNG and PDF. Parent item: the open Phase 1 checkbox in [PORTABLE_APP_PLAN.md](../PORTABLE_APP_PLAN.md)._
+_Status: complete. Actions run [42653026211](https://github.com/kgrizz-git/GUISkinDose/actions/runs/42653026211) on commit `151ca2ed` (2026-11-09) signed, notarized, and stapled Light arm64, Full arm64, and Full x64. A browser-downloaded Full arm64 zip opened from Finder after the standard quarantine prompt, then calculated and exported PNG and PDF. Parent item: the Phase 1 release-signing checkbox in [PORTABLE_APP_PLAN.md](../PORTABLE_APP_PLAN.md)._
 
 Public macOS zips are signed, notarized, and stapled with the Phase 0b recipe. Every nested Mach-O, including the bundled browser, is re-signed with our Developer ID Application certificate. Signing secrets live in the GitHub environment `macos-release` and are read only by the release signing job.
 
@@ -15,7 +15,7 @@ Phase 0b (2026-11-01, arm64, macOS 26) notarized a Light `GUISkinDose.app`. The 
 | Entitlements | `packaging/portable/macos_entitlements.plist` | Empty dictionary. The Light Developer ID build needed no extra key. |
 | Ad-hoc CI | `.github/workflows/portable-spike.yml` | `macos-15` builds Light and Full arm64. Full copies Chromium to `Contents/Helpers/Chromium.app`, notices to `Contents/Resources/chromium/`, and re-signs with identity `-` and no hardened runtime. Header comment: no release signing or notarization. |
 | PyPI release | `.github/workflows/release.yml` | `release: types: [published]`. Workflow and job both set `actions: read`. Checkout is `fetch-depth: 0`. The CI gate step sets `GH_TOKEN` and runs `gh run list`. No macOS runner and no signing secrets. |
-| Full layout proof | [archive/PORTABLE_MAC_LINUX_CI_BUILDS_PLAN.md](PORTABLE_MAC_LINUX_CI_BUILDS_PLAN.md) | Actions run [42339804464](https://github.com/kgrizz-git/GUISkinDose/actions/runs/42339804464). Frozen Full `--png-check` passed before and after the ad-hoc re-sign. Developer ID notarization of that layout is still open. |
+| Full layout proof | [archive/PORTABLE_MAC_LINUX_CI_BUILDS_PLAN.md](PORTABLE_MAC_LINUX_CI_BUILDS_PLAN.md) | Actions run [42339804464](https://github.com/kgrizz-git/GUISkinDose/actions/runs/42339804464). Frozen Full `--png-check` passed before and after the ad-hoc re-sign. Developer ID notarization of that layout passed in run [42653026211](https://github.com/kgrizz-git/GUISkinDose/actions/runs/42653026211). |
 
 Phase 0b measurements for Light: 210 Mach-O files, 23 s to sign, about 35 minutes (`2103 s`) in `notarytool submit --wait`, stapled zip 100.4 MB. `codesign --verify --deep --strict`, `xcrun stapler validate`, and `spctl -a -t exec -vv` (`accepted, source=Notarized Developer ID`) passed. A universal2 build is impractical. An x86_64 build needs an Intel runner.
 
