@@ -94,7 +94,13 @@ TAG_GATE = "Require attach tag commit matches checkout"
 
 
 # Ignore the developer's global and system git config, so tag or commit signing cannot prompt or hang.
-_HERMETIC_GIT_ENV = {**os.environ, "GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_NOSYSTEM": "1"}
+# Also drop repo-locating variables, which a git hook or rebase --exec can export.
+_GIT_REPO_VARS = {"GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_OBJECT_DIRECTORY", "GIT_COMMON_DIR"}
+_HERMETIC_GIT_ENV = {
+    **{k: v for k, v in os.environ.items() if k not in _GIT_REPO_VARS},
+    "GIT_CONFIG_GLOBAL": os.devnull,
+    "GIT_CONFIG_NOSYSTEM": "1",
+}
 
 
 def _git(repo: Path, *args: str) -> str:
