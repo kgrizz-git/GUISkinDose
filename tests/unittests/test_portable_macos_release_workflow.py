@@ -1,5 +1,6 @@
 """Static checks for the macOS release signing workflow (no codesign or notary on the runner)."""
 
+import os
 import shutil
 import subprocess
 import sys
@@ -92,8 +93,20 @@ def test_dispatch_gate_admits_main_and_version_tags(job_name: str, ref: str, adm
 TAG_GATE = "Require attach tag commit matches checkout"
 
 
+# Ignore the developer's global and system git config, so tag or commit signing cannot prompt or hang.
+_HERMETIC_GIT_ENV = {**os.environ, "GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_NOSYSTEM": "1"}
+
+
 def _git(repo: Path, *args: str) -> str:
-    return subprocess.run(["git", "-C", str(repo), *args], check=True, capture_output=True, text=True).stdout.strip()
+    return subprocess.run(
+        ["git", "-C", str(repo), *args],
+        check=True,
+        capture_output=True,
+        text=True,
+        env=_HERMETIC_GIT_ENV,
+        stdin=subprocess.DEVNULL,
+        timeout=30,
+    ).stdout.strip()
 
 
 @pytest.fixture
@@ -138,7 +151,11 @@ def test_attach_tag_gate_requires_matching_commit(
             "ATTACH_TO_TAG": tag,
             "GITHUB_SHA": tagged if checkout == "tagged" else later,
             "PATH": "/usr/bin:/bin:/usr/local/bin:/opt/homebrew/bin",
+            "GIT_CONFIG_GLOBAL": os.devnull,
+            "GIT_CONFIG_NOSYSTEM": "1",
         },
+        stdin=subprocess.DEVNULL,
+        timeout=30,
         capture_output=True,
         check=False,
     )
