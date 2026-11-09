@@ -12,7 +12,7 @@ This page is the map. Detailed how-tos stay in the linked sources of truth.
 | **Python package** (`pip install guiskindose`) | Primary path; published to PyPI from `1.1.0` | [PUBLISHING.md](../PUBLISHING.md), `.github/workflows/release.yml` |
 | **GitHub Release** (tag + notes + optional assets) | Maintainer-triggered; drives the PyPI workflow when a Release is published | This page § Cutting a release; [FORK_MAINTAINER_GUIDE.md](FORK_MAINTAINER_GUIDE.md) §6 |
 | **Source / editable install** | Developer path; users install from PyPI | [README.md](../README.md), [AGENTS.md](../AGENTS.md) |
-| **Portable GUI executable** (PyInstaller / `nicegui-pack`) | In progress — Phase 0 Windows freeze spike landed; nothing published yet | [plans/PORTABLE_APP_PLAN.md](plans/PORTABLE_APP_PLAN.md) |
+| **Portable GUI executable** (PyInstaller / `nicegui-pack`) | In progress — ad-hoc spikes in `portable-spike.yml`; published macOS staples from `portable-macos-release.yml` when attached to a `v*` release | [plans/PORTABLE_APP_PLAN.md](plans/PORTABLE_APP_PLAN.md) |
 
 **Non-goals:** a single binary for all OSes; committing built executables to git; wrapping the stack for the JVM (call CLI/API from Java instead — see the portable-exec note).
 
@@ -83,7 +83,11 @@ If the Trusted Publisher registration is ever removed, the publish step fails ra
 
 Frozen desktop apps are an optional channel for non-Python users. The execution plan is
 [plans/PORTABLE_APP_PLAN.md](plans/PORTABLE_APP_PLAN.md): a per-OS onedir zip, a Light build and a Full build, then a user phantom library. Feasibility and the Java non-goal stay in
-[references/PORTABLE_EXECUTABLE_PACKAGING.md](references/PORTABLE_EXECUTABLE_PACKAGING.md). Phase 0 (a Windows freeze spike with a CI self-check) has landed; nothing is published yet.
+[references/PORTABLE_EXECUTABLE_PACKAGING.md](references/PORTABLE_EXECUTABLE_PACKAGING.md). Phase 0 (a Windows freeze spike with a CI self-check) has landed.
+
+**macOS release downloads:** when a GitHub Release lists them, the assets are Developer ID signed,
+notarized, stapled zips from [.github/workflows/portable-macos-release.yml](../.github/workflows/portable-macos-release.yml)
+(`GUISkinDose-<edition>-macos-arm64.zip` plus a `.sha256` sidecar). Spike workflow artifacts are ad-hoc signed and expire after seven days — they are not release substitutes.
 
 ## Related docs
 

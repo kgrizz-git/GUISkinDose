@@ -11,6 +11,7 @@
 #
 # Optional:
 #   GUISKINDOSE_CI_OUT  Directory for copied reports (default: out)
+#   GUISKINDOSE_SKIP_ADHOC_RESIGN=1  Copy, verify, and notices only (release signing path)
 #
 # Writes counts and relative browser path names to stdout and appends CI env keys
 # to GITHUB_ENV when set. Never prints absolute paths.
@@ -94,6 +95,12 @@ echo "credits_product_entries=${libs}"
 append_env "CREDITS_PRODUCTS=${libs}"
 
 rm -rf "$dl" "$mount_dir"
+
+if [[ "${GUISKINDOSE_SKIP_ADHOC_RESIGN:-0}" == "1" ]]; then
+    echo "skip_adhoc_resign=true"
+    append_env "SKIP_ADHOC_RESIGN=true"
+    exit 0
+fi
 
 mkdir -p "$CI_OUT"
 export PNG_CHECK_LABEL=pre_resign
