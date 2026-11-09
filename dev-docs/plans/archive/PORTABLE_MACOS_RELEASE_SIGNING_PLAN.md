@@ -1,6 +1,6 @@
 # macOS release signing plan
 
-_Status: implemented on branch; awaiting first green `workflow_dispatch` run id before the parent checkbox and archival. Parent item: the open Phase 1 checkbox in [PORTABLE_APP_PLAN.md](PORTABLE_APP_PLAN.md)._
+_Status: complete. Actions run [42653026211](https://github.com/kgrizz-git/GUISkinDose/actions/runs/42653026211) on commit `151ca2ed` (2026-11-09) signed, notarized, and stapled Light arm64, Full arm64, and Full x64. A browser-downloaded Full arm64 zip opened from Finder after the standard quarantine prompt, then calculated and exported PNG and PDF. Parent item: the open Phase 1 checkbox in [PORTABLE_APP_PLAN.md](../PORTABLE_APP_PLAN.md)._
 
 Public macOS zips are signed, notarized, and stapled with the Phase 0b recipe. Every nested Mach-O, including the bundled browser, is re-signed with our Developer ID Application certificate. Signing secrets live in the GitHub environment `macos-release` and are read only by the release signing job.
 
@@ -15,7 +15,7 @@ Phase 0b (2026-11-01, arm64, macOS 26) notarized a Light `GUISkinDose.app`. The 
 | Entitlements | `packaging/portable/macos_entitlements.plist` | Empty dictionary. The Light Developer ID build needed no extra key. |
 | Ad-hoc CI | `.github/workflows/portable-spike.yml` | `macos-15` builds Light and Full arm64. Full copies Chromium to `Contents/Helpers/Chromium.app`, notices to `Contents/Resources/chromium/`, and re-signs with identity `-` and no hardened runtime. Header comment: no release signing or notarization. |
 | PyPI release | `.github/workflows/release.yml` | `release: types: [published]`. Workflow and job both set `actions: read`. Checkout is `fetch-depth: 0`. The CI gate step sets `GH_TOKEN` and runs `gh run list`. No macOS runner and no signing secrets. |
-| Full layout proof | [archive/PORTABLE_MAC_LINUX_CI_BUILDS_PLAN.md](archive/PORTABLE_MAC_LINUX_CI_BUILDS_PLAN.md) | Actions run [42339804464](https://github.com/kgrizz-git/GUISkinDose/actions/runs/42339804464). Frozen Full `--png-check` passed before and after the ad-hoc re-sign. Developer ID notarization of that layout is still open. |
+| Full layout proof | [archive/PORTABLE_MAC_LINUX_CI_BUILDS_PLAN.md](PORTABLE_MAC_LINUX_CI_BUILDS_PLAN.md) | Actions run [42339804464](https://github.com/kgrizz-git/GUISkinDose/actions/runs/42339804464). Frozen Full `--png-check` passed before and after the ad-hoc re-sign. Developer ID notarization of that layout is still open. |
 
 Phase 0b measurements for Light: 210 Mach-O files, 23 s to sign, about 35 minutes (`2103 s`) in `notarytool submit --wait`, stapled zip 100.4 MB. `codesign --verify --deep --strict`, `xcrun stapler validate`, and `spctl -a -t exec -vv` (`accepted, source=Notarized Developer ID`) passed. A universal2 build is impractical. An x86_64 build needs an Intel runner.
 
@@ -145,7 +145,7 @@ Add `GUISKINDOSE_ZIP_NAME` so the stapled archive is `GUISkinDose-<edition>-maco
 
 The outer app and the Python framework stay on the empty `macos_entitlements.plist` until a signed Light or outer-app crash names a key. That is the Phase 0b Light result. A shared Team ID satisfies library validation, so `disable-library-validation` is not added. The ad-hoc spike needed that key only because identity `-` has no Team ID. Hardened runtime is `--options runtime` on every `codesign`. It is not an entitlement key. `Info.plist` ATS already allows local networking. Phase 0b Light reached `127.0.0.1` through WebKit without `com.apple.security.network.client`. Leave that key off unless a signed build fails to open the local page.
 
-If that crash happens, add the named key on the main executable that crashed, through `GUISKINDOSE_ENTITLEMENTS`, and record it in [PORTABLE_APP_PLAN.md](PORTABLE_APP_PLAN.md). Do not spread it onto dylibs or the Chromium helper plist.
+If that crash happens, add the named key on the main executable that crashed, through `GUISKINDOSE_ENTITLEMENTS`, and record it in [PORTABLE_APP_PLAN.md](../PORTABLE_APP_PLAN.md). Do not spread it onto dylibs or the Chromium helper plist.
 
 Chromium helpers are the exception. Hardened runtime refuses the writable executable memory V8 uses unless the helper's main executable carries `com.apple.security.cs.allow-jit` or `com.apple.security.cs.allow-unsigned-executable-memory`. The repo does not record which of those keys the pinned `156.0.8078.79-1.1` helpers already have. Before re-signing, on each helper `.app` main executable under `Contents/Helpers/Chromium.app` (Renderer, GPU, and the other `Chromium Helper*.app` bundles) and on `Chromium.app/Contents/MacOS/Chromium`, run `codesign -d --entitlements -` and log the key names only.
 
@@ -270,12 +270,12 @@ New Python stays within the complexity gate. New shell stays a thin sequence of 
 
 | Doc | Change |
 |---|---|
-| [PORTABLE_APP_PLAN.md](PORTABLE_APP_PLAN.md) | Tick the Phase 1 signing checkbox only after a green release or rehearsal run id exists. Record Full entitlements, or the decision to drop offline PNG. Replace the Phase 0b sentence that says there is no macOS CI job. Ad-hoc CI already exists. This plan is the Developer ID job. |
-| [RELEASES_AND_DISTRIBUTION.md](../RELEASES_AND_DISTRIBUTION.md) | Say the published macOS downloads are the stapled zips from this workflow. Spike artifacts are ad-hoc and expire. |
-| [MAINTENANCE_LOG.md](../MAINTENANCE_LOG.md) | Record the workflow, the keychain lifetime, and the run id. |
+| [PORTABLE_APP_PLAN.md](../PORTABLE_APP_PLAN.md) | Tick the Phase 1 signing checkbox only after a green release or rehearsal run id exists. Record Full entitlements, or the decision to drop offline PNG. Replace the Phase 0b sentence that says there is no macOS CI job. Ad-hoc CI already exists. This plan is the Developer ID job. |
+| [RELEASES_AND_DISTRIBUTION.md](../../RELEASES_AND_DISTRIBUTION.md) | Say the published macOS downloads are the stapled zips from this workflow. Spike artifacts are ad-hoc and expire. |
+| [MAINTENANCE_LOG.md](../../MAINTENANCE_LOG.md) | Record the workflow, the keychain lifetime, and the run id. |
 | `CHANGELOG.md` | When the first release actually attaches the zips, one user-facing note: macOS downloads are notarized, Light has no PNG dose map, the app is not FDA-cleared. |
-| [TO_DO.md](../TO_DO.md) | Drop the "macOS release signing" clause from the portable item in that same PR. |
-| This file and [index.md](../index.md) | Point the status at the run id. Archive this plan when the parent checkbox is ticked. |
+| [TO_DO.md](../../TO_DO.md) | Drop the "macOS release signing" clause from the portable item in that same PR. |
+| This file and [index.md](../../index.md) | Point the status at the run id. Archive this plan when the parent checkbox is ticked. |
 
 Release notes name the zip files, the edition, and the architecture. They state that Light has no PNG dose map and that the app is not FDA-cleared. That copy is the parent plan's smoke bullet. This job does not write the notes by itself.
 

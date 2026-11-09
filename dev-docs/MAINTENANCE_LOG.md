@@ -8,6 +8,11 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ## [Unreleased]
 
+- **macOS release signing complete** — First green `portable-macos-release` dispatch (Actions run [42653026211](https://github.com/kgrizz-git/GUISkinDose/actions/runs/42653026211) on commit `151ca2ed` (2026-11-09)) produced
+  notarized, stapled Light arm64, Full arm64, and Full x64 zips. Ticked the Phase 1 checkboxes in
+  [plans/PORTABLE_APP_PLAN.md](plans/PORTABLE_APP_PLAN.md) and archived
+  [plans/archive/PORTABLE_MACOS_RELEASE_SIGNING_PLAN.md](plans/archive/PORTABLE_MACOS_RELEASE_SIGNING_PLAN.md).
+
 - **macOS release signing workflow (implementation)** — Added `.github/workflows/portable-macos-release.yml`
   (`sign-macos` arm64 Light/Full matrix plus optional Intel Full dispatch), extended
   `packaging/portable/macos_sign_notarize.sh` (sign-only / notarize-only split, selective entitlements,
@@ -17,7 +22,7 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
   the job imports the `.p12` into a throwaway keychain and restores the search list on `if: always()` teardown.
   A green `workflow_dispatch` run id is still required before the parent Phase 1 checkbox and release asset attach.
 
-- **macOS release signing plan** — Execution plan for Developer ID sign, notarize, and staple of Light and Full arm64 zips: [plans/PORTABLE_MACOS_RELEASE_SIGNING_PLAN.md](plans/PORTABLE_MACOS_RELEASE_SIGNING_PLAN.md).
+- **macOS release signing plan** — Execution plan for Developer ID sign, notarize, and staple of Light and Full arm64 zips: [plans/archive/PORTABLE_MACOS_RELEASE_SIGNING_PLAN.md](plans/archive/PORTABLE_MACOS_RELEASE_SIGNING_PLAN.md).
 
 - **Phantom packs Phase 2 (Steps 0–7)** — Two-root STL resolution, manifest/pin/install pipeline, CLI and Settings install, catalog rows, docs/help registries, `scripts/build_phantom_pack.py`, and unit/GUI/e2e tests (`test_phantom_pack_*`).
 

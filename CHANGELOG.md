@@ -21,6 +21,7 @@ That keeps SemVer and contributor history organized.
 
 ### Added
 
+- Signed and notarized **macOS portable app** zips (Light and Full for Apple silicon). They open from Finder after the standard "downloaded from the Internet" prompt.
 - Optional **phantom pack** zip install for clinical meshes (headless `--install-phantom-pack` and Settings catalog UI). Shipped meshes take precedence over the per-user library.
 
 ### Fixed
@@ -85,6 +86,7 @@ loadable example, and raises the pypdf floor for this week's advisories.
 
 ### Added
 
+- Signed and notarized **macOS portable app** zips (Light and Full for Apple silicon). They open from Finder after the standard "downloaded from the Internet" prompt.
 - A new `equipment_profile_loadable_example` (JSON and CSV) is an exact-model, coordinate-only profile that passes today's capability gate, so users have a filled example they can copy and load. A test keeps it loadable. The existing filled examples preview the full schema and are still rejected by the gate.
 
 ### Changed
@@ -207,6 +209,7 @@ First GUISkinDose release prepared for PyPI publication. Version `1.0.0` was the
 
 ### Added
 
+- Signed and notarized **macOS portable app** zips (Light and Full for Apple silicon). They open from Finder after the standard "downloaded from the Internet" prompt.
 - **Double-click launchers** (2026-10-19) — `GUISkinDose.command` starts the GUI from Finder on macOS.
   On first run, `run_gui.sh` / `run_gui.bat` give it the app icon (macOS) or create a git-ignored
   `GUISkinDose.lnk` (Windows) or `GUISkinDose.desktop` (Linux) with the icon. Set
@@ -503,6 +506,7 @@ First GUISkinDose release prepared for PyPI publication. Version `1.0.0` was the
 
 ### Added
 
+- Signed and notarized **macOS portable app** zips (Light and Full for Apple silicon). They open from Finder after the standard "downloaded from the Internet" prompt.
 - **Tabular import coordinate overrides on CLI and Python API** (2026-10-08) — headless runs and
   library callers can apply the same post-normalization expert overrides as the GUI upload preview:
   `Tx ↔ Tz` (`--swap-lat-lon` / `swap_lat_lon`), `Ap1×−1` (`--flip-ap1` / `flip_ap1`), and
@@ -830,6 +834,7 @@ First GUISkinDose release prepared for PyPI publication. Version `1.0.0` was the
 
 ### Added
 
+- Signed and notarized **macOS portable app** zips (Light and Full for Apple silicon). They open from Finder after the standard "downloaded from the Internet" prompt.
 - **Correction-data manifest** (2026-09-18) — new machine-readable
   `src/guiskindose/table_data/correction_data_manifest.json` inventorying every
   correction CSV (schema, units, ranges, runtime consumer, provenance with
@@ -1124,6 +1129,7 @@ First GUISkinDose release prepared for PyPI publication. Version `1.0.0` was the
 
 ### Added
 
+- Signed and notarized **macOS portable app** zips (Light and Full for Apple silicon). They open from Finder after the standard "downloaded from the Internet" prompt.
 ### Fixed
 
 - **GHSA-763m-79hh-57f2 / GHSA-23w6-3w8w-8484 / GHSA-jp53-mhqp-8xcg: bumped core `pypdf`** (2026-09-01) —
@@ -1286,6 +1292,7 @@ First GUISkinDose release prepared for PyPI publication. Version `1.0.0` was the
 
 ### Added
 
+- Signed and notarized **macOS portable app** zips (Light and Full for Apple silicon). They open from Finder after the standard "downloaded from the Internet" prompt.
 - **Kerma-meter correction factors** (2026-07-26) — optional per-(equipment × tube)
   calibration `CF = (real measured dose) / (unit reported dose)` applied to reported
   `K_IRP` before physics corrections. Lookup via CSV/TSV/XLSX/JSON or GUI prompt;
@@ -1315,6 +1322,7 @@ First GUISkinDose release prepared for PyPI publication. Version `1.0.0` was the
   `kerma_meter_correction` / `kerma_corrected` to be both provided or both omitted.
 ### Added
 
+- Signed and notarized **macOS portable app** zips (Light and Full for Apple silicon). They open from Finder after the standard "downloaded from the Internet" prompt.
 - **`_reduced_3000t` phantom preview companions** (2026-07-24) — ~3k-face reduced STLs for all
   shipped clinical human meshes (alongside existing `_reduced_1000t`). Settings preview and
   `plot_procedure` prefer `_reduced_3000t` when present; dose still uses the full STL.
@@ -1364,6 +1372,7 @@ First GUISkinDose release prepared for PyPI publication. Version `1.0.0` was the
 
 ### Added
 
+- Signed and notarized **macOS portable app** zips (Light and Full for Apple silicon). They open from Finder after the standard "downloaded from the Internet" prompt.
 - **Phantom mesh naming convention** (2026-07-23) — Canonical stems `ped_*`, `adult_ecto/endo_*`,
   `adult_bariatric_{sex}_{1,2,3}`, `demo_*`; legacy aliases resolve in Phantom / preview / Settings.
   Kept `adult_male` / `junior_*` / `hudfrid`. SemVer: **minor** on release.
@@ -1478,6 +1487,7 @@ First GUISkinDose release prepared for PyPI publication. Version `1.0.0` was the
 
 ### Added
 
+- Signed and notarized **macOS portable app** zips (Light and Full for Apple silicon). They open from Finder after the standard "downloaded from the Internet" prompt.
 - **Clothed + Steamboat demo phantoms plan** (2026-07-22) —
   `dev-docs/plans/archive/DEMO_PHANTOMS_CLOTHED_AND_STEAMBOAT_PLAN.md` to ship Cosmic Buddha (**CC0**), Petite
   Herculanaise (**CC BY-SA**), Ramesses II (**CC BY 4.0**), and Steamboat Willie (**CC BY 4.0**) with
@@ -1532,6 +1542,7 @@ First GUISkinDose release prepared for PyPI publication. Version `1.0.0` was the
 
 ### Added
 
+- Signed and notarized **macOS portable app** zips (Light and Full for Apple silicon). They open from Finder after the standard "downloaded from the Internet" prompt.
 - **Parametric human phantom library (MPFB)** — ten new full-body meshes with male/female pairs:
   `pediatric_5y_*`, `pediatric_10y_*`, `adult_ectomorph_*`, `adult_endomorph_*`, `bariatric_class2_*`
   (plus `*_reduced_1000t` previews). Generated via headless Blender/MPFB true-shape targets
@@ -1587,6 +1598,7 @@ First GUISkinDose release prepared for PyPI publication. Version `1.0.0` was the
 
 ### Added
 
+- Signed and notarized **macOS portable app** zips (Light and Full for Apple silicon). They open from Finder after the standard "downloaded from the Internet" prompt.
 - **Header-aware unit detection for tabular input** (2026-07-19) — the `radimetrics` and `dosetrack`
   adapters now read each field's physical unit from its source column header (reference-point dose,
   collimated field area, tube current, exposure, source-to-detector/isocenter distances, table
@@ -1718,6 +1730,7 @@ First GUISkinDose release prepared for PyPI publication. Version `1.0.0` was the
 
 ### Added
 
+- Signed and notarized **macOS portable app** zips (Light and Full for Apple silicon). They open from Finder after the standard "downloaded from the Internet" prompt.
 - **Multi-exam per-exam dose map controls** (2026-07-11) — added inline interactive 3D dose map checkboxes per exam row inside the multi-exam Results accordion (`results.py`), capped at 5 simultaneous inline maps via a memory guard (`MAX_INLINE_MAPS = 5`). Added a visible exams subset selector card allowing users to select specific exams (`All` / `None` / per-exam checkboxes) to dynamically recompute aggregate Peak Skin Dose and update the aggregate dose map plot for the selected subset.
 
 - **Local CI gate and reproducible CI installs** (2026-07-07) — `scripts/ci_local.py` runs the CI
@@ -1850,6 +1863,7 @@ First GUISkinDose release prepared for PyPI publication. Version `1.0.0` was the
 
 ### Added
 
+- Signed and notarized **macOS portable app** zips (Light and Full for Apple silicon). They open from Finder after the standard "downloaded from the Internet" prompt.
 - **Rich Report Export** (2026-07-02) — new `mypyskindose.export` package produces a single
   self-contained audit document (**XLSX / PDF / HTML / DOCX**) from a completed dose calculation,
   bundling dosimetric results, effective settings, input provenance (DICOM RDSR + tabular
@@ -1945,6 +1959,7 @@ First GUISkinDose release prepared for PyPI publication. Version `1.0.0` was the
 
 ### Added
 
+- Signed and notarized **macOS portable app** zips (Light and Full for Apple silicon). They open from Finder after the standard "downloaded from the Internet" prompt.
 - **Ignored asset advisory check** (2026-06-24): `scripts/check_ignored_asset_files.py` warns (pre-commit hook; `--strict` to fail) when `.png` or `.html` files outside `PlotOutputs/` are untracked or gitignored, including tracked-but-ignored paths that can be dropped from version control while `*.png` / `*.html` remain in `.gitignore`. Restored `wiki/*.png` illustrations after accidental untracking in commit `e856ccd`.
 
 - **User options for below-floor kVp events** (2026-06-19): events with a kVp below the 25 kV HVL table floor can now be handled by an explicit policy instead of being silently clamped. A new setting `below_floor_kvp_policy ∈ {snap (default), skip, manual, exam_average}` (+ `below_floor_kvp_manual`) is applied per exam in `geom_calc.apply_below_floor_kvp_policy()`, called at the top of `calculate_dose()` before the HVL lookup: `snap` keeps the status quo (clamp + flag), `skip` drops the events, `manual` substitutes a fixed kVp, and `exam_average` substitutes that exam's mean in-floor kVp (falls back to `snap` + warns if an exam is all below floor). `geom_calc.count_below_floor_events()` detects affected events; every policy emits a `logger.warning` → `state.calc_warnings`. GUI: a "Below-floor kVp handling" control under Physics settings (`gui/tabs/settings.py`) holds the persistent default, and a pre-calc prompt (`gui/app.py`) appears only when sub-floor events are detected, offering the policy + "don't ask again". Defaults preserve existing results (`snap`). Wired through `PyskindoseSettings`, `settings_example.json`, and `gui/helpers.build_settings`. Tests in `tests/unittests/test_geom_calc.py` (per-policy transforms, detection, all-below fallback) and `tests/unittests/test_gui_below_floor_kvp.py` (detection sum, settings propagation). Completes `dev-docs/plans/archive/hvl-interpolation-and-below-floor-kvp.md`.
@@ -2017,6 +2032,7 @@ First GUISkinDose release prepared for PyPI publication. Version `1.0.0` was the
 
 ### Added
 
+- Signed and notarized **macOS portable app** zips (Light and Full for Apple silicon). They open from Finder after the standard "downloaded from the Internet" prompt.
 - MyPySkinDose fork baseline: peak skin dose estimation and 3D skin dose maps from fluoroscopic RDSR data.
 - NiceGUI application (`python -m mypyskindose --mode gui`).
 
