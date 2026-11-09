@@ -94,8 +94,16 @@ TAG_GATE = "Require attach tag commit matches checkout"
 
 
 # Ignore the developer's global and system git config, so tag or commit signing cannot prompt or hang.
-# Also drop repo-locating variables, which a git hook or rebase --exec can export.
-_GIT_REPO_VARS = {"GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_OBJECT_DIRECTORY", "GIT_COMMON_DIR"}
+# Also drop repo-locating and command-scope config variables, which a git hook or rebase --exec can export.
+_GIT_REPO_VARS = {
+    "GIT_DIR",
+    "GIT_WORK_TREE",
+    "GIT_INDEX_FILE",
+    "GIT_OBJECT_DIRECTORY",
+    "GIT_COMMON_DIR",
+    "GIT_CONFIG_COUNT",
+    "GIT_CONFIG_PARAMETERS",
+}
 _HERMETIC_GIT_ENV = {
     **{k: v for k, v in os.environ.items() if k not in _GIT_REPO_VARS},
     "GIT_CONFIG_GLOBAL": os.devnull,
@@ -149,16 +157,16 @@ def test_attach_tag_gate_requires_matching_commit(
     repo, tagged, later = two_commit_repo
     wf = _load(RELEASE_WF)
     gate = next(s for s in wf["jobs"]["sign-macos"]["steps"] if s.get("name") == TAG_GATE)
+    assert gate["if"] == "github.event_name == 'workflow_dispatch' && inputs.attach_to_tag != ''"
     assert gate["env"]["ATTACH_TO_TAG"] == "${{ inputs.attach_to_tag }}"
     proc = subprocess.run(
         ["bash", "-c", gate["run"]],
         cwd=repo,
         env={
+            **_HERMETIC_GIT_ENV,
             "ATTACH_TO_TAG": tag,
             "GITHUB_SHA": tagged if checkout == "tagged" else later,
-            "PATH": "/usr/bin:/bin:/usr/local/bin:/opt/homebrew/bin",
-            "GIT_CONFIG_GLOBAL": os.devnull,
-            "GIT_CONFIG_NOSYSTEM": "1",
+            "PATH": os.environ.get("PATH", os.defpath),
         },
         stdin=subprocess.DEVNULL,
         timeout=30,
