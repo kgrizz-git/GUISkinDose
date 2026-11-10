@@ -49,8 +49,8 @@ Release process lives in the parent hub and [PUBLISHING.md](../../PUBLISHING.md)
    and Full onedir zips. Default matrix legs passed on Actions run
    [42339804464](https://github.com/kgrizz-git/GUISkinDose/actions/runs/42339804464) (2026-11-07). See
    [archive/PORTABLE_MAC_LINUX_CI_BUILDS_PLAN.md](../plans/archive/PORTABLE_MAC_LINUX_CI_BUILDS_PLAN.md).
-   Artifacts expire after seven days and are not committed. macOS release Developer ID signing,
-   optional Intel macOS dispatch, and notarization stay in the parent plan.
+   Artifacts expire after seven days and are not committed. macOS Developer ID signing and
+   notarization passed on run 42653026211. The optional Intel macOS Full leg passed on run 42745712842.
 6. **Smoke & checks:** Windows Full smokes offline PNG with `GUISkinDose.exe --png-check`. Light proves
    PNG never starts: `to_image` call count stays 0 on every OS. macOS and Linux Full jobs run the same
    frozen `--png-check` assertions as Windows on run 42339804464, with a decoy `BROWSER_PATH` and (on
@@ -76,7 +76,7 @@ Windows AV false positives, and ongoing rebuild cost when dependencies change.
 - The Windows spike and package-data proof are done (`--self-check` opens data through `importlib.resources`).
   A default corrections path resolves to packaged data, and a file named `corrections.db` in the working directory is ignored.
 - Per-OS release smoke is still open. That includes a zip downloaded through a browser, so Mark of the Web and macOS quarantine are present.
-- macOS Developer ID signing and notarization, optional Intel macOS CI, confirmation whether Linux PNG
+- Confirmation whether Linux PNG
   on a clean VM needs packages only root can install, and browser-download smokes for Mark of the Web
   and quarantine.
 
