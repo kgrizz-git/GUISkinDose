@@ -558,7 +558,7 @@ Other CI jobs (typecheck, bandit, pip-audit, GUI smoke, package build, doc-fresh
 | `python scripts/privacy_admission.py check/route` | Ubuntu `privacy-gates` job + local hooks; protected paths and conditional scanner routing |
 | `python scripts/run_semgrep_privacy.py` | Ubuntu `privacy-gates` job + pre-push; blocking project privacy SAST |
 | phi-scan / Presidio | Scheduled secondary workflows (`phi-scan.yml` Thu; `presidio.yml` Mon) + manual dispatch. Presidio PR path triggers were removed in the Jul 2026 privacy-streamline change — it no longer runs on every PR. Both are value-suppressed with no report upload. |
-| CodeQL (GitHub code scanning) | `CodeQL analysis (Python)` job in `ci.yml` on PRs and `main`, after `privacy-gates`. GitHub Default Setup is disabled to avoid a parallel ungated run. |
+| CodeQL (GitHub code scanning) | `CodeQL analysis (python)` and `CodeQL analysis (actions)` matrix legs in `ci.yml` on PRs, `main` pushes, and scheduled or manual runs (via `schedule-gate`), after `privacy-gates`; the `actions` leg scans the workflow files. GitHub Default Setup is disabled to avoid a parallel ungated run. |
 | GUI smoke tests (`pytest tests/gui/ -n auto`) | Ubuntu `gui-smoke` job after `privacy-gates` (requires `.[gui]`) |
 | `basedpyright` | Ubuntu `static-analysis` job (requires `.[dev,gui]`) |
 | gitleaks secret scan | Pull requests: `gitleaks` job in `ci.yml` after `privacy-gates`; `main` pushes: separate `.github/workflows/gitleaks.yml` workflow |
