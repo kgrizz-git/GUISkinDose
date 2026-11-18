@@ -445,12 +445,13 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   codeql:
-    # CodeQL Python SAST, gated behind privacy-gates so it never runs on a PR
-    # before privacy admission clears. Runs on PRs and push:main.
+    # CodeQL SAST for Python and for the GitHub Actions workflows themselves, gated behind
+    # privacy-gates so it never runs on a PR before privacy admission clears. Runs on PRs
+    # and push:main. The actions leg replaces the workflow scanning Default Setup used to do.
     # NOTE: If GitHub Default Setup (code scanning) is enabled in repository settings,
     # disable it to avoid a parallel ungated run: Settings → Security → Code security
     # → Code scanning → CodeQL → Switch to Advanced.
-    name: CodeQL analysis (Python)
+    name: CodeQL analysis (${{ matrix.language }})
     needs: [schedule-gate, privacy-gates]
     if: needs.schedule-gate.outputs.should_run == 'true'
     runs-on: ubuntu-latest
@@ -458,6 +459,10 @@ jobs:
       contents: read
       security-events: write
       actions: read
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [python, actions]
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
       with:
@@ -465,7 +470,7 @@ jobs:
     - name: Initialize CodeQL
       uses: github/codeql-action/init@9b3254085494b55a0f7c4c2b3d2d52cc712ce370  # v4.39.1
       with:
-        languages: python
+        languages: ${{ matrix.language }}
         # security-and-quality satisfies both branch protection gates:
         #   "Require code scanning results — CodeQL (high or higher)"  [security queries]
         #   "Require code quality results — severity errors"           [quality queries]
@@ -473,7 +478,7 @@ jobs:
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@9b3254085494b55a0f7c4c2b3d2d52cc712ce370  # v4.39.1
       with:
-        category: "/language:python"
+        category: "/language:${{ matrix.language }}"
 
   # ── Tracking-issue notification (schedule, dispatch, and push to main; never PRs) ──
   # Mirrors the ci-latest pattern with a distinct marker so the two issue
