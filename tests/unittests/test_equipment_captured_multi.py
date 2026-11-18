@@ -14,7 +14,7 @@ binary fixtures are used.
 
 from __future__ import annotations
 
-from pathlib import Path
+import pathlib
 from typing import Any
 
 import numpy as np
@@ -47,6 +47,8 @@ from tests.unittests.test_equipment_captured_input import (
     _snapshot_norm,
     _write,
 )
+
+Path = pathlib.Path
 
 
 def _session() -> Any:
@@ -356,7 +358,6 @@ def test_offline_bundles_broken(monkeypatch: Any, tmp_path: Path) -> None:
 
 def test_bad_late_context_zero_reads(monkeypatch: Any, tmp_path: Path) -> None:
     import copy as _copy
-    import pathlib
 
     import guiskindose.helpers.read_and_normalize_rdsr_data as dicom_helper
     import guiskindose.input_adapters.registry as registry_module
@@ -533,8 +534,6 @@ def test_caller_purity_and_shield(tmp_path: Path) -> None:
 
 def _spy_filesystem(monkeypatch: Any) -> dict[str, list[str]]:
     """Record-delegate spies for every filesystem/source entry point."""
-    import pathlib
-
     import guiskindose.helpers.read_and_normalize_rdsr_data as dicom_helper
     import guiskindose.input_adapters.registry as registry_module
 
