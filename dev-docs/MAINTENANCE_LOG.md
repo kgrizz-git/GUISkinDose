@@ -8,6 +8,8 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ## [Unreleased]
 
+- **CodeQL pathlib import note** — `tests/unittests/test_equipment_captured_multi.py` now imports `pathlib` once and binds `Path` from that module. The filesystem spies still patch `pathlib.Path`. No user-facing behavior change.
+
 - **Intel macOS spike leg passed** — `portable-spike` dispatch with `macos_intel=true` (Actions run [42745712842](https://github.com/kgrizz-git/GUISkinDose/actions/runs/42745712842), 2026-11-09) passed all seven jobs, including `macos-intel-full`. Updated the item in
   [plans/PORTABLE_APP_PLAN.md](plans/PORTABLE_APP_PLAN.md) and updated the Unreleased changelog note.
 - **macOS release signing complete** — First green `portable-macos-release` dispatch (Actions run [42653026211](https://github.com/kgrizz-git/GUISkinDose/actions/runs/42653026211) on commit `151ca2ed` (2026-11-09)) produced
