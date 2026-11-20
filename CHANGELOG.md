@@ -79,6 +79,10 @@ That keeps SemVer and contributor history organized.
 
 - The PyPI release workflow now pins `pypa/gh-action-pypi-publish` v1.14.3 (was v1.14.2). Versions up to 1.14.2 bundled a `certifi` trust store that still trusted the compromised emSign root CA, which Sigstore relies on during Trusted Publishing and attestation ([GHSA-5xjx-3w67-w9x9](https://github.com/pypa/gh-action-pypi-publish/security/advisories/GHSA-5xjx-3w67-w9x9)).
 
+- **mistune 3.4.0** (2026-11-20) closes GHSA-ww7q-mxrj-5ffg and GHSA-phmp-hrw4-r36r (quadratic-time Markdown
+  parsing). mistune reaches the lock only through nbconvert in the `docs` and `notebooks` extras, which now carry
+  a `mistune>=3.3.4` floor. Dose calculation and the GUI are unchanged.
+
 ## [1.1.1] - 2026-10-31
 
 Patch release: ships the equipment-profile examples that 1.1.0 left out of the package, adds a

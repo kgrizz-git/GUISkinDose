@@ -8,6 +8,12 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ## [Unreleased]
 
+- **mistune and Semgrep-tool advisories** (2026-11-20) — Dependabot flagged mistune 3.3.3 (GHSA-ww7q-mxrj-5ffg,
+  GHSA-phmp-hrw4-r36r, fixed in 3.3.4). mistune is transitive only (nbconvert in the `docs`/`notebooks` extras).
+  The lock now has mistune 3.4.0 (released 2026-10-19, past the 7-day cooldown), with a `mistune>=3.3.4` floor on
+  both extras. The `tools/semgrep` lock still carries mcp 1.29.0 and opentelemetry-api 1.37.0 advisories that no
+  bump can close: semgrep pins `mcp==1.29.0` and `opentelemetry-api~=1.37.0` through 1.186.0.
+
 - **CodeQL scans workflow files again** — The `codeql` job in `ci.yml` is now a matrix over `python` and `actions`. The `actions` leg uploads to `/language:actions`, which had gone stale since commit `ccf5ec74` (2026-07-27) moved CodeQL into `ci.yml` and Default Setup stopped running. No user-facing behavior change.
 
 - **CodeQL pathlib import note** — `tests/unittests/test_equipment_captured_multi.py` now imports `pathlib` once and binds `Path` from that module. The filesystem spies still patch `pathlib.Path`. No user-facing behavior change.

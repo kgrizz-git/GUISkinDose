@@ -56,6 +56,7 @@ docs = [
     "pandoc",
     "tornado>=6.6",  # transitive via ipykernel; GHSA-8423-8fgw-73vq / GHSA-wwv5-g3v4-889x / GHSA-mpf4-983q-p7j4; 6.6: see CHANGELOG 1.1.0
     "nbconvert>=7.17.2",  # transitive via nbsphinx; GHSA-pjvx-prjx-h659 (path traversal in output filenames)
+    "mistune>=3.3.4",  # transitive via nbconvert; GHSA-ww7q-mxrj-5ffg / GHSA-phmp-hrw4-r36r (quadratic-time parsing)
 ]
 # Interactive notebook editing (JupyterLab); the docs build does not need this.
 notebooks = [
@@ -64,6 +65,7 @@ notebooks = [
     "ipywidgets",
     "tornado>=6.6",  # transitive via jupyter-client/ipykernel; same advisories as docs extra
     "nbconvert>=7.17.2",  # transitive via jupyterlab; same advisory as docs extra
+    "mistune>=3.3.4",  # transitive via nbconvert; same advisories as docs extra
 ]
 # Headless phantom library tooling (reduced Mesh3d previews need real quadric
 # decimation — triangle subsample looks like scatter fragments in Settings).
