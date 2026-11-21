@@ -23,6 +23,7 @@ from ..dose_severity import (
 )
 from ..equipment_profile_surfaces import post_calc_equipment_profile_blocks
 from ..figures import extract_exam_dose_map, make_dosemap_fig
+from ..phantom_preview import capture_phantom_preview_snapshot, make_placeholder_dosemap_fig
 from ..state import state
 from ..summary_formatters import format_tube_summary
 from ..ui_copy import copy_text
@@ -97,6 +98,8 @@ class ResultsTabController:
         self.last_agg_map_run_id: int | None = None
         self.subset_checkboxes: list[Any] = []
         self._inline_rendered: dict[int, bool] = {}
+        # Inputs of the zero-dose placeholder now on screen; None while the real map shows.
+        self._placeholder_key: tuple[Any, str] | None = None
 
     def _apply_psd_presentation(self, readout: PsdReadout | None, psd: float | None, text: str | None = None) -> None:
         """Set one banded PSD readout's text and move all three carriers to ``psd``'s band.
@@ -283,12 +286,29 @@ class ResultsTabController:
         fig = await run.io_bound(make_dosemap_fig)
         self.refs.dosemap_spinner.visible = False
         if fig:
+            self._placeholder_key = None
             self.refs.dosemap_plot.update_figure(fig)
 
     async def maybe_auto_refresh_dosemap(self) -> None:
-        """Maybe auto refresh dosemap."""
-        if not state.is_multi_exam and state.calculation_done and state.dosemap_fig is None:
-            await self.refresh_dosemap()
+        """Show the real dose map once calculated, and a zero-dose phantom before that."""
+        if state.is_multi_exam:
+            return
+        if state.calculation_done:
+            if state.dosemap_fig is None:
+                await self.refresh_dosemap()
+            return
+        await self.refresh_placeholder_dosemap()
+
+    async def refresh_placeholder_dosemap(self) -> None:
+        """Draw the selected phantom with no dose, redrawing only when phantom or colorscale change."""
+        snapshot = capture_phantom_preview_snapshot(state)
+        key = (snapshot, str(state.colorscale))
+        if key == self._placeholder_key:
+            return
+        self._placeholder_key = key
+        fig = await run.io_bound(make_placeholder_dosemap_fig, snapshot, key[1])
+        if fig and not state.calculation_done and self._placeholder_key == key:
+            self.refs.dosemap_plot.update_figure(fig)
 
     def refresh_corr_table(self) -> None:
         """Refresh corr table (cleared while no single-exam calculation is current)."""

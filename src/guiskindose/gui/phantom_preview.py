@@ -15,6 +15,7 @@ Outputs
 -------
 - ``make_phantom_preview_fig`` → Plotly figure ``dict`` or ``None`` on failure /
   non-human model.
+- ``make_placeholder_dosemap_fig`` → zero-dose Results-tab map shown before any calculation.
 - ``resolve_preview_mesh`` → STL stem for preview loading.
 
 Requirements
@@ -56,7 +57,7 @@ _SHORT_LABELS = {
     "table": "Table",
     "pad": "Pad",
 }
-_MESH_ARRAY_KEYS = ("x", "y", "z", "i", "j", "k")
+_MESH_ARRAY_KEYS = ("x", "y", "z", "i", "j", "k", "intensity")
 
 
 def _expand_binary_plotly_arrays(fig_dict: dict[str, Any]) -> dict[str, Any]:
@@ -155,6 +156,78 @@ def build_settings_from_snapshot(
     )
 
 
+def _positioned_preview_phantoms(snapshot: PreviewSnapshot) -> tuple[Phantom, Phantom, Phantom] | None:
+    """Build the preview patient, table and pad in place, or ``None`` if the patient mesh is missing.
+
+    Human models use the reduced preview mesh. Plane and cylinder models need no mesh file.
+    """
+    settings = build_settings_from_snapshot(snapshot)
+    human_mesh = None
+    human_scale = (1.0, 1.0, 1.0)
+    if snapshot.phantom_model == c.PHANTOM_MODEL_HUMAN:
+        from guiskindose.phantom_mesh_names import resolve_human_mesh_stl_path
+
+        human_mesh = resolve_preview_mesh(snapshot.logical_mesh_stem)
+        try:
+            mesh_path = resolve_human_mesh_stl_path(human_mesh, phantom_data_dir=_PHANTOM_DATA_DIR)
+        except (ValueError, OSError):
+            return None
+        if not mesh_path.is_file():
+            return None
+        human_scale = (
+            float(settings.phantom.scale_lat),
+            float(settings.phantom.scale_ap),
+            float(settings.phantom.scale_lon),
+        )
+    patient = Phantom(
+        phantom_model=snapshot.phantom_model,
+        phantom_dim=settings.phantom.dimension,
+        human_mesh=human_mesh,
+        human_scale=human_scale,
+    )
+    table = Phantom(phantom_model=c.PHANTOM_MODEL_TABLE, phantom_dim=settings.phantom.dimension)
+    pad = Phantom(phantom_model=c.PHANTOM_MODEL_PAD, phantom_dim=settings.phantom.dimension)
+    po = settings.phantom.patient_offset
+    position_patient_phantom_on_table(
+        patient,
+        table,
+        pad,
+        settings.phantom.dimension.pad_thickness,
+        [float(po.d_lon), float(po.d_ver), float(po.d_lat)],
+        settings.phantom.patient_orientation,
+    )
+    return patient, table, pad
+
+
+def make_placeholder_dosemap_fig(snapshot: PreviewSnapshot, colorscale: str = "jet") -> dict | None:
+    """Build a zero-dose map of the selected phantom for the Results tab before any calculation.
+
+    Uses the same renderer as the real dose map, so the empty state looks like the result it
+    stands in for. Returns ``None`` when the phantom cannot be built.
+    """
+    try:
+        from guiskindose.export.images import render_dosemap_plotly_figure
+
+        phantoms = _positioned_preview_phantoms(snapshot)
+        if phantoms is None:
+            return None
+        patient = phantoms[0]
+        r = np.asarray(patient.r)
+        ijk = np.asarray(patient.ijk)
+        patient_dict = {
+            "patient_skin_cells": {"x": r[:, 0], "y": r[:, 1], "z": r[:, 2]},
+            "triangle_vertex_indices": {"i": ijk[:, 0], "j": ijk[:, 1], "k": ijk[:, 2]},
+        }
+        fig = render_dosemap_plotly_figure(np.zeros(len(r)), patient_dict, colorscale, dark=True)
+        # A 0-1 colour bar would read as real dose values, so the placeholder hides it.
+        fig.update_traces(showscale=False)
+        fig.update_layout(title={"text": "No dose calculated yet. Run a calculation to see the dose map.", "x": 0.5})
+        return _expand_binary_plotly_arrays(fig.to_dict())
+    except Exception as exc:
+        safe_error_event(logger, "placeholder_dosemap_figure_render", exc, level=logging.DEBUG)
+        return None
+
+
 def make_phantom_preview_fig(snapshot: PreviewSnapshot) -> dict | None:
     """Build a Plotly figure dict for the Settings human-mesh preview.
 
@@ -165,39 +238,11 @@ def make_phantom_preview_fig(snapshot: PreviewSnapshot) -> dict | None:
         if snapshot.phantom_model != c.PHANTOM_MODEL_HUMAN:
             return None
 
-        settings = build_settings_from_snapshot(snapshot)
         logical_stem = snapshot.logical_mesh_stem
-        preview_mesh = resolve_preview_mesh(logical_stem)
-        from guiskindose.phantom_mesh_names import resolve_human_mesh_stl_path
-
-        try:
-            mesh_path = resolve_human_mesh_stl_path(preview_mesh, phantom_data_dir=_PHANTOM_DATA_DIR)
-        except (ValueError, OSError):
+        phantoms = _positioned_preview_phantoms(snapshot)
+        if phantoms is None:
             return None
-        if not mesh_path.is_file():
-            return None
-
-        patient = Phantom(
-            phantom_model=c.PHANTOM_MODEL_HUMAN,
-            phantom_dim=settings.phantom.dimension,
-            human_mesh=preview_mesh,
-            human_scale=(
-                float(settings.phantom.scale_lat),
-                float(settings.phantom.scale_ap),
-                float(settings.phantom.scale_lon),
-            ),
-        )
-        table = Phantom(phantom_model=c.PHANTOM_MODEL_TABLE, phantom_dim=settings.phantom.dimension)
-        pad = Phantom(phantom_model=c.PHANTOM_MODEL_PAD, phantom_dim=settings.phantom.dimension)
-        po = settings.phantom.patient_offset
-        position_patient_phantom_on_table(
-            patient,
-            table,
-            pad,
-            settings.phantom.dimension.pad_thickness,
-            [float(po.d_lon), float(po.d_ver), float(po.d_lat)],
-            settings.phantom.patient_orientation,
-        )
+        patient, table, pad = phantoms
 
         patient_text = [_SHORT_LABELS["patient"]] * len(patient.r)
         table_text = [_SHORT_LABELS["table"]] * len(table.r)

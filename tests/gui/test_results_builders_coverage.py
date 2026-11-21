@@ -274,6 +274,69 @@ async def test_refresh_dosemap_updates_plot(monkeypatch: pytest.MonkeyPatch) -> 
     cast(MagicMock, ctrl.refs.dosemap_plot.update_figure).assert_called_once()
 
 
+@pytest.mark.asyncio
+async def test_placeholder_dosemap_shown_before_calculation(monkeypatch: pytest.MonkeyPatch) -> None:
+    ctrl = _controller()
+    state.is_multi_exam = False
+    state.calculation_done = False
+    builds = {"n": 0}
+
+    async def _fake_io_bound(fn, *args, **kwargs):
+        builds["n"] += 1
+        return {"data": [{"type": "mesh3d"}], "layout": {}}
+
+    monkeypatch.setattr(rb.run, "io_bound", _fake_io_bound)
+
+    await ctrl.maybe_auto_refresh_dosemap()
+    await ctrl.maybe_auto_refresh_dosemap()
+
+    # The timer fires repeatedly; an unchanged phantom must not be rebuilt each tick.
+    assert builds["n"] == 1
+    cast(MagicMock, ctrl.refs.dosemap_plot.update_figure).assert_called_once()
+
+    monkeypatch.setattr(state, "colorscale", "viridis")
+    await ctrl.maybe_auto_refresh_dosemap()
+    assert builds["n"] == 2
+
+
+@pytest.mark.asyncio
+async def test_placeholder_dosemap_returns_after_real_map(monkeypatch: pytest.MonkeyPatch) -> None:
+    ctrl = _controller()
+    state.is_multi_exam = False
+    state.calculation_done = False
+
+    async def _fake_io_bound(fn, *args, **kwargs):
+        return {"data": [], "layout": {}}
+
+    monkeypatch.setattr(rb.run, "io_bound", _fake_io_bound)
+    await ctrl.maybe_auto_refresh_dosemap()
+
+    state.calculation_done = True
+    await ctrl.refresh_dosemap()
+    assert ctrl._placeholder_key is None
+
+    # Invalidating the calculation must bring the zero-dose phantom back.
+    state.calculation_done = False
+    await ctrl.maybe_auto_refresh_dosemap()
+    assert cast(MagicMock, ctrl.refs.dosemap_plot.update_figure).call_count == 3
+
+
+@pytest.mark.asyncio
+async def test_placeholder_dosemap_not_drawn_if_calculation_finishes_first(monkeypatch: pytest.MonkeyPatch) -> None:
+    ctrl = _controller()
+    state.is_multi_exam = False
+    state.calculation_done = False
+
+    async def _calc_finishes_meanwhile(fn, *args, **kwargs):
+        state.calculation_done = True
+        return {"data": [], "layout": {}}
+
+    monkeypatch.setattr(rb.run, "io_bound", _calc_finishes_meanwhile)
+    await ctrl.refresh_placeholder_dosemap()
+
+    cast(MagicMock, ctrl.refs.dosemap_plot.update_figure).assert_not_called()
+
+
 def test_refresh_aggregate_dosemap_empty_exams() -> None:
     ctrl = _controller()
     state.calc_run_id = 9

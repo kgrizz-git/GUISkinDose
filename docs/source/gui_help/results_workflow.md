@@ -8,7 +8,7 @@ Single-exam results show:
 - Total air kerma when available.
 - Event count.
 - Total DAP and fluoro time when the input source provides those fields.
-- Interactive 3D dose map.
+- Interactive 3D dose map. Before any calculation, it shows the selected phantom with no dose, so you can check the phantom and colour scale first.
 - Per-event correction-factor summary.
 - A rotational-handling badge whenever rotational or moving events were
   detected (estimate-grade coverage envelope with event counts; static
