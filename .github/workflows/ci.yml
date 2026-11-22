@@ -75,7 +75,7 @@ jobs:
         persist-credentials: false
         fetch-depth: 0
     - name: Install uv
-      uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e  # v10.3.2
+      uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2  # v10.3.3
       with:
         version: ">=0.11.19"
     - name: Set up Python
@@ -185,7 +185,7 @@ jobs:
       with:
         persist-credentials: false
     - name: Install uv
-      uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e  # v10.3.2
+      uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2  # v10.3.3
       with:
         version: ">=0.11.19"
     - name: Set up Python
@@ -218,7 +218,7 @@ jobs:
       with:
         persist-credentials: false
     - name: Install uv
-      uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e  # v10.3.2
+      uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2  # v10.3.3
       with:
         version: ">=0.11.19"
     - name: Set up Python
@@ -281,7 +281,7 @@ jobs:
       with:
         persist-credentials: false
     - name: Install uv
-      uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e  # v10.3.2
+      uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2  # v10.3.3
       with:
         version: ">=0.11.19"
     - name: Set up Python ${{ matrix.python-version }}
@@ -334,7 +334,7 @@ jobs:
         BASE_REF: ${{ github.base_ref }}
       run: git fetch --no-tags origin "$BASE_REF"
     - name: Install uv
-      uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e  # v10.3.2
+      uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2  # v10.3.3
       with:
         version: ">=0.11.19"
     - name: Set up Python
@@ -387,7 +387,7 @@ jobs:
         fetch-depth: 0
         persist-credentials: false
     - name: Install uv
-      uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e  # v10.3.2
+      uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2  # v10.3.3
       with:
         version: ">=0.11.19"
     - name: Set up Python
@@ -414,7 +414,7 @@ jobs:
     # --no-quality-gate-wait still works.
     - name: SonarQube Cloud scan (requires token)
       if: env.SONAR_TOKEN_AVAILABLE == 'true'
-      uses: SonarSource/sonarqube-scan-action@d209202bc7d53ff1cc128f7f907dac145c9d6ae9  # v8.3.0
+      uses: SonarSource/sonarqube-scan-action@59202af334b4ba7b5db01b701b8e79f8b3bef0f4  # v8.5.0
       env:
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -468,7 +468,7 @@ jobs:
       with:
         persist-credentials: false
     - name: Initialize CodeQL
-      uses: github/codeql-action/init@9b3254085494b55a0f7c4c2b3d2d52cc712ce370  # v4.39.1
+      uses: github/codeql-action/init@33d7b85da1a04171e211befe2c739303b9a4c066  # v4.39.3
       with:
         languages: ${{ matrix.language }}
         # security-and-quality satisfies both branch protection gates:
@@ -476,7 +476,7 @@ jobs:
         #   "Require code quality results — severity errors"           [quality queries]
         queries: security-and-quality
     - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@9b3254085494b55a0f7c4c2b3d2d52cc712ce370  # v4.39.1
+      uses: github/codeql-action/analyze@33d7b85da1a04171e211befe2c739303b9a4c066  # v4.39.3
       with:
         category: "/language:${{ matrix.language }}"
 
