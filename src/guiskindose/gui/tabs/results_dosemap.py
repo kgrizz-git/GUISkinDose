@@ -33,6 +33,8 @@ class SingleExamDosemapMixin:
         # Real-map builds in flight. The spinner stays up until the last one finishes, so an
         # overlapping REGENERATE or colour-scale change cannot hide it early.
         self._dosemap_builds_in_flight = 0
+        # Bumped by each real-map build; when builds overlap, the newest request draws.
+        self._dosemap_request_id = 0
 
     def _show_dosemap(self, fig: dict, placeholder_key: tuple[Any, str] | None) -> None:
         """Put a figure on the single-exam plot; the caption shows only over a placeholder."""
@@ -76,13 +78,17 @@ class SingleExamDosemapMixin:
         run_id = state.calc_run_id
         # A zero-dose phantom, or a map from a superseded run, must not stand in for this run.
         self._clear_stale_figure(run_id)
+        self._dosemap_request_id += 1
+        request_id = self._dosemap_request_id
         self._dosemap_builds_in_flight += 1
-        self.refs.dosemap_spinner.visible = True
         try:
+            self.refs.dosemap_spinner.visible = True
             fig = await run.io_bound(make_dosemap_fig)
         finally:
             self._dosemap_builds_in_flight -= 1
             self.refs.dosemap_spinner.visible = self._dosemap_builds_in_flight > 0
+        if request_id != self._dosemap_request_id:
+            return  # a newer redraw (colour-scale change, REGENERATE) was requested meanwhile
         # Drop a figure whose run was invalidated or superseded while it was being built.
         if fig and state.calculation_done and state.calc_run_id == run_id:
             self._dosemap_run_id = run_id
