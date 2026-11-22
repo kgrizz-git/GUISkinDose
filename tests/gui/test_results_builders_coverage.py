@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from types import SimpleNamespace
-from typing import cast
+from typing import Any, cast
 from unittest.mock import MagicMock
 
 import numpy as np
@@ -673,6 +673,122 @@ async def test_placeholder_inputs_changed_during_its_build_are_not_drawn(monkeyp
 
     await ctrl.refresh_placeholder_dosemap()  # the moved selection is drawn on the next tick
     cast(MagicMock, ctrl.refs.dosemap_plot.update_figure).assert_called_once()
+
+
+async def _wait_for_builds(ctrl: rb.ResultsTabController, count: int) -> None:
+    """Yield to the loop until ``count`` real-map builds are in flight (bounded)."""
+    import asyncio
+
+    for _ in range(100):
+        if ctrl._dosemap_builds_in_flight == count:
+            return
+        await asyncio.sleep(0)
+    raise AssertionError(f"expected {count} builds in flight, saw {ctrl._dosemap_builds_in_flight}")
+
+
+def _gated_io_bound(gates: dict[str, Any], outcomes: dict[str, Any]):
+    """Fake ``run.io_bound``: each build waits on its own event, named by the running task."""
+    import asyncio
+
+    async def _fake(fn, *args, **kwargs):
+        name = asyncio.current_task().get_name()  # type: ignore[union-attr]
+        await gates[name].wait()
+        outcome = outcomes.get(name)
+        if isinstance(outcome, BaseException):
+            raise outcome
+        return {"data": [], "layout": {}}
+
+    return _fake
+
+
+@pytest.mark.asyncio
+async def test_spinner_stays_up_until_the_last_overlapping_build_finishes(monkeypatch: pytest.MonkeyPatch) -> None:
+    import asyncio
+
+    ctrl = _controller()
+    state.is_multi_exam = False
+    state.calculation_done = True
+    monkeypatch.setattr(state, "calc_run_id", 9)
+    gates = {"first": asyncio.Event(), "second": asyncio.Event()}
+    monkeypatch.setattr(rb.run, "io_bound", _gated_io_bound(gates, {}))
+
+    first = asyncio.create_task(ctrl.refresh_dosemap(), name="first")
+    second = asyncio.create_task(ctrl.refresh_dosemap(), name="second")  # double-click REGENERATE
+    await _wait_for_builds(ctrl, 2)
+
+    gates["first"].set()
+    await first
+    assert ctrl.refs.dosemap_spinner.visible is True  # the second build is still running
+
+    gates["second"].set()
+    await second
+    assert ctrl.refs.dosemap_spinner.visible is False
+    assert ctrl._dosemap_builds_in_flight == 0
+
+
+@pytest.mark.asyncio
+async def test_newest_real_map_request_wins_when_builds_finish_out_of_order(monkeypatch: pytest.MonkeyPatch) -> None:
+    import asyncio
+
+    ctrl = _controller()
+    state.is_multi_exam = False
+    state.calculation_done = True
+    monkeypatch.setattr(state, "calc_run_id", 11)
+    gates = {"older": asyncio.Event(), "newer": asyncio.Event()}
+
+    async def _fake(fn, *args, **kwargs):
+        name = asyncio.current_task().get_name()  # type: ignore[union-attr]
+        await gates[name].wait()
+        return {"data": [], "layout": {"title": name}}
+
+    monkeypatch.setattr(rb.run, "io_bound", _fake)
+    older = asyncio.create_task(ctrl.refresh_dosemap(), name="older")
+    newer = asyncio.create_task(ctrl.refresh_dosemap(), name="newer")
+    await _wait_for_builds(ctrl, 2)
+
+    gates["newer"].set()
+    await newer
+    gates["older"].set()  # the older build finishes last
+    await older
+
+    update = cast(MagicMock, ctrl.refs.dosemap_plot.update_figure)
+    assert [c.args[0]["layout"]["title"] for c in update.call_args_list] == ["newer"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("outcome", [RuntimeError("render failed"), "cancel"])
+async def test_spinner_counter_recovers_when_a_build_fails_or_is_cancelled(
+    monkeypatch: pytest.MonkeyPatch, outcome: Any
+) -> None:
+    import asyncio
+
+    ctrl = _controller()
+    state.is_multi_exam = False
+    state.calculation_done = True
+    monkeypatch.setattr(state, "calc_run_id", 10)
+    gates = {"first": asyncio.Event(), "second": asyncio.Event()}
+    outcomes = {"first": outcome} if isinstance(outcome, BaseException) else {}
+    monkeypatch.setattr(rb.run, "io_bound", _gated_io_bound(gates, outcomes))
+
+    first = asyncio.create_task(ctrl.refresh_dosemap(), name="first")
+    second = asyncio.create_task(ctrl.refresh_dosemap(), name="second")
+    await _wait_for_builds(ctrl, 2)
+
+    if outcome == "cancel":
+        first.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await first
+    else:
+        gates["first"].set()
+        with pytest.raises(RuntimeError):
+            await first
+    assert ctrl._dosemap_builds_in_flight == 1
+    assert ctrl.refs.dosemap_spinner.visible is True
+
+    gates["second"].set()
+    await second
+    assert ctrl._dosemap_builds_in_flight == 0
+    assert ctrl.refs.dosemap_spinner.visible is False
 
 
 def test_refresh_aggregate_dosemap_empty_exams() -> None:
