@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import subprocess
+import sys
 from importlib.resources import files
 from pathlib import Path
 from unittest.mock import MagicMock
@@ -64,7 +65,16 @@ def no_browser_launch(monkeypatch):
     monkeypatch.setattr(go.Figure, "to_image", refuse("Figure.to_image"))
     monkeypatch.setattr(kaleido, "calc_fig_sync", refuse("kaleido.calc_fig_sync"))
     monkeypatch.setattr(kaleido, "start_sync_server", refuse("kaleido.start_sync_server"))
-    monkeypatch.setattr(subprocess, "Popen", refuse("subprocess.Popen"))
+
+    # A subclass rather than a bare function: modules imported mid-test (IPython, via the
+    # report writers) evaluate ``subprocess.Popen[bytes]`` in annotations, which a
+    # function replacement breaks with "'function' object is not subscriptable".
+    class _RefusedPopen(subprocess.Popen):
+        def __init__(self, *_args, **_kwargs):
+            calls.append("subprocess.Popen")
+            raise AssertionError("subprocess.Popen called in Light")
+
+    monkeypatch.setattr(subprocess, "Popen", _RefusedPopen)
     return calls
 
 
@@ -154,6 +164,15 @@ def test_full_png_render_reaches_the_kaleido_entry(monkeypatch):
 
     monkeypatch.setattr(go.Figure, "to_image", lambda *_a, **_k: b"png")
     assert render_dosemap_png(*_TRIANGLE) == b"png"
+
+
+def test_no_browser_launch_guard_stops_a_process_but_stays_subscriptable(no_browser_launch):
+    """Control for the fixture: ``Popen`` refuses to run, yet its type alias still resolves."""
+    with pytest.raises(AssertionError, match=r"subprocess\.Popen called in Light"):
+        subprocess.Popen([sys.executable, "-c", "pass"])
+
+    assert no_browser_launch == ["subprocess.Popen"]
+    assert subprocess.Popen[bytes]
 
 
 def test_light_static_dose_maps_stop_before_rendering(light, capsys):
