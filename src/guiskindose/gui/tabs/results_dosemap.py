@@ -51,15 +51,28 @@ class SingleExamDosemapMixin:
         if self.refs.dosemap_placeholder_caption is not None:
             self.refs.dosemap_placeholder_caption.visible = visible
 
+    def _clear_stale_figure(self, run_id: int) -> None:
+        """Empty a placeholder, or a real map of another run, before building ``run_id``'s map.
+
+        A real map of the run being redrawn (colour-scale change, REGENERATE) is left on
+        screen while its replacement builds, so the panel never flashes empty. The
+        placeholder key is only dropped when the placeholder itself is cleared, which
+        keeps it describing exactly what is displayed.
+        """
+        stale_run = self._dosemap_drawn and self._dosemap_run_id != run_id
+        if self._placeholder_key is not None or stale_run:
+            self._clear_dosemap()
+
     async def refresh_dosemap(self) -> None:
         """Redraw the dose map: the real map after a calculation, the zero-dose phantom before."""
         if state.is_multi_exam:
             return
         if not state.calculation_done:
-            self._placeholder_key = None  # an explicit redraw always rebuilds
-            await self.refresh_placeholder_dosemap()
+            await self.refresh_placeholder_dosemap(force=True)
             return
         run_id = state.calc_run_id
+        # A zero-dose phantom, or a map from a superseded run, must not stand in for this run.
+        self._clear_stale_figure(run_id)
         self.refs.dosemap_spinner.visible = True
         try:
             fig = await run.io_bound(make_dosemap_fig)
@@ -76,9 +89,7 @@ class SingleExamDosemapMixin:
             return
         if state.calculation_done:
             if self._dosemap_run_id != state.calc_run_id:
-                # A placeholder must not pass for a 0 mGy result while the real map builds.
-                if self._placeholder_key is not None:
-                    self._clear_dosemap()
+                # A different run (or a placeholder) must not pass for this run's result.
                 await self.refresh_dosemap()
             return
         if self._dosemap_run_id is not None:
@@ -86,17 +97,20 @@ class SingleExamDosemapMixin:
             self._clear_dosemap()
         await self.refresh_placeholder_dosemap()
 
-    async def refresh_placeholder_dosemap(self) -> None:
+    async def refresh_placeholder_dosemap(self, force: bool = False) -> None:
         """Draw the selected phantom with no dose, redrawing only when phantom or colorscale change."""
         snapshot = capture_phantom_preview_snapshot(state)
         key = (snapshot, str(state.colorscale))
-        if key == self._placeholder_key:
+        if not force and key == self._placeholder_key:
             return
         self._placeholder_request_id += 1
         request_id = self._placeholder_request_id
         fig = await run.io_bound(make_placeholder_dosemap_fig, snapshot, key[1])
         # A newer build (colour-scale change, REGENERATE) started meanwhile, or a calculation finished.
         if request_id != self._placeholder_request_id or state.calculation_done:
+            return
+        # The phantom or colour scale changed while the mesh built, so this figure is stale.
+        if key != (capture_phantom_preview_snapshot(state), str(state.colorscale)):
             return
         # Remember the key only on success, so a mesh that fails now (for example one not yet
         # installed) is retried on the next tick instead of being latched as drawn.

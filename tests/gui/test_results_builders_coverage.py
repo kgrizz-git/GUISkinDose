@@ -400,7 +400,13 @@ async def test_real_map_drawn_per_page_even_if_shared_figure_exists(monkeypatch:
 
     monkeypatch.setattr(state, "calc_run_id", 8)  # a new calculation
     await ctrl.maybe_auto_refresh_dosemap()
-    assert cast(MagicMock, ctrl.refs.dosemap_plot.update_figure).call_count == 2
+    # Run 7's map is cleared before run 8's map is built, so no stale figure sits beside new metrics.
+    update = cast(MagicMock, ctrl.refs.dosemap_plot.update_figure)
+    assert [c.args[0] for c in update.call_args_list] == [
+        {"data": [], "layout": {}},
+        {},
+        {"data": [], "layout": {}},
+    ]
 
 
 @pytest.mark.asyncio
@@ -511,6 +517,162 @@ async def test_older_placeholder_build_cannot_overwrite_newer(monkeypatch: pytes
     assert last["data"][0]["colorscale"] == "viridis"
     assert ctrl._placeholder_key is not None
     assert ctrl._placeholder_key[1] == "viridis"
+
+
+@pytest.mark.asyncio
+async def test_explicit_redraw_keeps_placeholder_key_until_the_placeholder_is_replaced(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """REGENERATE forces a rebuild through a flag, not by blanking the displayed key."""
+    ctrl = _controller()
+    state.is_multi_exam = False
+    state.calculation_done = False
+    seen_keys: list[tuple | None] = []
+
+    async def _fake_io_bound(fn, *args, **kwargs):
+        seen_keys.append(ctrl._placeholder_key)
+        return {"data": [], "layout": {}}
+
+    monkeypatch.setattr(rb.run, "io_bound", _fake_io_bound)
+
+    await ctrl.maybe_auto_refresh_dosemap()
+    displayed_key = ctrl._placeholder_key
+    assert displayed_key is not None
+
+    await ctrl.refresh_dosemap()  # REGENERATE PLOT / colorscale change
+
+    # While the replacement builds, the key still describes the placeholder on screen.
+    assert seen_keys[-1] == displayed_key
+    assert ctrl._placeholder_key == displayed_key
+
+
+@pytest.mark.asyncio
+async def test_explicit_refresh_clears_placeholder_before_the_real_map_builds(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A captionless zero-dose phantom must not survive into an explicit real-map redraw."""
+    ctrl = _controller()
+    ctrl.refs.dosemap_placeholder_caption = MagicMock(visible=False)
+    state.is_multi_exam = False
+    state.calculation_done = False
+    state.calc_run_id = 11
+    drawn_at_build: list[bool] = []
+
+    async def _fake_io_bound(fn, *args, **kwargs):
+        drawn_at_build.append(ctrl._dosemap_drawn)
+        return {"data": [], "layout": {}}
+
+    monkeypatch.setattr(rb.run, "io_bound", _fake_io_bound)
+    await ctrl.maybe_auto_refresh_dosemap()
+    assert ctrl.refs.dosemap_placeholder_caption.visible is True
+
+    state.calculation_done = True
+    state.calc_run_id = 12
+    await ctrl.refresh_dosemap()  # explicit refresh, not the timer
+
+    assert drawn_at_build[-1] is False  # the placeholder was cleared before the build
+    assert ctrl._placeholder_key is None
+    assert ctrl.refs.dosemap_placeholder_caption.visible is False
+
+
+@pytest.mark.asyncio
+async def test_new_run_clears_the_previous_runs_real_map_before_building(monkeypatch: pytest.MonkeyPatch) -> None:
+    ctrl = _controller()
+    ctrl.refs.dosemap_placeholder_caption = MagicMock(visible=False)
+    state.is_multi_exam = False
+    state.calculation_done = True
+    state.calc_run_id = 1
+    drawn_at_build: list[bool] = []
+
+    async def _fake_io_bound(fn, *args, **kwargs):
+        drawn_at_build.append(ctrl._dosemap_drawn)
+        return {"data": [], "layout": {}}
+
+    monkeypatch.setattr(rb.run, "io_bound", _fake_io_bound)
+    await ctrl.refresh_dosemap()  # run 1 drawn
+
+    state.calc_run_id = 2
+    await ctrl.maybe_auto_refresh_dosemap()  # a new calculation finished
+
+    assert drawn_at_build[-1] is False  # run 1's map was cleared before run 2 built
+    update = cast(MagicMock, ctrl.refs.dosemap_plot.update_figure)
+    assert update.call_args_list[-2].args == ({},)
+    assert ctrl._dosemap_run_id == 2
+
+
+@pytest.mark.asyncio
+async def test_failing_renderer_for_a_new_run_leaves_no_superseded_map(monkeypatch: pytest.MonkeyPatch) -> None:
+    ctrl = _controller()
+    ctrl.refs.dosemap_placeholder_caption = MagicMock(visible=False)
+    state.is_multi_exam = False
+    state.calculation_done = True
+    state.calc_run_id = 3
+    results: list[dict | None] = [{"data": [{"type": "mesh3d"}], "layout": {}}, None]
+
+    async def _fake_io_bound(fn, *args, **kwargs):
+        return results.pop(0)
+
+    monkeypatch.setattr(rb.run, "io_bound", _fake_io_bound)
+    await ctrl.refresh_dosemap()  # run 3 drawn
+
+    state.calc_run_id = 4
+    await ctrl.maybe_auto_refresh_dosemap()  # run 4's renderer fails
+
+    update = cast(MagicMock, ctrl.refs.dosemap_plot.update_figure)
+    assert update.call_args_list[-1].args == ({},)
+    assert ctrl._dosemap_run_id is None
+    assert ctrl.refs.dosemap_spinner.visible is False
+
+
+@pytest.mark.asyncio
+async def test_explicit_redraw_preserves_the_same_runs_real_map(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A colour-scale change on an unchanged run must not blank the map it is replacing."""
+    ctrl = _controller()
+    ctrl.refs.dosemap_placeholder_caption = MagicMock(visible=False)
+    state.is_multi_exam = False
+    state.calculation_done = True
+    state.calc_run_id = 5
+    drawn_at_build: list[bool] = []
+
+    async def _fake_io_bound(fn, *args, **kwargs):
+        drawn_at_build.append(ctrl._dosemap_drawn)
+        return {"data": [], "layout": {}}
+
+    monkeypatch.setattr(rb.run, "io_bound", _fake_io_bound)
+    await ctrl.refresh_dosemap()  # run 5 drawn
+    await ctrl.refresh_dosemap()  # REGENERATE / colorscale change, same run
+
+    assert drawn_at_build[-1] is True
+    update = cast(MagicMock, ctrl.refs.dosemap_plot.update_figure)
+    assert [c.args[0] for c in update.call_args_list] == [
+        {"data": [], "layout": {}},
+        {"data": [], "layout": {}},
+    ]
+
+
+@pytest.mark.asyncio
+async def test_placeholder_inputs_changed_during_its_build_are_not_drawn(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The mesh drawn must match the phantom and colour scale on screen when the await returns."""
+    ctrl = _controller()
+    state.is_multi_exam = False
+    state.calculation_done = False
+    monkeypatch.setattr(state, "phantom_scale_lat", 1.0)
+    moved = {"done": False}
+
+    async def _fake_io_bound(fn, *args, **kwargs):
+        if not moved["done"]:
+            moved["done"] = True
+            state.phantom_scale_lat = 1.4  # habitus slider moved while the mesh was built
+        return {"data": [], "layout": {}}
+
+    monkeypatch.setattr(rb.run, "io_bound", _fake_io_bound)
+    await ctrl.refresh_placeholder_dosemap()
+
+    cast(MagicMock, ctrl.refs.dosemap_plot.update_figure).assert_not_called()
+    assert ctrl._placeholder_key is None
+
+    await ctrl.refresh_placeholder_dosemap()  # the moved selection is drawn on the next tick
+    cast(MagicMock, ctrl.refs.dosemap_plot.update_figure).assert_called_once()
 
 
 def test_refresh_aggregate_dosemap_empty_exams() -> None:
