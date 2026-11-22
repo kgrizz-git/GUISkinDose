@@ -196,7 +196,8 @@ def test_placeholder_dosemap_is_one_zero_dose_patient_mesh():
     intensity = np.asarray(meshes[0]["intensity"], dtype=float)
     assert intensity.size == len(meshes[0]["x"])
     assert not intensity.any()
-    assert "No dose calculated yet" in fig["layout"]["title"]["text"]
+    # The note lives in a caption; a title would overlap the intended-use stamp.
+    assert not fig["layout"].get("title", {}).get("text")
     assert meshes[0]["showscale"] is False
 
 

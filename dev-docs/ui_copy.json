@@ -113,6 +113,10 @@
       "text": "Not FDA-cleared. Skin dose estimates must be reviewed by a qualified medical physicist or physician.",
       "owner": "gui/tabs/results_builders.py"
     },
+    "results.dosemap_placeholder": {
+      "text": "No dose calculated yet. The map shows the selected phantom; run a calculation to see the dose.",
+      "owner": "gui/tabs/results_builders.py"
+    },
     "results.psd_band.pending": {
       "text": "Not calculated yet",
       "owner": "gui/dose_severity.py"

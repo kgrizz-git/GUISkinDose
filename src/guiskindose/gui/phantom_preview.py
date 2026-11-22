@@ -219,9 +219,10 @@ def make_placeholder_dosemap_fig(snapshot: PreviewSnapshot, colorscale: str = "j
             "triangle_vertex_indices": {"i": ijk[:, 0], "j": ijk[:, 1], "k": ijk[:, 2]},
         }
         fig = render_dosemap_plotly_figure(np.zeros(len(r)), patient_dict, colorscale, dark=True)
-        # A 0-1 colour bar would read as real dose values, so the placeholder hides it.
+        # A 0-1 colour bar would read as real dose values, so the placeholder hides it. The
+        # "no dose yet" note is a caption under the plot: a figure title collides with the
+        # intended-use stamp the renderer draws in the top margin.
         fig.update_traces(showscale=False)
-        fig.update_layout(title={"text": "No dose calculated yet. Run a calculation to see the dose map.", "x": 0.5})
         return _expand_binary_plotly_arrays(fig.to_dict())
     except Exception as exc:
         safe_error_event(logger, "placeholder_dosemap_figure_render", exc, level=logging.DEBUG)

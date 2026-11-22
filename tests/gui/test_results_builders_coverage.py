@@ -337,6 +337,66 @@ async def test_placeholder_dosemap_not_drawn_if_calculation_finishes_first(monke
     cast(MagicMock, ctrl.refs.dosemap_plot.update_figure).assert_not_called()
 
 
+@pytest.mark.asyncio
+async def test_failed_placeholder_build_is_retried(monkeypatch: pytest.MonkeyPatch) -> None:
+    ctrl = _controller()
+    state.is_multi_exam = False
+    state.calculation_done = False
+    results: list[dict | None] = [None, {"data": [], "layout": {}}]
+
+    async def _fake_io_bound(fn, *args, **kwargs):
+        return results.pop(0)
+
+    monkeypatch.setattr(rb.run, "io_bound", _fake_io_bound)
+
+    await ctrl.maybe_auto_refresh_dosemap()  # mesh not loadable yet
+    cast(MagicMock, ctrl.refs.dosemap_plot.update_figure).assert_not_called()
+    await ctrl.maybe_auto_refresh_dosemap()  # same inputs, now loadable
+    cast(MagicMock, ctrl.refs.dosemap_plot.update_figure).assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_real_map_drawn_per_page_even_if_shared_figure_exists(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Another page (or an export) filling ``state.dosemap_fig`` must not stop this page drawing."""
+    ctrl = _controller()
+    state.is_multi_exam = False
+    state.calculation_done = True
+    monkeypatch.setattr(state, "calc_run_id", 7)
+    monkeypatch.setattr(state, "dosemap_fig", object())
+
+    async def _fake_io_bound(fn, *args, **kwargs):
+        return {"data": [], "layout": {}}
+
+    monkeypatch.setattr(rb.run, "io_bound", _fake_io_bound)
+
+    await ctrl.maybe_auto_refresh_dosemap()
+    await ctrl.maybe_auto_refresh_dosemap()
+    cast(MagicMock, ctrl.refs.dosemap_plot.update_figure).assert_called_once()
+
+    monkeypatch.setattr(state, "calc_run_id", 8)  # a new calculation
+    await ctrl.maybe_auto_refresh_dosemap()
+    assert cast(MagicMock, ctrl.refs.dosemap_plot.update_figure).call_count == 2
+
+
+@pytest.mark.asyncio
+async def test_regenerate_before_calculation_redraws_placeholder(monkeypatch: pytest.MonkeyPatch) -> None:
+    ctrl = _controller()
+    state.is_multi_exam = False
+    state.calculation_done = False
+    builds = {"n": 0}
+
+    async def _fake_io_bound(fn, *args, **kwargs):
+        builds["n"] += 1
+        return {"data": [], "layout": {}}
+
+    monkeypatch.setattr(rb.run, "io_bound", _fake_io_bound)
+
+    await ctrl.maybe_auto_refresh_dosemap()
+    await ctrl.refresh_dosemap()  # REGENERATE PLOT / colorscale change
+
+    assert builds["n"] == 2
+
+
 def test_refresh_aggregate_dosemap_empty_exams() -> None:
     ctrl = _controller()
     state.calc_run_id = 9
