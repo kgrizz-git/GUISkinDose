@@ -356,6 +356,29 @@ async def test_failed_placeholder_build_is_retried(monkeypatch: pytest.MonkeyPat
 
 
 @pytest.mark.asyncio
+async def test_unbuildable_selection_clears_previous_placeholder(monkeypatch: pytest.MonkeyPatch) -> None:
+    ctrl = _controller()
+    state.is_multi_exam = False
+    state.calculation_done = False
+    results: list[dict | None] = [{"data": [{"type": "mesh3d"}], "layout": {}}, None, None]
+
+    async def _fake_io_bound(fn, *args, **kwargs):
+        return results.pop(0)
+
+    monkeypatch.setattr(rb.run, "io_bound", _fake_io_bound)
+    await ctrl.maybe_auto_refresh_dosemap()
+
+    monkeypatch.setattr(state, "colorscale", "viridis")  # any input change
+    await ctrl.maybe_auto_refresh_dosemap()  # new selection cannot be drawn
+    update = cast(MagicMock, ctrl.refs.dosemap_plot.update_figure)
+    assert update.call_args_list[-1].args == ({},)
+    assert ctrl._placeholder_key is None
+
+    await ctrl.maybe_auto_refresh_dosemap()  # still failing: no repeated clears
+    assert update.call_count == 2
+
+
+@pytest.mark.asyncio
 async def test_real_map_drawn_per_page_even_if_shared_figure_exists(monkeypatch: pytest.MonkeyPatch) -> None:
     """Another page (or an export) filling ``state.dosemap_fig`` must not stop this page drawing."""
     ctrl = _controller()

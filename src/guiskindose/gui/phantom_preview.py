@@ -92,6 +92,9 @@ class PreviewSnapshot:
     d_lon: float
     d_ver: float
     d_lat: float
+    # Custom phantom/table/pad dimensions as sorted (key, value) pairs; None keeps the defaults.
+    # A tuple, not a dict, so the snapshot stays hashable for the placeholder cache key.
+    phantom_dimensions: tuple[tuple[str, Any], ...] | None = None
 
     @property
     def logical_mesh_stem(self) -> str:
@@ -106,6 +109,7 @@ def capture_phantom_preview_snapshot(app_state: AppState) -> PreviewSnapshot:
     ``effective_patient_offset_for_preview`` (same as Geometry preview).
     """
     d_lon, d_ver, d_lat = effective_patient_offset_for_preview(app_state)
+    dims = app_state.phantom_dimensions
     return PreviewSnapshot(
         phantom_model=str(app_state.phantom_model),
         human_mesh=str(app_state.human_mesh),
@@ -116,6 +120,7 @@ def capture_phantom_preview_snapshot(app_state: AppState) -> PreviewSnapshot:
         d_lon=float(d_lon),
         d_ver=float(d_ver),
         d_lat=float(d_lat),
+        phantom_dimensions=tuple(sorted(dims.items())) if isinstance(dims, dict) else None,
     )
 
 
@@ -147,6 +152,7 @@ def build_settings_from_snapshot(
         d_lon=snapshot.d_lon,
         d_ver=snapshot.d_ver,
         d_lat=snapshot.d_lat,
+        phantom_dimensions=dict(snapshot.phantom_dimensions) if snapshot.phantom_dimensions is not None else None,
     )
     return build_settings(
         temp,

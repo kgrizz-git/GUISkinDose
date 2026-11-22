@@ -218,3 +218,21 @@ def test_placeholder_dosemap_supports_non_human_models(model):
 
 def test_placeholder_dosemap_unknown_stem_returns_none():
     assert make_placeholder_dosemap_fig(_snapshot(human_mesh="definitely_not_a_mesh")) is None
+
+
+def test_snapshot_carries_custom_phantom_dimensions():
+    app = AppState(phantom_model="cylinder", phantom_dimensions={"cylinder_radii_a": 30, "cylinder_length": 160})
+    snap = capture_phantom_preview_snapshot(app)
+    assert snap.phantom_dimensions == (("cylinder_length", 160), ("cylinder_radii_a", 30))
+    hash(snap)  # must stay usable as a cache key
+    assert snap != capture_phantom_preview_snapshot(AppState(phantom_model="cylinder"))
+
+
+def test_placeholder_uses_custom_phantom_dimensions():
+    base = make_placeholder_dosemap_fig(_snapshot(phantom_model="cylinder"))
+    wide = make_placeholder_dosemap_fig(
+        _snapshot(phantom_model="cylinder", phantom_dimensions=(("cylinder_radii_a", 40),))
+    )
+    assert base is not None
+    assert wide is not None
+    assert _span(_mesh3d_traces(wide)[0], "x") > _span(_mesh3d_traces(base)[0], "x")

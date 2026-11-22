@@ -315,11 +315,17 @@ class ResultsTabController:
         if key == self._placeholder_key:
             return
         fig = await run.io_bound(make_placeholder_dosemap_fig, snapshot, key[1])
+        if state.calculation_done:
+            return
         # Remember the key only on success, so a mesh that fails now (for example one not yet
         # installed) is retried on the next tick instead of being latched as drawn.
-        if fig and not state.calculation_done:
+        if fig:
             self._placeholder_key = key
             self.refs.dosemap_plot.update_figure(fig)
+        elif self._placeholder_key is not None:
+            # Never leave the previous phantom on screen for a selection that cannot be drawn.
+            self._placeholder_key = None
+            self.refs.dosemap_plot.update_figure({})
 
     def refresh_corr_table(self) -> None:
         """Refresh corr table (cleared while no single-exam calculation is current)."""
