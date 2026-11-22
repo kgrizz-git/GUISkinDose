@@ -99,8 +99,8 @@ def test_static_mode_matches_legacy_numbers():
 def _frame_with_unchanged_geometry_spin():
     """Spin whose static pose exactly matches the preceding event."""
     frame = generate_synthetic_normalized_events(2)
-    for column in ("Tx", "Ty", "Tz", "Ap1", "Ap2", "Ap3", "At1", "At2", "At3", "FS_lat", "FS_long"):
-        frame.at[1, column] = frame.at[0, column]
+    pose = ["Tx", "Ty", "Tz", "Ap1", "Ap2", "Ap3", "At1", "At2", "At3", "FS_lat", "FS_long"]
+    frame.loc[1, pose] = frame.loc[0, pose].to_numpy()
     frame.at[1, "acquisition_type"] = "Rotational Acquisition"
     frame.at[1, "acquisition_type_code"] = "113613"
     frame.at[1, "acquisition_type_coding_scheme"] = "DCM"
@@ -225,7 +225,7 @@ def test_assert_pose_invariant_accepts_faithful_copy_and_rejects_varied_pose():
     nan_row = pd.Series(parent_row.copy())
     nan_row["Tx"] = np.nan
     nan_frame = _candidate_frame(nan_row, 0.0, 0.0)
-    assert bool(pd.isna(nan_frame.at[0, "Tx"]))
+    assert bool(nan_frame["Tx"].isna().iloc[0])
     _assert_pose_invariant(nan_row, nan_frame)
 
 

@@ -8,6 +8,8 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ## [Unreleased]
 
+- **Dependabot Python group (2026-11-21)** — Typed `test_rotational_envelope_dose.py` for pandas-stubs 3.1. The Light-edition `no_browser_launch` fixture now refuses `subprocess.Popen` through a subclass, because a bare function breaks `subprocess.Popen[bytes]` annotations in IPython. kaleido stays at 1.5.0: 1.5.1 failed 3 of 36 PNG renders under parallel load with `kaleido_scopes is not defined`, so `dependabot.yml` ignores that version.
+
 - **mistune and Semgrep-tool advisories** (2026-11-20) — Dependabot flagged mistune 3.3.3 (GHSA-ww7q-mxrj-5ffg,
   GHSA-phmp-hrw4-r36r, fixed in 3.3.4). mistune is transitive only (nbconvert in the `docs`/`notebooks` extras).
   The lock now has mistune 3.4.0 (released 2026-10-19, past the 7-day cooldown), with a `mistune>=3.3.4` floor on

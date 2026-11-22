@@ -7,7 +7,7 @@ static-analysis environment (`dev` + `gui` extras):
 uv run --extra dev --extra gui --locked python scripts/check_licenses.py --write-notices
 ```
 
-Regenerate with `uv run --extra dev --extra gui --locked python scripts/check_licenses.py --write-notices` (last updated: 2026-11-05).
+Regenerate with `uv run --extra dev --extra gui --locked python scripts/check_licenses.py --write-notices` (last updated: 2026-11-22).
 
 Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIANCE.md`](LICENSE_COMPLIANCE.md).
 
@@ -48,7 +48,7 @@ Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIAN
 | debugpy | 1.8.21 | MIT | https://aka.ms/debugpy |
 | decorator | 5.3.1 | BSD-2-Clause | BSD-2-Clause |
 | defusedxml | 0.7.1 | PSF-2.0 | https://github.com/tiran/defusedxml |
-| diff_cover | 11.0.0 | Apache-2.0 | Homepage, https://github.com/Bachmann1234/diff-cover |
+| diff_cover | 11.0.2 | Apache-2.0 | Homepage, https://github.com/Bachmann1234/diff-cover |
 | distlib | 0.4.4 | PSF-2.0 | https://github.com/pypa/distlib |
 | docutils | 0.22.4 | BSD-3-Clause, GPL-2.0-or-later | Changelog, https://docutils.sourceforge.io/HISTORY.html |
 | et_xmlfile | 2.0.0 | MIT | https://foss.heptapod.net/openpyxl/et_xmlfile |
@@ -56,7 +56,7 @@ Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIAN
 | executing | 2.2.1 | MIT | https://github.com/alexmojaki/executing |
 | fastapi | 0.136.3 | MIT | Homepage, https://github.com/fastapi/fastapi |
 | fastjsonschema | 2.21.2 | BSD-3-Clause | https://github.com/horejsek/python-fastjsonschema |
-| filelock | 4.2.4 | MIT | Documentation, https://py-filelock.readthedocs.io |
+| filelock | 4.2.10 | MIT | Changelog, https://py-filelock.readthedocs.io/en/latest/changelog.html |
 | frozenlist | 1.8.0 | Apache-2.0 | https://github.com/aio-libs/frozenlist |
 | greenlet | 3.5.3 | MIT, PSF-2.0 | Homepage, https://greenlet.readthedocs.io |
 | h11 | 0.16.0 | MIT | https://github.com/python-hyper/h11 |
@@ -84,7 +84,7 @@ Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIAN
 | jupyter_core | 5.9.1 | BSD-3-Clause | Homepage, https://jupyter.org |
 | jupyter_server | 2.21.1 | BSD-3-Clause | Homepage, https://jupyter-server.readthedocs.io |
 | jupyter_server_terminals | 0.5.4 | BSD-3-Clause | Homepage, https://jupyter.org |
-| jupyterlab | 4.6.4 | BSD-3-Clause | Homepage, https://jupyter.org |
+| jupyterlab | 4.6.6 | BSD-3-Clause | Homepage, https://jupyter.org |
 | jupyterlab_pygments | 0.3.0 | BSD-3-Clause | Homepage, https://github.com/jupyterlab/jupyterlab_pygments |
 | jupyterlab_server | 2.28.0 | BSD-3-Clause | Homepage, https://jupyterlab-server.readthedocs.io |
 | kaleido | 1.5.0 | MIT, UNKNOWN, MIT, UNKNOWN, UNKNOWN, UNKNOWN, UNKNOWN, UNKNOWN, UNKNOWN | Homepage, https://github.com/plotly/kaleido |
@@ -97,7 +97,7 @@ Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIAN
 | MarkupSafe | 3.0.3 | BSD-3-Clause | Donate, https://palletsprojects.com/donate |
 | matplotlib-inline | 0.2.2 | BSD-3-Clause | Homepage, https://github.com/ipython/matplotlib-inline |
 | mdurl | 0.1.2 | MIT | Homepage, https://github.com/executablebooks/mdurl |
-| mistune | 3.3.3 | BSD-3-Clause | Documentation, https://mistune.lepture.com/ |
+| mistune | 3.4.0 | BSD-3-Clause | Documentation, https://mistune.lepture.com/ |
 | msgpack | 1.2.4 | Apache-2.0 | Homepage, https://msgpack.org/ |
 | multidict | 6.9.1 | Apache-2.0 | https://github.com/aio-libs/multidict |
 | narwhals | 2.22.1 | MIT | Homepage, https://github.com/narwhals-dev/narwhals |
@@ -111,13 +111,13 @@ Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIAN
 | nodejs-wheel-binaries | 24.16.0 | MIT | repository, https://github.com/njzjz/nodejs-wheel |
 | notebook_shim | 0.2.4 | BSD-3-Clause | BSD 3-Clause License  Copyright (c) 2022 Project Jupyter Contributors All rights reserved.  Redistribution and use in so |
 | numpy | 2.4.6 | BSD-3-Clause, 0BSD, MIT, Zlib, CC0-1.0 | homepage, https://numpy.org |
-| numpy-stl | 4.1.1 | BSD-3-Clause | Homepage, https://github.com/WoLpH/numpy-stl/ |
+| numpy-stl | 4.1.4 | BSD-3-Clause | Homepage, https://github.com/WoLpH/numpy-stl/ |
 | openpyxl | 3.1.5 | MIT | https://openpyxl.readthedocs.io |
 | orjson | 3.11.9 | Apache-2.0, MIT | changelog, https://github.com/ijl/orjson/blob/master/CHANGELOG.md |
 | packageurl-python | 0.17.6 | MIT | https://github.com/package-url/packageurl-python |
 | packaging | 26.3 | Apache-2.0, BSD-2-Clause | Documentation, https://packaging.pypa.io/ |
-| pandas | 3.1.0 | BSD-3-Clause | homepage, https://pandas.pydata.org |
-| pandas-stubs | 3.0.5.260914 | BSD-3-Clause | Bug Tracker, https://github.com/pandas-dev/pandas-stubs/issues |
+| pandas | 3.1.1 | BSD-3-Clause | homepage, https://pandas.pydata.org |
+| pandas-stubs | 3.1.0.261029 | BSD-3-Clause | Bug Tracker, https://github.com/pandas-dev/pandas-stubs/issues |
 | pandocfilters | 1.5.1 | BSD-3-Clause | http://github.com/jgm/pandocfilters |
 | parso | 0.8.7 | MIT | https://github.com/davidhalter/parso |
 | pexpect | 4.9.0 | ISC | https://pexpect.readthedocs.io/ |
@@ -126,7 +126,7 @@ Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIAN
 | pip-requirements-parser | 32.0.1 | MIT | https://github.com/nexB/pip-requirements-parser |
 | pip_audit | 2.10.1 | Apache-2.0 | Homepage, https://pypi.org/project/pip-audit/ |
 | platformdirs | 4.10.0 | MIT | Changelog, https://platformdirs.readthedocs.io/en/latest/changelog.html |
-| playwright | 1.64.1 | Apache-2.0 | homepage, https://github.com/Microsoft/playwright-python |
+| playwright | 1.65.2 | Apache-2.0 | homepage, https://github.com/Microsoft/playwright-python |
 | plotly | 6.8.0 | MIT | Homepage, https://plotly.com/python/ |
 | pluggy | 1.6.0 | MIT | MIT |
 | pre_commit | 4.7.0 | MIT | https://github.com/pre-commit/pre-commit |
@@ -141,12 +141,11 @@ Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIAN
 | pydantic | 2.13.4 | MIT | Homepage, https://github.com/pydantic/pydantic |
 | pydantic_core | 2.46.4 | MIT | https://github.com/pydantic/pydantic |
 | pydicom | 3.0.2 | MIT | documentation, https://pydicom.github.io/pydicom |
-| pyee | 13.0.1 | MIT | Repository, https://github.com/jfhbrook/pyee |
 | Pygments | 2.20.0 | BSD-2-Clause | Homepage, https://pygments.org |
 | pyparsing | 3.3.2 | MIT | Documentation, https://pyparsing-docs.readthedocs.io/en/latest/ |
 | pypdf | 6.21.4 | BSD-3-Clause | Bug Reports, https://github.com/py-pdf/pypdf/issues |
-| pytest | 9.1.1 | MIT | Changelog, https://docs.pytest.org/en/stable/changelog.html |
-| pytest-asyncio | 1.4.1 | Apache-2.0 | Bug Tracker, https://github.com/pytest-dev/pytest-asyncio/issues |
+| pytest | 9.2.0 | MIT | Changelog, https://docs.pytest.org/en/stable/changelog.html |
+| pytest-asyncio | 1.5.0 | Apache-2.0 | Bug Tracker, https://github.com/pytest-dev/pytest-asyncio/issues |
 | pytest-cov | 7.1.0 | MIT | Sources, https://github.com/pytest-dev/pytest-cov |
 | pytest-playwright | 0.10.0 | Apache-2.0 | homepage, https://github.com/microsoft/playwright-pytest |
 | pytest-xdist | 3.8.0 | MIT | Homepage, https://github.com/pytest-dev/pytest-xdist |
@@ -180,7 +179,7 @@ Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIAN
 | six | 1.17.0 | MIT | https://github.com/benjaminp/six |
 | snowballstemmer | 3.1.1 | BSD-3-Clause | https://github.com/snowballstem/snowball |
 | sortedcontainers | 2.4.0 | Apache-2.0 | http://www.grantjenks.com/docs/sortedcontainers/ |
-| soupsieve | 2.9.2 | MIT | Homepage, https://github.com/facelessuser/soupsieve |
+| soupsieve | 4.0 | MIT | Homepage, https://github.com/facelessuser/soupsieve |
 | Sphinx | 9.1.0 | BSD-2-Clause | Changelog, https://www.sphinx-doc.org/en/master/changes.html |
 | sphinx_rtd_theme | 3.1.0 | MIT | https://github.com/readthedocs/sphinx_rtd_theme |
 | sphinxcontrib-applehelp | 2.0.0 | BSD-3-Clause | Changelog, https://github.com/sphinx-doc/sphinxcontrib-applehelp/blob/master/CHANGES.rst |
@@ -199,7 +198,7 @@ Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIAN
 | tinycss2 | 1.5.1 | BSD-3-Clause | Changelog, https://github.com/Kozea/tinycss2/releases |
 | tomli | 2.4.1 | MIT | Homepage, https://github.com/hukkin/tomli |
 | tomli_w | 1.2.0 | MIT | Changelog, https://github.com/hukkin/tomli-w/blob/master/CHANGELOG.md |
-| tornado | 6.6 | Apache-2.0 | http://www.tornadoweb.org/ |
+| tornado | 6.6.1 | Apache-2.0 | http://www.tornadoweb.org/ |
 | tqdm | 4.70.1 | MIT | homepage, https://tqdm.github.io |
 | traitlets | 5.15.1 | BSD-3-Clause | Homepage, https://github.com/ipython/traitlets |
 | types-Pillow | 10.2.0.20240822 | Apache-2.0 | https://github.com/python/typeshed |
@@ -208,7 +207,7 @@ Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIAN
 | tzdata | 2026.2 | Apache-2.0 | https://github.com/python/tzdata |
 | urllib3 | 2.8.0 | MIT | Changelog, https://github.com/urllib3/urllib3/blob/main/CHANGES.rst |
 | uvicorn | 0.49.0 | BSD-3-Clause | Changelog, https://uvicorn.dev/release-notes |
-| virtualenv | 21.14.13 | MIT | thanks.dev, https://thanks.dev/u/gh/gaborbernat |
+| virtualenv | 21.15.6 | MIT | thanks.dev, https://thanks.dev/u/gh/gaborbernat |
 | wcwidth | 0.8.1 | MIT | Homepage, https://github.com/jquast/wcwidth |
 | webencodings | 0.5.1 | BSD-3-Clause | https://github.com/SimonSapin/python-webencodings |
 | websocket-client | 1.9.0 | Apache-2.0 | https://github.com/websocket-client/websocket-client.git |
