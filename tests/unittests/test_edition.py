@@ -64,7 +64,16 @@ def no_browser_launch(monkeypatch):
     monkeypatch.setattr(go.Figure, "to_image", refuse("Figure.to_image"))
     monkeypatch.setattr(kaleido, "calc_fig_sync", refuse("kaleido.calc_fig_sync"))
     monkeypatch.setattr(kaleido, "start_sync_server", refuse("kaleido.start_sync_server"))
-    monkeypatch.setattr(subprocess, "Popen", refuse("subprocess.Popen"))
+
+    # A subclass rather than a bare function: modules imported mid-test (IPython, via the
+    # report writers) evaluate ``subprocess.Popen[bytes]`` in annotations, which a
+    # function replacement breaks with "'function' object is not subscriptable".
+    class _RefusedPopen(subprocess.Popen):
+        def __init__(self, *_args, **_kwargs):
+            calls.append("subprocess.Popen")
+            raise AssertionError("subprocess.Popen called in Light")
+
+    monkeypatch.setattr(subprocess, "Popen", _RefusedPopen)
     return calls
 
 
