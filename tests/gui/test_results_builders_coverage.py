@@ -675,6 +675,36 @@ async def test_placeholder_inputs_changed_during_its_build_are_not_drawn(monkeyp
     cast(MagicMock, ctrl.refs.dosemap_plot.update_figure).assert_called_once()
 
 
+@pytest.mark.asyncio
+async def test_spinner_stays_up_until_the_last_overlapping_build_finishes(monkeypatch: pytest.MonkeyPatch) -> None:
+    import asyncio
+
+    ctrl = _controller()
+    state.is_multi_exam = False
+    state.calculation_done = True
+    monkeypatch.setattr(state, "calc_run_id", 9)
+    first_release = asyncio.Event()
+    second_release = asyncio.Event()
+    gates = [first_release, second_release]
+
+    async def _fake_io_bound(fn, *args, **kwargs):
+        await gates.pop(0).wait()
+        return {"data": [], "layout": {}}
+
+    monkeypatch.setattr(rb.run, "io_bound", _fake_io_bound)
+    first = asyncio.create_task(ctrl.refresh_dosemap())
+    second = asyncio.create_task(ctrl.refresh_dosemap())  # double-click REGENERATE
+    await asyncio.sleep(0)
+
+    first_release.set()
+    await first
+    assert ctrl.refs.dosemap_spinner.visible is True  # the second build is still running
+
+    second_release.set()
+    await second
+    assert ctrl.refs.dosemap_spinner.visible is False
+
+
 def test_refresh_aggregate_dosemap_empty_exams() -> None:
     ctrl = _controller()
     state.calc_run_id = 9

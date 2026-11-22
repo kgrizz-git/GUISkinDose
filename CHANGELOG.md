@@ -26,6 +26,7 @@ That keeps SemVer and contributor history organized.
 
 ### Fixed
 
+- The Results dose-map spinner no longer disappears while a second overlapping redraw (for example a double-clicked REGENERATE PLOT) is still running.
 - Missing **clinical** catalog meshes stay selected with an install hint instead of substituting another body. Other unavailable selections (demos off, unknown stems, preview suffixes) still fall back to an installed replacement when possible.
 
 ### Changed
