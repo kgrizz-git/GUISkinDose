@@ -315,10 +315,12 @@ async def test_placeholder_dosemap_returns_after_real_map(monkeypatch: pytest.Mo
     await ctrl.refresh_dosemap()
     assert ctrl._placeholder_key is None
 
-    # Invalidating the calculation must bring the zero-dose phantom back.
+    # Invalidating the calculation clears the stale real map, then brings the phantom back.
     state.calculation_done = False
     await ctrl.maybe_auto_refresh_dosemap()
-    assert cast(MagicMock, ctrl.refs.dosemap_plot.update_figure).call_count == 3
+    calls = cast(MagicMock, ctrl.refs.dosemap_plot.update_figure).call_args_list
+    assert [c.args[0] for c in calls[-2:]] == [{}, {"data": [], "layout": {}}]
+    assert ctrl._placeholder_key is not None
 
 
 @pytest.mark.asyncio
@@ -418,6 +420,97 @@ async def test_regenerate_before_calculation_redraws_placeholder(monkeypatch: py
     await ctrl.refresh_dosemap()  # REGENERATE PLOT / colorscale change
 
     assert builds["n"] == 2
+
+
+@pytest.mark.asyncio
+async def test_invalidated_real_map_is_cleared_when_placeholder_fails(monkeypatch: pytest.MonkeyPatch) -> None:
+    ctrl = _controller()
+    ctrl.refs.dosemap_placeholder_caption = MagicMock(visible=False)
+    state.is_multi_exam = False
+    state.calculation_done = True
+    monkeypatch.setattr(state, "calc_run_id", 3)
+    results: list[dict | None] = [{"data": [{"type": "mesh3d"}], "layout": {}}, None]
+
+    async def _fake_io_bound(fn, *args, **kwargs):
+        return results.pop(0)
+
+    monkeypatch.setattr(rb.run, "io_bound", _fake_io_bound)
+    await ctrl.maybe_auto_refresh_dosemap()  # real map drawn
+
+    state.calculation_done = False  # settings change invalidates the run
+    await ctrl.maybe_auto_refresh_dosemap()  # placeholder cannot be built
+
+    update = cast(MagicMock, ctrl.refs.dosemap_plot.update_figure)
+    assert update.call_args_list[-1].args == ({},)
+    assert ctrl.refs.dosemap_placeholder_caption.visible is False
+
+
+@pytest.mark.asyncio
+async def test_placeholder_is_cleared_before_the_real_map_builds(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A captionless zero-dose phantom must never stand in for a finished calculation."""
+    ctrl = _controller()
+    ctrl.refs.dosemap_placeholder_caption = MagicMock(visible=False)
+    state.is_multi_exam = False
+    state.calculation_done = False
+    seen: list[bool] = []
+
+    async def _fake_io_bound(fn, *args, **kwargs):
+        seen.append(ctrl._dosemap_drawn)
+        return {"data": [], "layout": {}}
+
+    monkeypatch.setattr(rb.run, "io_bound", _fake_io_bound)
+    await ctrl.maybe_auto_refresh_dosemap()
+    assert ctrl.refs.dosemap_placeholder_caption.visible is True
+
+    state.calculation_done = True
+    monkeypatch.setattr(state, "calc_run_id", 4)
+    await ctrl.maybe_auto_refresh_dosemap()
+
+    assert seen[-1] is False  # the plot was emptied before the real build started
+    assert ctrl.refs.dosemap_placeholder_caption.visible is False
+
+
+@pytest.mark.asyncio
+async def test_real_map_from_superseded_run_is_dropped(monkeypatch: pytest.MonkeyPatch) -> None:
+    ctrl = _controller()
+    state.is_multi_exam = False
+    state.calculation_done = True
+    monkeypatch.setattr(state, "calc_run_id", 5)
+
+    async def _run_changes_meanwhile(fn, *args, **kwargs):
+        state.calc_run_id = 6
+        return {"data": [], "layout": {}}
+
+    monkeypatch.setattr(rb.run, "io_bound", _run_changes_meanwhile)
+    await ctrl.refresh_dosemap()
+
+    cast(MagicMock, ctrl.refs.dosemap_plot.update_figure).assert_not_called()
+    assert ctrl.refs.dosemap_spinner.visible is False
+
+
+@pytest.mark.asyncio
+async def test_older_placeholder_build_cannot_overwrite_newer(monkeypatch: pytest.MonkeyPatch) -> None:
+    ctrl = _controller()
+    state.is_multi_exam = False
+    state.calculation_done = False
+    monkeypatch.setattr(state, "colorscale", "jet")
+    newer_started = {"done": False}
+
+    async def _fake_io_bound(fn, snapshot, colorscale):
+        if colorscale == "jet" and not newer_started["done"]:
+            # While the jet build is in flight, the user picks viridis.
+            newer_started["done"] = True
+            state.colorscale = "viridis"
+            await ctrl.refresh_dosemap()
+        return {"data": [{"colorscale": colorscale}], "layout": {}}
+
+    monkeypatch.setattr(rb.run, "io_bound", _fake_io_bound)
+    await ctrl.refresh_placeholder_dosemap()
+
+    last = cast(MagicMock, ctrl.refs.dosemap_plot.update_figure).call_args_list[-1].args[0]
+    assert last["data"][0]["colorscale"] == "viridis"
+    assert ctrl._placeholder_key is not None
+    assert ctrl._placeholder_key[1] == "viridis"
 
 
 def test_refresh_aggregate_dosemap_empty_exams() -> None:

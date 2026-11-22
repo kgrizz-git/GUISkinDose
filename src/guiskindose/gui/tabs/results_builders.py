@@ -1,8 +1,9 @@
 """Results tab controller, view references, and layout builders.
 
 Sibling module to ``results.py``; owns the ``ResultsTabController`` (tab-local
-state and timer callbacks), ``ResultsViewRefs`` (UI element handles), and the
-layout builder functions.  ``results.py`` remains the thin public entry point.
+state and timer callbacks) and the layout builder functions. UI element handles live
+in ``results_view_refs.py`` and the single-exam dose map in ``results_dosemap.py``.
+``results.py`` remains the thin public entry point.
 """
 
 from __future__ import annotations
@@ -22,10 +23,10 @@ from ..dose_severity import (
 )
 from ..equipment_profile_surfaces import post_calc_equipment_profile_blocks
 from ..figures import extract_exam_dose_map, make_dosemap_fig
-from ..phantom_preview import capture_phantom_preview_snapshot, make_placeholder_dosemap_fig
 from ..state import state
 from ..summary_formatters import format_tube_summary
 from ..ui_copy import copy_text
+from .results_dosemap import SingleExamDosemapMixin
 from .results_view_refs import ResultsViewRefs
 
 if TYPE_CHECKING:
@@ -89,7 +90,7 @@ def compute_subset_aggregate(res: Any, selected_mask: list[bool]) -> tuple[Any, 
     return combined, subset_psd
 
 
-class ResultsTabController:
+class ResultsTabController(SingleExamDosemapMixin):
     """Tab-local state and timer callbacks for the Results tab."""
 
     def __init__(self) -> None:
@@ -98,10 +99,7 @@ class ResultsTabController:
         self.last_agg_map_run_id: int | None = None
         self.subset_checkboxes: list[Any] = []
         self._inline_rendered: dict[int, bool] = {}
-        # Inputs of the zero-dose placeholder now on screen; None while the real map shows.
-        self._placeholder_key: tuple[Any, str] | None = None
-        # Calculation run whose real map this page shows. Per page, because ``state`` is shared.
-        self._dosemap_run_id: int | None = None
+        self._init_dosemap_state()
 
     def _apply_psd_presentation(self, readout: PsdReadout | None, psd: float | None, text: str | None = None) -> None:
         """Set one banded PSD readout's text and move all three carriers to ``psd``'s band.
@@ -279,53 +277,6 @@ class ResultsTabController:
             "Estimate-grade rotational handling (" + ", ".join(parts) + f" of {total} rotational/moving events)"
         )
         self.refs.agg_rotational_badge.visible = True
-
-    async def refresh_dosemap(self) -> None:
-        """Redraw the dose map: the real map after a calculation, the zero-dose phantom before."""
-        if state.is_multi_exam:
-            return
-        if not state.calculation_done:
-            self._placeholder_key = None  # an explicit redraw always rebuilds
-            await self.refresh_placeholder_dosemap()
-            return
-        run_id = state.calc_run_id
-        self.refs.dosemap_spinner.visible = True
-        fig = await run.io_bound(make_dosemap_fig)
-        self.refs.dosemap_spinner.visible = False
-        if fig:
-            self._placeholder_key = None
-            self._dosemap_run_id = run_id
-            self.refs.dosemap_plot.update_figure(fig)
-
-    async def maybe_auto_refresh_dosemap(self) -> None:
-        """Show the real dose map once calculated, and a zero-dose phantom before that."""
-        if state.is_multi_exam:
-            return
-        if state.calculation_done:
-            if self._dosemap_run_id != state.calc_run_id:
-                await self.refresh_dosemap()
-            return
-        self._dosemap_run_id = None
-        await self.refresh_placeholder_dosemap()
-
-    async def refresh_placeholder_dosemap(self) -> None:
-        """Draw the selected phantom with no dose, redrawing only when phantom or colorscale change."""
-        snapshot = capture_phantom_preview_snapshot(state)
-        key = (snapshot, str(state.colorscale))
-        if key == self._placeholder_key:
-            return
-        fig = await run.io_bound(make_placeholder_dosemap_fig, snapshot, key[1])
-        if state.calculation_done:
-            return
-        # Remember the key only on success, so a mesh that fails now (for example one not yet
-        # installed) is retried on the next tick instead of being latched as drawn.
-        if fig:
-            self._placeholder_key = key
-            self.refs.dosemap_plot.update_figure(fig)
-        elif self._placeholder_key is not None:
-            # Never leave the previous phantom on screen for a selection that cannot be drawn.
-            self._placeholder_key = None
-            self.refs.dosemap_plot.update_figure({})
 
     def refresh_corr_table(self) -> None:
         """Refresh corr table (cleared while no single-exam calculation is current)."""
@@ -634,7 +585,6 @@ class ResultsTabController:
         self._inline_rendered[exam_idx] = True
 
         async def _build(_idx=exam_idx, _plot=plot, _spinner=spinner):
-            from nicegui import run
 
             dose_map, patient_dict = extract_exam_dose_map(res.exams[_idx].output)
             fig = await run.io_bound(make_dosemap_fig, dose_map, patient_dict)
@@ -702,9 +652,10 @@ def _build_single_exam_section(ctrl: ResultsTabController) -> None:
                 ctrl.refs.dosemap_plot = ui.plotly({}).classes("w-full").style("height:700px")
                 ctrl.refs.dosemap_spinner = ui.spinner(size="lg", color="indigo").classes("absolute-center")
                 ctrl.refs.dosemap_spinner.visible = False
-                ui.label(copy_text("results.dosemap_placeholder")).classes(
+                ctrl.refs.dosemap_placeholder_caption = ui.label(copy_text("results.dosemap_placeholder")).classes(
                     "absolute-bottom text-center text-sm text-grey-5 q-pa-sm"
-                ).bind_visibility_from(state, "calculation_done", backward=lambda done: not done)
+                )
+                ctrl.refs.dosemap_placeholder_caption.visible = False
         with ui.column().classes("w-80 gap-6"):
             with ui.card().classes("modern-card w-full"):
                 ui.label("Visual settings").classes("text-subtitle2 q-mb-sm")

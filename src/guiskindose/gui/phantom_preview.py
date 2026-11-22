@@ -93,7 +93,8 @@ class PreviewSnapshot:
     d_ver: float
     d_lat: float
     # Custom phantom/table/pad dimensions as sorted (key, value) pairs; None keeps the defaults.
-    # A tuple, not a dict, so the snapshot stays hashable for the placeholder cache key.
+    # A tuple, not a dict, so snapshots compare by value in the placeholder cache key
+    # (they hash too while the values are scalars, as every shipped dimension is).
     phantom_dimensions: tuple[tuple[str, Any], ...] | None = None
 
     @property

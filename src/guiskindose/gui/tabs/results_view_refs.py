@@ -25,6 +25,7 @@ class ResultsViewRefs:
     equipment_profile_label: ui.label = None  # type: ignore[assignment]
     dosemap_plot: ui.plotly = None  # type: ignore[assignment]
     dosemap_spinner: ui.spinner = None  # type: ignore[assignment]
+    dosemap_placeholder_caption: ui.label = None  # type: ignore[assignment]
     corr_table: ui.table = None  # type: ignore[assignment]
     agg_psd_readout: PsdReadout | None = None
     agg_events_metric: ui.label = None  # type: ignore[assignment]
