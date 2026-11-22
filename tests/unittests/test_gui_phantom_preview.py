@@ -19,6 +19,7 @@ from guiskindose.gui.phantom_preview import (
     PreviewSnapshot,
     capture_phantom_preview_snapshot,
     make_phantom_preview_fig,
+    make_placeholder_dosemap_fig,
     resolve_preview_mesh,
 )
 from guiskindose.gui.state import AppState
@@ -185,3 +186,53 @@ def test_capture_phantom_preview_snapshot_uses_active_exam_offsets_in_multi_exam
 
 def test_make_phantom_preview_fig_non_human_returns_none():
     assert make_phantom_preview_fig(_snapshot(phantom_model="cylinder")) is None
+
+
+def test_placeholder_dosemap_is_one_zero_dose_patient_mesh():
+    fig = make_placeholder_dosemap_fig(_snapshot())
+    assert fig is not None
+    meshes = _mesh3d_traces(fig)
+    assert len(meshes) == 1
+    intensity = np.asarray(meshes[0]["intensity"], dtype=float)
+    assert intensity.size == len(meshes[0]["x"])
+    assert not intensity.any()
+    # The note lives in a caption; a title would overlap the intended-use stamp.
+    assert not fig["layout"].get("title", {}).get("text")
+    assert meshes[0]["showscale"] is False
+
+
+def test_placeholder_dosemap_follows_colorscale():
+    fig = make_placeholder_dosemap_fig(_snapshot(), colorscale="viridis")
+    assert fig is not None
+    default = make_placeholder_dosemap_fig(_snapshot())
+    assert default is not None
+    assert _mesh3d_traces(fig)[0]["colorscale"] != _mesh3d_traces(default)[0]["colorscale"]
+
+
+@pytest.mark.parametrize("model", ["plane", "cylinder"])
+def test_placeholder_dosemap_supports_non_human_models(model):
+    fig = make_placeholder_dosemap_fig(_snapshot(phantom_model=model))
+    assert fig is not None
+    assert len(_mesh3d_traces(fig)) == 1
+
+
+def test_placeholder_dosemap_unknown_stem_returns_none():
+    assert make_placeholder_dosemap_fig(_snapshot(human_mesh="definitely_not_a_mesh")) is None
+
+
+def test_snapshot_carries_custom_phantom_dimensions():
+    app = AppState(phantom_model="cylinder", phantom_dimensions={"cylinder_radii_a": 30, "cylinder_length": 160})
+    snap = capture_phantom_preview_snapshot(app)
+    assert snap.phantom_dimensions == (("cylinder_length", 160), ("cylinder_radii_a", 30))
+    hash(snap)  # must stay usable as a cache key
+    assert snap != capture_phantom_preview_snapshot(AppState(phantom_model="cylinder"))
+
+
+def test_placeholder_uses_custom_phantom_dimensions():
+    base = make_placeholder_dosemap_fig(_snapshot(phantom_model="cylinder"))
+    wide = make_placeholder_dosemap_fig(
+        _snapshot(phantom_model="cylinder", phantom_dimensions=(("cylinder_radii_a", 40),))
+    )
+    assert base is not None
+    assert wide is not None
+    assert _span(_mesh3d_traces(wide)[0], "x") > _span(_mesh3d_traces(base)[0], "x")

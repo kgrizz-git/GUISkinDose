@@ -30,6 +30,7 @@ That keeps SemVer and contributor history organized.
 
 ### Changed
 
+- The Results dose map now shows the selected phantom with no dose before a calculation runs, instead of empty axes.
 - Portable Full builds for macOS and Linux can hand PNG export to bundled Chromium when a frozen build is
   available. CI recorded that path on Actions run 42339804464 (2026-11-07). No portable macOS or Linux
   download is published yet. macOS bundles the browser under `Contents/Helpers/Chromium.app` with notices

@@ -1,13 +1,13 @@
 """Results tab controller, view references, and layout builders.
 
 Sibling module to ``results.py``; owns the ``ResultsTabController`` (tab-local
-state and timer callbacks), ``ResultsViewRefs`` (UI element handles), and the
-layout builder functions.  ``results.py`` remains the thin public entry point.
+state and timer callbacks) and the layout builder functions. UI element handles live
+in ``results_view_refs.py`` and the single-exam dose map in ``results_dosemap.py``.
+``results.py`` remains the thin public entry point.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 from nicegui import run, ui
@@ -26,6 +26,8 @@ from ..figures import extract_exam_dose_map, make_dosemap_fig
 from ..state import state
 from ..summary_formatters import format_tube_summary
 from ..ui_copy import copy_text
+from .results_dosemap import SingleExamDosemapMixin
+from .results_view_refs import ResultsViewRefs
 
 if TYPE_CHECKING:
     from ..page_context import PageContext
@@ -88,7 +90,7 @@ def compute_subset_aggregate(res: Any, selected_mask: list[bool]) -> tuple[Any, 
     return combined, subset_psd
 
 
-class ResultsTabController:
+class ResultsTabController(SingleExamDosemapMixin):
     """Tab-local state and timer callbacks for the Results tab."""
 
     def __init__(self) -> None:
@@ -97,6 +99,7 @@ class ResultsTabController:
         self.last_agg_map_run_id: int | None = None
         self.subset_checkboxes: list[Any] = []
         self._inline_rendered: dict[int, bool] = {}
+        self._init_dosemap_state()
 
     def _apply_psd_presentation(self, readout: PsdReadout | None, psd: float | None, text: str | None = None) -> None:
         """Set one banded PSD readout's text and move all three carriers to ``psd``'s band.
@@ -274,21 +277,6 @@ class ResultsTabController:
             "Estimate-grade rotational handling (" + ", ".join(parts) + f" of {total} rotational/moving events)"
         )
         self.refs.agg_rotational_badge.visible = True
-
-    async def refresh_dosemap(self) -> None:
-        """Refresh dosemap."""
-        if state.is_multi_exam or not state.calculation_done:
-            return
-        self.refs.dosemap_spinner.visible = True
-        fig = await run.io_bound(make_dosemap_fig)
-        self.refs.dosemap_spinner.visible = False
-        if fig:
-            self.refs.dosemap_plot.update_figure(fig)
-
-    async def maybe_auto_refresh_dosemap(self) -> None:
-        """Maybe auto refresh dosemap."""
-        if not state.is_multi_exam and state.calculation_done and state.dosemap_fig is None:
-            await self.refresh_dosemap()
 
     def refresh_corr_table(self) -> None:
         """Refresh corr table (cleared while no single-exam calculation is current)."""
@@ -597,7 +585,6 @@ class ResultsTabController:
         self._inline_rendered[exam_idx] = True
 
         async def _build(_idx=exam_idx, _plot=plot, _spinner=spinner):
-            from nicegui import run
 
             dose_map, patient_dict = extract_exam_dose_map(res.exams[_idx].output)
             fig = await run.io_bound(make_dosemap_fig, dose_map, patient_dict)
@@ -606,36 +593,6 @@ class ResultsTabController:
                 _plot.update_figure(fig)
 
         ui.timer(0.1, _build, once=True)
-
-
-@dataclass
-class ResultsViewRefs:
-    """UI element references for the Results tab."""
-
-    # Banded PSD readouts: the label, its band icon, and its band tooltip move
-    # together, so they are held as one unit rather than as loose references.
-    psd_readout: PsdReadout | None = None
-    kerma_metric: ui.label = None  # type: ignore[assignment]
-    events_metric: ui.label = None  # type: ignore[assignment]
-    dap_metric: ui.label = None  # type: ignore[assignment]
-    fluoro_metric: ui.label = None  # type: ignore[assignment]
-    rotational_badge: ui.label = None  # type: ignore[assignment]
-    tube_label: ui.label = None  # type: ignore[assignment]
-    equipment_profile_label: ui.label = None  # type: ignore[assignment]
-    dosemap_plot: ui.plotly = None  # type: ignore[assignment]
-    dosemap_spinner: ui.spinner = None  # type: ignore[assignment]
-    corr_table: ui.table = None  # type: ignore[assignment]
-    agg_psd_readout: PsdReadout | None = None
-    agg_events_metric: ui.label = None  # type: ignore[assignment]
-    agg_totals_metric: ui.label = None  # type: ignore[assignment]
-    agg_rotational_badge: ui.label = None  # type: ignore[assignment]
-    agg_tube_label: ui.label = None  # type: ignore[assignment]
-    agg_equipment_profile_label: ui.label = None  # type: ignore[assignment]
-    run_warnings_label: ui.label = None  # type: ignore[assignment]
-    agg_dosemap_plot: ui.plotly = None  # type: ignore[assignment]
-    agg_dosemap_spinner: ui.spinner = None  # type: ignore[assignment]
-    multi_exam_accordion_container: ui.column = None  # type: ignore[assignment]
-    subset_checkboxes_container: ui.column = None  # type: ignore[assignment]
 
 
 def _mean_correction(lst: list, i: int, np: Any) -> Any:
@@ -695,6 +652,10 @@ def _build_single_exam_section(ctrl: ResultsTabController) -> None:
                 ctrl.refs.dosemap_plot = ui.plotly({}).classes("w-full").style("height:700px")
                 ctrl.refs.dosemap_spinner = ui.spinner(size="lg", color="indigo").classes("absolute-center")
                 ctrl.refs.dosemap_spinner.visible = False
+                ctrl.refs.dosemap_placeholder_caption = ui.label(copy_text("results.dosemap_placeholder")).classes(
+                    "absolute-bottom text-center text-sm text-grey-5 q-pa-sm"
+                )
+                ctrl.refs.dosemap_placeholder_caption.visible = False
         with ui.column().classes("w-80 gap-6"):
             with ui.card().classes("modern-card w-full"):
                 ui.label("Visual settings").classes("text-subtitle2 q-mb-sm")
