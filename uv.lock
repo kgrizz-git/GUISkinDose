@@ -1349,8 +1349,8 @@ requires-dist = [
     { name = "nbconvert", marker = "extra == 'notebooks'", specifier = ">=7.17.2" },
     { name = "nbsphinx", marker = "extra == 'docs'" },
     { name = "networkx", marker = "extra == 'phantom-gen'", specifier = ">=3" },
-    { name = "nicegui", marker = "extra == 'gui'", specifier = ">=3.18.0" },
-    { name = "nicegui", marker = "extra == 'gui-native'", specifier = ">=3.18.0" },
+    { name = "nicegui", marker = "extra == 'gui'", specifier = ">=3.19,<4" },
+    { name = "nicegui", marker = "extra == 'gui-native'", specifier = ">=3.19,<4" },
     { name = "numpy", specifier = ">=2.2.4" },
     { name = "numpy-stl", specifier = ">=3.2.0" },
     { name = "openpyxl", specifier = ">=3.1" },
@@ -2567,7 +2567,7 @@ wheels = [
 
 [[package]]
 name = "nicegui"
-version = "3.18.0"
+version = "3.19.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiofiles" },
@@ -2595,9 +2595,9 @@ dependencies = [
     { name = "typing-extensions" },
     { name = "uvicorn", extra = ["standard"] },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/ed/ff/eaedb55c0ee3d75c9e9e236fd6ba045f9819db583642d8b745bce9154d2b/nicegui-3.18.0.tar.gz", hash = "sha256:74cf67c57d2a0dbcdc329d9b35d0396d25dc961550765276daef4de244eaf15b", size = 21213512, upload-time = "2026-10-07T13:30:26.068Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/a2/12/c828f10876175caf4b08f4e84795c5c44bb778af0303fc231944e78060d6/nicegui-3.19.0.tar.gz", hash = "sha256:d19c7eb181610fa9c8e3ee8e452261fcbcd9c495c9d66467c99d05f9d3229484", size = 21514299, upload-time = "2026-11-02T16:50:41.479Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/af/38/dd6dc5bfa2d70343a45f83f0b52b7d6411ba65e6b3035000fd633aad0f5e/nicegui-3.18.0-py3-none-any.whl", hash = "sha256:a2bd51642312d98aab6d8b641245d796ff1b89da5829777170bcc488140c3dcd", size = 8530801, upload-time = "2026-10-07T13:30:23.396Z" },
+    { url = "https://files.pythonhosted.org/packages/bd/4c/eab6b31f1f9e84944b6733c4ba597e2a957afab8ca8af5f39ad484fa3e50/nicegui-3.19.0-py3-none-any.whl", hash = "sha256:f0d0ed7485805051d7d039372615a18f08122aeaa30cf030e01471cb9e63725f", size = 8587426, upload-time = "2026-11-02T16:50:37.778Z" },
 ]
 
 [[package]]

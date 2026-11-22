@@ -175,7 +175,7 @@ async def test_import_restores_state_invokes_refresh_and_clears_results(user: Us
     calls: list[str] = []
     with _client(user):
         status = ui.label("")
-    await run_config_mod._do_load(_upload_event(_make_document()), _stub_ctx(calls), status)
+        await run_config_mod._do_load(_upload_event(_make_document()), _stub_ctx(calls), status)
     assert state.d_lon == 1.0
     assert state.input_schema == "dosetrack"
     assert state.loaded_exam_meta[0]["flip_tx"] is True
@@ -214,7 +214,7 @@ async def test_import_updates_rendered_widget_values(user: User) -> None:
     calls: list[str] = []
     with _client(user):
         status = ui.label("")
-    await run_config_mod._do_load(_upload_event(_make_document()), _stub_ctx(calls), status)
+        await run_config_mod._do_load(_upload_event(_make_document()), _stub_ctx(calls), status)
     assert state.d_lon == 1.0
     # Reactive binding propagates on the next client round-trips: poll
     # instead of sleeping a fixed span (flaky under load).
@@ -229,9 +229,9 @@ async def test_import_updates_rendered_widget_values(user: User) -> None:
 async def test_import_mismatch_warning_surfaces_live_untouched(user: User) -> None:
     """File-handle divergence notifies loudly and never overwrites the path.
 
-    Notifications are captured by the harness `user.notify` recorder
-    (NiceGUI reinstalls it on every `user.*` interaction, so manual
-    monkeypatching of `ui.notify` cannot stick — use the recorder).
+    Notifications are captured by the harness `user.notify` recorder, which
+    reads the simulated client outbox. `_do_load` therefore runs inside the
+    client slot (as it does from the upload handler in the app).
     """
     await user.open("/")
     _seed_single_exam()
@@ -242,7 +242,7 @@ async def test_import_mismatch_warning_surfaces_live_untouched(user: User) -> No
     state.kerma_meter_file = "/other/place/custom.xlsx"
     with _client(user):
         status = ui.label("")
-    await run_config_mod._do_load(_upload_event(_make_document()), _stub_ctx([]), status)
+        await run_config_mod._do_load(_upload_event(_make_document()), _stub_ctx([]), status)
     assert state.kerma_meter_file == "/other/place/custom.xlsx"
     assert user.notify.contains("kerma correction file")
     assert user.notify.contains("mismatch")
@@ -257,7 +257,7 @@ async def test_import_refuses_while_busy(user: User) -> None:
     try:
         with _client(user):
             status = ui.label("")
-        await run_config_mod._do_load(_upload_event(_make_document()), _stub_ctx([]), status)
+            await run_config_mod._do_load(_upload_event(_make_document()), _stub_ctx([]), status)
     finally:
         state.busy = False
     assert state.input_schema == "auto"  # nothing applied
@@ -279,9 +279,9 @@ async def test_import_reparse_failure_suppresses_success_status(user: User, monk
     monkeypatch.setattr(run_config_mod, "load_tabular", _fake_load_tabular)
     with _client(user):
         status = ui.label("")
-    document = _make_document()
-    document["gui_state"]["input_sheet_name"] = "Other"
-    await run_config_mod._do_load(_upload_event(document), _stub_ctx([]), status)
+        document = _make_document()
+        document["gui_state"]["input_sheet_name"] = "Other"
+        await run_config_mod._do_load(_upload_event(document), _stub_ctx([]), status)
     assert user.notify.contains("Re-parse after import failed")
     assert not user.notify.contains("Run configuration loaded")
     assert status.text == ""
@@ -306,9 +306,9 @@ async def test_import_count_mismatch_rolls_back_and_keeps_results(user: User) ->
     calls: list[str] = []
     with _client(user):
         status = ui.label("")
-    document = _make_document()
-    document["gui_state"]["exams"] = []  # 0 vs 1 loaded
-    await run_config_mod._do_load(_upload_event(document), _stub_ctx(calls), status)
+        document = _make_document()
+        document["gui_state"]["exams"] = []  # 0 vs 1 loaded
+        await run_config_mod._do_load(_upload_event(document), _stub_ctx(calls), status)
     assert state.input_schema == "auto"  # restored, not half-applied
     assert state.d_lon == 0.0
     assert state.calculation_done is True  # pre-import results stay valid
@@ -338,7 +338,7 @@ async def test_import_unexpected_error_restores_and_notifies(user: User, monkeyp
     monkeypatch.setattr(run_config_mod, "apply_run_state", _boom)
     with _client(user):
         status = ui.label("")
-    await run_config_mod._do_load(_upload_event(_make_document()), _stub_ctx([]), status)
+        await run_config_mod._do_load(_upload_event(_make_document()), _stub_ctx([]), status)
     assert state.input_schema == "auto"
     assert user.notify.contains("Operation failed")
     assert not user.notify.contains("Run configuration loaded")
@@ -367,9 +367,9 @@ async def test_import_second_apply_failure_restores_original_exams(user: User, m
     monkeypatch.setattr(run_config_mod, "load_tabular", _fake_load_tabular)
     with _client(user):
         status = ui.label("")
-    document = _make_document()
-    document["gui_state"]["input_sheet_name"] = "Other"
-    await run_config_mod._do_load(_upload_event(document), _stub_ctx([]), status)
+        document = _make_document()
+        document["gui_state"]["input_sheet_name"] = "Other"
+        await run_config_mod._do_load(_upload_event(document), _stub_ctx([]), status)
     assert user.notify.contains("could not be restored")
     assert not user.notify.contains("Run configuration loaded")
     assert state.loaded_exams == original_exams
@@ -411,10 +411,10 @@ async def test_import_rereparses_before_restoring_offsets(user: User, monkeypatc
     monkeypatch.setattr(run_config_mod, "load_tabular", _fake_load_tabular)
     with _client(user):
         status = ui.label("")
-    document = _make_document()
-    document["gui_state"]["input_sheet_name"] = "Other"
-    document["gui_state"]["exams"][0]["sheet"] = "Other"
-    await run_config_mod._do_load(_upload_event(document), _stub_ctx([]), status)
+        document = _make_document()
+        document["gui_state"]["input_sheet_name"] = "Other"
+        document["gui_state"]["exams"][0]["sheet"] = "Other"
+        await run_config_mod._do_load(_upload_event(document), _stub_ctx([]), status)
     assert reparse_calls == [str(Path("/data/inbox/export.xlsx"))]
     meta = state.loaded_exam_meta[0]
     assert (meta["d_lon"], meta["d_ver"], meta["d_lat"]) == (1.0, 2.0, 3.0)
@@ -473,8 +473,8 @@ async def test_import_replaces_unavailable_mesh_after_reparse(user: User, monkey
     _patch_starter_mesh(monkeypatch)
     with _client(user):
         status = ui.label("")
-    ctx = _stub_ctx([])
-    await run_config_mod._do_load(_upload_event(_unavailable_mesh_document()), ctx, status)
+        ctx = _stub_ctx([])
+        await run_config_mod._do_load(_upload_event(_unavailable_mesh_document()), ctx, status)
     for _ in range(40):
         if state.human_mesh == "senior_male":
             break
@@ -497,7 +497,7 @@ async def test_failed_reparse_does_not_announce_a_mesh_replacement(user: User, m
     _patch_starter_mesh(monkeypatch)
     with _client(user):
         status = ui.label("")
-    await run_config_mod._do_load(_upload_event(_unavailable_mesh_document()), _stub_ctx([]), status)
+        await run_config_mod._do_load(_upload_event(_unavailable_mesh_document()), _stub_ctx([]), status)
     assert state.human_mesh == "hudfrid"
     assert not user.notify.contains("not installed")
 
