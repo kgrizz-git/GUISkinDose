@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import subprocess
+import sys
 from importlib.resources import files
 from pathlib import Path
 from unittest.mock import MagicMock
@@ -163,6 +164,15 @@ def test_full_png_render_reaches_the_kaleido_entry(monkeypatch):
 
     monkeypatch.setattr(go.Figure, "to_image", lambda *_a, **_k: b"png")
     assert render_dosemap_png(*_TRIANGLE) == b"png"
+
+
+def test_no_browser_launch_guard_stops_a_process_but_stays_subscriptable(no_browser_launch):
+    """Control for the fixture: ``Popen`` refuses to run, yet its type alias still resolves."""
+    with pytest.raises(AssertionError, match=r"subprocess\.Popen called in Light"):
+        subprocess.Popen([sys.executable, "-c", "pass"])
+
+    assert no_browser_launch == ["subprocess.Popen"]
+    assert subprocess.Popen[bytes]
 
 
 def test_light_static_dose_maps_stop_before_rendering(light, capsys):
