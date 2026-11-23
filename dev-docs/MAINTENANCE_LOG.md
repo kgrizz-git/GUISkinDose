@@ -8,6 +8,16 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ## [Unreleased]
 
+- **NiceGUI 3.19 step of the 4.0 migration** (2026-11-22) — Raised the `gui` and `gui-native` floors to
+  `nicegui>=3.19,<4`; `uv lock --upgrade-package nicegui` moved only `nicegui` 3.18.0 → 3.19.0 (no other
+  locked package changed). No NiceGUI deprecation warnings were raised: the suite ran with warnings shown
+  and with NiceGUI's log-level warnings visible, the GUI startup and page render were captured, and a sweep
+  found no deprecated prop or removed-API names in `src/` or `tests/`. Eleven
+  `tests/gui/test_run_state_roundtrip.py` tests failed under 3.19 and are fixed by running `_do_load`
+  inside the client slot, matching the app's upload handler — 3.19's test harness records notifications
+  from the client outbox rather than patching `ui.notify`. See
+  [plans/NICEGUI_4_MIGRATION_PLAN.md](plans/NICEGUI_4_MIGRATION_PLAN.md) Step 1.
+
 - **Dependabot Python group (2026-11-21)** — Typed `test_rotational_envelope_dose.py` for pandas-stubs 3.1. The Light-edition `no_browser_launch` fixture now refuses `subprocess.Popen` through a subclass, because a bare function breaks `subprocess.Popen[bytes]` annotations in IPython. kaleido stays at 1.5.0: 1.5.1 failed 3 of 36 PNG renders under parallel load with `kaleido_scopes is not defined`, so `dependabot.yml` ignores that version.
 
 - **mistune and Semgrep-tool advisories** (2026-11-20) — Dependabot flagged mistune 3.3.3 (GHSA-ww7q-mxrj-5ffg,

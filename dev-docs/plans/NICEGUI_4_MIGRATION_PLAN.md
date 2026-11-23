@@ -1,6 +1,6 @@
 # NiceGUI 4 migration plan
 
-**Status:** planned (2026-11-22). **Tracks:** Dependabot PR #233 (`nicegui` 3.18.0 → 4.0.0).
+**Status:** in progress — Step 1 complete (2026-11-22). **Tracks:** Dependabot PR #233 (`nicegui` 3.18.0 → 4.0.0).
 
 NiceGUI 4.0 removes the APIs deprecated during 3.x, changes a few defaults, and updates the bundled
 JavaScript libraries. Most of its behaviour changes raise no error, so this plan records every change
@@ -11,10 +11,10 @@ V4.1 Flash and Muse Spark 1.3 (PR #238).
 
 - **CI on PR #233:** `tests/gui` reports 11 failed, 477 passed, 1 skipped (`gui-smoke` and coverage
   jobs). The non-GUI suite passes. All 11 failures are in `tests/gui/test_run_state_roundtrip.py`.
-- **Cause of the 11 failures: the test harness, not the app.** In 3.18, `nicegui.testing.User` replaced
+- **Cause of the 11 failures: the test harness, not the app.** Through 3.18, `nicegui.testing.User` replaced
   `ui.notify` with its own recorder on every attribute access (`testing/user.py:65`). Our
   `install_notification_defaults()` (`gui/notifications.py`, called from `app.py`) captured that recorder,
-  so a `ui.notify` reached outside any slot was recorded instead of raising. NiceGUI 4 records
+  so a `ui.notify` reached outside any slot was recorded instead of raising. NiceGUI 3.19 (and 4.0) record
   notifications from the client outbox instead, so the captured function is the real `ui.notify`, and
   `_do_load` → `_notify_warnings` (`gui/tabs/_run_config.py`) raises
   `RuntimeError: The current slot cannot be determined`. The tests call `await _do_load(...)` after their
@@ -71,12 +71,19 @@ The 4.0 removed-API list (`ui.add_scss`/`ui.add_sass`, `coroutine=`, `sanitize=N
 1. **Step through 3.19 first, as the guide asks.** On a branch, pin `nicegui>=3.19,<4`, run the app and the
    full test suite with warnings shown, and fix every NiceGUI deprecation warning. This is the only reliable
    detector for changes that are silent in 4.0, such as ignored prop names.
+   **Done (2026-11-22):** `gui`/`gui-native` now require `nicegui>=3.19,<4`; the lock moved only `nicegui`
+   3.18.0 → 3.19.0. No NiceGUI deprecation warnings were raised (pytest with warnings shown, NiceGUI log
+   warnings, GUI startup/render, and a static sweep of deprecated props and removed APIs). The 11
+   `test_run_state_roundtrip.py` failures that reproduce under 3.19 were fixed here (Step 3), by running
+   `_do_load` inside the client slot. ruff, basedpyright, the complexity gate, and the full suite pass.
 2. **Rebase PR #233 on that work.** Run `uv lock` (both touch `uv.lock`) and check the fastapi, starlette,
    uvicorn, `httpx2` and `truststore` versions. Set the `gui` and `gui-native` extras to
    `nicegui>=4.0.0,<5`, so the next major is a deliberate migration. Rewrite the `certifi` comment in
    `pyproject.toml` to say it is a direct dependency.
 3. **Fix the 11 tests.** In `tests/gui/test_run_state_roundtrip.py`, move each `await _do_load(...)` inside
    the existing `with _client(user):` block. Do not weaken assertions.
+   **Already landed in Step 1 (2026-11-22)** — the failures reproduce under 3.19, not only 4.0; the rebase in
+   Step 2 should keep this change.
 4. **Replace the `None` sentinel.** Remove `require_io_result` and its 13 call sites
    (`widgets/import_preview.py`, `tabs/calculate.py`, `tabs/_run_config.py`, `tabs/upload_builders.py`,
    `tabs/export.py`). In `_phantom_catalog.py`, delete the three `None` checks and let `CancelledError`

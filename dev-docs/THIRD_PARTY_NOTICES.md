@@ -106,7 +106,7 @@ Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIAN
 | nbformat | 5.10.4 | BSD-3-Clause | Homepage, https://jupyter.org |
 | nest-asyncio2 | 1.7.2 | BSD-3-Clause | https://github.com/Chaoses-Ib/nest-asyncio2 |
 | networkx | 3.6.1 | BSD-3-Clause | Homepage, https://networkx.org/ |
-| nicegui | 3.18.0 | MIT | Changelog, https://github.com/zauberzeug/nicegui/releases |
+| nicegui | 3.19.0 | MIT | Changelog, https://github.com/zauberzeug/nicegui/releases |
 | nodeenv | 1.10.0 | BSD-3-Clause | https://github.com/ekalinin/nodeenv |
 | nodejs-wheel-binaries | 24.16.0 | MIT | repository, https://github.com/njzjz/nodejs-wheel |
 | notebook_shim | 0.2.4 | BSD-3-Clause | BSD 3-Clause License  Copyright (c) 2022 Project Jupyter Contributors All rights reserved.  Redistribution and use in so |
@@ -127,7 +127,7 @@ Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIAN
 | pip_audit | 2.10.1 | Apache-2.0 | Homepage, https://pypi.org/project/pip-audit/ |
 | platformdirs | 4.10.0 | MIT | Changelog, https://platformdirs.readthedocs.io/en/latest/changelog.html |
 | playwright | 1.65.2 | Apache-2.0 | homepage, https://github.com/Microsoft/playwright-python |
-| plotly | 6.8.0 | MIT | Homepage, https://plotly.com/python/ |
+| plotly | 7.1.0 | MIT | Homepage, https://plotly.com/python/ |
 | pluggy | 1.6.0 | MIT | MIT |
 | pre_commit | 4.7.0 | MIT | https://github.com/pre-commit/pre-commit |
 | prometheus_client | 0.25.0 | Apache-2.0, BSD-2-Clause | Homepage, https://github.com/prometheus/client_python |
@@ -143,7 +143,7 @@ Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIAN
 | pydicom | 3.0.2 | MIT | documentation, https://pydicom.github.io/pydicom |
 | Pygments | 2.20.0 | BSD-2-Clause | Homepage, https://pygments.org |
 | pyparsing | 3.3.2 | MIT | Documentation, https://pyparsing-docs.readthedocs.io/en/latest/ |
-| pypdf | 6.21.4 | BSD-3-Clause | Bug Reports, https://github.com/py-pdf/pypdf/issues |
+| pypdf | 7.1.0 | BSD-3-Clause | Bug Reports, https://github.com/py-pdf/pypdf/issues |
 | pytest | 9.2.0 | MIT | Changelog, https://docs.pytest.org/en/stable/changelog.html |
 | pytest-asyncio | 1.5.0 | Apache-2.0 | Bug Tracker, https://github.com/pytest-dev/pytest-asyncio/issues |
 | pytest-cov | 7.1.0 | MIT | Sources, https://github.com/pytest-dev/pytest-cov |
@@ -169,7 +169,7 @@ Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIAN
 | rich | 15.0.0 | MIT | Documentation, https://rich.readthedocs.io/en/latest/ |
 | roman-numerals | 4.1.0 | 0BSD, CC0-1.0 | Changelog, https://github.com/AA-Turner/roman-numerals/blob/master/CHANGES.rst |
 | rpds-py | 2026.5.1 | MIT | Documentation, https://rpds.readthedocs.io/ |
-| ruff | 0.17.3 | MIT | https://docs.astral.sh/ruff |
+| ruff | 0.17.5 | MIT | https://docs.astral.sh/ruff |
 | scikit-image | 0.26.0 | BSD-3-Clause | homepage, https://scikit-image.org |
 | scipy | 1.17.1 | BSD-3-Clause | homepage, https://scipy.org/ |
 | Send2Trash | 2.1.0 | BSD-3-Clause | Homepage, https://github.com/arsenetar/send2trash |
