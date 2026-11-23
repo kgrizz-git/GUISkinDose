@@ -118,6 +118,15 @@ The 4.0 removed-API list (`ui.add_scss`/`ui.add_sass`, `coroutine=`, `sanitize=N
      backdrop does not lose an answer the user meant to give, and mark any that must be `persistent`;
    - HTML and PNG export; confirm no "Share chart" button in the app or the exported HTML.
    Record the results in the PR.
+   **Browser mode done (2026-11-22, PR #240):** a Playwright smoke on Chromium and WebKit passed every
+   check: the persistent welcome dialog survives a backdrop press; the Results placeholder and caption show
+   before upload; upload (24 events), the Data Table, the Settings preview and Geometry render; the
+   calculation gives 14.08 mGy; the real dose map replaces the placeholder; HTML (plotly.js 4.1.1) and PNG
+   export work; there is no "Share chart" button in the app (plotly.js 4.2.0) and the export does not enable
+   `showSendToCloud`. The only console error, plotly's "Resize must be passed a displayed plot div element"
+   from hidden tabs, occurs equally on `main` under 3.19. The pre-calculation prompts were checked in code
+   rather than driven: a backdrop dismissal resolves the dialog as cancel, so no answer is applied by
+   accident. **Remaining:** `--native` on macOS (and Windows if available), which Playwright cannot drive.
 8. **Gates and docs.** Full `pytest`, basedpyright, the complexity gate, Semgrep, a local SonarQube scan,
    `check_doc_freshness.py`, and `check_help_registry.py` if help copy changed. Update `CHANGELOG.md`
    (Changed: NiceGUI 4; native browser minimums), `dev-docs/MAINTENANCE_LOG.md`,
