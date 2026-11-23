@@ -5,8 +5,8 @@ they do not depend on any page-construction scope, so they live here rather than
 inside the page function. ``make_geometry_fig``/``make_dosemap_fig`` return a Plotly
 figure ``dict`` or ``None`` on failure (an empty plot is an acceptable outcome for
 Results). ``make_dosemap_html``/``make_dosemap_png`` return ``bytes`` and instead
-*raise* on failure, since a silent ``None`` there is indistinguishable from NiceGUI's
-cancel-on-shutdown sentinel (see ``gui/concurrency.require_io_result``).
+*raise* on failure, because a render failure must not be confused with a cancelled
+``run.io_bound`` call (which raises ``asyncio.CancelledError`` and is not caught here).
 """
 
 from __future__ import annotations
@@ -162,9 +162,9 @@ def make_dosemap_html(explicit_dose_map=None, explicit_patient=None) -> bytes:
     """Render the dose map as a standalone interactive HTML document.
 
     Raises on failure (instead of returning ``None``) so callers — notably the
-    export handlers in ``gui/tabs/export.py`` — can distinguish a real render
-    failure from NiceGUI's ``run.io_bound`` cancel-on-shutdown ``None`` sentinel
-    (see ``require_io_result``). The failure is logged via ``safe_error_event``
+    export handlers in ``gui/tabs/export.py`` — can tell a real render failure apart
+    from a cancelled ``run.io_bound`` call, which raises ``asyncio.CancelledError``.
+    The failure is logged via ``safe_error_event``
     before re-raising so no exception text/PHI reaches the caller or the log.
     """
     try:
@@ -184,7 +184,8 @@ def make_dosemap_png(explicit_dose_map=None, explicit_patient=None) -> bytes:
     """Render the dose map as a static PNG (requires kaleido).
 
     Raises on failure (instead of returning ``None``) — mirrors
-    ``make_dosemap_html``; see that docstring for the cancel-vs-failure rationale.
+    ``make_dosemap_html``; see that docstring for the failure-vs-cancellation
+    rationale.
     The Light edition raises ``PngExportUnavailableError`` before any figure is
     built, so Kaleido never looks for a browser.
     """

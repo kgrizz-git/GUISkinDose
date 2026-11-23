@@ -17,7 +17,7 @@ from guiskindose.input_adapters.import_options import TABULAR_SUFFIXES as _TABUL
 from guiskindose.privacy import opaque_exam_label
 
 from ..components import HelpButton
-from ..concurrency import operation_guard, require_io_result, upload_lock
+from ..concurrency import operation_guard, upload_lock
 from ..constants import EXAMPLE_FILES, EXAMPLE_OPTIONS, MISSING_FILE_NOTICE, TABULAR_EXAMPLE_FILES
 from ..dose_severity import reset_psd_label
 from ..helpers import (
@@ -216,10 +216,10 @@ class UploadTabController:
                 if suffix in _TABULAR_SUFFIXES:
                     state.input_source_type = suffix.lstrip(".")
                     workbook_sheets = await self._retain_workbook_sheet(tmp_path, suffix)
-                    ok, msg = require_io_result(await run.io_bound(load_tabular, tmp_path, state))
+                    ok, msg = await run.io_bound(load_tabular, tmp_path, state)
                 else:
                     state.input_source_type = "dicom"
-                    ok, msg = require_io_result(await run.io_bound(load_rdsr, tmp_path, state))
+                    ok, msg = await run.io_bound(load_rdsr, tmp_path, state)
                 if ok:
                     self._clear_sheet_picker(suffix)
                     await self._on_load_success(file_name, suffix, tmp_path, msg, workbook_sheets)
@@ -257,7 +257,7 @@ class UploadTabController:
         """
         if suffix not in _EXCEL_SUFFIXES:
             return None
-        sheets = require_io_result(await run.io_bound(get_excel_sheets, tmp_path))
+        sheets = await run.io_bound(get_excel_sheets, tmp_path)
         state.input_sheet_name = sheet_kept_for_replacement(state.input_sheet_name, sheets)
         return sheets
 
@@ -313,7 +313,7 @@ class UploadTabController:
         """Apply the sheet list, reading the workbook only when it was not already read."""
         sheets = workbook_sheets
         if sheets is None:
-            sheets = require_io_result(await run.io_bound(get_excel_sheets, tmp_path))
+            sheets = await run.io_bound(get_excel_sheets, tmp_path)
         self._apply_workbook_sheets(sheets)
 
     async def load_example(self) -> None:
@@ -339,7 +339,7 @@ class UploadTabController:
                 state.flip_ap1 = False
                 state.flip_ap2 = False
                 self.refs.upload_status.set_text(_PARSING_STATUS)
-                ok, msg = require_io_result(await run.io_bound(load_rdsr, path, state))
+                ok, msg = await run.io_bound(load_rdsr, path, state)
                 if ok:
                     if staged_abandoned:
                         ui.notify(_REMOVE_ABANDON_MESSAGE, type="warning")
@@ -382,7 +382,7 @@ class UploadTabController:
             tmp_path = create_temp_upload(path.read_bytes(), suffix=suffix)
             self.refs.upload_status.set_text(_PARSING_STATUS)
             state.input_source_type = suffix.lstrip(".")
-            ok, msg = require_io_result(await run.io_bound(load_tabular, tmp_path, state))
+            ok, msg = await run.io_bound(load_tabular, tmp_path, state)
             if ok:
                 if staged_abandoned:
                     ui.notify(_REMOVE_ABANDON_MESSAGE, type="warning")
@@ -415,7 +415,7 @@ class UploadTabController:
                 ui.notify(MISSING_FILE_NOTICE, type="warning", timeout=8000)
                 return
             self.refs.upload_status.set_text("RE-PARSING...")
-            ok, msg = require_io_result(await run.io_bound(load_tabular, state.file_path, state, True))
+            ok, msg = await run.io_bound(load_tabular, state.file_path, state, True)
             if ok:
                 self.refs.upload_status.set_text(f"OK: {msg}")
                 ui.notify(msg, color="positive")

@@ -54,14 +54,16 @@ Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIAN
 | et_xmlfile | 2.0.0 | MIT | https://foss.heptapod.net/openpyxl/et_xmlfile |
 | execnet | 2.1.2 | MIT | Homepage, https://execnet.readthedocs.io/en/latest/ |
 | executing | 2.2.1 | MIT | https://github.com/alexmojaki/executing |
-| fastapi | 0.136.3 | MIT | Homepage, https://github.com/fastapi/fastapi |
+| fastapi | 0.165.0 | MIT | Homepage, https://github.com/fastapi/fastapi |
 | fastjsonschema | 2.21.2 | BSD-3-Clause | https://github.com/horejsek/python-fastjsonschema |
 | filelock | 4.2.10 | MIT | Changelog, https://py-filelock.readthedocs.io/en/latest/changelog.html |
 | frozenlist | 1.8.0 | Apache-2.0 | https://github.com/aio-libs/frozenlist |
 | greenlet | 3.5.3 | MIT, PSF-2.0 | Homepage, https://greenlet.readthedocs.io |
 | h11 | 0.16.0 | MIT | https://github.com/python-hyper/h11 |
 | httpcore | 1.0.9 | BSD-3-Clause | Documentation, https://www.encode.io/httpcore |
+| httpcore2 | 2.16.2 | BSD-3-Clause | Changelog, https://github.com/pydantic/httpx2/blob/main/src/httpcore2/CHANGELOG.md |
 | httpx | 0.28.1 | BSD-3-Clause | Changelog, https://github.com/encode/httpx/blob/master/CHANGELOG.md |
+| httpx2 | 2.16.2 | BSD-3-Clause | Changelog, https://github.com/pydantic/httpx2/blob/main/src/httpx2/CHANGELOG.md |
 | identify | 2.6.19 | MIT | https://github.com/pre-commit/identify |
 | idna | 3.18 | BSD-3-Clause | Changelog, https://github.com/kjd/idna/blob/master/HISTORY.md |
 | ifaddr | 0.2.0 | MIT | https://github.com/pydron/ifaddr |
@@ -106,13 +108,14 @@ Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIAN
 | nbformat | 5.10.4 | BSD-3-Clause | Homepage, https://jupyter.org |
 | nest-asyncio2 | 1.7.2 | BSD-3-Clause | https://github.com/Chaoses-Ib/nest-asyncio2 |
 | networkx | 3.6.1 | BSD-3-Clause | Homepage, https://networkx.org/ |
-| nicegui | 3.19.0 | MIT | Changelog, https://github.com/zauberzeug/nicegui/releases |
+| nicegui | 4.0.0 | MIT | Changelog, https://github.com/zauberzeug/nicegui/releases |
 | nodeenv | 1.10.0 | BSD-3-Clause | https://github.com/ekalinin/nodeenv |
 | nodejs-wheel-binaries | 24.16.0 | MIT | repository, https://github.com/njzjz/nodejs-wheel |
 | notebook_shim | 0.2.4 | BSD-3-Clause | BSD 3-Clause License  Copyright (c) 2022 Project Jupyter Contributors All rights reserved.  Redistribution and use in so |
 | numpy | 2.4.6 | BSD-3-Clause, 0BSD, MIT, Zlib, CC0-1.0 | homepage, https://numpy.org |
 | numpy-stl | 4.1.4 | BSD-3-Clause | Homepage, https://github.com/WoLpH/numpy-stl/ |
 | openpyxl | 3.1.5 | MIT | https://openpyxl.readthedocs.io |
+| opentelemetry-api | 1.45.2 | Apache-2.0 | Homepage, https://github.com/open-telemetry/opentelemetry-python/tree/main/opentelemetry-api |
 | orjson | 3.11.9 | Apache-2.0, MIT | changelog, https://github.com/ijl/orjson/blob/master/CHANGELOG.md |
 | packageurl-python | 0.17.6 | MIT | https://github.com/package-url/packageurl-python |
 | packaging | 26.3 | Apache-2.0, BSD-2-Clause | Documentation, https://packaging.pypa.io/ |
@@ -190,7 +193,7 @@ Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIAN
 | sphinxcontrib-qthelp | 2.0.0 | BSD-3-Clause | Changelog, https://github.com/sphinx-doc/sphinxcontrib-qthelp/blob/master/CHANGES.rst |
 | sphinxcontrib-serializinghtml | 2.0.0 | BSD-3-Clause | Changelog, https://github.com/sphinx-doc/sphinxcontrib-serializinghtml/blob/master/CHANGES.rst |
 | stack-data | 0.6.3 | MIT | http://github.com/alexmojaki/stack_data |
-| starlette | 1.3.1 | BSD-3-Clause | Homepage, https://github.com/Kludex/starlette |
+| starlette | 1.10.0 | BSD-3-Clause | Homepage, https://github.com/Kludex/starlette |
 | stevedore | 5.8.0 | Apache-2.0 | Homepage, https://docs.openstack.org/stevedore |
 | terminado | 0.18.1 | BSD-3-Clause | Homepage, https://github.com/jupyter/terminado |
 | text-unidecode | 1.3 | UNKNOWN, GPL-2.0-or-later, GPL-2.0-or-later | https://github.com/kmike/text-unidecode/ |
@@ -201,6 +204,7 @@ Project license: MIT — see [`LICENSE`](../LICENSE). Policy: [`LICENSE_COMPLIAN
 | tornado | 6.6.1 | Apache-2.0 | http://www.tornadoweb.org/ |
 | tqdm | 4.70.1 | MIT | homepage, https://tqdm.github.io |
 | traitlets | 5.15.1 | BSD-3-Clause | Homepage, https://github.com/ipython/traitlets |
+| truststore | 0.10.5 | MIT | Documentation, https://truststore.readthedocs.io |
 | types-Pillow | 10.2.0.20240822 | Apache-2.0 | https://github.com/python/typeshed |
 | typing-inspection | 0.4.2 | MIT | Homepage, https://github.com/pydantic/typing-inspection |
 | typing_extensions | 4.15.0 | PSF-2.0 | Bug Tracker, https://github.com/python/typing_extensions/issues |

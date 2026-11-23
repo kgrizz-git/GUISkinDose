@@ -14,6 +14,21 @@ guiskindose --mode gui --native   # own window; needs guiskindose[gui-native]
 
 `python -m guiskindose --mode gui [--native]` is equivalent.
 
+### Browser and native window requirements
+
+The GUI uses NiceGUI 4, which needs a current browser engine:
+
+| Mode | Minimum |
+|------|---------|
+| Browser | Chrome or Edge 121+, or Safari 17.2+ |
+| Windows, `--native` | WebView2 (Edge) 121+ and .NET Framework 4.6.2+ |
+| macOS, `--native` | macOS 14.2+ (Safari 17.2 WebKit) |
+
+On Windows, `--native` refuses to open a window when it cannot find a usable WebView2
+runtime, and prints how to install the Evergreen runtime. On macOS, `--native` needs
+macOS 14.2 or newer; older systems can still use browser mode with a current browser.
+Linux native mode uses the system WebKitGTK, which must be current enough for NiceGUI 4.
+
 ### From a source checkout
 
 The launcher scripts also set up the interpreter and dependencies.

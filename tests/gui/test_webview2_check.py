@@ -148,6 +148,21 @@ def test_newest_runtime_wins() -> None:
     assert status.runtime_version == (120, 0, 2210, 91)
 
 
+@pytest.mark.parametrize(
+    ("pv", "ready"),
+    [
+        ("120.0.2210.91", False),
+        ("121.0.2272.76", True),
+    ],
+)
+def test_webview2_121_is_the_minimum(pv: str, ready: bool) -> None:
+    """NiceGUI 4 needs Chromium/Edge 121: 120 is too old and 121 passes."""
+    status = webview2.probe_webview2(_reader({_pv("HKEY_LOCAL_MACHINE", _WOW): pv}))
+    assert status is not None
+    assert status.runtime_ok is ready
+    assert status.usable is ready
+
+
 @pytest.mark.parametrize("release", [None, 394801])
 def test_old_or_missing_dotnet_is_unusable(release) -> None:
     status = webview2.probe_webview2(_reader({_pv("HKEY_CURRENT_USER", _NATIVE): "130.0.1.1"}, dotnet=release))

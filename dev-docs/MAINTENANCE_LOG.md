@@ -8,6 +8,21 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ## [Unreleased]
 
+- **NiceGUI 4.0 migration, Steps 2, 4 and 5** (2026-11-22) — `gui`/`gui-native` now require
+  `nicegui>=4.0.0,<5`; the `certifi` comment says it is a direct dependency. `uv lock --upgrade-package
+  nicegui` moved nicegui 3.19.0 → 4.0.0, fastapi 0.136.3 → 0.165.0, starlette 1.3.1 → 1.10.0, and added
+  `httpx2` 2.16.2, `httpx2-jsfetch` 1.0, `httpcore2` 2.16.2, `truststore` 0.10.5 and `opentelemetry-api` 1.45.2 (uvicorn,
+  websockets, httpx and certifi unchanged). Removed `gui.concurrency.require_io_result` and unwrapped all
+  13 call sites, because NiceGUI 4 raises `asyncio.CancelledError` from `run.io_bound` instead of returning
+  `None`; the two `_phantom_catalog.py` shutdown sentinels and their dead branches are gone, and the
+  dialog-cancel `None` in `native_install` remains (it is not an `io_bound` sentinel). Reviewed every
+  `run.io_bound` site under `src/guiskindose/gui` (24, not the 30 the plan recorded) — the remaining
+  `if fig:`/`fig is None` checks are genuine builder failures. Export handlers no longer special-case a
+  cancellation string. New tests cover cancellation propagation with the pack stream and spool closed.
+  `MIN_WEBVIEW2_VERSION` is now `(121, 0, 0, 0)` with a 120-too-old/121-passes test; user docs and the
+  portable-app plan state the NiceGUI 4 browser and OS minimums. See
+  [plans/NICEGUI_4_MIGRATION_PLAN.md](plans/NICEGUI_4_MIGRATION_PLAN.md) Steps 2, 4 and 5.
+
 - **NiceGUI 3.19 step of the 4.0 migration** (2026-11-22) — Raised the `gui` and `gui-native` floors to
   `nicegui>=3.19,<4`; `uv lock --upgrade-package nicegui` moved only `nicegui` 3.18.0 → 3.19.0 (no other
   locked package changed). No NiceGUI deprecation warnings were raised: the suite ran with warnings shown

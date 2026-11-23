@@ -6,6 +6,11 @@
 
 **Architecture:** Keep NiceGUI’s interim `run.io_bound` → `None` = cancel contract via `require_io_result`. Change export builders so failure **raises** (logged via `safe_error_event`) instead of returning `None`. Export handlers catch builder failures separately from cancel. Phase 0 captures the unknown exception; Phase 2 fixes it with a decision tree based on that evidence.
 
+> **Update (2026-11-22):** NiceGUI 4 now raises `asyncio.CancelledError` from `run.io_bound`, and
+> `require_io_result` was removed in the NiceGUI 4 migration (Steps 2, 4 and 5). The failure-versus-cancel
+> separation below is retained: `make_dosemap_html`/`make_dosemap_png` still raise on failure, and the export
+> handlers report those as render failures through their generic exception path.
+
 **Tech Stack:** Python 3.10+, NiceGUI `run.io_bound`, Plotly `Figure.to_html` / `to_image`, pytest, existing `safe_error_event` / `safe_user_error` privacy helpers.
 
 **Source assessment:** [assessments/HTML_EXPORT_BACKGROUND_TASK_ERROR_20260719T123241.md](../assessments/HTML_EXPORT_BACKGROUND_TASK_ERROR_20260719T123241.md)  

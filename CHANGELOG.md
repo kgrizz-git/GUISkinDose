@@ -31,6 +31,10 @@ That keeps SemVer and contributor history organized.
 
 ### Changed
 
+- The GUI now runs on **NiceGUI 4** (`nicegui>=4.0.0,<5`). It also raises the browser floor: Chrome or Edge
+  121+, Safari 17.2+, and macOS 14.2+ for `--native` on macOS. Windows `--native` needs WebView2/Edge 121 or
+  newer, and the pre-check now refuses an older runtime instead of opening a broken window. Python 3.11 or
+  newer is required (the project already required it).
 - The Results dose map now shows the selected phantom with no dose before a calculation runs, instead of empty axes.
 - Portable Full builds for macOS and Linux can hand PNG export to bundled Chromium when a frozen build is
   available. CI recorded that path on Actions run 42339804464 (2026-11-07). No portable macOS or Linux

@@ -135,7 +135,6 @@ async def test_download_html_browser_mode(monkeypatch, _capture_notify) -> None:
     monkeypatch.setattr(export_tab, "_is_native_mode", lambda: False)
     monkeypatch.setattr(export_tab, "_get_save_path", AsyncMock(return_value=None))
     monkeypatch.setattr(export_tab.run, "io_bound", _fake_io_bound)
-    monkeypatch.setattr(export_tab, "require_io_result", lambda x: x)
     monkeypatch.setattr(ui, "download", lambda content, name: downloaded.append((content, name)))
 
     await ctrl.download_html()

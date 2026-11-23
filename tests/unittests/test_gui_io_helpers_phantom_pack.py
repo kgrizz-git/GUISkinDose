@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import builtins
 import sys
 from types import SimpleNamespace
@@ -15,7 +16,7 @@ from guiskindose.gui import io_helpers
 
 
 @pytest.mark.asyncio
-async def test_open_phantom_pack_stream_cancelled_returns_none(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_open_phantom_pack_stream_dialog_cancel_returns_none(monkeypatch: pytest.MonkeyPatch) -> None:
 
     class _MainWindow:
         async def create_file_dialog(self, *_args, **_kwargs):
@@ -32,6 +33,29 @@ async def test_open_phantom_pack_stream_cancelled_returns_none(monkeypatch: pyte
     monkeypatch.setitem(sys.modules, "nicegui", nicegui)
     monkeypatch.setitem(sys.modules, "webview", webview)
     assert await io_helpers.open_phantom_pack_stream() is None
+
+
+@pytest.mark.asyncio
+async def test_open_phantom_pack_stream_cancellation_propagates(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A cancelled io_bound open raises; nothing turns it into a ``None`` result."""
+
+    class _MainWindow:
+        async def create_file_dialog(self, *_args, **_kwargs):
+            return ["/tmp/phantom-pack.zip"]
+
+    async def _io_bound(_fn, *_args, **_kwargs):
+        raise asyncio.CancelledError("The app has shut down.")
+
+    nicegui = SimpleNamespace(
+        app=SimpleNamespace(native=SimpleNamespace(main_window=_MainWindow())),
+        run=SimpleNamespace(io_bound=_io_bound),
+    )
+    webview = SimpleNamespace(FileDialog=SimpleNamespace(OPEN=1), OPEN_DIALOG=1)
+    monkeypatch.setitem(sys.modules, "nicegui", nicegui)
+    monkeypatch.setitem(sys.modules, "webview", webview)
+
+    with pytest.raises(asyncio.CancelledError):
+        await io_helpers.open_phantom_pack_stream()
 
 
 @pytest.mark.asyncio
