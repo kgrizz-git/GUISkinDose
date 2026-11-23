@@ -38,6 +38,22 @@ K_TAB_MODE_OPTIONS = {
 _KERMA_TITLE = "Kerma-meter correction"
 
 
+def _bind_optional_text(field: ui.input, attribute: str) -> ui.input:
+    """Bind a text field to an optional ``str | None`` state attribute.
+
+    NiceGUI 4 stores ``''`` for a cleared input, while these state attributes
+    use ``None`` for unset (for example, "no correction table selected"). Map
+    between the two in both directions so clearing a field really unsets it. A
+    whitespace-only entry also counts as unset.
+    """
+    return field.bind_value(
+        state,
+        attribute,
+        forward=lambda value: value if value and value.strip() else None,
+        backward=lambda value: value or "",
+    )
+
+
 def build(ctx: PageContext) -> None:
     """Construct the Corrections tab panel."""
     del ctx  # corrections need no cross-tab callbacks
@@ -151,20 +167,26 @@ def _build_kerma_meter_section() -> None:
         ui.button(copy_text("settings.kerma_meter.example_button"), on_click=_download_example_calibration_file).props(
             "flat dense no-caps"
         )
-        ui.input(
-            label="Correction table path (CSV/TSV/XLSX/JSON)",
-            value=state.kerma_meter_file or "",
-        ).bind_value(state, "kerma_meter_file").on(_MODEL_VALUE_EVENT, reset_results).classes("w-full")
+        _bind_optional_text(
+            ui.input(
+                label="Correction table path (CSV/TSV/XLSX/JSON)",
+                value=state.kerma_meter_file or "",
+            ),
+            "kerma_meter_file",
+        ).on(_MODEL_VALUE_EVENT, reset_results).classes("w-full")
         ui.number(
             label="Default factor (unresolved / table miss)",
             value=state.kerma_meter_default_factor,
             min=0.01,
             step=0.01,
         ).bind_value(state, "kerma_meter_default_factor").on(_MODEL_VALUE_EVENT, reset_results).classes("w-full")
-        ui.input(
-            label="Explicit equipment label (optional override)",
-            value=state.kerma_meter_explicit_label or "",
-        ).bind_value(state, "kerma_meter_explicit_label").on(_MODEL_VALUE_EVENT, reset_results).classes("w-full")
+        _bind_optional_text(
+            ui.input(
+                label="Explicit equipment label (optional override)",
+                value=state.kerma_meter_explicit_label or "",
+            ),
+            "kerma_meter_explicit_label",
+        ).on(_MODEL_VALUE_EVENT, reset_results).classes("w-full")
         ui.label(
             "CF = (real measured dose) / (unit reported dose). "
             "Radimetrics Equipment = room; DoseTrack Equipment Name is often the model."

@@ -8,6 +8,17 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ## [Unreleased]
 
+- **NiceGUI 4.0 migration, Steps 6 and 8** (2026-11-23) — The two optional kerma-meter text inputs
+  (`gui/tabs/corrections.py`) now bind through `_bind_optional_text()`, which maps NiceGUI 4's `''` for a
+  cleared or whitespace-only input to `None` state and back to `''`. Added
+  `tests/gui/test_corrections_optional_inputs.py` (types and clears each field on the live page and asserts
+  `None`) and `tests/gui/test_plotly_cloud_sharing.py` (no `ui.plotly` element on the live page, no exported
+  HTML plot call, and no source file under `src/guiskindose` enables `showSendToCloud`). Moved the
+  native phantom-pack dialog follow-up to [TO_DO.md](TO_DO.md) (GUI / UX), updated `GUI_PLAN.md` §0 and
+  `dev-docs/index.md`, and archived the plan as
+  [plans/archive/NICEGUI_4_MIGRATION_PLAN.md](plans/archive/NICEGUI_4_MIGRATION_PLAN.md). See Step 6 and
+  Step 8 of that plan.
+
 - **NiceGUI 4.0 migration, Steps 2, 4 and 5** (2026-11-22) — `gui`/`gui-native` now require
   `nicegui>=4.0.0,<5`; the `certifi` comment says it is a direct dependency. `uv lock --upgrade-package
   nicegui` moved nicegui 3.19.0 → 4.0.0, fastapi 0.136.3 → 0.165.0, starlette 1.3.1 → 1.10.0, and added
@@ -21,7 +32,7 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
   cancellation string. New tests cover cancellation propagation with the pack stream and spool closed.
   `MIN_WEBVIEW2_VERSION` is now `(121, 0, 0, 0)` with a 120-too-old/121-passes test; user docs and the
   portable-app plan state the NiceGUI 4 browser and OS minimums. See
-  [plans/NICEGUI_4_MIGRATION_PLAN.md](plans/NICEGUI_4_MIGRATION_PLAN.md) Steps 2, 4 and 5.
+  [plans/archive/NICEGUI_4_MIGRATION_PLAN.md](plans/archive/NICEGUI_4_MIGRATION_PLAN.md) Steps 2, 4 and 5.
 
 - **NiceGUI 3.19 step of the 4.0 migration** (2026-11-22) — Raised the `gui` and `gui-native` floors to
   `nicegui>=3.19,<4`; `uv lock --upgrade-package nicegui` moved only `nicegui` 3.18.0 → 3.19.0 (no other
@@ -31,7 +42,7 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
   `tests/gui/test_run_state_roundtrip.py` tests failed under 3.19 and are fixed by running `_do_load`
   inside the client slot, matching the app's upload handler — 3.19's test harness records notifications
   from the client outbox rather than patching `ui.notify`. See
-  [plans/NICEGUI_4_MIGRATION_PLAN.md](plans/NICEGUI_4_MIGRATION_PLAN.md) Step 1.
+  [plans/archive/NICEGUI_4_MIGRATION_PLAN.md](plans/archive/NICEGUI_4_MIGRATION_PLAN.md) Step 1.
 
 - **Dependabot Python group (2026-11-21)** — Typed `test_rotational_envelope_dose.py` for pandas-stubs 3.1. The Light-edition `no_browser_launch` fixture now refuses `subprocess.Popen` through a subclass, because a bare function breaks `subprocess.Popen[bytes]` annotations in IPython. kaleido stays at 1.5.0: 1.5.1 failed 3 of 36 PNG renders under parallel load with `kaleido_scopes is not defined`, so `dependabot.yml` ignores that version.
 
