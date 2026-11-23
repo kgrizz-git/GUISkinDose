@@ -5,7 +5,9 @@ from __future__ import annotations
 import asyncio
 import importlib.util
 import io
+import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -235,6 +237,65 @@ def _catalog_section() -> object:
     )
     section.status_label = type("L", (), {"set_text": lambda self, _t: None})()
     return section
+
+
+def _native_dialog(monkeypatch: pytest.MonkeyPatch, *, result, error: Exception | None = None) -> None:
+    """Make the real open helper see a native main window whose dialog returns *result* or raises *error*."""
+    from nicegui import app as nicegui_app
+
+    class _MainWindow:
+        async def create_file_dialog(self, *_args, **_kwargs):
+            if error is not None:
+                raise error
+            return result
+
+    monkeypatch.setattr(nicegui_app.native, "main_window", _MainWindow())
+    monkeypatch.setitem(sys.modules, "webview", SimpleNamespace(FileDialog=SimpleNamespace(OPEN=1), OPEN_DIALOG=1))
+
+
+def _section_recording_status() -> tuple[object, list[str]]:
+    from guiskindose.gui.tabs import _phantom_catalog as catalog
+
+    section = catalog._PhantomCatalogSection(
+        mesh_select=type("S", (), {"options": {}, "update": lambda self: None})(),
+        on_change=lambda: None,
+    )
+    status_text: list[str] = []
+    section.status_label = type("L", (), {"set_text": lambda self, text: status_text.append(str(text))})()
+    return section, status_text
+
+
+@pytest.mark.asyncio
+async def test_native_install_dialog_failure_notifies(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A failing native dialog reports the install-failure sentence instead of doing nothing."""
+    from guiskindose.gui.tabs import _phantom_catalog as catalog
+
+    section, status_text = _section_recording_status()
+    messages: list[str] = []
+    monkeypatch.setattr(catalog.ui, "notify", lambda message, **_k: messages.append(str(message)))
+    _native_dialog(monkeypatch, result=None, error=RuntimeError("dialog failed"))
+
+    await section.native_install()  # type: ignore[attr-defined]
+
+    assert messages
+    assert status_text
+    assert messages[-1] == status_text[-1]
+
+
+@pytest.mark.asyncio
+async def test_native_install_cancel_is_silent(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A cancelled native dialog notifies nothing and leaves the status label alone."""
+    from guiskindose.gui.tabs import _phantom_catalog as catalog
+
+    section, status_text = _section_recording_status()
+    wanted: list[tuple[str, dict]] = []
+    monkeypatch.setattr(catalog.ui, "notify", lambda message, **kwargs: wanted.append((str(message), kwargs)))
+    _native_dialog(monkeypatch, result=None)
+
+    await section.native_install()  # type: ignore[attr-defined]
+
+    assert not wanted
+    assert not status_text
 
 
 @pytest.mark.asyncio

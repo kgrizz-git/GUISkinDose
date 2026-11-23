@@ -124,7 +124,12 @@ async def _get_save_path(default_name: str, extension: str) -> str | None:
 
 
 async def open_phantom_pack_stream():
-    """Return an open pack zip stream in native mode, else ``None`` when cancelled."""
+    """Return an open pack zip stream in native mode, else ``None`` when cancelled.
+
+    Outside native mode there is no dialog, so ``None`` means "nothing to open".
+    A dialog failure is left to propagate so the caller can notify the user;
+    only a falsy dialog result (a genuine cancel) maps to ``None``.
+    """
     try:
         from nicegui import app as _app
         from nicegui import run
@@ -134,18 +139,14 @@ async def open_phantom_pack_stream():
             return None
     except Exception:
         return None
-    try:
-        import webview  # pyright: ignore[reportMissingImports]
+    import webview  # pyright: ignore[reportMissingImports]
 
-        open_dialog = webview.FileDialog.OPEN if hasattr(webview, "FileDialog") else webview.OPEN_DIALOG
-        result = await main_window.create_file_dialog(
-            int(open_dialog),
-            file_types=("Zip archives (*.zip)",),
-        )
-        if not result:
-            return None
-        choice = result[0] if isinstance(result, (list, tuple)) else result
-    except Exception as exc:
-        safe_error_event(logger, "native_open_dialog", exc, level=logging.DEBUG)
+    open_dialog = webview.FileDialog.OPEN if hasattr(webview, "FileDialog") else webview.OPEN_DIALOG
+    result = await main_window.create_file_dialog(
+        int(open_dialog),
+        file_types=("Zip archives (*.zip)",),
+    )
+    if not result:
         return None
+    choice = result[0] if isinstance(result, (list, tuple)) else result
     return await run.io_bound(open, choice, "rb")

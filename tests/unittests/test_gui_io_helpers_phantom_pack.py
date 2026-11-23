@@ -36,6 +36,26 @@ async def test_open_phantom_pack_stream_dialog_cancel_returns_none(monkeypatch: 
 
 
 @pytest.mark.asyncio
+async def test_open_phantom_pack_stream_dialog_failure_propagates(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A dialog error is not a cancel: it must reach the caller, not become ``None``."""
+
+    class _MainWindow:
+        async def create_file_dialog(self, *_args, **_kwargs):
+            raise RuntimeError("dialog failed")
+
+    nicegui = SimpleNamespace(
+        app=SimpleNamespace(native=SimpleNamespace(main_window=_MainWindow())),
+        run=SimpleNamespace(io_bound=AsyncMock()),
+    )
+    webview = SimpleNamespace(FileDialog=SimpleNamespace(OPEN=1), OPEN_DIALOG=1)
+    monkeypatch.setitem(sys.modules, "nicegui", nicegui)
+    monkeypatch.setitem(sys.modules, "webview", webview)
+
+    with pytest.raises(RuntimeError, match="dialog failed"):
+        await io_helpers.open_phantom_pack_stream()
+
+
+@pytest.mark.asyncio
 async def test_open_phantom_pack_stream_cancellation_propagates(monkeypatch: pytest.MonkeyPatch) -> None:
     """A cancelled io_bound open raises; nothing turns it into a ``None`` result."""
 
