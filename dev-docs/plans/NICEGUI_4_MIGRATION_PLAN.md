@@ -126,8 +126,9 @@ The 4.0 removed-API list (`ui.add_scss`/`ui.add_sass`, `coroutine=`, `sanitize=N
    `showSendToCloud`. The only console error, plotly's "Resize must be passed a displayed plot div element"
    from hidden tabs, occurs equally on `main` under 3.19. The pre-calculation prompts were checked in code
    rather than driven: a backdrop dismissal resolves the dialog as cancel, so no answer is applied by
-   accident. **Remaining:** `--native` on macOS and Windows, which Playwright cannot drive. Logged as a manual
-   smoke in [TO_DO.md](../TO_DO.md) (*NiceGUI 4 native pass*); it does not block the remaining steps.
+   accident. **Native:** the macOS `--native` window launched with no log errors and rendered correctly
+   (macOS 27.2, user-observed). Windows `--native` remains, logged as a manual smoke in
+   [TO_DO.md](../TO_DO.md) (*NiceGUI 4 native pass*); it does not block the remaining steps.
 8. **Gates and docs.** Full `pytest`, basedpyright, the complexity gate, Semgrep, a local SonarQube scan,
    `check_doc_freshness.py`, and `check_help_registry.py` if help copy changed. Update `CHANGELOG.md`
    (Changed: NiceGUI 4; native browser minimums), `dev-docs/MAINTENANCE_LOG.md`,
