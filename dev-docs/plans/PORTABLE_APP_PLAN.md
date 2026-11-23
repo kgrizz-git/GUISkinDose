@@ -183,6 +183,10 @@ What they do not promise, and later phases take on:
 | Mark of the Web | A browser download marks the zip. The app must not strip that mark. | Signing is the mitigation, not deleting `Zone.Identifier` |
 | Network or UNC launch | Microsoft's Fixed Version runtime does not run from a network path. This applies to the Full Windows zip. | Phase 4 release notes say to copy the Full folder onto the PC first |
 
+NiceGUI 4 sets the browser floor for every edition: WebView2/Edge 121 or newer on Windows,
+macOS 14.2+ (Safari 17.2 WebKit) for `--native` on macOS, and Chrome/Edge 121+ or Safari
+17.2+ in browser mode. The Phase 1 WebView2 pre-check rejects a runtime older than 121.
+
 The frozen Windows manifest must not set `requireAdministrator`. Linux builds must not be setuid. macOS builds must not include a privileged helper. The macOS `Info.plist` sets `NSAppTransportSecurity` → `NSAllowsLocalNetworking`, because the native window loads `http://127.0.0.1` and App Transport Security can block that from macOS 14.
 
 ## Phases

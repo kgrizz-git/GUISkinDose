@@ -32,7 +32,6 @@ from guiskindose.privacy import safe_error_event, safe_user_error
 from guiskindose.safe_output import atomic_write_private
 
 from ..components import HelpButton
-from ..concurrency import require_io_result
 from ..export_source import build_export_source_from_gui
 from ..figures import make_dosemap_html, make_dosemap_png
 from ..io_helpers import _get_save_path, _inject_html_tabular_meta, _is_native_mode, _tabular_input_meta
@@ -118,10 +117,9 @@ def _write_or_download(save_path, content, default_name: str, saved_msg: str, wr
 def _notify_export_failure(safe_error_key: str, exc: Exception, message: str) -> None:
     """Log an export failure safely and show actionable, dismissible negative notifications.
 
-    Shared by every non-cancel exception path in ``download_html``/``download_png`` (both the
-    non-cancel ``RuntimeError`` branch and the generic ``Exception`` branch) so a builder failure
-    such as ``RuntimeError("Dose map figure could not be built")`` can never escape the handler
-    silently mislabeled as a cancellation.
+    Shared by the failure paths in ``download_html``/``download_png``, so a builder failure such
+    as ``RuntimeError("Dose map figure could not be built")`` always reaches the user.
+    Cancellation (``asyncio.CancelledError``, a ``BaseException``) is not caught and propagates.
     """
     safe_error_event(logger, safe_error_key, exc)
     ui.notify(safe_user_error(safe_error_key), type="negative", timeout=0, close_button="Dismiss")
@@ -231,17 +229,7 @@ class ExportTabController:
             explicit_dose_map = state.multi_exam_result.aggregate_dose_map
             explicit_patient = state.multi_exam_result.exams[0].output.to_dict()["patient"]
         try:
-            content = require_io_result(
-                await run.io_bound(make_dosemap_html, explicit_dose_map, explicit_patient)
-            )
-        except RuntimeError as exc:
-            if "Background task was cancelled" in str(exc):
-                ui.notify("Export cancelled — the application is shutting down.", type="warning")
-                return
-            _notify_export_failure(
-                "html_export", exc, "Could not generate the HTML dose map. Check the log for details."
-            )
-            return
+            content = await run.io_bound(make_dosemap_html, explicit_dose_map, explicit_patient)
         except Exception as exc:
             _notify_export_failure(
                 "html_export", exc, "Could not generate the HTML dose map. Check the log for details."
@@ -277,25 +265,12 @@ class ExportTabController:
             explicit_dose_map = state.multi_exam_result.aggregate_dose_map
             explicit_patient = state.multi_exam_result.exams[0].output.to_dict()["patient"]
         try:
-            content = require_io_result(
-                await run.io_bound(make_dosemap_png, explicit_dose_map, explicit_patient)
-            )
+            content = await run.io_bound(make_dosemap_png, explicit_dose_map, explicit_patient)
         except BundledBrowserUnavailableError as exc:
             _notify_export_failure("png_export", exc, BUNDLED_BROWSER_MESSAGE)
             return
         except PngRenderError as exc:
             _notify_export_failure("png_export", exc, PNG_RENDER_MESSAGE)
-            return
-        except RuntimeError as exc:
-            if "Background task was cancelled" in str(exc):
-                ui.notify("Export cancelled — the application is shutting down.", type="warning")
-                return
-            _notify_export_failure(
-                "png_export",
-                exc,
-                "Could not generate the PNG dose map (this may require the 'kaleido' "
-                "package). Check the log for details.",
-            )
             return
         except Exception as exc:
             _notify_export_failure(
@@ -310,9 +285,7 @@ class ExportTabController:
 
     async def _render_rich_report(self, fmt: str, title: str | None) -> bytes | None:
         try:
-            return require_io_result(
-                await run.io_bound(_rich_report_bytes_titled, fmt, title, self._include_ids())
-            )
+            return await run.io_bound(_rich_report_bytes_titled, fmt, title, self._include_ids())
         except MissingExportDependencyError as exc:
             _show_missing_dependency_dialog(exc)
         except Exception as exc:  # kaleido or writer failure

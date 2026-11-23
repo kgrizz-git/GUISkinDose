@@ -58,6 +58,11 @@ be archived.
   - *Native window* — restore-from-maximize and multi-display OS smokes
     ([MAC_NATIVE_WINDOW_MAXIMIZE_PLAN.md](plans/archive/MAC_NATIVE_WINDOW_MAXIMIZE_PLAN.md),
     [NATIVE_WINDOW_GEOMETRY_PLAN.md](plans/archive/NATIVE_WINDOW_GEOMETRY_PLAN.md)).
+  - *NiceGUI 4 native pass* — browser mode passed on Chromium and WebKit (2026-11-22, PR #240); see Step 7
+    of [NICEGUI_4_MIGRATION_PLAN.md](plans/NICEGUI_4_MIGRATION_PLAN.md). The macOS native window launched
+    cleanly and rendered (macOS 27.2, user-observed, 2026-11-22). Remaining: on Windows with WebView2 121+,
+    run `python -m guiskindose --mode gui --native`, load the example RDSR, run a calculation, and confirm the
+    3D views draw; also confirm a WebView2 below 121 is refused with the install message.
 - [ ] **Portable desktop app (PyInstaller)** — Phase 1 partial (the Light/Full editions, the pywebview floor, the Light PNG gate, the WebView2 registry pre-check, the preview proof, the packaging note, the Windows edition matrix, the PNG timing, the Unix pipe-wrapper code, the macOS/Linux CI workflow jobs, frozen Full `--png-check` on macOS and Linux (run [42339804464](https://github.com/kgrizz-git/GUISkinDose/actions/runs/42339804464), 2026-11-07), and Developer ID signed, notarized macOS Light/Full arm64 and Full x64 zips from `portable-macos-release.yml` (run [42653026211](https://github.com/kgrizz-git/GUISkinDose/actions/runs/42653026211), 2026-11-09) are in; the Linux air-gapped library proof, the manual offline PNG check, and the clean-VM checks remain):
   [PORTABLE_APP_PLAN.md](plans/PORTABLE_APP_PLAN.md). Archived execution plans:
   [archive/PORTABLE_BROWSER_WRAPPER_PLAN.md](plans/archive/PORTABLE_BROWSER_WRAPPER_PLAN.md),

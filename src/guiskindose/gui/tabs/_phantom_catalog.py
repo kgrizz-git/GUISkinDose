@@ -116,7 +116,7 @@ class _PhantomCatalogSection:
         stream.seek(0)
         import guiskindose.phantom_pack_pin as pack_pin_module
 
-        result: InstallResult | None = None
+        result: InstallResult
         try:
             result = await run.io_bound(
                 install_phantom_pack_from_stream,
@@ -134,18 +134,13 @@ class _PhantomCatalogSection:
             return
         finally:
             stream.close()
-        if result is not None:
-            self.report_install_success(result)
+        self.report_install_success(result)
 
     async def install_upload(self, event: Any) -> None:
         """Stream a browser upload into a spool under the size cap, then install it."""
         assert self.status_label is not None
         # NiceGUI has already buffered the upload; the server-side middleware caps that. This cap keeps the spool bounded.
         spool = await run.io_bound(_new_pack_spool)
-        if spool is None:
-            # run.io_bound returns None when the app is shutting down.
-            _notify_install_failure(self.status_label)
-            return
         exceeded = False
         try:
             try:
@@ -163,8 +158,9 @@ class _PhantomCatalogSection:
                 return
             await self.commit_install(spool)
         finally:
+            # Close synchronously: an awaited close would itself be cancelled during shutdown.
             if not spool.closed:
-                await run.io_bound(spool.close)
+                spool.close()
 
     async def native_install(self) -> None:
         """Open a pack through the native file dialog and install it; a cancelled dialog does nothing."""
@@ -176,7 +172,7 @@ class _PhantomCatalogSection:
             _notify_install_failure(self.status_label)
             return
         if stream is None:
-            return
+            return  # the native dialog was cancelled; io_bound cancellation raises instead
         await self.commit_install(stream)
 
     def mount_install_control(self) -> None:

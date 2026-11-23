@@ -42,8 +42,9 @@ RegistryReader = Callable[[str, str, str], object]
 # elevation, the bootstrapper installs for the current user only.
 WEBVIEW2_DOWNLOAD_URL = "https://developer.microsoft.com/microsoft-edge/webview2/"
 
-# pywebview's thresholds (webview/platforms/winforms.py, 6.2.1).
-MIN_WEBVIEW2_VERSION = (86, 0, 622, 0)
+# NiceGUI 4 needs Chromium/Edge 121 or newer in the embedded web view. Older
+# runtimes are below its documented minimum, so the window would open broken.
+MIN_WEBVIEW2_VERSION = (121, 0, 0, 0)
 DOTNET_462_RELEASE = 394802
 _DOTNET_KEY = r"SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full"
 
@@ -86,7 +87,7 @@ class WebView2Status:
 
     @property
     def runtime_ok(self) -> bool:
-        """True when a WebView2 runtime at or above pywebview's minimum is registered."""
+        """True when a WebView2 runtime at or above the NiceGUI 4 minimum is registered."""
         return self.runtime_version is not None and self.runtime_version >= MIN_WEBVIEW2_VERSION
 
     @property

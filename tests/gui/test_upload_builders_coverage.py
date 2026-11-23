@@ -360,7 +360,6 @@ async def test_handle_upload_success_dicom(monkeypatch: pytest.MonkeyPatch) -> N
 
     monkeypatch.setattr(ub, "create_temp_upload", lambda payload, suffix=".dcm": tmp)
     monkeypatch.setattr(ub.run, "io_bound", _fake_io_bound)
-    monkeypatch.setattr(ub, "require_io_result", lambda x: x)
     monkeypatch.setattr(ctrl, "_on_load_success", _on_success)
 
     await ctrl.handle_upload(event)

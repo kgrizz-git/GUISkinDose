@@ -14,7 +14,7 @@ from nicegui import run, ui
 from guiskindose.equipment_profile_display import format_equipment_profile_blocks
 
 from ..components import HelpButton
-from ..concurrency import operation_guard, require_io_result
+from ..concurrency import operation_guard
 from ..dose_severity import apply_psd_presentation, reset_psd_label
 from ..equipment_profile_surfaces import pre_calc_equipment_profile_blocks
 from ..helpers import below_floor_event_count, format_input_scanner_label, run_calculation
@@ -492,7 +492,7 @@ class _CalculationController:
         controls.progress.set_value(0)
         controls.status_label.set_text("Starting...")
         try:
-            return require_io_result(await run.io_bound(run_calculation, state, self._update_progress))
+            return await run.io_bound(run_calculation, state, self._update_progress)
         finally:
             controls.progress.set_value(1.0)
             controls.button.enable()

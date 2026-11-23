@@ -1,6 +1,6 @@
 # NiceGUI 4 migration plan
 
-**Status:** in progress — Step 1 complete (2026-11-22). **Tracks:** Dependabot PR #233 (`nicegui` 3.18.0 → 4.0.0).
+**Status:** in progress — Steps 1–5 complete (2026-11-22); Steps 6–8 remain. **Tracks:** Dependabot PR #233 (`nicegui` 3.18.0 → 4.0.0).
 
 NiceGUI 4.0 removes the APIs deprecated during 3.x, changes a few defaults, and updates the bundled
 JavaScript libraries. Most of its behaviour changes raise no error, so this plan records every change
@@ -80,6 +80,10 @@ The 4.0 removed-API list (`ui.add_scss`/`ui.add_sass`, `coroutine=`, `sanitize=N
    uvicorn, `httpx2` and `truststore` versions. Set the `gui` and `gui-native` extras to
    `nicegui>=4.0.0,<5`, so the next major is a deliberate migration. Rewrite the `certifi` comment in
    `pyproject.toml` to say it is a direct dependency.
+   **Done (2026-11-22):** applied on `gui/nicegui-4` instead of rebasing PR #233 — both extras say
+   `nicegui>=4.0.0,<5`, `uv lock --upgrade-package nicegui` moved nicegui 3.19.0 → 4.0.0, fastapi
+   0.136.3 → 0.165.0 and starlette 1.3.1 → 1.10.0, and added `httpx2`, `httpcore2`, `truststore` and
+   `opentelemetry-api`; PR #233 was not touched.
 3. **Fix the 11 tests.** In `tests/gui/test_run_state_roundtrip.py`, move each `await _do_load(...)` inside
    the existing `with _client(user):` block. Do not weaken assertions.
    **Already landed in Step 1 (2026-11-22)** — the failures reproduce under 3.19, not only 4.0; the rebase in
@@ -90,10 +94,19 @@ The 4.0 removed-API list (`ui.add_scss`/`ui.add_sass`, `coroutine=`, `sanitize=N
    propagate; the existing `finally` blocks still close the stream and spool, and a shutdown notification
    is pointless. Review the other 17 `run.io_bound` call sites for checks that assumed `None` meant
    cancellation. Update the `gui/figures.py` docstrings and `HARNESS_ENGINEERING.md` § GUI tests.
+   **Done (2026-11-22):** `require_io_result` and all 13 call sites removed; the export handlers no longer
+   special-case a cancellation string. The two `io_bound` shutdown sentinels (`result is not None`,
+   `spool is None`) are gone. The `stream is None` check in `native_install` stays: that `None` is a
+   cancelled native dialog, not an `io_bound` result, and `CancelledError` now propagates from the open.
+   Reviewed 24 `io_bound` sites (the plan's 30 is stale); the remaining `if fig:`-style checks are genuine
+   builder failures. Tests assert `CancelledError` propagates with the pack stream and spool closed.
 5. **Raise the native browser floors.** Set `MIN_WEBVIEW2_VERSION` in `gui/webview2.py` to a 121.x floor,
    update its comment (it is no longer pywebview's threshold), and add a "120 is too old" case to
    `tests/gui/test_webview2_check.py`. State the macOS 14.2 minimum for `--native` in
    `docs/source/user/running_the_gui.md` and the portable-app notes.
+   **Done (2026-11-22):** `MIN_WEBVIEW2_VERSION = (121, 0, 0, 0)` with a NiceGUI 4 comment and a
+   120-too-old/121-passes test; `running_the_gui.md` and `PORTABLE_APP_PLAN.md` state WebView2/Edge 121,
+   macOS 14.2 (Safari 17.2 WebKit), and Chrome/Edge 121+ or Safari 17.2+ in browser mode.
 6. **Normalise cleared inputs and lock down plotly sharing.** For the two kerma-meter inputs, map `''` to
    `None` in the binding (`forward=lambda v: v or None, backward=lambda v: v or ''`), and add a GUI test that
    clears each field and round-trips saved run state. Add a test or grep gate that no `ui.plotly` config or
@@ -105,12 +118,29 @@ The 4.0 removed-API list (`ui.add_scss`/`ui.add_sass`, `coroutine=`, `sanitize=N
      backdrop does not lose an answer the user meant to give, and mark any that must be `persistent`;
    - HTML and PNG export; confirm no "Share chart" button in the app or the exported HTML.
    Record the results in the PR.
+   **Browser mode done (2026-11-22, PR #240):** a Playwright smoke on Chromium and WebKit passed every
+   check: the persistent welcome dialog survives a backdrop press; the Results placeholder and caption show
+   before upload; upload (24 events), the Data Table, the Settings preview and Geometry render; the
+   calculation gives 14.08 mGy; the real dose map replaces the placeholder; HTML (plotly.js 4.1.1) and PNG
+   export work; there is no "Share chart" button in the app (plotly.js 4.2.0) and the export does not enable
+   `showSendToCloud`. The only console error, plotly's "Resize must be passed a displayed plot div element"
+   from hidden tabs, occurs equally on `main` under 3.19. The pre-calculation prompts were checked in code
+   rather than driven: a backdrop dismissal resolves the dialog as cancel, so no answer is applied by
+   accident. **Native:** the macOS `--native` window launched with no log errors and rendered correctly
+   (macOS 27.2, user-observed). Windows `--native` remains, logged as a manual smoke in
+   [TO_DO.md](../TO_DO.md) (*NiceGUI 4 native pass*); it does not block the remaining steps.
 8. **Gates and docs.** Full `pytest`, basedpyright, the complexity gate, Semgrep, a local SonarQube scan,
    `check_doc_freshness.py`, and `check_help_registry.py` if help copy changed. Update `CHANGELOG.md`
    (Changed: NiceGUI 4; native browser minimums), `dev-docs/MAINTENANCE_LOG.md`,
    `dev-docs/THIRD_PARTY_NOTICES.md` (`check_licenses.py --write-notices`), `dev-docs/plans/GUI_PLAN.md`
    §0, and `dev-docs/index.md`. When packaging resumes, re-check the portable freeze's collect list for the
    new transitives. Archive this plan when the migration merges.
+
+## Follow-ups found during the migration
+
+- `open_phantom_pack_stream()` (`gui/io_helpers.py`) catches every exception from the native file dialog and
+  returns `None`, so a real dialog error looks like a user cancel and `native_install` exits silently.
+  Pre-existing; found in the Step 4 review. Distinguish the two and notify on a real error.
 
 ## Out of scope
 

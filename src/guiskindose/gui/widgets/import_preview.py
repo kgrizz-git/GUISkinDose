@@ -21,7 +21,7 @@ from nicegui import run, ui
 
 from guiskindose.settings.normalization_settings import normalize_manufacturer_key
 
-from ..concurrency import operation_guard, require_io_result
+from ..concurrency import operation_guard
 from ..constants import MISSING_FILE_NOTICE
 from ..helpers import apply_exam_transforms, load_tabular
 from ..page_context import PageContext
@@ -151,7 +151,7 @@ class ImportPreviewController:
                 # Keep the selection in state, but do not start a load that can only fail.
                 ui.notify(MISSING_FILE_NOTICE, type="warning", timeout=8000)
                 return
-            ok, msg = require_io_result(await run.io_bound(load_tabular, state.file_path, state, True))
+            ok, msg = await run.io_bound(load_tabular, state.file_path, state, True)
             if ok:
                 self.upload_status.set_text(f"SUCCESS: {msg.upper()}")
                 reset_results()

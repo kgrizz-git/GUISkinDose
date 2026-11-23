@@ -31,7 +31,7 @@ from guiskindose.gui.state import AppState
 from guiskindose.privacy import safe_error_event, safe_user_error
 
 from ..components import HelpButton
-from ..concurrency import operation_guard, require_io_result
+from ..concurrency import operation_guard
 from ..helpers import load_tabular
 from ..io_helpers import _get_save_path, _is_native_mode
 from ..page_context import PageContext
@@ -320,7 +320,7 @@ async def _resequence_reparse_if_needed(document: dict, schema_or_sheet_changed:
     with operation_guard("re-parsing after configuration import") as proceed:
         if not proceed:
             return True
-        ok, msg = require_io_result(await run.io_bound(load_tabular, state.file_path, state, True))
+        ok, msg = await run.io_bound(load_tabular, state.file_path, state, True)
     if not ok:
         ui.notify(f"Re-parse after import failed: {msg}. Per-exam offsets may be stale.", type="negative")
         return False

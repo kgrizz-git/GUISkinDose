@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import importlib.util
 import io
 from pathlib import Path
@@ -206,3 +207,84 @@ def test_saved_preview_stem_maps_to_its_full_mesh(two_root_dirs, monkeypatch) ->
     monkeypatch.setattr(state, "human_mesh", "senior_male_reduced_3000t")
     settings_tab._select_installed_mesh(get_human_mesh_options())
     assert state.human_mesh == "senior_male"
+
+
+class _TrackingSpool:
+    """Minimal spool: records writes and whether close ran."""
+
+    def __init__(self) -> None:
+        self.closed = False
+        self.buffer = bytearray()
+
+    def tell(self) -> int:
+        return len(self.buffer)
+
+    def write(self, chunk: bytes) -> None:
+        self.buffer.extend(chunk)
+
+    def close(self) -> None:
+        self.closed = True
+
+
+def _catalog_section() -> object:
+    from guiskindose.gui.tabs import _phantom_catalog as catalog
+
+    section = catalog._PhantomCatalogSection(
+        mesh_select=type("S", (), {"options": {}, "update": lambda self: None})(),
+        on_change=lambda: None,
+    )
+    section.status_label = type("L", (), {"set_text": lambda self, _t: None})()
+    return section
+
+
+@pytest.mark.asyncio
+async def test_commit_install_cancellation_closes_stream_and_propagates(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A shutdown during install closes the stream, then lets CancelledError escape."""
+    from guiskindose.gui.tabs import _phantom_catalog as catalog
+
+    section = _catalog_section()
+    stream = io.BytesIO(b"zip")
+
+    async def _io_bound(_fn, *_args, **_kwargs):
+        raise asyncio.CancelledError("The app has shut down.")
+
+    monkeypatch.setattr(catalog.run, "io_bound", _io_bound)
+
+    with pytest.raises(asyncio.CancelledError):
+        await section.commit_install(stream)  # type: ignore[attr-defined]
+
+    assert stream.closed
+
+
+@pytest.mark.asyncio
+async def test_install_upload_cancellation_closes_spool_and_propagates(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A shutdown mid-upload closes the spool, then lets CancelledError escape."""
+    from guiskindose.gui.tabs import _phantom_catalog as catalog
+
+    spool = _TrackingSpool()
+    section = _catalog_section()
+    committed: list[bool] = []
+
+    async def _commit(_stream):
+        committed.append(True)
+
+    section.commit_install = _commit  # type: ignore[method-assign]
+    monkeypatch.setattr(catalog, "_new_pack_spool", lambda: spool)
+
+    async def _io_bound(fn, *args, **kwargs):
+        if fn == spool.write:
+            raise asyncio.CancelledError("The app has shut down.")
+        return fn(*args, **kwargs)
+
+    monkeypatch.setattr(catalog.run, "io_bound", _io_bound)
+
+    class _Upload:
+        async def iterate(self):
+            yield b"chunk"
+
+    upload_event = type("E", (), {"file": _Upload()})()
+    with pytest.raises(asyncio.CancelledError):
+        await section.install_upload(upload_event)  # type: ignore[arg-type]
+
+    assert spool.closed
+    assert not committed
