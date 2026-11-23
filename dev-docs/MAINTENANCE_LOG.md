@@ -11,11 +11,14 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 - **NiceGUI 4.0 migration, Steps 6 and 8** (2026-11-23) — The two optional kerma-meter text inputs
   (`gui/tabs/corrections.py`) now bind through `_bind_optional_text()`, which maps NiceGUI 4's `''` for a
   cleared or whitespace-only input to `None` state and back to `''`. Added
-  `tests/gui/test_corrections_optional_inputs.py` (types and clears each field on the live page and asserts
-  `None`) and `tests/gui/test_plotly_cloud_sharing.py` (no `ui.plotly` element on the live page, no exported
-  HTML plot call, and no source file under `src/guiskindose` enables `showSendToCloud`). Moved the
-  native phantom-pack dialog follow-up to [TO_DO.md](TO_DO.md) (GUI / UX), updated `GUI_PLAN.md` §0 and
-  `dev-docs/index.md`, and archived the plan as
+  `tests/gui/test_corrections_optional_inputs.py` (types into each field on the live page, then clears it with
+  an empty value, spaces, and blank lines, asserting `None` each time) and
+  `tests/gui/test_plotly_cloud_sharing.py` (the dose-map, Results-placeholder, phantom-preview, and geometry
+  figure builders carry no `config` enabling `showSendToCloud`, the exported HTML plot call never sets it,
+  and a comment-stripped source gate rejects anything under `src/guiskindose` that is not an explicit
+  false/0/null). Semgrep (OWASP and the project PHI/PII hooks) and the local SonarQube quality gate ran and
+  passed for PR #241 with no new issues. Moved the native phantom-pack dialog follow-up to
+  [TO_DO.md](TO_DO.md) (GUI / UX), updated `GUI_PLAN.md` §0 and `dev-docs/index.md`, and archived the plan as
   [plans/archive/NICEGUI_4_MIGRATION_PLAN.md](plans/archive/NICEGUI_4_MIGRATION_PLAN.md). See Step 6 and
   Step 8 of that plan.
 

@@ -1,8 +1,10 @@
-"""Corrections-tab text inputs: a cleared field means unset (``None``).
+"""Corrections-tab text inputs: a cleared or blank field means unset (``None``).
 
 NiceGUI 4 stores ``''`` in a text input the user clears. The two optional
 kerma-meter state attributes are ``str | None`` and use ``None`` for unset, so
-the binding must map between the two. These tests drive the real page.
+the binding must map between the two, and a whitespace-only entry also counts as
+unset. These tests drive the real page, clearing each field with an empty,
+space-only, and blank-line value.
 """
 
 from __future__ import annotations
@@ -36,8 +38,9 @@ async def _corrections_inputs(user: User) -> dict[str, ui.input]:
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("label,attribute", _FIELDS)
-async def test_clearing_a_field_unsets_state(user: User, label: str, attribute: str) -> None:
-    """Typing sets the state string; clearing the input stores None, never ''."""
+@pytest.mark.parametrize("cleared", ["", "   ", "\t\n "], ids=["empty", "spaces", "blank-lines"])
+async def test_clearing_a_field_unsets_state(user: User, label: str, attribute: str, cleared: str) -> None:
+    """Typing sets the state string; clearing (or blanking) the input stores None, never ''."""
     from guiskindose.gui.state import state
 
     field = (await _corrections_inputs(user))[label]
@@ -47,5 +50,5 @@ async def test_clearing_a_field_unsets_state(user: User, label: str, attribute: 
     assert getattr(state, attribute) == "/data/cf/corrections.csv"
 
     with user:
-        field.value = ""
+        field.value = cleared
     assert getattr(state, attribute) is None
