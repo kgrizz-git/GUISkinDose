@@ -43,12 +43,10 @@ _SOURCE_SUFFIXES = {".py", ".js", ".mjs", ".html", ".htm"}
 # ``:`` or ``=`` and the assigned value up to the next delimiter.
 _CLOUD_SHARING_ASSIGNMENT = re.compile(r"""showSendToCloud\s*["'\]]*\s*[:=]\s*(?P<value>[^,;}\)\n]*)""")
 
-# The only spellings that mean "do not enable sharing". Everything else -- a
-# quoted "true"/"yes", 2, a variable, ``!0`` -- is treated as enabled.
-_CLEARLY_FALSY = {"", "false", "0", "!1", "null", "none", "undefined"}
-
-_C_BLOCK_COMMENT = re.compile(r"/\*.*?\*/", re.DOTALL)
-_C_LINE_COMMENT = re.compile(r"//[^\n]*")
+# The only unquoted spellings that mean "do not enable sharing". Everything else -- 2,
+# a variable, ``!0`` -- is treated as enabled. A quoted value is falsy only when it is
+# exactly empty: in JavaScript "false", "0" and " " are non-empty strings, so truthy.
+_CLEARLY_FALSY = {"false", "0", "!1", "null", "none", "undefined"}
 
 
 def _preview_snapshot():
@@ -74,10 +72,10 @@ def _config_enables_cloud_sharing(config: object) -> bool:
 
 def _is_clearly_falsy(value: str) -> bool:
     """Whether an assigned value is an explicit false/0/null/empty spelling."""
-    text = value.strip().lower()
+    text = value.strip()
     if len(text) >= 2 and text[0] == text[-1] and text[0] in "\"'":
-        text = text[1:-1].strip()
-    return text in _CLEARLY_FALSY
+        return text[1:-1] == ""
+    return text.lower() in _CLEARLY_FALSY
 
 
 def _enabling_values(text: str) -> list[str]:
@@ -109,8 +107,37 @@ def _python_without_comments(text: str) -> str:
 
 
 def _c_like_without_comments(text: str) -> str:
-    """Drop ``/* ... */`` blocks first, then ``//`` line comments."""
-    return _C_LINE_COMMENT.sub("", _C_BLOCK_COMMENT.sub("", text))
+    """Drop ``//`` and ``/* ... */`` comments, leaving string literals intact.
+
+    A small scanner rather than a regex, so ``"https://..."`` inside a string is not
+    mistaken for a comment that would hide the rest of the line.
+    """
+    out: list[str] = []
+    i, quote = 0, ""
+    while i < len(text):
+        char = text[i]
+        if quote:
+            out.append(char)
+            if char == "\\" and i + 1 < len(text):
+                out.append(text[i + 1])
+                i += 1
+            elif char == quote:
+                quote = ""
+        elif char in "\"'`":
+            quote = char
+            out.append(char)
+        elif text.startswith("//", i):
+            end = text.find("\n", i)
+            i = len(text) if end == -1 else end
+            continue
+        elif text.startswith("/*", i):
+            end = text.find("*/", i + 2)
+            i = len(text) if end == -1 else end + 2
+            continue
+        else:
+            out.append(char)
+        i += 1
+    return "".join(out)
 
 
 def _stripped_source(suffix: str, text: str) -> str:
@@ -211,6 +238,9 @@ def test_exported_dose_map_html_does_not_enable_cloud_sharing() -> None:
         'config = {"showSendToCloud": "yes"}',
         "config.showSendToCloud = enabled;",
         'config["showSendToCloud"] = True',
+        'config = {"showSendToCloud": "false"}',
+        "config = {'showSendToCloud': '0'}",
+        'config = {"showSendToCloud": " "}',
     ],
 )
 def test_source_gate_flags_any_value_that_is_not_clearly_falsy(snippet: str) -> None:
@@ -247,6 +277,12 @@ def test_source_gate_allows_explicit_falsy_values(snippet: str) -> None:
 def test_source_gate_ignores_comments(suffix: str, snippet: str) -> None:
     """A commented-out assignment (``#``, ``//``, ``/* */``) is not an offender."""
     assert _enabling_values(_stripped_source(suffix, snippet)) == []
+
+
+def test_js_comment_stripping_keeps_urls_in_strings() -> None:
+    """A ``//`` inside a string (a URL) must not hide an assignment later on the line."""
+    text = 'const opts = {url: "https://plot.ly/x", showSendToCloud: true};\n'
+    assert _enabling_values(_stripped_source(".js", text)) == ["true"]
 
 
 def test_python_comment_stripping_keeps_string_literals() -> None:
