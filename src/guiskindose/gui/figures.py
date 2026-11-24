@@ -174,7 +174,9 @@ def make_dosemap_html(explicit_dose_map=None, explicit_patient=None) -> bytes:
         import plotly.graph_objects as go
 
         fig = go.Figure(fig_dict)
-        return fig.to_html(full_html=True).encode()
+        from guiskindose.plotting.plot_settings import PLOTLY_CONFIG
+
+        return fig.to_html(full_html=True, config=PLOTLY_CONFIG).encode()
     except Exception as exc:
         safe_error_event(logger, "dosemap_html_render", exc)
         raise

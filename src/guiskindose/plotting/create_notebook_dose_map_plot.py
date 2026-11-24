@@ -10,6 +10,7 @@ from ..constants import (
     PLOT_GROUND_SHIFT_X_STATIC,
     PLOT_SHIFT_X_STATIC,
 )
+from .plot_settings import PLOTLY_CONFIG
 
 logger = logging.getLogger(__name__)
 
@@ -85,4 +86,4 @@ def create_notebook_dose_map_plot(names: list[Path]):
         margin={"l": 0, "r": 0, "t": 0, "b": 0},
     )
 
-    fig.show(config={"doubleClick": "reset"})
+    fig.show(config={**PLOTLY_CONFIG, "doubleClick": "reset"})

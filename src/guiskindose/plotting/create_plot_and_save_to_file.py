@@ -3,6 +3,8 @@ import logging
 
 import plotly.graph_objects as go
 
+from .plot_settings import PLOTLY_CONFIG
+
 logger = logging.getLogger(__name__)
 
 
@@ -23,4 +25,4 @@ def create_plot_and_save_to_file(mode: str, data: list[go.Mesh3d | go.Scatter3d]
 
     fig = go.Figure(data=data, layout=layout)
 
-    fig.show()
+    fig.show(config=PLOTLY_CONFIG)
