@@ -1,6 +1,6 @@
 # NiceGUI 4 migration plan
 
-**Status:** in progress — Steps 1–5 complete (2026-11-22); Steps 6–8 remain. **Tracks:** Dependabot PR #233 (`nicegui` 3.18.0 → 4.0.0).
+**Status:** complete — Steps 1–8 done (2026-11-23). **Tracks:** Dependabot PR #233 (`nicegui` 3.18.0 → 4.0.0).
 
 NiceGUI 4.0 removes the APIs deprecated during 3.x, changes a few defaults, and updates the bundled
 JavaScript libraries. Most of its behaviour changes raise no error, so this plan records every change
@@ -111,6 +111,20 @@ The 4.0 removed-API list (`ui.add_scss`/`ui.add_sass`, `coroutine=`, `sanitize=N
    `None` in the binding (`forward=lambda v: v or None, backward=lambda v: v or ''`), and add a GUI test that
    clears each field and round-trips saved run state. Add a test or grep gate that no `ui.plotly` config or
    exported figure sets `showSendToCloud`.
+   **Done (2026-11-23):** both inputs in `gui/tabs/corrections.py` go through `_bind_optional_text()`
+   (forward maps empty or whitespace-only text to `None`, backward maps `None` to `""`), so a cleared field
+   stores `None`; the existing `reset_results` wiring is unchanged. A run-state round-trip test was dropped in
+   review: `build_settings` already coerces `""` to `None` and import never restores the file path, so it
+   could not fail. `tests/gui/test_corrections_optional_inputs.py` types into both fields on the live page, then
+   clears each with an empty value, spaces, and blank lines, asserting `None` every time.
+   `tests/gui/test_plotly_cloud_sharing.py` checks the figure builders that actually feed `ui.plotly` /
+   `update_figure()` — `make_dosemap_fig`, `make_placeholder_dosemap_fig`, `make_phantom_preview_fig`, and
+   `make_geometry_fig` in `plot_setup` mode from a bundled example — for a `config` that enables
+   `showSendToCloud`; the page's own `ui.plotly({})` elements hold no figure at load and gain one only later
+   through `update_figure()`, so inspecting them proves nothing. The exported HTML's `Plotly.newPlot` call
+   never sets the option, and a comment-stripped source gate rejects anything under `src/guiskindose` that is
+   not an explicit false/0/null (comments removed with `tokenize` for Python and `//` / `/* */` stripping for
+   JS/HTML, with a self-test covering both directions).
 7. **Manual smoke.** In browser mode and `--native` on macOS, and on Windows if possible:
    - welcome dialog, upload, and an exam load whose values appear in bound widgets;
    - Settings preview, Geometry views, a calculation, and the Results dose map (placeholder and real);
@@ -128,19 +142,30 @@ The 4.0 removed-API list (`ui.add_scss`/`ui.add_sass`, `coroutine=`, `sanitize=N
    rather than driven: a backdrop dismissal resolves the dialog as cancel, so no answer is applied by
    accident. **Native:** the macOS `--native` window launched with no log errors and rendered correctly
    (macOS 27.2, user-observed). Windows `--native` remains, logged as a manual smoke in
-   [TO_DO.md](../TO_DO.md) (*NiceGUI 4 native pass*); it does not block the remaining steps.
+   [TO_DO.md](../../TO_DO.md) (*NiceGUI 4 native pass*); it does not block the remaining steps.
 8. **Gates and docs.** Full `pytest`, basedpyright, the complexity gate, Semgrep, a local SonarQube scan,
    `check_doc_freshness.py`, and `check_help_registry.py` if help copy changed. Update `CHANGELOG.md`
    (Changed: NiceGUI 4; native browser minimums), `dev-docs/MAINTENANCE_LOG.md`,
    `dev-docs/THIRD_PARTY_NOTICES.md` (`check_licenses.py --write-notices`), `dev-docs/plans/GUI_PLAN.md`
    §0, and `dev-docs/index.md`. When packaging resumes, re-check the portable freeze's collect list for the
    new transitives. Archive this plan when the migration merges.
+   **Done (2026-11-23):** the native-dialog follow-up moved to `dev-docs/TO_DO.md` (GUI / UX), the
+   `[Unreleased]` changelog entry now also covers cleared kerma-meter fields, and `MAINTENANCE_LOG.md` and
+   `GUI_PLAN.md` §0 record NiceGUI 4.0 with the browser/native minimums. Plan archived under
+   `dev-docs/plans/archive/`; `dev-docs/index.md` moved its row to the archived section. ruff, basedpyright,
+   the complexity/file-size/doc-freshness/help-registry/UI-copy/agent-guidance checks, the license notices
+   check, and `pytest -n auto tests/gui tests/unittests` pass. Semgrep ran and passed for PR #241 (the OWASP
+   and project PHI/PII hooks on push), and the local SonarQube scan passed its quality gate with no new
+   issues. Only the portable freeze collect-list re-check remains deferred, until packaging resumes with the
+   new transitives.
 
 ## Follow-ups found during the migration
 
 - `open_phantom_pack_stream()` (`gui/io_helpers.py`) catches every exception from the native file dialog and
   returns `None`, so a real dialog error looks like a user cancel and `native_install` exits silently.
-  Pre-existing; found in the Step 4 review. Distinguish the two and notify on a real error.
+  Pre-existing; found in the Step 4 review. Tracked in
+  [TO_DO.md](../../TO_DO.md) (*Native phantom-pack dialog errors look like cancellation*) so it survives this
+  plan's archive.
 
 ## Out of scope
 

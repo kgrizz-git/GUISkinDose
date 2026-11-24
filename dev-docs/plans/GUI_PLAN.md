@@ -2,7 +2,7 @@
 
 > See also: [CODEBASE_OVERVIEW.md](../CODEBASE_OVERVIEW.md) | [FEATURE_INVENTORY.md](../FEATURE_INVENTORY.md) | [DESIGN.md](../../DESIGN.md) | [UI_values.md](../UI_values.md) | [AGENTS.md](../../AGENTS.md)
 
-_Last updated: 2026-06-09_
+_Last updated: 2026-11-23_
 
 **Documentation roles:** [DESIGN.md](../../DESIGN.md) = aesthetic intent; [UI_values.md](../UI_values.md) = auto-generated tokens from `app.py`; this file = current state + implementation plan (§0 supersedes the retired `UI_ANALYSIS.md`).
 
@@ -40,6 +40,10 @@ python -m guiskindose --mode headless|gui [--file-path PATH] [--settings PATH] [
 ### 0.4 NiceGUI web application (implemented)
 
 Location: `src/guiskindose/gui/app.py`. Default URL: http://localhost:8765.
+
+Runs on **NiceGUI 4.0** (`nicegui>=4.0.0,<5`). Browser mode needs Chrome or Edge 121+ or Safari 17.2+
+(WebKit). `--native` on macOS needs macOS 14.2+ (Safari 17.2 WebKit); on Windows it needs WebView2/Edge 121+
+and the launch pre-check refuses an older runtime.
 
 | Aspect | Detail |
 |--------|--------|

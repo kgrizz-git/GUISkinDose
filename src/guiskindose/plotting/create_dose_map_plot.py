@@ -31,7 +31,7 @@ from ..constants import (
     PLOT_FONT_FAMILY,
     PLOT_ORDER_STATIC,
 )
-from .plot_settings import fetch_plot_colors, fetch_plot_margin, fetch_plot_size
+from .plot_settings import PLOTLY_CONFIG, fetch_plot_colors, fetch_plot_margin, fetch_plot_size
 
 logger = logging.getLogger(__name__)
 
@@ -129,7 +129,7 @@ def create_dose_map_plot(patient: Phantom, settings: PyskindoseSettings, dose_ma
     stamp_figure(fig)
 
     if settings.plot.interactivity:
-        fig.show()
+        fig.show(config=PLOTLY_CONFIG)
         return
 
     _write_and_show_static_dose_maps(fig, settings)

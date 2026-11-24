@@ -110,3 +110,10 @@ def fetch_slider_padding(notebook_mode: bool):
         return PLOT_SLIDER_PADDING_NOTEBOOK
 
     return PLOT_SLIDER_PADDING
+
+
+# Plotly config for every figure the package renders outside NiceGUI (CLI ``fig.show``,
+# notebooks, standalone HTML export). NiceGUI sets this itself in the app, but standalone
+# plotly.js 4.0 shows a "Share chart" button by default, which uploads chart data to
+# cloud.plotly.com. Patient dose data must never leave the machine that way.
+PLOTLY_CONFIG = {"showSendToCloud": False}

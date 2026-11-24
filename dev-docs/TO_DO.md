@@ -59,7 +59,7 @@ be archived.
     ([MAC_NATIVE_WINDOW_MAXIMIZE_PLAN.md](plans/archive/MAC_NATIVE_WINDOW_MAXIMIZE_PLAN.md),
     [NATIVE_WINDOW_GEOMETRY_PLAN.md](plans/archive/NATIVE_WINDOW_GEOMETRY_PLAN.md)).
   - *NiceGUI 4 native pass* — browser mode passed on Chromium and WebKit (2026-11-22, PR #240); see Step 7
-    of [NICEGUI_4_MIGRATION_PLAN.md](plans/NICEGUI_4_MIGRATION_PLAN.md). The macOS native window launched
+    of [NICEGUI_4_MIGRATION_PLAN.md](plans/archive/NICEGUI_4_MIGRATION_PLAN.md). The macOS native window launched
     cleanly and rendered (macOS 27.2, user-observed, 2026-11-22). Remaining: on Windows with WebView2 121+,
     run `python -m guiskindose --mode gui --native`, load the example RDSR, run a calculation, and confirm the
     3D views draw; also confirm a WebView2 below 121 is refused with the install message.
@@ -119,6 +119,12 @@ be archived.
 ### GUI / UX
 
 - [ ] **Native GUI optional file logging** — `run_gui()` / `__main__` never pass `log_file`, so there is one console sink only (stderr), including `--native`. **Goal:** pass a temp-path `log_file` in native/pywebview mode. Privacy model: value-free logging boundaries stay as-is; file defaults to INFO (DEBUG only with an explicit `dprint` category); rotation ~1 MiB × 4, session purge, POSIX `0o600` (`guiskindose.debug`). **Acceptance:** manual native smoke shows the file; `docs/source/user/running_the_gui.md` + `PRIVACY_AND_SENSITIVE_ASSETS.md` updated; unit test for handler registration; privacy review of the enabled path. **Optional follow-on:** settings/CLI toggle to disable file logging on shared machines. **Progress (2026-10-30):** the portable frozen entry (`packaging/portable/entry.py`) already attaches this sink at `debug.default_native_log_path()`, a per-user `0o700` temp folder, and honors a `GUISKINDOSE_NO_FILE_LOG` opt-out. It is documented under *Logging and privacy* in `docs/source/user/running_the_gui.md`. Source-checkout `--native` runs and the privacy review remain.
+- [ ] **Native phantom-pack dialog errors look like cancellation** — `open_phantom_pack_stream()`
+  ([gui/io_helpers.py](../src/guiskindose/gui/io_helpers.py)) catches every exception from the native file
+  dialog and returns `None`, so a real dialog failure is indistinguishable from a user cancel and
+  `native_install` exits silently. **Goal:** keep `None` for a genuine cancel but notify the user when the
+  dialog itself failed (log through the existing value-free boundary). **Acceptance:** a GUI test where a
+  raised dialog exception surfaces a notification while a `None` result stays silent, plus a `--native` smoke.
 - [ ] **GUI clutter cleanup** — simplify the interface and hide lower-priority or advanced info behind warning/info buttons, collapsible cards, or similar patterns; consider other UX ideas for reducing cognitive load.
 - [ ] **Better export-failure messaging** — when an export fails due to a missing dependency, show clear user-facing info and actionable warnings (e.g. which package to install and how).
 - [ ] **Export audit trail for `table_origin_override`** — record per-exam table-origin overrides in normalized

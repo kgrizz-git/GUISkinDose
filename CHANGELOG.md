@@ -27,6 +27,10 @@ That keeps SemVer and contributor history organized.
 ### Fixed
 
 - The Results dose-map spinner no longer disappears while a second overlapping redraw (for example a double-clicked REGENERATE PLOT) is still running.
+- Exported HTML dose maps, CLI plots, and notebook plots now explicitly hide plotly's "Share chart" button, which
+  uploads chart data to cloud.plotly.com. Standalone plotly.js 4.0 shows it by default.
+- Clearing the kerma-meter correction table path or explicit equipment label, or leaving only spaces in it,
+  now leaves that setting unset instead of an empty string.
 - Missing **clinical** catalog meshes stay selected with an install hint instead of substituting another body. Other unavailable selections (demos off, unknown stems, preview suffixes) still fall back to an installed replacement when possible.
 
 ### Changed
