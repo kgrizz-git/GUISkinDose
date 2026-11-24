@@ -1,6 +1,6 @@
 # Native file-dialog error handling plan
 
-**Status:** complete (2026-11-23). Drafted by Muse Spark 1.3; reviewed by Claude. Source: the
+**Status:** complete (2026-11-23) except the §8 manual `--native` smoke, which is pending. Drafted by Muse Spark 1.3; reviewed by Claude. Source: the
 *Native phantom-pack dialog errors look like cancellation* item in [TO_DO.md](../../TO_DO.md), added by PR #241.
 The `--native` manual smoke (section 8) is still pending.
 

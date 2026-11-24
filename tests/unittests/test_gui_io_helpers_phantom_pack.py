@@ -55,6 +55,53 @@ async def test_open_phantom_pack_stream_dialog_failure_propagates(monkeypatch: p
         await io_helpers.open_phantom_pack_stream()
 
 
+def _native_modules(monkeypatch: pytest.MonkeyPatch, *, result) -> AsyncMock:
+    """Install a fake native window whose dialog returns *result*; return the io_bound mock."""
+
+    class _MainWindow:
+        async def create_file_dialog(self, *_args, **_kwargs):
+            return result
+
+    io_bound = AsyncMock(return_value="stream")
+    nicegui = SimpleNamespace(
+        app=SimpleNamespace(native=SimpleNamespace(main_window=_MainWindow())),
+        run=SimpleNamespace(io_bound=io_bound),
+    )
+    monkeypatch.setitem(sys.modules, "nicegui", nicegui)
+    monkeypatch.setitem(sys.modules, "webview", SimpleNamespace(FileDialog=SimpleNamespace(OPEN=1), OPEN_DIALOG=1))
+    return io_bound
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("result", [None, (), [], ""])
+async def test_open_phantom_pack_stream_any_empty_result_is_a_cancel(monkeypatch: pytest.MonkeyPatch, result) -> None:
+    """pywebview may report a cancel as None, an empty tuple or list, or an empty string."""
+    io_bound = _native_modules(monkeypatch, result=result)
+
+    assert await io_helpers.open_phantom_pack_stream() is None
+    io_bound.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("result", [("pack.zip",), ["pack.zip"], "pack.zip"])
+async def test_open_phantom_pack_stream_opens_the_chosen_file(monkeypatch: pytest.MonkeyPatch, result) -> None:
+    """A tuple, a list, or a bare string all open the chosen file."""
+    io_bound = _native_modules(monkeypatch, result=result)
+
+    assert await io_helpers.open_phantom_pack_stream() == "stream"
+    io_bound.assert_awaited_once_with(open, "pack.zip", "rb")
+
+
+@pytest.mark.asyncio
+async def test_open_phantom_pack_stream_missing_webview_propagates(monkeypatch: pytest.MonkeyPatch) -> None:
+    """In native mode a missing pywebview is a failure to report, not a silent cancel."""
+    _native_modules(monkeypatch, result=None)
+    monkeypatch.setitem(sys.modules, "webview", None)  # makes ``import webview`` raise ImportError
+
+    with pytest.raises(ImportError):
+        await io_helpers.open_phantom_pack_stream()
+
+
 @pytest.mark.asyncio
 async def test_open_phantom_pack_stream_cancellation_propagates(monkeypatch: pytest.MonkeyPatch) -> None:
     """A cancelled io_bound open raises; nothing turns it into a ``None`` result."""

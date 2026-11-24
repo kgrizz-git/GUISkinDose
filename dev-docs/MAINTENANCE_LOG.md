@@ -13,8 +13,8 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
   import in native mode) propagates to `native_install`, which already logs one
   `phantom_pack_open_dialog` event and shows the install-failure message; the helper's own
   `native_open_dialog` log event is gone, so one failure is one event. A falsy dialog result still maps to
-  `None` (a genuine cancel). `_get_save_path` keeps its swallow-as-cancel contract; the follow-up replaces the fixed item in
-  `TO_DO.md`. New tests: the unit helper error propagation and GUI notify/cancel pair (the failure path was
+  `None` (a genuine cancel). `_get_save_path` keeps its swallow-as-cancel contract; the fixed item was removed from `TO_DO.md` and a
+  `_get_save_path` follow-up added. New tests: the unit helper error propagation and GUI notify/cancel pair (the failure path was
   proved to fail before the fix). The `--native` manual smoke remains pending. See
   [plans/archive/NATIVE_FILE_DIALOG_ERRORS_PLAN.md](plans/archive/NATIVE_FILE_DIALOG_ERRORS_PLAN.md).
 
