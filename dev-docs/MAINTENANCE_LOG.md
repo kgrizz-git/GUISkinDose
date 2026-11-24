@@ -8,6 +8,16 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ## [Unreleased]
 
+- **Native phantom-pack dialog errors** (2026-11-23) — `open_phantom_pack_stream()` no longer wraps the
+  pywebview `create_file_dialog` call in `try/except Exception`, so a dialog failure (or a missing `webview`
+  import in native mode) propagates to `native_install`, which already logs one
+  `phantom_pack_open_dialog` event and shows the install-failure message; the helper's own
+  `native_open_dialog` log event is gone, so one failure is one event. A falsy dialog result still maps to
+  `None` (a genuine cancel). `_get_save_path` keeps its swallow-as-cancel contract; the fixed item was removed from `TO_DO.md` and a
+  `_get_save_path` follow-up added. New tests: the unit helper error propagation and GUI notify/cancel pair (the failure path was
+  proved to fail before the fix). The `--native` manual smoke remains pending. See
+  [plans/archive/NATIVE_FILE_DIALOG_ERRORS_PLAN.md](plans/archive/NATIVE_FILE_DIALOG_ERRORS_PLAN.md).
+
 - **NiceGUI 4.0 migration, Steps 6 and 8** (2026-11-23) — The two optional kerma-meter text inputs
   (`gui/tabs/corrections.py`) now bind through `_bind_optional_text()`, which maps NiceGUI 4's `''` for a
   cleared or whitespace-only input to `None` state and back to `''`. Added

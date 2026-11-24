@@ -5,7 +5,10 @@ from __future__ import annotations
 import asyncio
 import importlib.util
 import io
+import logging
+import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -37,6 +40,7 @@ def two_root_dirs(tmp_path, monkeypatch):
     library.mkdir()
     (shipped / "adult_male.stl").write_bytes(tiny_stl_body())
     (library / "senior_male.stl").write_bytes(tiny_stl_body())
+
     def _shipped_dir() -> Path:
         return shipped
 
@@ -92,7 +96,9 @@ def test_pack_install_from_bytes_clears_measurement_cache(two_root_dirs, monkeyp
         shipped_dir=shipped,
     )
     assert result.installed == 1
-    section = catalog._PhantomCatalogSection(mesh_select=type("S", (), {"options": {}, "update": lambda self: None})(), on_change=lambda: None)
+    section = catalog._PhantomCatalogSection(
+        mesh_select=type("S", (), {"options": {}, "update": lambda self: None})(), on_change=lambda: None
+    )
     section.status_label = type("L", (), {"set_text": lambda self, _t: None})()
     section.report_install_success(result)
     assert "junior_male" not in helpers._MESH_EXTENT_CACHE
@@ -118,7 +124,9 @@ async def test_catalog_upload_good_zip_production_wiring(two_root_dirs, monkeypa
         return fn(*args, **kwargs)
 
     monkeypatch.setattr(catalog.run, "io_bound", _io_bound)
-    section = catalog._PhantomCatalogSection(mesh_select=type("S", (), {"options": {}, "update": lambda self: None})(), on_change=lambda: None)
+    section = catalog._PhantomCatalogSection(
+        mesh_select=type("S", (), {"options": {}, "update": lambda self: None})(), on_change=lambda: None
+    )
     section.status_label = type("L", (), {"set_text": lambda self, _t: None})()
 
     class _Upload:
@@ -140,7 +148,9 @@ async def test_install_upload_cumulative_cap_closes_spool(two_root_dirs, monkeyp
     from guiskindose.gui.tabs import _phantom_catalog as catalog
 
     shipped, library = two_root_dirs
-    section = catalog._PhantomCatalogSection(mesh_select=type("S", (), {"options": {}, "update": lambda self: None})(), on_change=lambda: None)
+    section = catalog._PhantomCatalogSection(
+        mesh_select=type("S", (), {"options": {}, "update": lambda self: None})(), on_change=lambda: None
+    )
     section.status_label = type("L", (), {"set_text": lambda self, _t: None})()
     committed: list[bool] = []
 
@@ -186,7 +196,9 @@ async def test_catalog_upload_tampered_zip_leaves_not_installed(two_root_dirs, m
         return fn(*args, **kwargs)
 
     monkeypatch.setattr(catalog.run, "io_bound", _io_bound)
-    section = catalog._PhantomCatalogSection(mesh_select=type("S", (), {"options": {}, "update": lambda self: None})(), on_change=lambda: None)
+    section = catalog._PhantomCatalogSection(
+        mesh_select=type("S", (), {"options": {}, "update": lambda self: None})(), on_change=lambda: None
+    )
     status_text: list[str] = []
     section.status_label = type("L", (), {"set_text": lambda self, text: status_text.append(str(text))})()
 
@@ -235,6 +247,90 @@ def _catalog_section() -> object:
     )
     section.status_label = type("L", (), {"set_text": lambda self, _t: None})()
     return section
+
+
+def _native_dialog(monkeypatch: pytest.MonkeyPatch, *, result, error: BaseException | None = None) -> None:
+    """Make the real open helper see a native main window whose dialog returns *result* or raises *error*."""
+    from nicegui import app as nicegui_app
+
+    class _MainWindow:
+        async def create_file_dialog(self, *_args, **_kwargs):
+            if error is not None:
+                raise error
+            return result
+
+    monkeypatch.setattr(nicegui_app.native, "main_window", _MainWindow())
+    monkeypatch.setitem(sys.modules, "webview", SimpleNamespace(FileDialog=SimpleNamespace(OPEN=1), OPEN_DIALOG=1))
+
+
+def _section_recording_status() -> tuple[object, list[str]]:
+    from guiskindose.gui.tabs import _phantom_catalog as catalog
+
+    section = catalog._PhantomCatalogSection(
+        mesh_select=type("S", (), {"options": {}, "update": lambda self: None})(),
+        on_change=lambda: None,
+    )
+    status_text: list[str] = []
+    section.status_label = type("L", (), {"set_text": lambda self, text: status_text.append(str(text))})()
+    return section, status_text
+
+
+@pytest.mark.asyncio
+async def test_native_install_dialog_failure_notifies(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    """A failing native dialog reports the install-failure sentence and logs exactly one value-free event."""
+    from guiskindose.gui.tabs import _phantom_catalog as catalog
+
+    section, status_text = _section_recording_status()
+    messages: list[str] = []
+    monkeypatch.setattr(catalog.ui, "notify", lambda message, **_k: messages.append(str(message)))
+    _native_dialog(monkeypatch, result=None, error=RuntimeError("dialog failed at /secret/path.zip"))
+
+    # INFO, not DEBUG: at DEBUG safe_error_event adds a value-free traceback record for the same event.
+    with caplog.at_level(logging.INFO):
+        await section.native_install()  # type: ignore[attr-defined]
+
+    assert messages
+    assert status_text
+    assert messages[-1] == status_text[-1]
+    events = [r.getMessage() for r in caplog.records if "dialog" in r.getMessage()]
+    assert len(events) == 1
+    assert "phantom_pack_open_dialog" in events[0]
+    assert "/secret/path.zip" not in caplog.text  # the exception message never reaches the log
+
+
+@pytest.mark.asyncio
+async def test_native_install_lets_dialog_cancellation_propagate(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Shutdown cancellation is not an install failure: it escapes without a notification."""
+    from guiskindose.gui.tabs import _phantom_catalog as catalog
+
+    section, status_text = _section_recording_status()
+    messages: list[str] = []
+    monkeypatch.setattr(catalog.ui, "notify", lambda message, **_k: messages.append(str(message)))
+    _native_dialog(monkeypatch, result=None, error=asyncio.CancelledError())
+
+    with pytest.raises(asyncio.CancelledError):
+        await section.native_install()  # type: ignore[attr-defined]
+
+    assert not messages
+    assert not status_text
+
+
+@pytest.mark.asyncio
+async def test_native_install_cancel_is_silent(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A cancelled native dialog notifies nothing and leaves the status label alone."""
+    from guiskindose.gui.tabs import _phantom_catalog as catalog
+
+    section, status_text = _section_recording_status()
+    wanted: list[tuple[str, dict]] = []
+    monkeypatch.setattr(catalog.ui, "notify", lambda message, **kwargs: wanted.append((str(message), kwargs)))
+    _native_dialog(monkeypatch, result=None)
+
+    await section.native_install()  # type: ignore[attr-defined]
+
+    assert not wanted
+    assert not status_text
 
 
 @pytest.mark.asyncio

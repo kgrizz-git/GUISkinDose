@@ -26,6 +26,7 @@ That keeps SemVer and contributor history organized.
 
 ### Fixed
 
+- A failed **native phantom-pack file dialog** now shows the install-failure message instead of doing nothing; a cancel stays silent.
 - The Results dose-map spinner no longer disappears while a second overlapping redraw (for example a double-clicked REGENERATE PLOT) is still running.
 - Exported HTML dose maps, CLI plots, and notebook plots now explicitly hide plotly's "Share chart" button, which
   uploads chart data to cloud.plotly.com. Standalone plotly.js 4.0 shows it by default.
