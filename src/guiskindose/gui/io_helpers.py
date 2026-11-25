@@ -81,8 +81,10 @@ async def _request_native_save_path(default_name: str, extension: str) -> str | 
 
     Returns ``None`` in browser mode (callers fall back to ``ui.download()``)
     and ``None`` when the user cancels the dialog (``None``, ``()``, ``[]``
-    or ``""``). Every other failure propagates so the caller-facing wrapper
-    can report it; nothing here logs or notifies.
+    or ``""``). A failed native-window lookup also returns ``None`` (browser
+    fallback) and is logged value-free at DEBUG. Every other failure
+    propagates so the caller-facing wrapper can report it; nothing here
+    notifies.
     """
     try:
         from nicegui import app as _app
