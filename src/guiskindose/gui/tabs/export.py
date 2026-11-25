@@ -210,7 +210,7 @@ class ExportTabController:
         default_name = "guiskindose_results.json"
         save_path = await _get_save_path(default_name, "json")
         if save_path is None and _is_native_mode():
-            return  # user cancelled the native dialog
+            return  # cancel or an already-reported dialog failure
         content = json.dumps(self._build_export_payload(), indent=4).encode("utf-8")
         _write_or_download(save_path, content, default_name, "JSON export saved.", "json_export_write")
 
@@ -222,7 +222,7 @@ class ExportTabController:
         default_name = "guiskindose_dose_map.html"
         save_path = await _get_save_path(default_name, "html")
         if save_path is None and _is_native_mode():
-            return  # user cancelled the native dialog
+            return  # cancel or an already-reported dialog failure
         explicit_dose_map = None
         explicit_patient = None
         if state.multi_exam_result is not None and state.multi_exam_result.exams:
@@ -258,7 +258,7 @@ class ExportTabController:
         default_name = "guiskindose_dose_map.png"
         save_path = await _get_save_path(default_name, "png")
         if save_path is None and _is_native_mode():
-            return  # user cancelled the native dialog
+            return  # cancel or an already-reported dialog failure
         explicit_dose_map = None
         explicit_patient = None
         if state.multi_exam_result is not None and state.multi_exam_result.exams:
@@ -309,7 +309,7 @@ class ExportTabController:
         default_name = f"guiskindose_report_{stamp}.{fmt}"
         save_path = await _get_save_path(default_name, fmt)
         if save_path is None and _is_native_mode():
-            return  # user cancelled native dialog
+            return  # cancel or an already-reported dialog failure
         self.rich_report_dialog.close()
         ui.notify("Generating report…")
         content = await self._render_rich_report(fmt, title)

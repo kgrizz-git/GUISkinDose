@@ -119,13 +119,6 @@ be archived.
 ### GUI / UX
 
 - [ ] **Native GUI optional file logging** — `run_gui()` / `__main__` never pass `log_file`, so there is one console sink only (stderr), including `--native`. **Goal:** pass a temp-path `log_file` in native/pywebview mode. Privacy model: value-free logging boundaries stay as-is; file defaults to INFO (DEBUG only with an explicit `dprint` category); rotation ~1 MiB × 4, session purge, POSIX `0o600` (`guiskindose.debug`). **Acceptance:** manual native smoke shows the file; `docs/source/user/running_the_gui.md` + `PRIVACY_AND_SENSITIVE_ASSETS.md` updated; unit test for handler registration; privacy review of the enabled path. **Optional follow-on:** settings/CLI toggle to disable file logging on shared machines. **Progress (2026-10-30):** the portable frozen entry (`packaging/portable/entry.py`) already attaches this sink at `debug.default_native_log_path()`, a per-user `0o700` temp folder, and honors a `GUISKINDOSE_NO_FILE_LOG` opt-out. It is documented under *Logging and privacy* in `docs/source/user/running_the_gui.md`. Source-checkout `--native` runs and the privacy review remain.
-- [ ] **Native save dialogs swallow errors as a cancel** — `_get_save_path` in `src/guiskindose/gui/io_helpers.py`
-  returns `None` for any dialog exception, the same value a genuine cancel produces, so its seven callers
-  (`export.py` ×4, `_run_config.py`, `corrections.py`, `data.py`) stay silent on a real failure. **Goal:** let a
-  failed save dialog reach the user instead of looking like a cancel. **Acceptance:** a dialog error notifies (using
-  existing failure copy where a caller has one) while a genuine cancel stays silent; unit tests cover both paths per
-  caller; one log event per failure at one layer only. Follow-up from
-  [plans/archive/NATIVE_FILE_DIALOG_ERRORS_PLAN.md](plans/archive/NATIVE_FILE_DIALOG_ERRORS_PLAN.md) §5.
 - [ ] **GUI clutter cleanup** — simplify the interface and hide lower-priority or advanced info behind warning/info buttons, collapsible cards, or similar patterns; consider other UX ideas for reducing cognitive load.
 - [ ] **Better export-failure messaging** — when an export fails due to a missing dependency, show clear user-facing info and actionable warnings (e.g. which package to install and how).
 - [ ] **Export audit trail for `table_origin_override`** — record per-exam table-origin overrides in normalized

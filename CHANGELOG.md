@@ -26,6 +26,7 @@ That keeps SemVer and contributor history organized.
 
 ### Fixed
 
+- A failed **native save dialog** now reports that nothing was saved instead of silently doing nothing; cancelling still does nothing.
 - A failed **native phantom-pack file dialog** now shows the install-failure message instead of doing nothing; a cancel stays silent.
 - The Results dose-map spinner no longer disappears while a second overlapping redraw (for example a double-clicked REGENERATE PLOT) is still running.
 - Exported HTML dose maps, CLI plots, and notebook plots now explicitly hide plotly's "Share chart" button, which
