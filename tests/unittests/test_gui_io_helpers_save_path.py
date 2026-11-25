@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import sys
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
@@ -92,7 +93,7 @@ async def test_request_native_save_path_browser_mode_skips_webview(monkeypatch: 
 
 @pytest.mark.asyncio
 async def test_request_native_save_path_without_native_window_guard_returns_none(
-    monkeypatch: pytest.MonkeyPatch,
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
 ) -> None:
     """When the native-window lookup itself fails, browser fallback applies."""
     monkeypatch.delitem(sys.modules, "nicegui", raising=False)
@@ -104,7 +105,12 @@ async def test_request_native_save_path_without_native_window_guard_returns_none
 
     monkeypatch.setitem(sys.modules, "nicegui", SimpleNamespace(app=_BrokenApp()))
 
-    assert await io_helpers._request_native_save_path("out.json", "json") is None
+    with caplog.at_level(logging.DEBUG, logger=io_helpers.logger.name):
+        assert await io_helpers._request_native_save_path("out.json", "json") is None
+    records = [r for r in caplog.records if "native_save_dialog_window_lookup" in r.getMessage()]
+    assert records
+    assert all(r.levelno == logging.DEBUG for r in records)
+    assert all("no app context" not in r.getMessage() for r in caplog.records)
 
 
 @pytest.mark.asyncio

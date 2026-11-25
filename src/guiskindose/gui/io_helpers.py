@@ -90,7 +90,10 @@ async def _request_native_save_path(default_name: str, extension: str) -> str | 
         if main_window is None:
             # Browser mode: let the browser handle the save dialog via ui.download().
             return None
-    except Exception:
+    except Exception as exc:
+        # Fall back to browser mode, but keep the value-free record the
+        # pre-split code wrote for a failed window lookup.
+        safe_error_event(logger, "native_save_dialog_window_lookup", exc, level=logging.DEBUG)
         return None
 
     # Native mode: use pywebview's built-in save dialog.
