@@ -174,11 +174,11 @@ be archived.
   `tools/semgrep/` is a standalone uv project whose `uv.lock` sha256-pins all ~68 transitive
   packages, and both gates run it via `uv run --locked` (`scripts/semgrep_tool.py`). `phi-scan`
   still runs via bare `uvx --from phi-scan==0.7.0`, which resolves from PyPI **without hash
-  verification**, so a same-version re-upload would be trusted. Separately, `uv audit` does not yet audit
-  `tools/semgrep/uv.lock` (`tools/privacy-scan/uv.lock` is audited via `--tool-project`). Only Dependabot sees the semgrep lock (see the note in
-  `[tool.uv.audit]`). **Acceptance:** a `tools/phi-scan/` project
-  mirroring `tools/semgrep/`; `scripts/audit_dependencies.py` also audits `tools/semgrep/uv.lock` (and the phi-scan lock), reporting
-  scanner-only advisories separately from application ones so the distinction stays explicit.
+  verification**, so a same-version re-upload would be trusted. `tools/semgrep/uv.lock` is now audited in CI and
+  the weekly `dependency-audit` run as a separate, non-blocking step (2026-11-24), so scanner-only advisories are
+  reported apart from the blocking application audits. It currently reports 7 advisories that Semgrep's exact pins
+  hold back (`mcp==1.29.0`; the `opentelemetry ~=1.37` family), reachable only via `semgrep mcp` and telemetry.
+  **Acceptance (remaining):** a `tools/phi-scan/` project mirroring `tools/semgrep/`, audited the same way.
 - [ ] **Archive the older MAINTENANCE_LOG entries** — `dev-docs/MAINTENANCE_LOG.md` passed 800
   lines. It is deliberately exempt from the file-size cap (`APPEND_ONLY_HISTORY` in
   `scripts/check_file_sizes.py`), so this is gardening rather than a blocker, and entries must

@@ -25,9 +25,15 @@
 name = "guiskindose-semgrep-tool"
 version = "0"
 description = "Pinned, hash-locked Semgrep scanner environment (not shipped, not importable)."
-requires-python = ">=3.10"
+requires-python = ">=3.11"  # wcmatch 11+ needs 3.11; the project floor is 3.11 too
 dependencies = ["semgrep==1.179.0"]
 
 # Nothing here is built or installed as a package; this project only carries the lock.
 [tool.uv]
 package = false
+
+# Semgrep (up to at least 1.187.0) pins wcmatch~=8.3, which holds it below the ReDoS fix for
+# GHSA-53pm-wgxf-c6qf (fixed in 11.2). Force the fixed version. Verified 2026-11-24: with
+# wcmatch 12.0.4 both gates give identical results to 8.5.2 (OWASP: 181 rules on 330 files,
+# 0 findings; project privacy rules: OK). Drop this once Semgrep relaxes its pin.
+override-dependencies = ["wcmatch>=11.2"]

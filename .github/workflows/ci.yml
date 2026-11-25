@@ -169,6 +169,14 @@ jobs:
         python scripts/audit_dependencies.py
         python scripts/audit_dependencies.py --tool-project tools/privacy-scan
         python scripts/check_licenses.py
+    - name: Audit Semgrep scanner lock (advisory, non-blocking)
+      # Scanner-only advisories, reported separately from the application locks above.
+      # Semgrep's own exact pins (mcp==1.29.0, opentelemetry ~=1.37) hold some transitive
+      # packages below their fixes, and those are reachable only through `semgrep mcp` and
+      # telemetry, which the gates never run. So this step reports without failing the job;
+      # read its output, and fix what tools/semgrep can fix (see tools/semgrep/pyproject.toml).
+      continue-on-error: true
+      run: python scripts/audit_dependencies.py --tool-project tools/semgrep
     - name: Bandit (Python SAST, medium+ severity)
       run: bandit -c pyproject.toml -r src/guiskindose scripts --severity-level medium
     - name: ShellCheck (shell script lint)
