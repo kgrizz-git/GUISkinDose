@@ -96,7 +96,7 @@ async def _on_save(include_ids: ui.checkbox, status_label: ui.label) -> None:
         return
     save_path = await _get_save_path(_CONFIG_DEFAULT_NAME, "json")
     if save_path is None and _is_native_mode():
-        return  # user cancelled the native dialog
+        return  # cancel or an already-reported dialog failure
     _write_or_download(save_path, content, _CONFIG_DEFAULT_NAME, "Run configuration saved.", "run_config_write")
     status_label.set_text(f"Saved run configuration ({len(content)} bytes).")
 

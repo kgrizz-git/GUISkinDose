@@ -53,6 +53,10 @@
       "text": "GUISkinDose cannot open its window, because this PC does not have .NET Framework 4.6.2 or later. Windows 10 and 11 include it, so it may have been removed or blocked. Ask your IT department to restore .NET Framework 4.8, then start GUISkinDose again.",
       "owner": "gui/webview2.py"
     },
+    "native.save_dialog.failure": {
+      "text": "Could not open the save dialog, so nothing was saved. Try again.",
+      "owner": "gui/io_helpers.py"
+    },
     "settings.human_mesh.unavailable": {
       "text": "The saved human mesh '{saved}' is not in the mesh list, so {label} is selected instead.",
       "owner": "gui/tabs/settings.py"

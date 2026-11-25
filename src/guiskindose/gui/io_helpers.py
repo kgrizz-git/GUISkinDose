@@ -13,6 +13,8 @@ import logging
 
 from guiskindose.privacy import safe_error_event
 
+from .ui_copy import copy_text
+
 logger = logging.getLogger(__name__)
 
 
@@ -74,15 +76,15 @@ def _is_native_mode() -> bool:
         return False
 
 
-async def _get_save_path(default_name: str, extension: str) -> str | None:
-    """Open a native "Save As" dialog when running in --native (pywebview) mode.
+async def _request_native_save_path(default_name: str, extension: str) -> str | None:
+    """Open a native "Save As" dialog and return the chosen path.
 
-    NiceGUI wraps pywebview's window in a ``WindowProxy`` whose
-    ``create_file_dialog`` is a **coroutine** — it marshals the call to the GUI
-    thread over an internal queue and awaits the result. It must be awaited (the
-    old synchronous call returned an un-awaited coroutine, which blew up when a
-    caller did ``Path(save_path)``). Returns ``None`` in browser mode so callers
-    fall back to ``ui.download()``, and ``None`` when the user cancels the dialog.
+    Returns ``None`` in browser mode (callers fall back to ``ui.download()``)
+    and ``None`` when the user cancels the dialog (``None``, ``()``, ``[]``
+    or ``""``). A failed native-window lookup also returns ``None`` (browser
+    fallback) and is logged value-free at DEBUG. Every other failure
+    propagates so the caller-facing wrapper can report it; nothing here
+    notifies.
     """
     try:
         from nicegui import app as _app
@@ -90,7 +92,10 @@ async def _get_save_path(default_name: str, extension: str) -> str | None:
         if main_window is None:
             # Browser mode: let the browser handle the save dialog via ui.download().
             return None
-    except Exception:
+    except Exception as exc:
+        # Fall back to browser mode, but keep the value-free record the
+        # pre-split code wrote for a failed window lookup.
+        safe_error_event(logger, "native_save_dialog_window_lookup", exc, level=logging.DEBUG)
         return None
 
     # Native mode: use pywebview's built-in save dialog.
@@ -104,22 +109,39 @@ async def _get_save_path(default_name: str, extension: str) -> str | None:
         "pdf": ("PDF Files (*.pdf)",),
         "docx": ("Word Documents (*.docx)",),
     }
+    import webview  # pyright: ignore[reportMissingImports]  # optional gui-native dep (pywebview)
+    # FileDialog.SAVE (pywebview >=5); fall back to the deprecated SAVE_DIALOG
+    # constant on older releases.
+    save_dialog = webview.FileDialog.SAVE if hasattr(webview, "FileDialog") else webview.SAVE_DIALOG
+    result = await main_window.create_file_dialog(
+        int(save_dialog),
+        save_filename=default_name,
+        file_types=ext_filter_map.get(extension, ("All Files (*.*)",)),
+    )
+    # pywebview returns a tuple/list of paths, or None when cancelled.
+    if not result:
+        return None
+    return result[0] if isinstance(result, (list, tuple)) else result
+
+
+async def _get_save_path(default_name: str, extension: str) -> str | None:
+    """Return the native save path, or ``None`` on cancel, fallback, or failure.
+
+    NiceGUI wraps pywebview's window in a ``WindowProxy`` whose
+    ``create_file_dialog`` is a **coroutine** — it marshals the call to the GUI
+    thread over an internal queue and awaits the result. It must be awaited (the
+    old synchronous call returned an un-awaited coroutine, which blew up when a
+    caller did ``Path(save_path)``). Returns ``None`` in browser mode so callers
+    fall back to ``ui.download()``, and ``None`` when the user cancels the dialog
+    or when the dialog fails (the failure is already reported to the user here).
+    """
     try:
-        import webview  # pyright: ignore[reportMissingImports]  # optional gui-native dep (pywebview)
-        # FileDialog.SAVE (pywebview >=5); fall back to the deprecated SAVE_DIALOG
-        # constant on older releases.
-        save_dialog = webview.FileDialog.SAVE if hasattr(webview, "FileDialog") else webview.SAVE_DIALOG
-        result = await main_window.create_file_dialog(
-            int(save_dialog),
-            save_filename=default_name,
-            file_types=ext_filter_map.get(extension, ("All Files (*.*)",)),
-        )
-        # pywebview returns a tuple/list of paths, or None when cancelled.
-        if not result:
-            return None
-        return result[0] if isinstance(result, (list, tuple)) else result
+        return await _request_native_save_path(default_name, extension)
     except Exception as exc:
-        safe_error_event(logger, "native_save_dialog", exc, level=logging.DEBUG)
+        safe_error_event(logger, "native_save_dialog", exc)
+        from nicegui import ui
+
+        ui.notify(copy_text("native.save_dialog.failure"), type="negative")
         return None
 
 

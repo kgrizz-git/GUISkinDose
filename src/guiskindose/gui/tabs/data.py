@@ -84,7 +84,7 @@ async def _local_export(fmt: str) -> None:
     default_name = f"guiskindose_{prefix}events.{fmt}"
     save_path = await _get_save_path(default_name, fmt)
     if save_path is None and _is_native_mode():
-        return
+        return  # cancel or an already-reported dialog failure
 
     content = _export_content(dataframe, fmt)
     if save_path:

@@ -8,6 +8,16 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ## [Unreleased]
 
+- **Native save-dialog errors** (2026-11-24) — `_get_save_path()` in `gui/io_helpers.py` split into the
+  `_request_native_save_path()` primitive (no `try/except`, so dialog failures propagate; falsy results still
+  map to `None`) and a thin wrapper owning the single handler (one ERROR `native_save_dialog`
+  `safe_error_event`, one negative `native.save_dialog.failure` notification, then `None`). The
+  `native_save_dialog` code moved from DEBUG to ERROR. All seven callers (`export.py` ×4, `_run_config.py`,
+  `corrections.py`, `data.py`) keep aborting on `None` with updated comments. New tests: the unit helper
+  propagation/mapping tests and the GUI wrapper plus per-caller failure/cancel pairs (failure paths proved
+  to fail without the fix; old code returned `None` with no notification and only a DEBUG record). The
+  `--native` manual smoke remains pending. See
+  [plans/archive/NATIVE_SAVE_DIALOG_ERRORS_PLAN.md](plans/archive/NATIVE_SAVE_DIALOG_ERRORS_PLAN.md).
 - **Semgrep tool lock: wcmatch ReDoS fix and an advisory audit** (2026-11-24) — Dependabot alert #48
   (GHSA-53pm-wgxf-c6qf, wcmatch ReDoS) sat in `tools/semgrep/uv.lock`. A plain bump cannot reach the fix:
   Semgrep (through at least 1.187.0) pins `wcmatch~=8.3`, and the fix is 11.2. `tools/semgrep/pyproject.toml`
