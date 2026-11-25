@@ -8,6 +8,19 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ## [Unreleased]
 
+- **Semgrep tool lock: wcmatch ReDoS fix and an advisory audit** (2026-11-24) — Dependabot alert #48
+  (GHSA-53pm-wgxf-c6qf, wcmatch ReDoS) sat in `tools/semgrep/uv.lock`. A plain bump cannot reach the fix:
+  Semgrep (through at least 1.187.0) pins `wcmatch~=8.3`, and the fix is 11.2. `tools/semgrep/pyproject.toml`
+  now overrides `wcmatch>=11.2` (locked 12.0.4, with bracex 3.1 → 3.2.4) and raises the tool's
+  `requires-python` to 3.11 to match wcmatch 11. Both gates give identical results on 8.5.2 and 12.0.4 (OWASP:
+  181 rules on 330 files, 0 findings; project privacy rules OK). No CI job audited this lock before, which is
+  why only Dependabot saw the alert. CI's `static-analysis` job and the weekly `dependency-audit` workflow now
+  audit it in a separate, blocking step. The 7 advisories Semgrep's exact pins hold back (`mcp==1.29.0`: five;
+  `opentelemetry-api ~=1.37`: two), reachable only through `semgrep mcp` and telemetry, are listed by ID in
+  `tools/semgrep/pyproject.toml` `[tool.uv.audit]`, so any new advisory fails whatever its severity (CodeRabbit
+  review on PR #243 asked that serious advisories block; per-ID listing is stricter than a severity filter).
+  Verified: with all 7 listed the audit passes; with one removed it fails.
+
 - **Native phantom-pack dialog errors** (2026-11-23) — `open_phantom_pack_stream()` no longer wraps the
   pywebview `create_file_dialog` call in `try/except Exception`, so a dialog failure (or a missing `webview`
   import in native mode) propagates to `native_install`, which already logs one

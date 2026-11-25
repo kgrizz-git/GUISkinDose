@@ -260,7 +260,8 @@ skips = ["B101"]
 # The tool environment is no longer unhashed or unwatched: tools/semgrep/uv.lock pins every
 # transitive package by sha256, and Dependabot raises alerts against it. Do not add a
 # suppression here for something the tool drags in — fix it in tools/semgrep, or triage it
-# on the alert where the reasoning stays attached to the advisory.
+# on the alert where the reasoning stays attached to the advisory. Scanner-only advisories that
+# Semgrep's own pins hold back are listed in tools/semgrep/pyproject.toml's [tool.uv.audit].
 #
 ignore = []
 # No `ignore-until-fixed` entries active. The former nltk GHSA-8mgp-746c-j5xp entry disappeared

@@ -293,8 +293,11 @@ Configuration-only changes do not require notice regeneration; verify the invent
 The separate `/tools/semgrep` uv entry uses `lockfile-only`, allows transitive dependencies, and ignores
 Semgrep itself. It cannot widen scanner manifest constraints or change the inventory-controlled scanner pin.
 Keep the isolated project outside the root workspace. Scanner-version upgrades still require inventory/manifest
-coordination, relocking, and the weekly latest-scanner probe's review; constraints that prevent a transitive
-security fix require a deliberate scanner upgrade rather than relaxing the lock gate.
+coordination, relocking, and the weekly latest-scanner probe's review. When a scanner pin blocks a transitive
+security fix, prefer a scanner upgrade. If no upgrade relaxes the pin, a reviewed `override-dependencies` entry in
+`tools/semgrep/pyproject.toml` is the sanctioned alternative, verified by an unchanged scan result. Never relax the
+lock gate itself. Advisories that only an exact scanner pin holds back are listed by ID in that file's
+`[tool.uv.audit] ignore`, so any new advisory still fails the blocking scanner-lock audit.
 
 Gitleaks is the remaining remote hook, pinned to a reviewed release. The metadata-only
 `hook-release-monitor` job in `ci-latest` compares the pinned tag with the latest stable upstream release,
