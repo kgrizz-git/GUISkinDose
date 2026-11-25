@@ -15,8 +15,11 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
   `requires-python` to 3.11 to match wcmatch 11. Both gates give identical results on 8.5.2 and 12.0.4 (OWASP:
   181 rules on 330 files, 0 findings; project privacy rules OK). No CI job audited this lock before, which is
   why only Dependabot saw the alert. CI's `static-analysis` job and the weekly `dependency-audit` workflow now
-  audit it in a separate, non-blocking step. That step reports 7 advisories Semgrep's exact pins hold back
-  (`mcp==1.29.0`: five; `opentelemetry-api ~=1.37`: two), reachable only through `semgrep mcp` and telemetry.
+  audit it in a separate, blocking step. The 7 advisories Semgrep's exact pins hold back (`mcp==1.29.0`: five;
+  `opentelemetry-api ~=1.37`: two), reachable only through `semgrep mcp` and telemetry, are listed by ID in
+  `tools/semgrep/pyproject.toml` `[tool.uv.audit]`, so any new advisory fails whatever its severity (CodeRabbit
+  review on PR #243 asked that serious advisories block; per-ID listing is stricter than a severity filter).
+  Verified: with all 7 listed the audit passes; with one removed it fails.
 
 - **Native phantom-pack dialog errors** (2026-11-23) — `open_phantom_pack_stream()` no longer wraps the
   pywebview `create_file_dialog` call in `try/except Exception`, so a dialog failure (or a missing `webview`

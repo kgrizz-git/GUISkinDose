@@ -165,8 +165,9 @@ be archived.
   [RELEASES_AND_DISTRIBUTION.md](RELEASES_AND_DISTRIBUTION.md) if pursued). Original brainstorm:
   [DOCUMENTATION_AND_HELP_INFRASTRUCTURE_BRAINSTORM.md](plans/archive/DOCUMENTATION_AND_HELP_INFRASTRUCTURE_BRAINSTORM.md).
 - [ ] **Re-check ignored dependency advisories** — quarterly or pre-release (see [RELEASES_AND_DISTRIBUTION.md](RELEASES_AND_DISTRIBUTION.md)): run
-  `python scripts/audit_dependencies.py`, review `[tool.uv.audit]` in `pyproject.toml`. **Current state: the ignore
-  list is empty.** All five entries it ever held (click, mcp x3, pyjwt) existed because semgrep pinned those
+  `python scripts/audit_dependencies.py` (and `--tool-project tools/semgrep`), review `[tool.uv.audit]` in
+  `pyproject.toml` and in `tools/semgrep/pyproject.toml`. **Current state: the root ignore list is empty; the Semgrep
+  tool list holds 7 scanner-only IDs (2026-11-25).** All five entries it ever held (click, mcp x3, pyjwt) existed because semgrep pinned those
   transitive deps below their fixes; isolating semgrep as a `uvx` tool resolved every one, and the semgrep 1.179.0
   bump moved the tool lock to patched pyjwt 2.15.1. `nltk` resolved when `safety` was removed (2026-09-03). Before adding a new
   suppression, check whether a CLI-only dependency is the actual cause. CI's `uv audit` is the gate that matters.
@@ -175,9 +176,10 @@ be archived.
   packages, and both gates run it via `uv run --locked` (`scripts/semgrep_tool.py`). `phi-scan`
   still runs via bare `uvx --from phi-scan==0.7.0`, which resolves from PyPI **without hash
   verification**, so a same-version re-upload would be trusted. `tools/semgrep/uv.lock` is now audited in CI and
-  the weekly `dependency-audit` run as a separate, non-blocking step (2026-11-24), so scanner-only advisories are
-  reported apart from the blocking application audits. It currently reports 7 advisories that Semgrep's exact pins
-  hold back (`mcp==1.29.0`; the `opentelemetry ~=1.37` family), reachable only via `semgrep mcp` and telemetry.
+  the weekly `dependency-audit` run in its own blocking step (2026-11-25). Its 7 known scanner-only advisories, held
+  back by Semgrep's exact pins (`mcp==1.29.0`; the `opentelemetry ~=1.37` family) and reachable only via `semgrep mcp`
+  and telemetry, are listed by ID in `tools/semgrep/pyproject.toml` `[tool.uv.audit]`, so any new one fails. Re-check
+  them on every Semgrep bump.
   **Acceptance (remaining):** a `tools/phi-scan/` project mirroring `tools/semgrep/`, audited the same way.
 - [ ] **Archive the older MAINTENANCE_LOG entries** — `dev-docs/MAINTENANCE_LOG.md` passed 800
   lines. It is deliberately exempt from the file-size cap (`APPEND_ONLY_HISTORY` in

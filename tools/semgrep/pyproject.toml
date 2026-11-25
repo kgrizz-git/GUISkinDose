@@ -37,3 +37,22 @@ package = false
 # wcmatch 12.0.4 both gates give identical results to 8.5.2 (OWASP: 181 rules on 330 files,
 # 0 findings; project privacy rules: OK). Drop this once Semgrep relaxes its pin.
 override-dependencies = ["wcmatch>=11.2"]
+
+# Scanner-only advisories that Semgrep's own exact pins hold below their fixes (Semgrep 1.179.0
+# requires mcp==1.29.0 and the opentelemetry ~=1.37 family). They are reachable only through
+# `semgrep mcp` and Semgrep's telemetry, which neither gate runs (--metrics=off, no mcp
+# subcommand). Each ID is listed individually so that any NEW advisory on this lock fails the
+# audit, whatever its severity. Re-check on every Semgrep bump and drop an ID once its package is
+# fixed (see the "Re-check ignored dependency advisories" item in dev-docs/TO_DO.md).
+[tool.uv.audit]
+ignore = [
+    # mcp 1.29.0 (fixed in 2.2.0; GHSA-84m7-p3x7-pcfv fixed in 1.30.0)
+    "GHSA-qx49-fqc8-xw99",
+    "GHSA-5h93-6whr-6q8j",
+    "GHSA-w4fh-qvv9-3v23",
+    "GHSA-84m7-p3x7-pcfv",
+    "GHSA-rwrf-2pqf-9j8j",
+    # opentelemetry-api 1.37.0 (fixed in 1.45.1 / 1.45.2)
+    "GHSA-mf5v-w3w3-f6cg",
+    "GHSA-xcq7-p3pf-p88h",
+]
