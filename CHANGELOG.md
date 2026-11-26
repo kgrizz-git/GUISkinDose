@@ -31,6 +31,8 @@ That keeps SemVer and contributor history organized.
   `kaleido._page_generator`, so a lowest-version install could not render PNG exports. 6.3.1 is also the
   first plotly release whose `fig.to_image` resolves width and height the same way as the frozen path;
   kaleido 1.1.0 is the first release with `start_sync_server`, which the Light-edition guard tests rely on.
+  Upgrade note: kaleido 0.2.1 bundled its own Chromium and 1.x does not, so an environment upgrading from 0.2.1
+  needs an installed Chrome or Chromium for PNG export (for example via `plotly_get_chrome`).
 - **GUI test-tool floor** — the `gui` extras now require `pytest-asyncio` 1.3.0, whose pytest 9 support lets the
   dependency-floors probe install pytest 9. With pytest 8.4, `caplog` missed records from GUISkinDose's
   non-propagating logger and GUI logging tests failed.
