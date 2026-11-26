@@ -54,33 +54,14 @@ the double-click launcher the app icon (`scripts/desktop_launchers.py`).
 
 ### 3. Automatic Dependency Resolution
 
-The package declares its dependencies in `pyproject.toml`:
-
-```toml
-dependencies = [
-    "pandas >= 2.2.3",
-    "numpy >= 2.2.4",
-    "pydicom >= 2.0",
-    "numpy-stl >= 3.2.0",
-    "plotly >= 4.13.3",
-    "scipy >= 1.15.2",
-    ...
-]
-```
-
-When you install the package, pip automatically installs everything it needs. Without this, you'd have to manually install each dependency and keep them in sync with the requirements.
+The package declares its dependencies in `pyproject.toml` under `[project].dependencies`; that file is the
+source of truth for every floor. When you install the package, pip automatically installs everything it needs.
 
 ### 4. Optional Extras
 
-The package defines optional dependency groups:
-
-```toml
-[project.optional-dependencies]
-gui = ["nicegui>=2.0.0"]
-gui-native = ["nicegui>=2.0.0", "pywebview"]
-```
-
-Users can choose what they need:
+The package defines optional dependency groups in `pyproject.toml` under
+`[project.optional-dependencies]`; that file is the source of truth for the `gui`, `gui-native`, `export`,
+`docs`, `notebooks`, and `phantom-gen` extras. Users can choose what they need:
 
 ```bash
 pip install -e .                 # core only

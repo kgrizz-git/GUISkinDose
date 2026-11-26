@@ -26,6 +26,16 @@ That keeps SemVer and contributor history organized.
 
 ### Fixed
 
+- **Dependency floors for static export** — `plotly` now requires 6.3.1 and `kaleido` 1.1.0. The old floors
+  (plotly 4.13.3 / kaleido 0.2.1) lack `plotly.io.defaults.plotlyjs`, `kaleido.calc_fig`, and
+  `kaleido._page_generator`, so a lowest-version install could not render PNG exports. 6.3.1 is also the
+  first plotly release whose `fig.to_image` resolves width and height the same way as the frozen path;
+  kaleido 1.1.0 is the first release with `start_sync_server`, which the Light-edition guard tests rely on.
+  Upgrade note: kaleido 0.2.1 bundled its own Chromium and 1.x does not, so an environment upgrading from 0.2.1
+  needs an installed Chrome or Chromium for PNG export (for example via `plotly_get_chrome`).
+- **GUI test-tool floor** — the `gui` extras now require `pytest-asyncio` 1.3.0, whose pytest 9 support lets the
+  dependency-floors probe install pytest 9. With pytest 8.4, `caplog` missed records from GUISkinDose's
+  non-propagating logger and GUI logging tests failed.
 - A failed **native save dialog** now reports that nothing was saved instead of silently doing nothing; cancelling still does nothing.
 - A failed **native phantom-pack file dialog** now shows the install-failure message instead of doing nothing; a cancel stays silent.
 - The Results dose-map spinner no longer disappears while a second overlapping redraw (for example a double-clicked REGENERATE PLOT) is still running.
