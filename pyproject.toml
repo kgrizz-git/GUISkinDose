@@ -21,12 +21,12 @@ dependencies = [
     "numpy >= 2.2.4",
     "pydicom >= 2.3",
     "numpy-stl >= 3.2.0",
-    "plotly >= 4.13.3",
+    "plotly >= 6.3.1",
     "scipy >= 1.15.2",
     "tqdm >= 4.66",
     "psutil >= 5.9",
     "pillow >= 13.0.0",  # GHSA-65qm-jvmh-6pqg and eight other image-handling advisories
-    "kaleido >= 0.2.1",
+    "kaleido >= 1.1.0",
     "rich >= 13.0",
     "openpyxl >= 3.1",
     "pypdf>=6.21.4",  # GHSA-x3rh-gjgm-fmqc, GHSA-cggf-277g-3q54, GHSA-mfr5-77xh-9j7h and four other parser advisories
@@ -36,8 +36,8 @@ dependencies = [
 
 [project.optional-dependencies]
 # certifi is a direct dependency; its floor drops the compromised emSign roots (GHSA-6q48-6c7w-9gw2).
-gui = ["nicegui>=4.0.0,<5", "itsdangerous>=2.1.2,<3", "pytest-asyncio>=0.24", "certifi>=2026.10.19"]
-gui-native = ["nicegui>=4.0.0,<5", "itsdangerous>=2.1.2,<3", "pywebview>=6.1", "pytest-asyncio>=0.24", "certifi>=2026.10.19"]
+gui = ["nicegui>=4.0.0,<5", "itsdangerous>=2.1.2,<3", "pytest-asyncio>=1.3.0", "certifi>=2026.10.19"]
+gui-native = ["nicegui>=4.0.0,<5", "itsdangerous>=2.1.2,<3", "pywebview>=6.1", "pytest-asyncio>=1.3.0", "certifi>=2026.10.19"]
 # Rich report export backends (PDF via reportlab, DOCX via python-docx) are now
 # core dependencies so exports work out of the box. This extra is retained as a
 # no-op alias so existing `pip install guiskindose[export]` commands still work.

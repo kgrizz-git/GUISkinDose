@@ -232,7 +232,7 @@ def test_dose_map_html_export_contains_stamp_once() -> None:
     from guiskindose.gui import figures
 
     html = figures.make_dosemap_html(np.array([1.0, 2.0, 3.0]), _PATIENT).decode()
-    # Plotly 6 writes compact JSON ("text":"..."); the 4.x floor in pyproject writes "text": "...".
+    # Plotly 6.3.1 and later write compact JSON ("text":"..."); keep the regex tolerant of whitespace.
     texts = [json.loads(f'"{m}"') for m in re.findall(r'"text":\s*"((?:[^"\\]|\\.)*)"', html)]
     stamps = [t for t in texts if t.startswith("Not FDA-cleared")]
     assert len(stamps) == 1

@@ -210,8 +210,8 @@ def test_geometry_fig_does_not_enable_cloud_sharing() -> None:
 def test_exported_dose_map_html_does_not_enable_cloud_sharing() -> None:
     """The exported plot call sets ``showSendToCloud`` to false explicitly.
 
-    Absence is not enough: standalone plotly.js 4.0 (allowed by the plotly floor) shows
-    "Share chart" by default, and NiceGUI's in-app default does not reach exports.
+    Absence is not enough: standalone plotly.js 4.0 (bundled by plotly 7) shows "Share
+    chart" by default, and NiceGUI's in-app default does not reach exports.
     """
     from guiskindose.gui.figures import make_dosemap_html
 
