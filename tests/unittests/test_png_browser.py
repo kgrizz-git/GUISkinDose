@@ -448,3 +448,29 @@ def test_render_failure_is_logged_by_class_only(monkeypatch, tmp_path, kaleido_c
     with pytest.raises(PngRenderError):
         figure_to_png(fig)
     assert events == [("bundled_browser_png_render", "ValueError")]
+
+
+def test_browser_probe_uses_the_resolver_the_choreographer_floor_provides() -> None:
+    """``Chromium.find_browser`` (choreographer >= 1.3.0, the declared floor) takes ``skip_local``."""
+    import inspect
+
+    from choreographer.browsers.chromium import Chromium
+
+    assert "skip_local" in inspect.signature(Chromium.find_browser).parameters
+
+
+@pytest.mark.parametrize(("resolved", "expected"), [("/opt/chrome", True), (None, False)])
+def test_browser_probe_maps_the_resolver_result(
+    monkeypatch: pytest.MonkeyPatch, resolved: str | None, expected: bool
+) -> None:
+    from choreographer.browsers.chromium import Chromium
+
+    monkeypatch.setattr(Chromium, "find_browser", classmethod(lambda cls, **_kw: resolved))
+    assert png_browser.system_browser_available() is expected
+
+
+def test_browser_probe_is_uncertain_when_the_resolver_is_missing(monkeypatch: pytest.MonkeyPatch) -> None:
+    from choreographer.browsers.chromium import Chromium
+
+    monkeypatch.delattr(Chromium, "find_browser")
+    assert png_browser.system_browser_available() is None

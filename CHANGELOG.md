@@ -37,6 +37,7 @@ That keeps SemVer and contributor history organized.
   dependency-floors probe install pytest 9. With pytest 8.4, `caplog` missed records from GUISkinDose's
   non-propagating logger and GUI logging tests failed.
 - **Actionable export-failure messages** — a missing report package now names the package and offers the exact `pip install ...` command; PNG export without Chrome offers `plotly_get_chrome -y` (or `BROWSER_PATH`) instead of blaming `kaleido`; event-table XLSX failures are reported instead of escaping; CLI exports print the same install hint. The portable app shows a re-extract instruction and never a pip command.
+  `choreographer` is now a direct dependency at 1.3.0 or later, the first release with the read-only browser resolver that the missing-browser check uses.
 - A failed **native save dialog** now reports that nothing was saved instead of silently doing nothing; cancelling still does nothing.
 - A failed **native phantom-pack file dialog** now shows the install-failure message instead of doing nothing; a cancel stays silent.
 - The Results dose-map spinner no longer disappears while a second overlapping redraw (for example a double-clicked REGENERATE PLOT) is still running.
