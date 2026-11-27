@@ -73,8 +73,9 @@ def test_incomplete_install_content_has_no_command() -> None:
 
 
 def test_unknown_failure_does_not_use_the_dialog() -> None:
+    failure = ExportFailure(kind=ExportFailureKind.UNKNOWN)
     with pytest.raises(ValueError):
-        failure_dialog_content(ExportFailure(kind=ExportFailureKind.UNKNOWN))
+        failure_dialog_content(failure)
 
 
 def test_copy_command_uses_clipboard(monkeypatch) -> None:

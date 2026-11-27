@@ -120,9 +120,10 @@ def _source_install(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_source_missing_kaleido_becomes_missing_dependency(monkeypatch) -> None:
     _source_install(monkeypatch)
     monkeypatch.setattr(png_browser, "missing_backend", lambda _fmt: "kaleido")
+    fig = _RaisingFig(ValueError("raw kaleido detail"))
 
     with pytest.raises(MissingExportDependencyError) as excinfo:
-        figure_to_png(_RaisingFig(ValueError("raw kaleido detail")))
+        figure_to_png(fig)
 
     exc = excinfo.value
     assert exc.format == "png"
@@ -135,9 +136,10 @@ def test_source_missing_browser_is_typed(monkeypatch) -> None:
     _source_install(monkeypatch)
     monkeypatch.setattr(png_browser, "missing_backend", lambda _fmt: None)
     monkeypatch.setattr(png_browser, "system_browser_available", lambda: False)
+    fig = _RaisingFig(RuntimeError("Chrome not found"))
 
     with pytest.raises(PngBrowserUnavailableError) as excinfo:
-        figure_to_png(_RaisingFig(RuntimeError("Chrome not found")))
+        figure_to_png(fig)
 
     assert str(excinfo.value) == PNG_BROWSER_MESSAGE
     assert "Chrome not found" not in str(excinfo.value)
@@ -148,9 +150,10 @@ def test_source_other_render_failure_stays_generic(monkeypatch, probe) -> None:
     _source_install(monkeypatch)
     monkeypatch.setattr(png_browser, "missing_backend", lambda _fmt: None)
     monkeypatch.setattr(png_browser, "system_browser_available", lambda: probe)
+    fig = _RaisingFig(ValueError("bad figure"))
 
     with pytest.raises(PngRenderError) as excinfo:
-        figure_to_png(_RaisingFig(ValueError("bad figure")))
+        figure_to_png(fig)
 
     assert str(excinfo.value) == PNG_RENDER_MESSAGE
     assert "bad figure" not in str(excinfo.value)

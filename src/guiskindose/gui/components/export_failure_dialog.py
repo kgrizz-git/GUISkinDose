@@ -23,24 +23,31 @@ class FailureDialogContent:
     retry: str | None = None
 
 
-def _format_line(fmt: str | None) -> tuple[str, ...]:
+_RETRY_KEY = "export.failure.retry"
+
+
+def _format_line(fmt: str | None) -> str | None:
     if not fmt:
-        return ()
-    return (copy_text("export.failure.format_line").format(format=fmt.upper()),)
+        return None
+    return copy_text("export.failure.format_line").format(format=fmt.upper())
+
+
+def _detail_lines(*lines: str | None) -> tuple[str, ...]:
+    return tuple(line for line in lines if line)
 
 
 def _missing_package_content(failure: ExportFailure) -> FailureDialogContent:
     package = failure.pip_name or failure.import_name or ""
-    detail = _format_line(failure.format)
-    if package:
-        detail += (copy_text("export.failure.package_line").format(package=package),)
+    package_line = (
+        copy_text("export.failure.package_line").format(package=package) if package else None
+    )
     return FailureDialogContent(
         title=copy_text("export.failure.missing_package.title"),
         body=copy_text("export.failure.missing_package.body"),
-        detail=detail,
+        detail=_detail_lines(_format_line(failure.format), package_line),
         command=failure.command,
         command_label=copy_text("export.failure.install_package_label"),
-        retry=copy_text("export.failure.retry"),
+        retry=copy_text(_RETRY_KEY),
     )
 
 
@@ -48,10 +55,10 @@ def _missing_browser_content(failure: ExportFailure) -> FailureDialogContent:
     return FailureDialogContent(
         title=copy_text("export.failure.missing_browser.title"),
         body=copy_text("export.failure.missing_browser.body"),
-        detail=_format_line(failure.format),
+        detail=_detail_lines(_format_line(failure.format)),
         command=failure.command,
         command_label=copy_text("export.failure.install_browser_label"),
-        retry=copy_text("export.failure.retry"),
+        retry=copy_text(_RETRY_KEY),
     )
 
 
@@ -59,8 +66,8 @@ def _incomplete_install_content(failure: ExportFailure) -> FailureDialogContent:
     return FailureDialogContent(
         title=copy_text("export.failure.incomplete_install.title"),
         body=copy_text("export.failure.incomplete_install.body"),
-        detail=_format_line(failure.format),
-        retry=copy_text("export.failure.retry"),
+        detail=_detail_lines(_format_line(failure.format)),
+        retry=copy_text(_RETRY_KEY),
     )
 
 
@@ -69,7 +76,7 @@ def _portable_repair_content(failure: ExportFailure) -> FailureDialogContent:
     return FailureDialogContent(
         title=copy_text("export.failure.portable_repair.title"),
         body=copy_text("export.failure.portable_repair.body"),
-        detail=_format_line(failure.format),
+        detail=_detail_lines(_format_line(failure.format)),
     )
 
 

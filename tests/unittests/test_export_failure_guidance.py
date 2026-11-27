@@ -132,8 +132,10 @@ def test_probe_export_readiness_matches_environment(monkeypatch: pytest.MonkeyPa
     portable = probe_export_readiness("xlsx", frozen=True)
 
     assert ready is None
-    assert missing is not None and missing.kind is ExportFailureKind.MISSING_PACKAGE
-    assert portable is not None and portable.kind is ExportFailureKind.PORTABLE_REPAIR
+    assert missing is not None
+    assert missing.kind is ExportFailureKind.MISSING_PACKAGE
+    assert portable is not None
+    assert portable.kind is ExportFailureKind.PORTABLE_REPAIR
 
 
 def test_missing_backend_probes_without_importing(monkeypatch: pytest.MonkeyPatch) -> None:
