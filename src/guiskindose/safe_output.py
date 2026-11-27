@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import os
 import subprocess
-import sys
 import tempfile
 from pathlib import Path
+
+from guiskindose.edition import is_frozen_app
 
 
 class UnsafeOutputPathError(ValueError):
@@ -126,7 +127,7 @@ def validate_output_path(
         raise UnsafeOutputPathError("export_destination_exists")
 
     # A frozen app has no checkout to protect and must not spawn git.
-    if not getattr(sys, "frozen", False):
+    if not is_frozen_app():
         root = _git_root(parent)
         if root is not None:
             _validate_checkout_destination(target, root, allow_ignored_checkout=allow_ignored_checkout)

@@ -55,11 +55,21 @@ logger = logging.getLogger(__name__)
 
 
 def _call_or_exit(action: Callable[[], Any]) -> Any:
-    """Run *action* or print a value-safe input error and exit 1."""
+    """Run *action* or print a value-safe error and exit 1.
+
+    ``MissingExportDependencyError`` carries a code-owned format, package, and
+    install hint (never exception text or paths), so it can reach the user
+    verbatim through this privacy boundary.
+    """
+    from guiskindose.export.models import MissingExportDependencyError
+
     try:
         return action()
     except UserFacingInputError as exc:
         print(exc.user_message(), file=sys.stderr)
+        sys.exit(1)
+    except MissingExportDependencyError as exc:
+        print(f"{exc.format.upper()} export: {exc.install_hint}", file=sys.stderr)
         sys.exit(1)
 
 

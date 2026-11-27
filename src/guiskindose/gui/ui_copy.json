@@ -45,6 +45,58 @@
       "text": "GUISkinDose Light has no PNG dose-map export. Use the interactive HTML dose map instead. Rich reports mark each dose-map image as unavailable.",
       "owner": "gui/tabs/export.py"
     },
+    "export.failure.format_line": {
+      "text": "Format: {format}",
+      "owner": "gui/components/export_failure_dialog.py"
+    },
+    "export.failure.package_line": {
+      "text": "Package: {package}",
+      "owner": "gui/components/export_failure_dialog.py"
+    },
+    "export.failure.missing_package.title": {
+      "text": "Export needs an extra package",
+      "owner": "gui/components/export_failure_dialog.py"
+    },
+    "export.failure.missing_package.body": {
+      "text": "This export format needs a Python package that is not installed in this copy of GUISkinDose.",
+      "owner": "gui/components/export_failure_dialog.py"
+    },
+    "export.failure.missing_browser.title": {
+      "text": "PNG export needs a web browser",
+      "owner": "gui/components/export_failure_dialog.py"
+    },
+    "export.failure.missing_browser.body": {
+      "text": "Kaleido 1.x renders images with an installed Chrome or Chromium browser and no longer includes one. Install Chrome for Testing with the command below, or point the BROWSER_PATH environment variable at an existing Chrome or Chromium.",
+      "owner": "gui/components/export_failure_dialog.py"
+    },
+    "export.failure.incomplete_install.title": {
+      "text": "GUISkinDose is missing a required component",
+      "owner": "gui/components/export_failure_dialog.py"
+    },
+    "export.failure.incomplete_install.body": {
+      "text": "A dependency is missing or damaged. Reinstall GUISkinDose with pip, then try the export again.",
+      "owner": "gui/components/export_failure_dialog.py"
+    },
+    "export.failure.portable_repair.title": {
+      "text": "This GUISkinDose copy is incomplete",
+      "owner": "gui/components/export_failure_dialog.py"
+    },
+    "export.failure.portable_repair.body": {
+      "text": "A component this export needs is missing from the app files. Re-extract the GUISkinDose download and try again.",
+      "owner": "gui/components/export_failure_dialog.py"
+    },
+    "export.failure.install_package_label": {
+      "text": "Install the missing package:",
+      "owner": "gui/components/export_failure_dialog.py"
+    },
+    "export.failure.install_browser_label": {
+      "text": "Install a browser for image export:",
+      "owner": "gui/components/export_failure_dialog.py"
+    },
+    "export.failure.retry": {
+      "text": "Then try the export again.",
+      "owner": "gui/components/export_failure_dialog.py"
+    },
     "native.webview2.runtime_missing": {
       "text": "GUISkinDose cannot open its window, because the Microsoft Edge WebView2 Runtime is not installed on this PC.\n\nTo fix it, download the Evergreen Bootstrapper from Microsoft:\n{url}\n\nRun it normally, not as administrator. It then installs for your user account only and needs no admin rights. Start GUISkinDose again afterwards.",
       "owner": "gui/webview2.py"

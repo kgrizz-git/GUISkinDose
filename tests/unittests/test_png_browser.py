@@ -14,11 +14,13 @@ import plotly.io as pio
 import pytest
 
 from guiskindose.edition import PngExportUnavailableError
-from guiskindose.export import png_browser
+from guiskindose.export import MissingExportDependencyError, png_browser
 from guiskindose.export.png_browser import (
     BUNDLED_BROWSER_MESSAGE,
+    PNG_BROWSER_MESSAGE,
     PNG_RENDER_MESSAGE,
     BundledBrowserUnavailableError,
+    PngBrowserUnavailableError,
     PngRenderError,
     bundled_browser,
     bundled_browser_for_render,
@@ -100,6 +102,84 @@ def test_not_frozen_uses_to_image_and_never_kaleido(monkeypatch, kaleido_calls) 
     assert fig.to_image_calls == [{"format": "png", "width": 10, "height": None, "scale": 2}]
     assert kaleido_calls["calc"] == []
     assert kaleido_calls["server"] == []
+
+
+class _RaisingFig:
+    def __init__(self, exc: Exception) -> None:
+        self.exc = exc
+
+    def to_image(self, **_kwargs: Any) -> bytes:
+        raise self.exc
+
+
+def _source_install(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delattr(sys, "frozen", raising=False)
+    monkeypatch.setattr(png_browser, "png_export_available", lambda: True)
+
+
+def test_source_missing_kaleido_becomes_missing_dependency(monkeypatch) -> None:
+    _source_install(monkeypatch)
+    monkeypatch.setattr(png_browser, "missing_backend", lambda _fmt: "kaleido")
+
+    with pytest.raises(MissingExportDependencyError) as excinfo:
+        figure_to_png(_RaisingFig(ValueError("raw kaleido detail")))
+
+    exc = excinfo.value
+    assert exc.format == "png"
+    assert exc.package == "kaleido"
+    assert "pip install kaleido" in exc.install_hint
+    assert "raw kaleido detail" not in str(exc)
+
+
+def test_source_missing_browser_is_typed(monkeypatch) -> None:
+    _source_install(monkeypatch)
+    monkeypatch.setattr(png_browser, "missing_backend", lambda _fmt: None)
+    monkeypatch.setattr(png_browser, "system_browser_available", lambda: False)
+
+    with pytest.raises(PngBrowserUnavailableError) as excinfo:
+        figure_to_png(_RaisingFig(RuntimeError("Chrome not found")))
+
+    assert str(excinfo.value) == PNG_BROWSER_MESSAGE
+    assert "Chrome not found" not in str(excinfo.value)
+
+
+@pytest.mark.parametrize("probe", [True, None])
+def test_source_other_render_failure_stays_generic(monkeypatch, probe) -> None:
+    _source_install(monkeypatch)
+    monkeypatch.setattr(png_browser, "missing_backend", lambda _fmt: None)
+    monkeypatch.setattr(png_browser, "system_browser_available", lambda: probe)
+
+    with pytest.raises(PngRenderError) as excinfo:
+        figure_to_png(_RaisingFig(ValueError("bad figure")))
+
+    assert str(excinfo.value) == PNG_RENDER_MESSAGE
+    assert "bad figure" not in str(excinfo.value)
+
+
+def test_browser_probe_never_downloads_or_touches_network(monkeypatch) -> None:
+    import socket
+    import urllib.request
+
+    _cli_utils = pytest.importorskip("choreographer.cli._cli_utils")
+    calls: list[str] = []
+
+    def _record(name):
+        def _forbidden(*_args: Any, **_kwargs: Any) -> Any:
+            calls.append(name)
+            raise AssertionError(f"the failure probe must not call {name}")
+
+        return _forbidden
+
+    # Every choreographer/urllib download or connection entry point the probe could reach.
+    monkeypatch.setattr(urllib.request, "urlopen", _record("urlopen"))
+    monkeypatch.setattr(socket, "create_connection", _record("create_connection"))
+    monkeypatch.setattr(_cli_utils, "get_chrome_sync", _record("get_chrome_sync"))
+    monkeypatch.setattr(_cli_utils, "get_chrome", _record("get_chrome"))
+
+    # ``system_browser_available`` swallows probe errors, so the call counts (not
+    # the return value) are what prove no download/network path ran.
+    assert png_browser.system_browser_available() in (True, False, None)
+    assert calls == []
 
 
 def test_frozen_windows_passes_bundled_path(monkeypatch, tmp_path, kaleido_calls) -> None:

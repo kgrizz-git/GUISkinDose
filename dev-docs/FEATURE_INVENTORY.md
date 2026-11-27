@@ -323,7 +323,10 @@ JSON/HTML/PNG downloads. Formats: **XLSX** (`openpyxl`), **PDF** (`reportlab`), 
 **DOCX** (`python-docx`). All backing libraries are now core dependencies (the `export` extra is
 retained as a no-op alias for backward compatibility). If a backend is somehow missing,
 `writers.render_bytes()` raises `MissingExportDependencyError` with install instructions, which the
-GUI surfaces as a persistent dialog.
+GUI surfaces as a persistent dialog. `export/failure_guidance.py` classifies dependency, browser,
+incomplete-install, and portable-repair failures; the GUI renders catalog copy and the CLI prints
+the code-owned package hint. PNG also requires an installed Chrome/Chromium outside the frozen Full
+app (Kaleido 1.x does not bundle one); the dialog offers `plotly_get_chrome -y` or `BROWSER_PATH`.
 - `collect_export_payload(source)` builds an `ExportPayload` (report-layout, separate from
   `PySkinDoseOutput.to_dict()`); normalizes single-exam dict and multi-exam `MultiExamResult` via
   `ExamView`. Sections: title/software identity, input provenance (DICOM RDSR + tabular branches),

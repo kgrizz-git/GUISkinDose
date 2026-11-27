@@ -14,6 +14,8 @@ pytest.importorskip("nicegui")
 import orjson
 from nicegui import ui
 
+from guiskindose.export import failure_guidance as fg
+from guiskindose.export.failure_guidance import ExportFailureKind
 from guiskindose.gui.state import state
 from guiskindose.gui.tabs import data as data_tab
 
@@ -134,3 +136,45 @@ async def test_local_export_browser_download(monkeypatch: pytest.MonkeyPatch) ->
     assert downloaded
     assert downloaded[0][1].endswith(".csv")
     assert any("Downloaded CSV" in m for m in messages)
+
+
+@pytest.mark.asyncio
+async def test_local_export_xlsx_preflight_shows_guidance_before_content(monkeypatch: pytest.MonkeyPatch) -> None:
+    state.rdsr_df = pd.DataFrame({"Tx": [1.0]})
+    shown: list = []
+    get_save_path = AsyncMock(return_value=None)
+    monkeypatch.setattr(data_tab, "show_export_failure_dialog", shown.append)
+    monkeypatch.setattr(data_tab, "_get_save_path", get_save_path)
+    monkeypatch.setattr(fg, "missing_backend", lambda fmt: "openpyxl" if fmt == "xlsx" else None)
+
+    def _must_not_build(*_args, **_kwargs):
+        raise AssertionError("preflight must report before content is built")
+
+    monkeypatch.setattr(data_tab, "_export_content", _must_not_build)
+
+    await data_tab._local_export("xlsx")  # must not raise
+
+    get_save_path.assert_not_awaited()
+    assert [failure.kind for failure in shown] == [ExportFailureKind.MISSING_PACKAGE]
+    assert shown[0].command == "pip install openpyxl"
+
+
+@pytest.mark.asyncio
+async def test_local_export_content_import_failure_shows_guidance(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The post-preflight content build is still guarded (preflight can miss a damaged backend)."""
+    state.rdsr_df = pd.DataFrame({"Tx": [1.0]})
+    shown: list = []
+    get_save_path = AsyncMock(return_value=None)
+    monkeypatch.setattr(data_tab, "show_export_failure_dialog", shown.append)
+    monkeypatch.setattr(data_tab, "_get_save_path", get_save_path)
+    monkeypatch.setattr(fg, "missing_backend", lambda _fmt: None)
+
+    def _boom(*_args, **_kwargs):
+        raise ModuleNotFoundError("No module named 'openpyxl'")
+
+    monkeypatch.setattr(data_tab, "_export_content", _boom)
+
+    await data_tab._local_export("xlsx")  # must not raise
+
+    get_save_path.assert_not_awaited()
+    assert [failure.kind for failure in shown] == [ExportFailureKind.INCOMPLETE_INSTALL]

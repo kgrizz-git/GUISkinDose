@@ -42,6 +42,24 @@ def test_cli_export_refuses_overwrite_without_force(tmp_path):
     assert out.read_bytes().lower().startswith(b"<!doctype html>")
 
 
+def test_cli_missing_export_dependency_prints_install_hint(capsys):
+    from guiskindose.__main__ import _call_or_exit
+    from guiskindose.export import MissingExportDependencyError
+    from guiskindose.export.failure_guidance import install_hint_for
+
+    def action():
+        raise MissingExportDependencyError("pdf", "reportlab", install_hint_for("reportlab"))
+
+    with pytest.raises(SystemExit) as excinfo:
+        _call_or_exit(action)
+
+    assert excinfo.value.code == 1
+    err = capsys.readouterr().err
+    assert "PDF export" in err
+    assert "pip install reportlab" in err
+    assert "cli_run" not in err
+
+
 def test_cli_export_flag_conflicts():
     with pytest.raises(ValueError):
         validate_export_flags("xlsx", aggregate_only=True, input_preview_only=False, has_files=True)

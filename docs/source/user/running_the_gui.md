@@ -139,9 +139,12 @@ instead of sharing it.
 
 PNG dose maps, and the dose-map images embedded in XLSX, PDF, HTML, and DOCX reports, are
 rendered by Kaleido.
-Kaleido needs a Chromium-family browser such as Chrome or Edge installed on the machine.
-Without one, PNG export reports an error, and reports show "Image unavailable" in place of
-the images. HTML dose maps, JSON, CSV, and the report text and tables still work.
+Kaleido 1.x needs a Chromium-family browser such as Chrome or Edge installed on the machine
+and no longer bundles one. Without a browser, PNG export opens a dialog with the
+`plotly_get_chrome -y` command to copy (or set `BROWSER_PATH` to an existing Chrome or
+Chromium), and reports show "Image unavailable" in place of the images. HTML dose maps, JSON,
+CSV, and the report text and tables still work. The portable Full app renders with its bundled
+Chromium; the Light app has no PNG export by design.
 
 ## Platform notes (Tkinter)
 

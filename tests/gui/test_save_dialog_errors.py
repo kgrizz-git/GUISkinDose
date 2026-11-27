@@ -392,9 +392,6 @@ async def test_data_export_failure_notifies_and_skips_write(
     caplog.set_level(logging.INFO, logger=_IO_HELPERS_LOGGER)
     _patch_native_failure(monkeypatch)
     _native_caller(monkeypatch, data_tab)
-    monkeypatch.setattr(
-        data_tab, "_export_content", lambda *a, **k: (_ for _ in ()).throw(AssertionError("must not build"))
-    )
     downloaded: list = []
     monkeypatch.setattr(ui, "download", lambda *a: downloaded.append(a))
 
@@ -415,9 +412,6 @@ async def test_data_export_cancel_stays_silent(monkeypatch: pytest.MonkeyPatch, 
     state.rdsr_df = pd.DataFrame({"Tx": [1.0]})
     _patch_native_cancel(monkeypatch)
     _native_caller(monkeypatch, data_tab)
-    monkeypatch.setattr(
-        data_tab, "_export_content", lambda *a, **k: (_ for _ in ()).throw(AssertionError("must not build"))
-    )
     downloaded: list = []
     monkeypatch.setattr(ui, "download", lambda *a: downloaded.append(a))
 

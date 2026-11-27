@@ -13,11 +13,13 @@ import logging
 import pandas as pd
 from nicegui import ui
 
+from guiskindose.export.failure_guidance import classify_export_failure, probe_export_readiness
 from guiskindose.privacy import safe_error_event, safe_user_error
 from guiskindose.safe_output import atomic_write_private
 from guiskindose.spreadsheet_safety import neutralize_dataframe
 
 from ..components import HelpButton
+from ..components.export_failure_dialog import show_export_failure_dialog
 from ..helpers import EXAM_COLUMN, EXAM_INDEX_COLUMN, to_json_safe_records
 from ..io_helpers import _get_save_path, _is_native_mode
 from ..page_context import PageContext
@@ -80,13 +82,31 @@ async def _local_export(fmt: str) -> None:
         ui.notify("No data to export", type="warning")
         return
 
+    # A known-missing backend is reported before asking for a save path.
+    readiness = probe_export_readiness(fmt)
+    if readiness is not None:
+        show_export_failure_dialog(readiness)
+        return
+
+    # Build before prompting so a content failure never comes after the user
+    # picked a save path.
+    try:
+        content = _export_content(dataframe, fmt)
+    except ImportError as exc:
+        safe_error_event(logger, "event_table_export", exc)
+        show_export_failure_dialog(classify_export_failure(exc, format=fmt))
+        return
+    except Exception as exc:
+        safe_error_event(logger, "event_table_export", exc)
+        ui.notify(safe_user_error("event_table_export"), type="negative")
+        return
+
     prefix = "raw_" if state.view_raw else "normalized_"
     default_name = f"guiskindose_{prefix}events.{fmt}"
     save_path = await _get_save_path(default_name, fmt)
     if save_path is None and _is_native_mode():
         return  # cancel or an already-reported dialog failure
 
-    content = _export_content(dataframe, fmt)
     if save_path:
         try:
             atomic_write_private(save_path, content, force=True)

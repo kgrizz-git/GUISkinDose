@@ -254,7 +254,7 @@ Default directory: first input file's directory for CLI and native GUI. In brows
 - Modal: format dropdown, optional title field, Export / Cancel. Show editable path + Browse (`_get_save_path`) **only in native mode**.
 - Browser mode: progressively enhance save UX. Use browser `showSaveFilePicker()` when available; otherwise fall back to `ui.download()` with the generated filename plus a short toast explaining that the browser saved it using the browser's normal download location/settings.
 - Guardrail: browser save-picker support must never block export, replace the working fallback, or justify browser-specific behavior that risks existing download functionality.
-- Success: Open file / Open folder (native only); kaleido failure → actionable notice
+- Success: Open file / Open folder (native only); dependency, missing-browser, and incomplete/portable-install failures → catalog-backed guidance dialog ([archive/EXPORT_FAILURE_MESSAGING_PLAN.md](archive/EXPORT_FAILURE_MESSAGING_PLAN.md)); other render failures → actionable notice
 
 ---
 
