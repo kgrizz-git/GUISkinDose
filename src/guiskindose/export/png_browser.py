@@ -118,7 +118,9 @@ def system_browser_available() -> bool | None:
     except Exception:
         return None
     try:
-        return Chromium.find_browser(skip_local=False) is not None
+        resolved = Chromium.find_browser(skip_local=False)
+        # ``BROWSER_PATH`` is returned unchecked, so a stale override must not count.
+        return resolved is not None and Path(resolved).is_file()
     except Exception:
         return None
 

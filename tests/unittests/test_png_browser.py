@@ -459,13 +459,17 @@ def test_browser_probe_uses_the_resolver_the_choreographer_floor_provides() -> N
     assert "skip_local" in inspect.signature(Chromium.find_browser).parameters
 
 
-@pytest.mark.parametrize(("resolved", "expected"), [("/opt/chrome", True), (None, False)])
+@pytest.mark.parametrize(("resolved", "expected"), [("present", True), ("stale", False), (None, False)])
 def test_browser_probe_maps_the_resolver_result(
-    monkeypatch: pytest.MonkeyPatch, resolved: str | None, expected: bool
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, resolved: str | None, expected: bool
 ) -> None:
     from choreographer.browsers.chromium import Chromium
 
-    monkeypatch.setattr(Chromium, "find_browser", classmethod(lambda cls, **_kw: resolved))
+    browser = tmp_path / "chrome"
+    if resolved == "present":
+        browser.write_bytes(b"")
+    path = None if resolved is None else str(browser)
+    monkeypatch.setattr(Chromium, "find_browser", classmethod(lambda cls, **_kw: path))
     assert png_browser.system_browser_available() is expected
 
 
