@@ -75,6 +75,9 @@ rules:
           - pattern: ui.notify(..., f"...{$EXC}...", ...)
       - pattern-not-inside: safe_error_event(..., $EXC, ...)
       - pattern-not-inside: exception_class_name($EXC)
+      # Value-free classifier: decides from the exception type and read-only
+      # environment probes, never from exception text (export/failure_guidance.py).
+      - pattern-not-inside: classify_export_failure($EXC, ...)
       - pattern-not-inside: sys.__excepthook__(..., $EXC, ...)
       - metavariable-regex:
           metavariable: $EXC
