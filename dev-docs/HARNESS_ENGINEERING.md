@@ -69,14 +69,14 @@ Agents working in this repository should be able to answer three questions quick
 | Sensitive-content + approved-asset gate | `scripts/check_sensitive_content.py` (policy/CLI), `scripts/check_sensitive_helpers.py` (notebook/PDF/container readers), `scripts/git_identity_trailers.py` (Dependabot/GitHub noreply commit trailers), `scripts/check_commit_message.py`, `scripts/render_asset_inventory.py`, `dev-docs/approved_asset_inventory.json`, `dev-docs/approved_asset_inventory.md`, `dev-docs/PRIVACY_AND_SENSITIVE_ASSETS.md` |
 | Conditional privacy admission | `scripts/privacy_admission.py`, `dev-docs/privacy_admission_policy.json`; receipts stay under `.git/privacy-scan-receipts/` |
 | Privacy tool inventory | `dev-docs/privacy_tool_inventory.json`, generated `dev-docs/privacy_tool_inventory.md`, `scripts/render_privacy_tool_inventory.py` |
-| Privacy scanners | `scripts/run_semgrep_privacy.py`, `scripts/run_presidio_advisory.py`, `scripts/run_hounddog_advisory.py`, `scripts/run_dicom_phi_advisory.py`, `scripts/run_image_privacy_advisory.py`, `.github/workflows/phi-scan.yml`, `.github/workflows/presidio.yml` |
+| Privacy scanners | `scripts/run_semgrep_privacy.py`, `scripts/run_presidio_advisory.py`, `scripts/run_hounddog_advisory.py`, `scripts/run_dicom_phi_advisory.py`, `scripts/run_image_privacy_advisory.py`, `scripts/phi_scan_tool.py`, `scripts/run_phi_scan.py`, `.github/workflows/phi-scan.yml`, `.github/workflows/presidio.yml` |
 | Sonar configuration / local SonarQube | `scripts/check_sonar_properties.py` (shared scope parity), `scripts/check_cloud_scanner_exclusions.py` (Sonar + CodeRabbit sensitive-file policy), `scripts/run_sonarqube_local.py`, `scripts/check_sonarcloud_gate.py` (SonarCloud QG + new-code sample via API), `scripts/dump_sonar_issues.py`, `sonar-project.properties`, `.sonarcloud.properties`, `dev-docs/SONARQUBE_LOCAL.md`. Cloud exclusions omit asset/fixture/binary surfaces; GUI stays in coverage. README Quality Gate badge removed on Free/Sonar-way (untunable 80% new coverage). |
 | Python SAST (Bandit) | `[tool.bandit]` in `pyproject.toml`; CI `bandit` job |
 | OWASP SAST (Semgrep) | `p/owasp-top-ten`; CI local CLI on include-list roots (`src scripts .github/workflows docs/source/conf.py`); pre-push hook; **Semgrep Cloud App stays disabled** (`--metrics=off`, no `SEMGREP_APP_TOKEN`) |
 | Shell-script lint (ShellCheck) | `shellcheck-py` pre-commit hook + CI `static-analysis` job |
 | Type-check helpers | `scripts/type_baseline.sh`, `.basedpyright/README.md` |
 | Release build | `.github/workflows/release.yml` |
-| Dependency and Actions updates | `.github/dependabot.yml` (monthly on the 21st, 4pm US Eastern; uv root + isolated Semgrep lock + Actions; routine minor/patch grouped, gate tools and majors ungrouped) |
+| Dependency and Actions updates | `.github/dependabot.yml` (monthly on the 21st, 4pm US Eastern; uv root + isolated Semgrep and phi-scan locks + Actions; routine minor/patch grouped, gate tools and majors ungrouped) |
 
 ## Documentation conventions
 
@@ -290,12 +290,13 @@ check that uv is available before installing hooks. PyYAML is an explicit dev de
 above; the lock/baseline parity test blocks partial updates. Refresh third-party notices when root dependencies change.
 Configuration-only changes do not require notice regeneration; verify the inventory after dependency declarations change.
 
-The separate `/tools/semgrep` uv entry uses `lockfile-only`, allows transitive dependencies, and ignores
-Semgrep itself. It cannot widen scanner manifest constraints or change the inventory-controlled scanner pin.
-Keep the isolated project outside the root workspace. Scanner-version upgrades still require inventory/manifest
-coordination, relocking, and the weekly latest-scanner probe's review. When a scanner pin blocks a transitive
-security fix, prefer a scanner upgrade. If no upgrade relaxes the pin, a reviewed `override-dependencies` entry in
-`tools/semgrep/pyproject.toml` is the sanctioned alternative, verified by an unchanged scan result. Never relax the
+The separate `/tools/semgrep` and `/tools/phi-scan` uv entries use `lockfile-only`, allow transitive
+dependencies, and ignore the scanner itself. They cannot widen scanner manifest constraints or change the
+inventory-controlled scanner pins. Keep the isolated projects outside the root workspace. Scanner-version
+upgrades still require inventory/manifest coordination, relocking, and (for Semgrep) the weekly
+latest-scanner probe's review. When a scanner pin blocks a transitive security fix, prefer a scanner
+upgrade. If no upgrade relaxes the pin, a reviewed `override-dependencies` entry in the scanner's
+`pyproject.toml` is the sanctioned alternative, verified by an unchanged scan result. Never relax the
 lock gate itself. Advisories that only an exact scanner pin holds back are listed by ID in that file's
 `[tool.uv.audit] ignore`, so any new advisory still fails the blocking scanner-lock audit.
 
@@ -379,7 +380,8 @@ value to output.
 `python scripts/check_commit_message.py <git-message-file>` runs at local
 `commit-msg` time with the same value-free rules and no exemptions. See
 [`PRIVACY_AND_SENSITIVE_ASSETS.md`](PRIVACY_AND_SENSITIVE_ASSETS.md) for the mandatory human-review process and strict
-approved baseline. The separate phi-scan workflow is pinned, quiet, and fails on new/expired reviewed-baseline deltas;
+approved baseline. The separate phi-scan workflow is pinned in a hash-locked `tools/phi-scan`
+environment, runs through `scripts/run_phi_scan.py`, and fails on new/expired reviewed-baseline deltas;
 it has no report upload or AI review.
 `python scripts/render_asset_inventory.py --check` also runs in pre-commit and CI to ensure the linked Markdown
 review view precisely matches the machine-enforced JSON.
@@ -413,6 +415,16 @@ Auditing is orchestrated by a wrapper script [scripts/audit_dependencies.py](../
 
 CI runs the same audit (Ubuntu, Python 3.12, with `uv` installed) in the `static-analysis` job, and `.github/workflows/dependency-audit.yml` repeats it weekly
 without `ci.yml`'s schedule gate, so a newly published advisory fails a scheduled run even on a quiet week.
+Both jobs also audit the isolated scanner locks in their own blocking steps:
+
+```bash
+python scripts/audit_dependencies.py --tool-project tools/semgrep
+python scripts/audit_dependencies.py --tool-project tools/phi-scan
+```
+
+Those steps are separate from the application locks so a scanner-only advisory is reported where it belongs.
+The Semgrep lock lists its known scanner-only advisories by ID in `tools/semgrep/pyproject.toml`; the phi-scan lock
+currently has none, so any new advisory fails the step.
 
 **Policy:**
 
@@ -518,7 +530,7 @@ pre-commit run --hook-stage pre-push --all-files # pre-push hooks (semgrep, pip-
 | Hook | What it runs |
 |---|---|
 | **basedpyright** | Full-project type check (matches CI `typecheck` job; requires `.[dev,gui]`) |
-| **semgrep** | OWASP Top 10 SAST via `scripts/run_semgrep_owasp.py` (`p/owasp-top-ten`; needs network to fetch rules; `--metrics=off`). Pinned isolated `uvx` tool, **not** a `dev` dependency — its own pins previously blocked four transitive advisory fixes. Pin lives in `dev-docs/privacy_tool_inventory.json`; weekly `ci-latest` probes the latest release for drift. |
+| **semgrep** | OWASP Top 10 SAST via `scripts/run_semgrep_owasp.py` (`p/owasp-top-ten`; needs network to fetch rules; `--metrics=off`). Pinned, hash-locked `tools/semgrep` project, **not** a `dev` dependency — its own pins previously blocked four transitive advisory fixes. Pin lives in `dev-docs/privacy_tool_inventory.json`; weekly `ci-latest` probes the latest release for drift. |
 | **pip-audit** | Dependency vulnerability scan (`python scripts/audit_dependencies.py`; `uv audit` on `uv.lock` when `uv` >= 0.11.19 is available) |
 | **check-changelog** | `python scripts/check_changelog.py` when `src/` or `tests/` change |
 
@@ -560,7 +572,7 @@ Other CI jobs (typecheck, bandit, pip-audit, GUI smoke, package build, doc-fresh
 | `python scripts/check_sensitive_content.py --require-approved-assets` | Ubuntu `privacy-gates` job + pre-commit; strict asset/content admission with value-safe output |
 | `python scripts/privacy_admission.py check/route` | Ubuntu `privacy-gates` job + local hooks; protected paths and conditional scanner routing |
 | `python scripts/run_semgrep_privacy.py` | Ubuntu `privacy-gates` job + pre-push; blocking project privacy SAST |
-| phi-scan / Presidio | Scheduled secondary workflows (`phi-scan.yml` Thu; `presidio.yml` Mon) + manual dispatch. Presidio PR path triggers were removed in the Jul 2026 privacy-streamline change — it no longer runs on every PR. Both are value-suppressed with no report upload. |
+| phi-scan / Presidio | Scheduled secondary workflows (`phi-scan.yml` Thu; `presidio.yml` Mon) + manual dispatch. Presidio PR path triggers were removed in the Jul 2026 privacy-streamline change — it no longer runs on every PR. Both are value-suppressed with no report upload. phi-scan runs from its hash-locked `tools/phi-scan` environment via `scripts/run_phi_scan.py`. |
 | CodeQL (GitHub code scanning) | `CodeQL analysis (python)` and `CodeQL analysis (actions)` matrix legs in `ci.yml` on PRs, `main` pushes, and scheduled or manual runs (via `schedule-gate`), after `privacy-gates`; the `actions` leg scans the workflow files. GitHub Default Setup is disabled to avoid a parallel ungated run. |
 | GUI smoke tests (`pytest tests/gui/ -n auto`) | Ubuntu `gui-smoke` job after `privacy-gates` (requires `.[gui]`) |
 | `basedpyright` | Ubuntu `static-analysis` job (requires `.[dev,gui]`) |
@@ -568,9 +580,9 @@ Other CI jobs (typecheck, bandit, pip-audit, GUI smoke, package build, doc-fresh
 | `bandit -c pyproject.toml -r src/guiskindose scripts --severity-level medium` | Ubuntu `static-analysis` job (requires `.[dev]`) |
 | `shellcheck run_gui.sh GUISkinDose.command scripts/type_baseline.sh scripts/setup-dev.sh` | Ubuntu `static-analysis` job (requires `.[dev]`) |
 | `semgrep --config=p/owasp-top-ten --error --metrics=off` on include-list code roots, excluding example/phantom/table data and fixtures | Ubuntu `owasp-semgrep` job after `privacy-gates` (local CLI; Semgrep Cloud App disabled) |
-| `python scripts/audit_dependencies.py` | Ubuntu `static-analysis` job (requires `.[dev,gui]`) |
+| `python scripts/audit_dependencies.py`, plus `--tool-project tools/semgrep` and `--tool-project tools/phi-scan` | Ubuntu `static-analysis` job (requires `.[dev,gui]`); the weekly `dependency-audit` workflow repeats all three without `ci.yml`'s schedule gate |
 | SonarCloud CI scan | **Enabled**: `main` is protected by a ruleset and repository variable `SONAR_PROTECTED_MAIN_ENABLED=true`, so `sonar-scan` runs on protected `main` pushes only, after `privacy-gates` + `build`, with combined non-GUI+GUI `coverage.xml`. Automatic Analysis is disabled (CI-based analysis is authoritative). The scan requires the `SONAR_TOKEN` repository secret; no tokenized scanner runs on a PR head. The scan waits on the Quality Gate (`sonar.qualitygate.wait=true`), so a red gate fails `sonar-scan` and `ci-issue-notify` files a tracking issue. Treat that as triage, not a revert: fix the finding or resolve a false positive in SonarCloud. Local SonarQube Community Build has no `pythonsecurity:*` taint rules, so local scans cannot pre-screen findings such as S2083. |
-| Dependency auditors | `uv audit` on `uv.lock` with `pip-audit` fallback via `scripts/audit_dependencies.py` — runs in the Ubuntu `static-analysis` job and the local pre-push hook. (The former main-only `safety scan` cloud job was removed with the `safety` dev dependency; it duplicated the OSV/PyPA advisory data both auditors already query.) |
+| Dependency auditors | `uv audit` on `uv.lock` with `pip-audit` fallback via `scripts/audit_dependencies.py` — runs in the Ubuntu `static-analysis` job and the local pre-push hook. Separate blocking steps audit `tools/semgrep/uv.lock` and `tools/phi-scan/uv.lock`; the weekly `dependency-audit` workflow repeats all of them. (The former main-only `safety scan` cloud job was removed with the `safety` dev dependency; it duplicated the OSV/PyPA advisory data both auditors already query.) |
 | PR coverage gate | Ubuntu `coverage-pr` on pull requests after `privacy-gates`: combined non-GUI+GUI `coverage` ≥80% of `src/guiskindose/*`, plus `diff-cover` ≥80% of lines changed vs the PR base (base branch fetched with full history so merge-base stays valid when `main` moves). This is the single coverage standard (80%); the matrix `build` job runs tests only (no coverage gate), and `sonar-scan` enforces ≥80% new-code coverage on `main`. |
 | `python scripts/check_licenses.py` | Ubuntu `static-analysis` job (forbidden licenses; `--check-notices`) |
 | CodeRabbit | Auto-review off (`.coderabbit.yaml`); sensitive path filters retained. The obsolete CI bot-comment request job is removed. Maintainers use a supported review action after the exact head passes privacy admission; filters are defense in depth, not an admission boundary. |

@@ -8,6 +8,25 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ## [Unreleased]
 
+- **phi-scan is hash-locked and audited** (2026-11-27) — The PHI text scanner ran through bare
+  `uvx --from phi-scan==0.7.0`, which fixes the version but re-resolves its 38 transitive packages with no recorded
+  hashes, so a same-version re-upload would have been trusted. `tools/phi-scan/` now mirrors `tools/semgrep/`: a
+  standalone uv project (not a workspace member) whose `uv.lock` pins every transitive package to an exact version
+  and sha256, with `requires-python = ">=3.12"` because phi-scan 0.7.0 requires it. `scripts/phi_scan_tool.py`
+  resolves the invocation (`uv run --locked` preferred, `uvx` only locally, `PATH` only at the pin and never from
+  the project `.venv`) and `scripts/run_phi_scan.py` is the single runner used by `.github/workflows/phi-scan.yml`;
+  `scripts/privacy_admission.py` uses the same resolver, so the hook and CI cannot diverge. `.envrc` provisions
+  `tools/phi-scan/.venv` with the same redirected environment as the privacy-scan project, and `scripts/setup-dev.sh`
+  / `setup-dev.bat` print the manual sync command. CI refuses every non-locked route, and the workflow now selects
+  Python 3.12 explicitly. Both `ci.yml` static-analysis and the weekly `dependency-audit` run
+  `scripts/audit_dependencies.py --tool-project tools/phi-scan` as a blocking step; `uv audit` reports no known
+  vulnerabilities on this lock, so it carries no `[tool.uv.audit]` suppressions. Dependabot refreshes the lock's
+  transitives only, ignoring the inventory-controlled pin. The admission policy version changes to
+  `locked-phi-scan-tool` (not the tool version) and binds `tools/phi-scan/{pyproject.toml,uv.lock}` into receipts,
+  so existing phi-scan receipts are invalidated and a relock requires a new clean scan. Added
+  `tests/unittests/test_phi_scan_tool.py`, a phi call-site test, and a receipt-binding test; removed the completed
+  item from `dev-docs/TO_DO.md`.
+
 - **Native save-dialog errors** (2026-11-24) — `_get_save_path()` in `gui/io_helpers.py` split into the
   `_request_native_save_path()` primitive (no `try/except`, so dialog failures propagate; falsy results still
   map to `None`) and a thin wrapper owning the single handler (one ERROR `native_save_dialog`

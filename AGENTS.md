@@ -224,6 +224,20 @@ The scanner's environment lives at `tools/semgrep/.venv` (gitignored). Note that
 `semgrep_tool.tool_environment()` must be used to launch it — otherwise the scanner installs
 straight into the project `.venv`.
 
+`tools/phi-scan` is the same pattern for the PHI text scanner: a standalone uv project whose
+`uv.lock` sha256-pins all 39 packages in phi-scan 0.7.0's dependency tree (the tool itself needs
+Python >=3.12; this does not move the root project floor). `scripts/phi_scan_tool.py` resolves
+the invocation, preferring `uv run --locked --project tools/phi-scan`, and
+`scripts/run_phi_scan.py` is the single runner used by `.github/workflows/phi-scan.yml` and
+manual runs. `scripts/privacy_admission.py` imports the resolver directly, so the privacy hook
+and CI share one environment. `.envrc` provisions `tools/phi-scan/.venv` (gitignored) on
+`direnv allow`, and `scripts/setup-dev.sh` / `setup-dev.bat` print the manual sync command. The
+bare `uvx --from phi-scan==<pin>` route is a **warned local fallback** when `uv` or the lock is
+missing; in CI every non-locked route fails rather than running an unverified dependency tree.
+Bumping means editing the inventory *and* re-running `uv lock --project tools/phi-scan`; the
+resolver refuses an inventory/manifest mismatch before `--locked` is reached.
+`dependency-audit.yml` audits the lock weekly.
+
 `tools/privacy-scan` is a second isolated tool project. It carries Presidio, spaCy, the `en_core_web_sm`
 model and the image-advisory imports. The model is a direct github.com wheel URL, and Dependabot's proxy
 fails on that download, so the wheel cannot sit in the root lock. The project is not a workspace member.

@@ -10,8 +10,10 @@ from pathlib import Path
 from scripts.privacy_admission import (
     ScannerRule,
     command_check,
+    config_digest,
     digest_mapping,
     forbidden_paths,
+    load_policy,
     missing_ignore_patterns,
     normalize_path,
     phi_filename_findings,
@@ -232,6 +234,29 @@ def test_repository_policy_json_has_unique_scanner_ids() -> None:
 
     assert len(scanner_ids) == len(set(scanner_ids))
     assert policy["receipt_max_age_hours"] > 0
+
+
+def test_phi_scan_receipts_bind_the_hash_locked_tool_environment() -> None:
+    """A scanner receipt must not survive a change to the locked phi-scan environment.
+
+    The policy version is deliberately not the tool pin: the pin lives in the inventory
+    and tools/phi-scan/pyproject.toml, while the receipt binds both files so a relock or
+    manifest change invalidates older clean results.
+    """
+    root = Path(__file__).resolve().parents[2]
+    _policy, rules = load_policy(root)
+    rule = next(item for item in rules if item.scanner_id == "phi-scan")
+
+    assert rule.version == "locked-phi-scan-tool"
+    assert "tools/phi-scan/pyproject.toml" in rule.config_paths
+    assert "tools/phi-scan/uv.lock" in rule.config_paths
+
+    entries = {path: f"oid-{index}" for index, path in enumerate(rule.config_paths)}
+    baseline = config_digest(rule, b"policy", entries)
+    for changed in ("tools/phi-scan/pyproject.toml", "tools/phi-scan/uv.lock"):
+        modified = dict(entries)
+        modified[changed] = "different"
+        assert config_digest(rule, b"policy", modified) != baseline, changed
 
 
 def test_staged_policy_check_cannot_be_bypassed_by_restoring_worktree_ignore(tmp_path: Path) -> None:

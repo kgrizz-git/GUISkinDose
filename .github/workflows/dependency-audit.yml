@@ -8,9 +8,10 @@
 #
 # Only uv + Python are needed: `uv audit` reads uv.lock directly, so no `uv sync`.
 # Action SHAs and uv/Python versions mirror ci.yml's static-analysis job.
-# Scope: root uv.lock, tools/privacy-scan/uv.lock and tools/semgrep/uv.lock (the last two via the
-# wrapper's --tool-project flag), all blocking. The Semgrep lock's known scanner-only advisories are
-# listed by ID in tools/semgrep/pyproject.toml, so any new one fails.
+# Scope: root uv.lock, tools/privacy-scan/uv.lock, tools/semgrep/uv.lock and
+# tools/phi-scan/uv.lock (the last three via the wrapper's --tool-project flag), all blocking.
+# The Semgrep lock's known scanner-only advisories are listed by ID in
+# tools/semgrep/pyproject.toml, so any new one fails; the phi-scan lock has no suppressions.
 #
 # Second job (vulnerable-actions): zizmor's known-vulnerable-actions audit over every workflow.
 # This repo pins actions by commit SHA, and Dependabot raises alerts only for actions referenced
@@ -61,6 +62,10 @@ jobs:
       # hold back (reachable only via `semgrep mcp` and telemetry, which the gates never run), so
       # any new advisory on this lock fails, whatever its severity.
       run: python scripts/audit_dependencies.py --tool-project tools/semgrep
+    - name: Audit phi-scan scanner lock
+      # Same rule for the hash-locked phi-scan environment. Its lock currently carries no
+      # suppressions, so any advisory fails this step.
+      run: python scripts/audit_dependencies.py --tool-project tools/phi-scan
 
   # Dependabot alerts are never raised for actions pinned by commit SHA (only
   # for semver tags), so check pinned actions against GitHub's advisory

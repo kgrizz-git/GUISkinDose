@@ -175,6 +175,10 @@ jobs:
       # hold back (reachable only via `semgrep mcp` and telemetry, which the gates never run), so
       # any new advisory on this lock fails, whatever its severity.
       run: python scripts/audit_dependencies.py --tool-project tools/semgrep
+    - name: Audit phi-scan scanner lock
+      # Same rule for the hash-locked phi-scan environment. Its lock currently carries no
+      # suppressions, so any advisory fails this step.
+      run: python scripts/audit_dependencies.py --tool-project tools/phi-scan
     - name: Bandit (Python SAST, medium+ severity)
       run: bandit -c pyproject.toml -r src/guiskindose scripts --severity-level medium
     - name: ShellCheck (shell script lint)

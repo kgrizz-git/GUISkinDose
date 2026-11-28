@@ -116,13 +116,14 @@
   "scanners": [
     {
       "id": "phi-scan",
-      "version": "0.7.0",
+      "version": "locked-phi-scan-tool",
       "tool_ids": ["phi-scan"],
       "trigger_extensions": [".csv", ".tsv"],
       "input_extensions": [".csv", ".tsv"],
       "scope": "all_matching",
       "config_paths": [
-        ".phi-scanner.yml", ".phi-scanbaseline", "dev-docs/privacy_tool_inventory.json"
+        ".phi-scanner.yml", ".phi-scanbaseline", "dev-docs/privacy_tool_inventory.json",
+        "tools/phi-scan/pyproject.toml", "tools/phi-scan/uv.lock"
       ]
     },
     {
