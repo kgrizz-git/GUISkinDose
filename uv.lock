@@ -1234,6 +1234,7 @@ name = "guiskindose"
 version = "1.1.1"
 source = { editable = "." }
 dependencies = [
+    { name = "certifi" },
     { name = "choreographer" },
     { name = "kaleido" },
     { name = "numpy" },
@@ -1293,13 +1294,11 @@ export = [
     { name = "reportlab" },
 ]
 gui = [
-    { name = "certifi" },
     { name = "itsdangerous" },
     { name = "nicegui" },
     { name = "pytest-asyncio" },
 ]
 gui-native = [
-    { name = "certifi" },
     { name = "itsdangerous" },
     { name = "nicegui" },
     { name = "pytest-asyncio" },
@@ -1330,8 +1329,7 @@ portable = [
 requires-dist = [
     { name = "bandit", marker = "extra == 'dev'", specifier = ">=1.8" },
     { name = "basedpyright", marker = "extra == 'dev'", specifier = ">=1.23" },
-    { name = "certifi", marker = "extra == 'gui'", specifier = ">=2026.10.19" },
-    { name = "certifi", marker = "extra == 'gui-native'", specifier = ">=2026.10.19" },
+    { name = "certifi", specifier = ">=2026.10.19" },
     { name = "choreographer", specifier = ">=1.3.0" },
     { name = "defusedxml", marker = "extra == 'dev'", specifier = ">=0.7.1" },
     { name = "diff-cover", marker = "extra == 'dev'", specifier = ">=10.0" },

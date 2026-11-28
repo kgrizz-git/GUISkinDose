@@ -8,6 +8,15 @@ Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categor
 
 ## [Unreleased]
 
+- **Phantom-pack release download** (2026-11-27) — `phantom_pack_release.py` pins the per-version GitHub
+  URL and redirect hosts; `phantom_pack_download.py` streams over verified HTTPS with a 5 s socket timeout,
+  cancel-closes the response, caps the body at the install limit, and hands the spool to the existing
+  transactional installer. The GUI controller keeps progress/cancel/retry and a process-level busy guard
+  that survives page reload; the catalog hides both actions when the catalog is complete. Tests use a
+  scripted transport and a test-only redirect transport; none contacts GitHub. `certifi` moved to core
+  dependencies. The draft-release workflow attaches with authenticated `gh release download` verification;
+  a separate published-release job re-checks the public URL with backoff. See
+  [plans/PORTABLE_PHASE3_PACK_DOWNLOAD_PLAN.md](plans/PORTABLE_PHASE3_PACK_DOWNLOAD_PLAN.md).
 - **Native save-dialog errors** (2026-11-24) — `_get_save_path()` in `gui/io_helpers.py` split into the
   `_request_native_save_path()` primitive (no `try/except`, so dialog failures propagate; falsy results still
   map to `None`) and a thin wrapper owning the single handler (one ERROR `native_save_dialog`

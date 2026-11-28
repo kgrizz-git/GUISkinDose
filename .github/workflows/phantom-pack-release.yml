@@ -1,0 +1,219 @@
+# Phantom-pack release assets (dev-docs/plans/PORTABLE_PHASE3_PACK_DOWNLOAD_PLAN.md).
+# Attach the pack while the release is a draft, because immutable releases lock
+# assets after publication. GitHub does not emit workflow events for draft
+# release create/edit/delete, so the attach path is a manual dispatch.
+# A separate read-only job re-checks the public URL after publication.
+name: phantom-pack-release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing vX.Y.Z tag whose draft release receives the pack asset.
+        required: true
+        type: string
+      publish_after_attach:
+        description: Publish the draft after the asset is attached and verified.
+        type: boolean
+        default: false
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: phantom-pack-${{ github.event_name }}-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  attach-pack:
+    name: Attach pack to draft
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          ref: ${{ inputs.tag }}
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Require tag, main ancestry, and green CI
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          if ! printf '%s' "$TAG" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "tag must match ^v[0-9]+\.[0-9]+\.[0-9]+$" >&2
+            exit 1
+          fi
+          TARGET="$(git rev-parse "${TAG}^{commit}")"
+          test "$TARGET" = "$(git rev-parse HEAD)"
+          git fetch origin main
+          git merge-base --is-ancestor "$TARGET" origin/main
+          SUCCESSFUL_RUNS="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow ci.yml --commit "$TARGET" --status completed --json conclusion --jq 'map(select(.conclusion == "success")) | length')"
+          test "$SUCCESSFUL_RUNS" -ge 1
+
+      - name: Setup python 3.14
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
+        with:
+          python-version: "3.14"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2  # v10.3.3
+        with:
+          version: "0.11.25"
+
+      - name: Require tag matches pyproject version
+        env:
+          TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          VERSION="$(python -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')"
+          test "v$VERSION" = "$TAG"
+
+      - name: Require a draft, skip prereleases
+        id: release-check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          gh release view "$TAG" --json isDraft,isPrerelease,tagName > release.json
+          python - <<'PY'
+          import json
+          import os
+          import sys
+
+          data = json.load(open("release.json", encoding="utf-8"))
+          if data.get("tagName") != os.environ["TAG"]:
+              sys.exit("release tag mismatch")
+          skip = "true" if data.get("isPrerelease") else "false"
+          if skip == "true":
+              print("prerelease; no pack asset")
+          elif not data.get("isDraft"):
+              sys.exit("release must be a draft; attach assets before publishing")
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as handle:
+              handle.write(f"skip={skip}\n")
+          PY
+
+      - name: Install locked privacy checks
+        if: steps.release-check.outputs.skip != 'true'
+        run: uv sync --locked --extra dev
+
+      - name: Enforce privacy release gates
+        if: steps.release-check.outputs.skip != 'true'
+        run: |
+          uv run --no-sync python scripts/check_sensitive_content.py --require-approved-assets
+          uv run --no-sync python scripts/check_ignored_asset_files.py --strict
+          uv run --no-sync python scripts/run_semgrep_privacy.py
+
+      - name: Build and verify the pack against the committed pin
+        if: steps.release-check.outputs.skip != 'true'
+        env:
+          TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          VERSION="${TAG#v}"
+          ASSET="guiskindose-phantom-pack-${VERSION}.zip"
+          uv run --no-sync python scripts/build_phantom_pack.py --check
+          mkdir -p out
+          uv run --no-sync python scripts/build_phantom_pack.py --output "out/$ASSET"
+          uv run --no-sync python scripts/build_phantom_pack.py --verify "out/$ASSET"
+          (cd out && sha256sum "$ASSET" > "$ASSET.sha256")
+
+      - name: Attach without clobber
+        if: steps.release-check.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          VERSION="${TAG#v}"
+          ASSET="guiskindose-phantom-pack-${VERSION}.zip"
+          gh release view "$TAG" --json assets --jq '.assets[].name' > assets.txt
+          if grep -Fxq "$ASSET" assets.txt; then
+            mkdir -p out/existing
+            gh release download "$TAG" --pattern "$ASSET" --dir out/existing
+            cmp "out/$ASSET" "out/existing/$ASSET"
+          else
+            gh release upload "$TAG" "out/$ASSET" "out/$ASSET.sha256"
+          fi
+          if grep -Fxq "$ASSET.sha256" assets.txt; then
+            mkdir -p out/existing-sha
+            gh release download "$TAG" --pattern "$ASSET.sha256" --dir out/existing-sha
+            cmp "out/$ASSET.sha256" "out/existing-sha/$ASSET.sha256"
+          else
+            gh release upload "$TAG" "out/$ASSET.sha256"
+          fi
+
+      - name: Verify the authenticated draft asset
+        if: steps.release-check.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          VERSION="${TAG#v}"
+          ASSET="guiskindose-phantom-pack-${VERSION}.zip"
+          mkdir -p out/verify
+          gh release download "$TAG" --pattern "$ASSET" --dir out/verify
+          uv run --no-sync python scripts/build_phantom_pack.py --verify "out/verify/$ASSET"
+
+      - name: Publish the draft when requested
+        if: steps.release-check.outputs.skip != 'true' && inputs.publish_after_attach
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+        run: gh release edit "$TAG" --draft=false
+
+  verify-public-pack:
+    name: Verify public asset after publish
+    if: github.event_name == 'release' && !github.event.release.prerelease
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Setup python 3.14
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
+        with:
+          python-version: "3.14"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2  # v10.3.3
+        with:
+          version: "0.11.25"
+
+      - name: Install locked dev tool
+        run: uv sync --locked --extra dev
+
+      - name: Re-download the public URL with backoff and verify
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          set -euo pipefail
+          VERSION="${TAG#v}"
+          ASSET="guiskindose-phantom-pack-${VERSION}.zip"
+          URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/${ASSET}"
+          mkdir -p out
+          downloaded=0
+          for delay in 2 4 8 16 32; do
+            if curl -fsSL --proto '=https' --tlsv1.2 -o "out/$ASSET" "$URL"; then
+              downloaded=1
+              break
+            fi
+            sleep "$delay"
+          done
+          test "$downloaded" -eq 1
+          uv run --no-sync python scripts/build_phantom_pack.py --verify "out/$ASSET"

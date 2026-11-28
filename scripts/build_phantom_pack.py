@@ -76,10 +76,17 @@ def write_pack_zip(manifest: dict, paths: list[Path], out_zip: Path) -> None:
 
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Build or verify the phantom pack zip.")
-    parser.add_argument(
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument(
         "--check",
         action="store_true",
         help="Verify EXPECTED_PHANTOM_PACK_SHA256 matches a freshly built manifest.",
+    )
+    mode.add_argument(
+        "--verify",
+        type=Path,
+        default=None,
+        help="Verify an existing pack zip's manifest against the committed pin.",
     )
     parser.add_argument(
         "--output",
@@ -90,10 +97,39 @@ def _parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def verify_pack_zip(pack_path: Path, *, app_version: str) -> int:
+    """Verify an existing zip's manifest pin and app-version gate without extracting members."""
+    from guiskindose.phantom_pack import (
+        PhantomPackError,
+        manifest_sha256,
+        parse_pack_manifest,
+        validate_manifest_for_install,
+    )
+    from guiskindose.phantom_pack_pin import EXPECTED_PHANTOM_PACK_SHA256
+
+    if not EXPECTED_PHANTOM_PACK_SHA256:
+        print("EXPECTED_PHANTOM_PACK_SHA256 is empty; verify refused.", file=sys.stderr)
+        return 1
+    try:
+        with zipfile.ZipFile(pack_path) as zf:
+            manifest = parse_pack_manifest(zf.read("manifest.json"))
+        validate_manifest_for_install(manifest, app_version=app_version)
+    except (OSError, KeyError, zipfile.BadZipFile, PhantomPackError):
+        print("Phantom pack zip could not be verified.", file=sys.stderr)
+        return 1
+    if manifest_sha256(manifest) != EXPECTED_PHANTOM_PACK_SHA256:
+        print("Phantom pack manifest pin mismatch.", file=sys.stderr)
+        return 1
+    print("Phantom pack zip verifies against the committed manifest pin.")
+    return 0
+
+
 def main() -> int:
-    """Build the pack zip, or with --check compare the committed pin to a freshly built manifest digest."""
+    """Build the pack zip, or check/verify it against the committed manifest pin."""
     args = _parse_args()
     app_version = _load_version()
+    if args.verify is not None:
+        return verify_pack_zip(args.verify, app_version=app_version)
     paths = _pack_stl_paths()
     from guiskindose.phantom_pack import canonical_manifest_bytes, validate_manifest_for_install
 

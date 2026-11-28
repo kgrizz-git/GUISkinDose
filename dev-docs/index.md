@@ -99,6 +99,7 @@ Long-lived topic source-of-truth plans. Convention: [HARNESS_ENGINEERING.md](HAR
 | [plans/TABULAR_RDSR_INPUT_PLAN.md](plans/TABULAR_RDSR_INPUT_PLAN.md) | Staged plan for CSV/TSV/XLSX exported event-table inputs (Radimetrics, DoseTrack, etc.). Phases 1–5 shipped; Phase 5+ vendor stubs documented in-plan. |
 | [plans/PORTABLE_APP_PLAN.md](plans/PORTABLE_APP_PLAN.md) | **In progress (Phase 0 spike)** — per-OS double-click app via NiceGUI pack / PyInstaller. Light has a small phantom set and no PNG/Chrome; Full has the clinical library and a bundled Chromium for Kaleido. In-app phantom packs are later phases. macOS release signing: [plans/archive/PORTABLE_MACOS_RELEASE_SIGNING_PLAN.md](plans/archive/PORTABLE_MACOS_RELEASE_SIGNING_PLAN.md). |
 | [plans/PORTABLE_PHANTOM_PACKS_PLAN.md](plans/PORTABLE_PHANTOM_PACKS_PLAN.md) | **In progress** — user phantom library, pack manifest, zip install (Phase 2 of portable app). |
+| [plans/PORTABLE_PHASE3_PACK_DOWNLOAD_PLAN.md](plans/PORTABLE_PHASE3_PACK_DOWNLOAD_PLAN.md) | **In progress** — Phase 3 download, pinned URL, Phase 2 manifest pin, cancel/retry, draft-release asset workflow; manual/frozen smokes remain. |
 
 ---
 

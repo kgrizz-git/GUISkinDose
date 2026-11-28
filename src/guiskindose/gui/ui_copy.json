@@ -141,12 +141,44 @@
       "text": "Phantom pack install failed.",
       "owner": "gui/tabs/_phantom_catalog.py"
     },
-    "settings.phantom_catalog.phase3_caption": {
-      "text": "A future version may download a signed pack when the network is available.",
+    "settings.phantom_catalog.download_button": {
+      "text": "Download phantom pack",
       "owner": "gui/tabs/_phantom_catalog.py"
     },
+    "settings.phantom_catalog.download_caption": {
+      "text": "Adds the clinical meshes missing from this build from the matching GUISkinDose release. The download is optional; installed meshes keep working offline.",
+      "owner": "gui/tabs/_phantom_catalog.py"
+    },
+    "settings.phantom_catalog.catalog_complete": {
+      "text": "This build includes the full clinical phantom catalog.",
+      "owner": "gui/tabs/_phantom_catalog.py"
+    },
+    "settings.phantom_catalog.download_progress": {
+      "text": "Downloading… {percent}%",
+      "owner": "gui/phantom_pack_download_controller.py"
+    },
+    "settings.phantom_catalog.download_progress_unknown": {
+      "text": "Downloading…",
+      "owner": "gui/phantom_pack_download_controller.py"
+    },
+    "settings.phantom_catalog.download_cancelling": {
+      "text": "Cancelling download…",
+      "owner": "gui/phantom_pack_download_controller.py"
+    },
+    "settings.phantom_catalog.download_busy": {
+      "text": "A phantom pack download is still finishing. Try again in a moment.",
+      "owner": "gui/phantom_pack_download_controller.py"
+    },
+    "settings.phantom_catalog.download_cancel_button": {
+      "text": "Cancel download",
+      "owner": "gui/tabs/_phantom_catalog.py"
+    },
+    "settings.phantom_catalog.download_retry_button": {
+      "text": "Retry download",
+      "owner": "gui/phantom_pack_download_controller.py"
+    },
     "cli.phantom_pack.gui_mode_refusal": {
-      "text": "Phantom pack install is only available in headless mode. Use Settings in the GUI to install a pack zip, or run without --mode gui.",
+      "text": "Phantom pack installation and download are only available in headless mode. Use Settings in the GUI, or run without --mode gui.",
       "owner": "gui/phantom_pack_messages.py"
     },
     "upload.privacy_notice": {

@@ -159,6 +159,7 @@ _PACKAGE_DATA = [(f"phantom_data/{name}", "phantom_data") for name in _phantom_s
 
 datas = [(str(PKG / pattern), str(Path("guiskindose") / dest)) for pattern, dest in _PACKAGE_DATA]
 # NiceGUI serves its own static/templates; plotly needs its package JSON/JS.
+datas += collect_data_files("certifi")
 datas += collect_data_files("nicegui")
 datas += collect_data_files("plotly")
 datas += collect_data_files("kaleido")

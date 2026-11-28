@@ -64,11 +64,14 @@ def _read_json(*parts: str) -> int:
 
 def _check_package_data() -> dict[str, Any]:
     """Open every data root the portable plan lists, through ``importlib.resources``."""
+    import certifi
+
     from guiskindose.gui.ui_copy import _PACKAGED_CATALOG_TRAVERSABLE, _load_catalog
     from guiskindose.phantom_mesh_names import resolve_human_mesh_stl_path
 
     kerma_csv = _pkg("example_data", "kerma_meter", "calibration_factors_example.csv")
     found = {
+        "certifi_ca_bundle": Path(certifi.where()).is_file(),
         "phantom_data_stl": _count(("phantom_data",), ".stl"),
         "hudfrid_stl_bytes": resolve_human_mesh_stl_path("hudfrid").stat().st_size,
         "table_data_csv": _count(("table_data",), ".csv"),

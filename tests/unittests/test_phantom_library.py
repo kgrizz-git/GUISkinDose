@@ -249,3 +249,16 @@ def test_reduced_demo_only_in_user_library_is_refused(tmp_path: Path, show_demo_
             user_library_dir=library,
             show_demo_phantoms=show_demo_phantoms,
         )
+
+
+def test_missing_clinical_stems_excludes_previews_and_installed(tmp_path: Path) -> None:
+    from guiskindose.phantom_library import missing_clinical_stems
+    from guiskindose.phantom_mesh_names import _CLINICAL_SORT_ORDER, _PREVIEW_REDUCED_SUFFIXES
+
+    shipped = tmp_path / "shipped"
+    _write_stl(shipped, "adult_male")
+    _write_stl(shipped, "adult_male_reduced_3000t")
+    missing = missing_clinical_stems(shipped_dir=shipped, user_library_dir=tmp_path / "library")
+    assert "adult_male" not in missing
+    assert all(not any(stem.endswith(suffix) for suffix in _PREVIEW_REDUCED_SUFFIXES) for stem in missing)
+    assert set(missing) <= set(_CLINICAL_SORT_ORDER)

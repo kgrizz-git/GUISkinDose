@@ -23,6 +23,7 @@ That keeps SemVer and contributor history organized.
 
 - Signed and notarized **macOS portable app** zips (Light and Full for Apple silicon). They open from Finder after the standard "downloaded from the Internet" prompt.
 - Optional **phantom pack** zip install for clinical meshes (headless `--install-phantom-pack` and Settings catalog UI). Shipped meshes take precedence over the per-user library.
+- **Download the phantom pack** for the running release from Settings or with headless `--download-phantom-pack`. The HTTPS URL is fixed in code, redirects are limited to GitHub's release hosts, the existing manifest SHA-256 pin rejects a substituted or tampered pack, and cancel/retry/offline leave installed meshes unchanged. A complete catalog hides both pack actions; the local zip remains the offline path. `certifi` is now a core dependency so the CLI and GUI share one verified trust store.
 
 ### Fixed
 

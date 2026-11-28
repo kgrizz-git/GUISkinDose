@@ -276,7 +276,8 @@ def _describe_launch(rows: list[dict[str, Any]]) -> dict[str, Any]:
 
 _SAMPLE_INTERVAL_S = 0.1
 _SAMPLER_STOP_TIMEOUT_S = 30.0
-_WATCH_READY_TIMEOUT_S = 10.0
+# A cold Windows runner can take over 10 s to start the PowerShell watch (sampler_not_ready).
+_WATCH_READY_TIMEOUT_S = 30.0
 
 
 def _signal_process(proc: subprocess.Popen[str] | None, *, kill: bool) -> None:

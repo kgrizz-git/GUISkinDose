@@ -13,12 +13,15 @@ from nicegui import run, ui
 from guiskindose import __version__
 from guiskindose.gui.helpers import get_human_mesh_options, mesh_stem_is_installed
 from guiskindose.gui.io_helpers import _is_native_mode, open_phantom_pack_stream
+from guiskindose.gui.phantom_pack_download_controller import PhantomPackDownloadController
 from guiskindose.gui.ui_copy import copy_text
 from guiskindose.gui.window_prefs import show_demo_phantoms_enabled
 from guiskindose.mesh_measurement_cache import clear_mesh_measurement_caches_for_stems
 from guiskindose.phantom_library import (
     _WINDOWS_LIBRARY_UNAVAILABLE,
     PhantomLibraryUnavailableError,
+    default_user_library_dir,
+    missing_clinical_stems,
 )
 from guiskindose.phantom_mesh_names import (
     _CLINICAL_SORT_ORDER,
@@ -30,7 +33,9 @@ from guiskindose.phantom_mesh_names import (
 )
 from guiskindose.phantom_pack import PhantomPackError
 from guiskindose.phantom_pack_cli import install_phantom_pack_from_stream
-from guiskindose.phantom_pack_install import InstallResult
+from guiskindose.phantom_pack_download import DOWNLOAD_UNAVAILABLE
+from guiskindose.phantom_pack_install import InstallResult, default_install_library_dir
+from guiskindose.phantom_pack_release import pack_release_url
 from guiskindose.privacy import safe_error_event
 
 logger = logging.getLogger(__name__)
@@ -91,6 +96,8 @@ class _PhantomCatalogSection:
     on_change: Callable[[], None]
     status_label: Any = None
     _refresh_catalog_rows: Callable[..., Any] = field(default=lambda: None, repr=False)
+    _refresh_actions: Callable[..., Any] = field(default=lambda: None, repr=False)
+    _download_controller: PhantomPackDownloadController | None = field(default=None, repr=False)
 
     def refresh_mesh_options(self) -> None:
         self.mesh_select.options = get_human_mesh_options()
@@ -108,6 +115,7 @@ class _PhantomCatalogSection:
             )
         )
         self.refresh_mesh_options()
+        self._refresh_actions()
         self.on_change()
 
     async def commit_install(self, stream: IO[bytes]) -> None:
@@ -192,6 +200,60 @@ class _PhantomCatalogSection:
         )
         pack_upload.on_upload(self.install_upload)
 
+    def _missing_stems(self) -> list[str]:
+        return missing_clinical_stems(
+            shipped_dir=package_phantom_data_dir().resolve(),
+            user_library_dir=default_user_library_dir(),
+        )
+
+    def mount_pack_actions(self) -> None:
+        """Render download and local-install controls, or the catalog-complete caption."""
+        if not self._missing_stems():
+            ui.label(copy_text("settings.phantom_catalog.catalog_complete")).classes("text-caption text-grey-5")
+            self._download_controller = None
+            return
+        ui.label(copy_text("settings.phantom_catalog.download_caption")).classes("text-caption text-grey-5")
+        if pack_release_url(__version__) is None:
+            with ui.row().classes("items-center q-gutter-sm"):
+                ui.label(DOWNLOAD_UNAVAILABLE).classes("text-caption text-warning")
+                self.mount_install_control()
+            self._download_controller = None
+            return
+        self._mount_download_controls()
+
+    def _mount_download_controls(self) -> None:
+        try:
+            library_dir = default_install_library_dir()
+        except PhantomLibraryUnavailableError:
+            with ui.row().classes("items-center q-gutter-sm"):
+                ui.label(_WINDOWS_LIBRARY_UNAVAILABLE).classes("text-caption text-warning")
+                self.mount_install_control()
+            self._download_controller = None
+            return
+        with ui.row().classes("items-center q-gutter-sm"):
+            button = ui.button(copy_text("settings.phantom_catalog.download_button"))
+            self.mount_install_control()
+        progress = ui.linear_progress(value=0.0, show_value=False).classes("w-full")
+        progress.visible = False
+        cancel = ui.button(copy_text("settings.phantom_catalog.download_cancel_button")).props("flat")
+        cancel.visible = False
+        import guiskindose.phantom_pack_pin as pack_pin_module
+
+        controller = PhantomPackDownloadController(
+            status_label=self.status_label,
+            button=button,
+            progress_bar=progress,
+            cancel_button=cancel,
+            on_installed=self.report_install_success,
+            expected_manifest_sha256=pack_pin_module.EXPECTED_PHANTOM_PACK_SHA256,
+            app_version=__version__,
+            user_library_dir=library_dir,
+            shipped_dir=package_phantom_data_dir().resolve(),
+        )
+        button.on_click(controller.start)
+        cancel.on_click(controller.cancel)
+        self._download_controller = controller
+
 
 def build_phantom_catalog_section(
     *,
@@ -206,10 +268,14 @@ def build_phantom_catalog_section(
     def _catalog_rows() -> None:
         _render_catalog_rows()
 
+    @ui.refreshable
+    def _pack_actions() -> None:
+        section.mount_pack_actions()
+
     section._refresh_catalog_rows = _catalog_rows.refresh
+    section._refresh_actions = _pack_actions.refresh
 
     ui.label(copy_text("settings.phantom_catalog.section_title")).classes("text-subtitle2 q-mt-sm")
     _catalog_rows()
-    ui.label(copy_text("settings.phantom_catalog.phase3_caption")).classes("text-caption text-grey-5")
-    section.mount_install_control()
+    _pack_actions()
     return section.refresh_mesh_options

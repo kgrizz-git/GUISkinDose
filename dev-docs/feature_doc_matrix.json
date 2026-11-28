@@ -307,7 +307,10 @@
         "src/guiskindose/phantom_library.py",
         "src/guiskindose/phantom_pack.py",
         "src/guiskindose/phantom_pack_install.py",
+        "src/guiskindose/phantom_pack_download.py",
+        "src/guiskindose/phantom_pack_release.py",
         "src/guiskindose/phantom_pack_cli.py",
+        "src/guiskindose/gui/phantom_pack_download_controller.py",
         "src/guiskindose/gui/tabs/_phantom_catalog.py",
         "scripts/build_phantom_pack.py"
       ],
@@ -315,10 +318,15 @@
         "tests/unittests/test_phantom_library.py",
         "tests/unittests/test_phantom_pack_manifest.py",
         "tests/unittests/test_phantom_pack_install.py",
+        "tests/unittests/test_phantom_pack_download.py",
+        "tests/unittests/test_phantom_pack_release.py",
         "tests/unittests/test_phantom_pack_cli.py",
-        "tests/gui/test_phantom_pack_settings.py"
+        "tests/gui/test_phantom_pack_settings.py",
+        "tests/gui/test_gui_phantom_pack_download.py",
+        "tests/gui/test_phantom_preview_download.py"
       ],
       "docs": [
+        "dev-docs/plans/PORTABLE_PHASE3_PACK_DOWNLOAD_PLAN.md",
         "dev-docs/plans/PORTABLE_PHANTOM_PACKS_PLAN.md",
         "dev-docs/ADDITIONAL_PHANTOMS.md",
         "dev-docs/FEATURE_INVENTORY.md",

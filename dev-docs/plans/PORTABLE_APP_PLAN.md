@@ -337,10 +337,12 @@ The Light app is now reproduced from committed files. `guiskindose.spec` writes 
 
 ### Phase 3 — Download from the matching release
 
-- [ ] Download action fetches the pack (or one stem, if the release layout allows) from the build's pinned release URL.
-- [ ] Hash check is the same as Phase 2. Partial files are not treated as installed.
-- [ ] Cancel, retry, and offline failure leave the library unchanged.
-- [ ] No request carries exam data, file names, or machine identifiers beyond what HTTPS already sends.
+Execution plan: [PORTABLE_PHASE3_PACK_DOWNLOAD_PLAN.md](PORTABLE_PHASE3_PACK_DOWNLOAD_PLAN.md).
+
+- [x] Download action fetches the pack (or one stem, if the release layout allows) from the build's pinned release URL.
+- [x] Hash check is the same as Phase 2. Partial files are not treated as installed.
+- [x] Cancel, retry, and offline failure leave the library unchanged.
+- [x] No request carries exam data, file names, or machine identifiers beyond what HTTPS already sends.
 
 **Acceptance:** on a machine with network, Light can grow to the full catalog without a second app download. With network disabled, installed meshes and the local zip path still work.
 
