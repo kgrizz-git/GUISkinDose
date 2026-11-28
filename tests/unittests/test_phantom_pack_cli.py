@@ -117,3 +117,120 @@ def test_missing_mesh_headless_uses_install_hint(
     with pytest.raises(HumanMeshNotInstalledError) as info:
         Phantom(phantom_model="human", phantom_dim=dims, human_mesh="senior_male")
     assert "phantom pack" in str(info.value).lower()
+
+
+def test_download_flag_installs_and_prints_counts(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    from guiskindose.phantom_pack_cli import run_cli_phantom_pack_download
+    from guiskindose.phantom_pack_install import InstallResult
+
+    monkeypatch.setattr("guiskindose.phantom_pack_cli.default_install_library_dir", lambda: tmp_path / "library")
+    monkeypatch.setattr("guiskindose.phantom_mesh_names.package_phantom_data_dir", lambda: tmp_path / "shipped")
+    monkeypatch.setattr(
+        "guiskindose.phantom_pack_cli.download_release_pack",
+        lambda **_kwargs: InstallResult(1, 0, ("senior_male",)),
+    )
+    code = run_cli_phantom_pack_download()
+    out = capsys.readouterr()
+    assert code == 0
+    assert "Installed 1" in out.out
+    assert str(tmp_path) not in out.out
+
+
+def test_download_failure_prints_fixed_sentence(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    from guiskindose.phantom_pack_cli import run_cli_phantom_pack_download
+    from guiskindose.phantom_pack_download import DOWNLOAD_OFFLINE, PhantomPackDownloadError
+
+    monkeypatch.setattr("guiskindose.phantom_pack_cli.default_install_library_dir", lambda: tmp_path / "library")
+    monkeypatch.setattr("guiskindose.phantom_mesh_names.package_phantom_data_dir", lambda: tmp_path / "shipped")
+
+    def _offline(**_kwargs):
+        raise PhantomPackDownloadError(DOWNLOAD_OFFLINE)
+
+    monkeypatch.setattr("guiskindose.phantom_pack_cli.download_release_pack", _offline)
+    code = run_cli_phantom_pack_download()
+    err = capsys.readouterr().err
+    assert code == 1
+    assert DOWNLOAD_OFFLINE in err
+    assert str(tmp_path) not in err
+
+
+def test_download_cancel_exits_130(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    from guiskindose.phantom_pack_cli import run_cli_phantom_pack_download
+    from guiskindose.phantom_pack_download import (
+        DOWNLOAD_CANCELLED,
+        PhantomPackDownloadCancelled,
+    )
+
+    monkeypatch.setattr("guiskindose.phantom_pack_cli.default_install_library_dir", lambda: tmp_path / "library")
+    monkeypatch.setattr("guiskindose.phantom_mesh_names.package_phantom_data_dir", lambda: tmp_path / "shipped")
+
+    def _cancel(**_kwargs):
+        raise PhantomPackDownloadCancelled(DOWNLOAD_CANCELLED)
+
+    monkeypatch.setattr("guiskindose.phantom_pack_cli.download_release_pack", _cancel)
+    code = run_cli_phantom_pack_download()
+    assert code == 130
+    assert DOWNLOAD_CANCELLED in capsys.readouterr().err
+
+
+def test_download_keyboard_interrupt_cancels_and_exits_130(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    from guiskindose.phantom_pack_cli import run_cli_phantom_pack_download
+    from guiskindose.phantom_pack_download import DOWNLOAD_CANCELLED
+
+    monkeypatch.setattr("guiskindose.phantom_pack_cli.default_install_library_dir", lambda: tmp_path / "library")
+    monkeypatch.setattr("guiskindose.phantom_mesh_names.package_phantom_data_dir", lambda: tmp_path / "shipped")
+
+    def _interrupt(**kwargs):
+        kwargs["control"].cancel()
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr("guiskindose.phantom_pack_cli.download_release_pack", _interrupt)
+    code = run_cli_phantom_pack_download()
+    assert code == 130
+    assert DOWNLOAD_CANCELLED in capsys.readouterr().err
+
+
+def test_gui_mode_refuses_pack_download(monkeypatch: pytest.MonkeyPatch) -> None:
+    from guiskindose import __main__ as entry
+
+    monkeypatch.setattr(sys, "argv", ["guiskindose", "--mode", "gui", "--download-phantom-pack"])
+    with pytest.raises(SystemExit) as exc:
+        entry.cli()
+    assert exc.value.code == 1
+
+
+def test_pack_flags_are_mutually_exclusive() -> None:
+    from guiskindose.cli_args import get_argument_parser
+
+    with pytest.raises(SystemExit) as exc:
+        get_argument_parser(["--download-phantom-pack", "--install-phantom-pack", "pack.zip"])
+    assert exc.value.code == 2
+
+
+def test_download_keyboard_interrupt_during_install_reports_install_state(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    from guiskindose.phantom_pack_cli import run_cli_phantom_pack_download
+    from guiskindose.phantom_pack_download import DOWNLOAD_CANCELLED
+
+    monkeypatch.setattr("guiskindose.phantom_pack_cli.default_install_library_dir", lambda: tmp_path / "library")
+    monkeypatch.setattr("guiskindose.phantom_mesh_names.package_phantom_data_dir", lambda: tmp_path / "shipped")
+
+    def _interrupt(**kwargs):
+        kwargs["progress"].update(phase="installing")
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr("guiskindose.phantom_pack_cli.download_release_pack", _interrupt)
+    code = run_cli_phantom_pack_download()
+    err = capsys.readouterr().err
+    assert code == 130
+    assert "installation was interrupted" in err
+    assert DOWNLOAD_CANCELLED not in err

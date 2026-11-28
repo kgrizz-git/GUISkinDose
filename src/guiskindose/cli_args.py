@@ -96,13 +96,20 @@ def _add_top_level_args(parser: argparse.ArgumentParser) -> None:
         help="Path to the settings file to use if a specific settings file is required",
     )
 
-    parser.add_argument(
+    pack_group = parser.add_mutually_exclusive_group()
+    pack_group.add_argument(
         "--install-phantom-pack",
         required=False,
         type=Path,
         default=None,
         dest="install_phantom_pack",
         help="Install a phantom pack zip and exit without running a dose calculation.",
+    )
+    pack_group.add_argument(
+        "--download-phantom-pack",
+        action="store_true",
+        dest="download_phantom_pack",
+        help="Download and install this release's phantom pack, then exit.",
     )
 
     parser.add_argument(

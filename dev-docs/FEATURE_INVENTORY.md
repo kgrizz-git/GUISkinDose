@@ -106,7 +106,8 @@ New vendors can be added by editing `normalization_settings.json`.
 Shipped STLs live in `src/guiskindose/phantom_data/` (full-resolution `.stl` plus optional
 `*_reduced_3000t` / `*_reduced_1000t` previews). **Human** mesh path resolution is
 two-root: shipped package data first, then a per-OS user library (`phantom_library.py`;
-optional phantom pack zip via CLI `--install-phantom-pack` or Settings → Phantom catalog).
+optional phantom pack via CLI `--install-phantom-pack`, the pinned per-release download
+(`--download-phantom-pack` or Settings → Phantom catalog), or a local zip).
 The GUI selector lists the **clinical catalog** with “(not installed)” suffixes; plane and
 cylinder models ignore mesh files. `get_human_mesh_names()` lists installed stems only.
 Treat the families below as the product surface, not a frozen stem census (inventory may

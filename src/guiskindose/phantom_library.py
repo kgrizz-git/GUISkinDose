@@ -236,6 +236,29 @@ def installed_full_clinical_stems(
     return sort_clinical_mesh_stems(installed)
 
 
+def missing_clinical_stems(
+    *,
+    shipped_dir: Path,
+    user_library_dir: Path | None = None,
+) -> list[str]:
+    """Return canonical full-resolution clinical stems absent from both roots."""
+    from guiskindose.phantom_mesh_names import _CLINICAL_SORT_ORDER, sort_clinical_mesh_stems
+
+    installed = set(
+        installed_full_clinical_stems(
+            shipped_dir=shipped_dir,
+            user_library_dir=user_library_dir,
+        )
+    )
+    missing = [
+        catalog_stem
+        for catalog_stem in _CLINICAL_SORT_ORDER
+        if not any(catalog_stem.endswith(suffix) for suffix in _PREVIEW_REDUCED_SUFFIXES)
+        and catalog_stem not in installed
+    ]
+    return sort_clinical_mesh_stems(missing)
+
+
 def is_reduced_preview_suffix_stem(stem: str) -> bool:
     """True when *stem* ends with a known reduced preview suffix."""
     return any(stem.endswith(suffix) for suffix in _PREVIEW_REDUCED_SUFFIXES)

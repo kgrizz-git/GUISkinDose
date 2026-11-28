@@ -253,8 +253,15 @@ def cli() -> None:
             port=getattr(args, "port", None),
         )
         return
-    from guiskindose.phantom_pack_cli import phantom_pack_cli_args_present, run_cli_phantom_pack_install
+    from guiskindose.phantom_pack_cli import (
+        phantom_pack_cli_args_present,
+        phantom_pack_download_arg_present,
+        run_cli_phantom_pack_download,
+        run_cli_phantom_pack_install,
+    )
 
+    if phantom_pack_download_arg_present(args):
+        sys.exit(run_cli_phantom_pack_download())
     if phantom_pack_cli_args_present(args):
         sys.exit(run_cli_phantom_pack_install(args.install_phantom_pack))
     if getattr(args, "input_preview_only", False):

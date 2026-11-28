@@ -31,7 +31,7 @@
     },
     "phantom pack": {
       "preferred": "phantom pack",
-      "definition": "Signed zip of allow-listed clinical STL meshes plus a manifest; optional data for Light or offline Full installs.",
+      "definition": "Zip of allow-listed clinical STL meshes plus a pinned manifest; optional data for Light or offline Full installs. Install from a local zip or, when the network allows, download the asset published for the running GUISkinDose version.",
       "aliases": [
         "phantom packs",
         "clinical phantom pack"

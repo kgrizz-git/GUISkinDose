@@ -55,6 +55,8 @@ Use a release PR or written checklist. Condensed from [FORK_MAINTAINER_GUIDE.md]
 
 When the library version in `pyproject.toml` changes, rebuild the maintainer phantom pack and refresh the committed pin: run `scripts/build_phantom_pack.py`, set `EXPECTED_PHANTOM_PACK_SHA256` in `phantom_pack_pin.py`, then confirm with `scripts/build_phantom_pack.py --check`.
 
+Every stable `vX.Y.Z` release also publishes `guiskindose-phantom-pack-<version>.zip` and its `.zip.sha256` on the **draft** release, before publishing. A per-release pack is required even when no mesh changed, because the pack manifest is version-scoped; it does **not** imply new meshes. Run `.github/workflows/phantom-pack-release.yml` by `workflow_dispatch` with the draft's tag, then publish after the pack and the macOS assets are attached. A published immutable release cannot gain assets. The workflow's separate `release: published` job re-downloads the public URL and verifies the committed pin.
+
 1. Compare/sync upstream intent; record in the fork guide if you sync.
 2. Confirm `main` is green for the exact commit you will tag.
 3. Bump the version on a `release/x.y.z` branch. The version lives only in `pyproject.toml`: the
@@ -66,7 +68,8 @@ When the library version in `pyproject.toml` changes, rebuild the maintainer pha
      and update the link references at the bottom (`[Unreleased]` compares from `vx.y.z`, add `[x.y.z]`);
    - run `git grep -n "<old version>"` and update docs that name the live version (for example this
      page and `info/PACKAGE_INSTALL.md`). Leave historical mentions and third-party dependency versions alone;
-   - update citation/support bits if needed.
+   - update citation/support bits if needed;
+   - release notes name the in-app phantom-pack download, the manual `…zip` asset, the offline fallback (installed meshes and local zip), and state that the pack is optional data.
 4. Run full tests and documented privacy, secret, dependency, license, type, build, and doc checks. Confirm the documentation assessment is current — the matrix in [assessments/DOCUMENTATION_ASSESSMENT_2026-09-07.md](assessments/DOCUMENTATION_ASSESSMENT_2026-09-07.md) was touched this cycle, or note N/A with a reason.
 5. Locally `uv build` (or equivalent); inspect wheel/sdist contents. For correction-data
    changes, run `python scripts/verify_distribution.py` (hermetic install + packaged-data

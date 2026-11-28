@@ -36,3 +36,28 @@ def test_is_allowed_pack_stem_rejects_unsafe_names() -> None:
 
     assert not is_allowed_pack_stem("senior male")
     assert not is_allowed_pack_stem("manifest.json")
+
+
+def test_verify_mode_accepts_the_committed_pin(tmp_path: Path, monkeypatch) -> None:
+    from scripts.build_phantom_pack import verify_pack_zip
+    from tests.unittests.phantom_pack_test_helpers import manifest_for_files, pack_zip_bytes, tiny_stl_body
+
+    body = tiny_stl_body()
+    manifest = manifest_for_files({"senior_male": body}, app_version="1.1.1")
+    pack = tmp_path / "pack.zip"
+    pack.write_bytes(pack_zip_bytes(manifest, {"senior_male": body}))
+    monkeypatch.setattr("guiskindose.phantom_pack_pin.EXPECTED_PHANTOM_PACK_SHA256", manifest_sha256(manifest))
+    assert verify_pack_zip(pack, app_version="1.1.1") == 0
+
+
+def test_verify_mode_rejects_a_different_pin(tmp_path: Path, monkeypatch, capsys) -> None:
+    from scripts.build_phantom_pack import verify_pack_zip
+    from tests.unittests.phantom_pack_test_helpers import manifest_for_files, pack_zip_bytes, tiny_stl_body
+
+    body = tiny_stl_body()
+    manifest = manifest_for_files({"senior_male": body}, app_version="1.1.1")
+    pack = tmp_path / "pack.zip"
+    pack.write_bytes(pack_zip_bytes(manifest, {"senior_male": body}))
+    monkeypatch.setattr("guiskindose.phantom_pack_pin.EXPECTED_PHANTOM_PACK_SHA256", "0" * 64)
+    assert verify_pack_zip(pack, app_version="1.1.1") == 1
+    assert "pin mismatch" in capsys.readouterr().err

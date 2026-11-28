@@ -128,12 +128,19 @@ def capture_phantom_preview_snapshot(app_state: AppState) -> PreviewSnapshot:
 def resolve_preview_mesh(stem: str) -> str:
     """Return reduced companion stem when its STL exists; else the logical stem.
 
-    Looks only under package ``phantom_data/``. Prefers ``_reduced_3000t`` over
-    ``_reduced_1000t``. Legacy mesh aliases resolve to canonical stems first.
+    Checks the shipped ``phantom_data/`` root first, then the per-user phantom
+    library, so a downloaded or locally installed pack is visible. Prefers
+    ``_reduced_3000t`` over ``_reduced_1000t``. Legacy mesh aliases resolve to
+    canonical stems first.
     """
+    from guiskindose.phantom_library import default_user_library_dir
     from guiskindose.phantom_mesh_names import prefer_reduced_preview_stem
 
-    return prefer_reduced_preview_stem(stem, phantom_data_dir=_PHANTOM_DATA_DIR, user_library_dir=None)
+    return prefer_reduced_preview_stem(
+        stem,
+        phantom_data_dir=_PHANTOM_DATA_DIR,
+        user_library_dir=default_user_library_dir(),
+    )
 
 
 def build_settings_from_snapshot(
@@ -172,11 +179,16 @@ def _positioned_preview_phantoms(snapshot: PreviewSnapshot) -> tuple[Phantom, Ph
     human_mesh = None
     human_scale = (1.0, 1.0, 1.0)
     if snapshot.phantom_model == c.PHANTOM_MODEL_HUMAN:
+        from guiskindose.phantom_library import default_user_library_dir
         from guiskindose.phantom_mesh_names import resolve_human_mesh_stl_path
 
         human_mesh = resolve_preview_mesh(snapshot.logical_mesh_stem)
         try:
-            mesh_path = resolve_human_mesh_stl_path(human_mesh, phantom_data_dir=_PHANTOM_DATA_DIR)
+            mesh_path = resolve_human_mesh_stl_path(
+                human_mesh,
+                phantom_data_dir=_PHANTOM_DATA_DIR,
+                user_library_dir=default_user_library_dir(),
+            )
         except (ValueError, OSError):
             return None
         if not mesh_path.is_file():

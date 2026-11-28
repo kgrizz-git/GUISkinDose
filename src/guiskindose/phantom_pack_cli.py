@@ -12,7 +12,18 @@ from guiskindose.phantom_library import (
     PhantomLibraryUnavailableError,
 )
 from guiskindose.phantom_pack import PhantomPackError
-from guiskindose.phantom_pack_install import InstallResult, install_phantom_pack
+from guiskindose.phantom_pack_download import (
+    DOWNLOAD_CANCELLED,
+    DownloadControl,
+    DownloadProgress,
+    PhantomPackDownloadCancelled,
+    download_release_pack,
+)
+from guiskindose.phantom_pack_install import (
+    InstallResult,
+    default_install_library_dir,
+    install_phantom_pack,
+)
 
 _CLI_SUCCESS = (
     "Phantom pack install finished. Installed {installed} clinical mesh(es); "
@@ -20,11 +31,20 @@ _CLI_SUCCESS = (
 )
 
 _CLI_FAILURE = "Phantom pack install could not finish."
+_CLI_INTERRUPTED_INSTALL = (
+    "Phantom pack installation was interrupted. Re-run the download and check the catalog; "
+    "the installer normally rolls back an unfinished publish."
+)
 
 
 def phantom_pack_cli_args_present(args: object) -> bool:
-    """True when ``--install-phantom-pack`` was passed."""
-    return getattr(args, "install_phantom_pack", None) is not None
+    """True when either phantom-pack flag was passed."""
+    return getattr(args, "install_phantom_pack", None) is not None or phantom_pack_download_arg_present(args)
+
+
+def phantom_pack_download_arg_present(args: object) -> bool:
+    """True when ``--download-phantom-pack`` was passed."""
+    return bool(getattr(args, "download_phantom_pack", False))
 
 
 def install_phantom_pack_from_stream(
@@ -71,5 +91,40 @@ def run_cli_phantom_pack_install(pack_path: Path) -> int:
     except OSError:
         print(_CLI_FAILURE, file=sys.stderr)
         return 1
+    print(_CLI_SUCCESS.format(installed=result.installed, skipped_shipped=result.skipped_shipped))
+    return 0
+
+
+def run_cli_phantom_pack_download() -> int:
+    """Download and install this build's phantom pack. Never prints a path or URL."""
+    import guiskindose.phantom_pack_pin as phantom_pack_pin_module
+
+    control = DownloadControl()
+    progress = DownloadProgress()
+    try:
+        result = download_release_pack(
+            expected_manifest_sha256=phantom_pack_pin_module.EXPECTED_PHANTOM_PACK_SHA256,
+            app_version=__version__,
+            user_library_dir=default_install_library_dir(),
+            shipped_dir=phantom_mesh_names.package_phantom_data_dir().resolve(),
+            control=control,
+            progress=progress,
+        )
+    except PhantomPackDownloadCancelled:
+        print(DOWNLOAD_CANCELLED, file=sys.stderr)
+        return 130
+    except PhantomPackError as exc:
+        print(exc.user_message(), file=sys.stderr)
+        return 1
+    except PhantomLibraryUnavailableError:
+        print(_WINDOWS_LIBRARY_UNAVAILABLE, file=sys.stderr)
+        return 1
+    except KeyboardInterrupt:
+        control.cancel()
+        if progress.snapshot()[2] == "installing":
+            print(_CLI_INTERRUPTED_INSTALL, file=sys.stderr)
+        else:
+            print(DOWNLOAD_CANCELLED, file=sys.stderr)
+        return 130
     print(_CLI_SUCCESS.format(installed=result.installed, skipped_shipped=result.skipped_shipped))
     return 0

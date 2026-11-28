@@ -13,7 +13,7 @@ Coordinate conventions for geometry and plotting are defined in [`VENDOR_COORDIN
 Human meshes ship under `src/guiskindose/phantom_data/` as `{name}.stl`. **Full** editions
 bundle the clinical catalog; **Light** bundles a starter subset. Additional clinical stems
 resolve from a per-OS **user mesh library** (see `phantom_library.py` and GUI help
-`phantom_packs.md`) after a phantom pack zip install or a manual copy. Runtime lookup uses
+`phantom_packs.md`) after a phantom pack zip install, the in-app release download, or a manual copy. Runtime lookup uses
 the shipped tree first, then the user library; the GUI mesh selector lists the full clinical
 catalog with “(not installed)” when files are missing. `get_human_mesh_names()` still reflects
 **installed** stems only (shipped plus user library). Prefer that call or the in-app list over
