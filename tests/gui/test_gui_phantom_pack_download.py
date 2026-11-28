@@ -94,7 +94,8 @@ async def test_start_installs_and_releases_guard(
         lambda **_kwargs: InstallResult(1, 0, ("senior_male",)),
     )
     await controller.start()
-    assert installed and installed[0].installed == 1
+    assert installed
+    assert installed[0].installed == 1
     assert download_is_active() is False
     assert timer.cancelled is True
     assert progress.visible is False
@@ -145,7 +146,8 @@ async def test_cancelled_worker_shows_cancel_sentence(
     await controller.start()
     assert status.text == DOWNLOAD_CANCELLED
     assert button.text == "Retry download"
-    assert notes and notes[-1] == DOWNLOAD_CANCELLED
+    assert notes
+    assert notes[-1] == DOWNLOAD_CANCELLED
 
 
 def test_cancel_requests_control_cancellation(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
@@ -255,7 +257,8 @@ async def test_setup_failure_releases_busy_guard(
     )
     controller._timer_factory = lambda *_a, **_k: _Timer()
     await controller.start()
-    assert installed and installed[-1].installed == 1
+    assert installed
+    assert installed[-1].installed == 1
     assert "still finishing" not in status.text
     assert download_is_active() is False
 

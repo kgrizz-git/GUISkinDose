@@ -127,16 +127,18 @@ def test_public_api_has_no_url_or_insecure_knobs() -> None:
     parameters = inspect.signature(download_release_pack).parameters
     for forbidden in ("url", "opener", "transport", "allow_insecure_loopback", "cacert"):
         assert forbidden not in parameters
+    forbidden_call = {
+        "url": _RELEASE_URL,
+        "expected_manifest_sha256": "0" * 64,
+        "app_version": "1.1.1",
+        "user_library_dir": Path(),
+        "shipped_dir": Path(),
+        "control": DownloadControl(),
+        "progress": DownloadProgress(),
+    }
+    untyped_download = cast(Any, download_release_pack)
     with pytest.raises(TypeError):
-        cast(Any, download_release_pack)(
-            url=_RELEASE_URL,
-            expected_manifest_sha256="0" * 64,
-            app_version="1.1.1",
-            user_library_dir=Path(),
-            shipped_dir=Path(),
-            control=DownloadControl(),
-            progress=DownloadProgress(),
-        )
+        untyped_download(**forbidden_call)
 
 
 def test_happy_path_installs_into_temp_library(tmp_path: Path) -> None:
@@ -161,8 +163,9 @@ def test_offline_uses_fixed_sentence(tmp_path: Path) -> None:
 
 
 def test_tls_failure_uses_fixed_sentence(tmp_path: Path) -> None:
+    tls_error = ssl.SSLCertVerificationError("bad certificate")
     with pytest.raises(PhantomPackDownloadError) as info:
-        _download(ssl.SSLCertVerificationError("bad certificate"), tmp_path=tmp_path)
+        _download(tls_error, tmp_path=tmp_path)
     assert str(info.value) == DOWNLOAD_TLS_FAILED
 
 
@@ -198,8 +201,9 @@ def test_truncated_body_uses_incomplete_sentence(tmp_path: Path) -> None:
 
 def test_pin_mismatch_is_rejected(tmp_path: Path) -> None:
     raw, _pin = _pack()
+    response = _Response(raw, headers={"Content-Length": str(len(raw))})
     with pytest.raises(PhantomPackError, match="not recognized"):
-        _download(_Response(raw, headers={"Content-Length": str(len(raw))}), tmp_path=tmp_path, pin="0" * 64)
+        _download(response, tmp_path=tmp_path, pin="0" * 64)
     assert not (tmp_path / "library" / "senior_male.stl").exists()
 
 
@@ -208,8 +212,9 @@ def test_tampered_member_is_rejected(tmp_path: Path) -> None:
     manifest = manifest_for_files({"senior_male": body}, app_version="1.1.1")
     pin = manifest_sha256(manifest)
     raw = pack_zip_bytes(manifest, {"senior_male": body + b"#"})
+    response = _Response(raw, headers={"Content-Length": str(len(raw))})
     with pytest.raises(PhantomPackError, match=r"hash|manifest|valid"):
-        _download(_Response(raw, headers={"Content-Length": str(len(raw))}), tmp_path=tmp_path, pin=pin)
+        _download(response, tmp_path=tmp_path, pin=pin)
 
 
 def test_cancel_closes_response_and_returns_promptly(tmp_path: Path) -> None:
@@ -247,7 +252,8 @@ def test_cancel_closes_response_and_returns_promptly(tmp_path: Path) -> None:
     thread.join(2)
     assert not thread.is_alive()
     assert time.monotonic() - began < 1.5
-    assert errors and isinstance(errors[0], PhantomPackDownloadCancelled)
+    assert errors
+    assert isinstance(errors[0], PhantomPackDownloadCancelled)
     assert str(errors[0]) == DOWNLOAD_CANCELLED
     assert not (tmp_path / "library").exists()
 
@@ -325,24 +331,26 @@ def test_cancel_after_body_before_install_leaves_library_untouched(
     control = DownloadControl()
     original = download._read_body
 
-    def _read_then_cancel(response, *, control, progress):
-        spool = original(response, control=control, progress=progress)
+    def _read_then_cancel(response, spool, *, control, progress):
+        original(response, spool, control=control, progress=progress)
         control.cancel()
-        return spool
 
     installed: list[object] = []
+    response = _Response(raw, headers={"Content-Length": str(len(raw))})
+    transport = _ScriptedTransport(response)
+    progress = DownloadProgress()
     monkeypatch.setattr(download, "_read_body", _read_then_cancel)
     monkeypatch.setattr(download, "install_phantom_pack", lambda *args, **kwargs: installed.append((args, kwargs)))
     with pytest.raises(PhantomPackDownloadCancelled) as info:
         download._download_from(
             _RELEASE_URL,
-            transport=_ScriptedTransport(_Response(raw, headers={"Content-Length": str(len(raw))})),
+            transport=transport,
             expected_manifest_sha256=pin,
             app_version="1.1.1",
             user_library_dir=library,
             shipped_dir=shipped,
             control=control,
-            progress=DownloadProgress(),
+            progress=progress,
         )
     assert str(info.value) == DOWNLOAD_CANCELLED
     assert installed == []

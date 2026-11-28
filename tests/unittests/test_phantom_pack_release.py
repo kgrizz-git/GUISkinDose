@@ -27,7 +27,7 @@ def test_pack_release_url_is_version_pinned() -> None:
 
 @pytest.mark.parametrize(
     "version",
-    ["0.0.0+unknown", "1.1", "v1.1.1", "", "1.1.1/../../x", "1.1.1\x00", "1.1.1rc1"],
+    ["0.0.0+unknown", "1.1", "v1.1.1", "", "1.1.1/../../x", "1.1.1\x00", "1.1.1rc1", "\u0661.\u0661.\u0661"],
 )
 def test_unreleasable_versions_have_no_url(version: str) -> None:
     assert pack_release_url(version) is None

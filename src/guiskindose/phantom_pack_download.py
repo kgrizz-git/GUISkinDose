@@ -230,45 +230,59 @@ def _open_response(transport: _Transport, url: str, control: DownloadControl) ->
         raise PhantomPackDownloadError(_transport_error_message(exc)) from None
 
 
-def _read_body(response: Any, *, control: DownloadControl, progress: DownloadProgress) -> IO[bytes]:
-    """Stream the response into a prefixed spool under the compressed-size cap."""
+def _read_chunk(response: Any, *, control: DownloadControl) -> bytes:
+    """Read one chunk, mapping a closed/failed response to the right fixed sentence."""
+    try:
+        return response.read(_READ_CHUNK_BYTES)
+    except (OSError, ValueError, http.client.HTTPException) as exc:
+        if control.cancelled:
+            raise PhantomPackDownloadCancelled(DOWNLOAD_CANCELLED) from exc
+        safe_error_event(_LOG, _OPERATION, exc)
+        raise PhantomPackDownloadError(DOWNLOAD_INCOMPLETE) from None
+
+
+def _copy_chunks(
+    response: Any,
+    spool: IO[bytes],
+    *,
+    control: DownloadControl,
+    progress: DownloadProgress,
+) -> int:
+    """Copy the body under the running size cap; return the received byte count."""
+    received = 0
+    while True:
+        if control.cancelled:
+            raise PhantomPackDownloadCancelled(DOWNLOAD_CANCELLED)
+        chunk = _read_chunk(response, control=control)
+        if not chunk:
+            return received
+        received += len(chunk)
+        if received > MAX_COMPRESSED_PACK_BYTES:
+            raise PhantomPackDownloadError(DOWNLOAD_TOO_LARGE)
+        spool.write(chunk)
+        progress.update(received=received)
+
+
+def _read_body(
+    response: Any,
+    spool: IO[bytes],
+    *,
+    control: DownloadControl,
+    progress: DownloadProgress,
+) -> None:
+    """Stream the response into *spool* under the compressed-size cap."""
     total = _content_length(getattr(response, "headers", {}))
     if total is not None and total > MAX_COMPRESSED_PACK_BYTES:
         raise PhantomPackDownloadError(DOWNLOAD_TOO_LARGE)
     progress.update(total=total)
-    spool = tempfile.SpooledTemporaryFile(  # noqa: SIM115 - returned to the installer, closed by the worker
-        max_size=_SPOOL_MAX_BYTES,
-        prefix="guiskindose-pack-",
-    )
     control.bind_response(response.close)
-    received = 0
     try:
-        while True:
-            if control.cancelled:
-                raise PhantomPackDownloadCancelled(DOWNLOAD_CANCELLED)
-            try:
-                chunk = response.read(_READ_CHUNK_BYTES)
-            except (OSError, ValueError, http.client.HTTPException) as exc:
-                if control.cancelled:
-                    raise PhantomPackDownloadCancelled(DOWNLOAD_CANCELLED) from exc
-                safe_error_event(_LOG, _OPERATION, exc)
-                raise PhantomPackDownloadError(DOWNLOAD_INCOMPLETE) from None
-            if not chunk:
-                break
-            received += len(chunk)
-            if received > MAX_COMPRESSED_PACK_BYTES:
-                raise PhantomPackDownloadError(DOWNLOAD_TOO_LARGE)
-            spool.write(chunk)
-            progress.update(received=received)
+        received = _copy_chunks(response, spool, control=control, progress=progress)
         if total is not None and received != total:
             raise PhantomPackDownloadError(DOWNLOAD_INCOMPLETE)
-    except BaseException:
-        spool.close()
-        raise
     finally:
         control.bind_response(None)
     spool.seek(0)
-    return spool
 
 
 def _download_from(
@@ -286,10 +300,9 @@ def _download_from(
     if not is_allowed_pack_url(url):
         raise PhantomPackDownloadError(DOWNLOAD_UNAVAILABLE)
     response = _open_response(transport, url, control)
-    spool: IO[bytes] | None = None
-    try:
+    with tempfile.SpooledTemporaryFile(max_size=_SPOOL_MAX_BYTES, prefix="guiskindose-pack-") as spool:
         with response:
-            spool = _read_body(response, control=control, progress=progress)
+            _read_body(response, spool, control=control, progress=progress)
         # A cancel that lands after the last chunk but before publish must not install.
         if control.cancelled:
             raise PhantomPackDownloadCancelled(DOWNLOAD_CANCELLED)
@@ -301,9 +314,6 @@ def _download_from(
             expected_manifest_sha256=expected_manifest_sha256,
             app_version=app_version,
         )
-    finally:
-        if spool is not None:
-            spool.close()
 
 
 def download_release_pack(

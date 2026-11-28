@@ -42,6 +42,8 @@ logger = logging.getLogger(__name__)
 
 _MAX_PACK_UPLOAD_BYTES = 80 * 1024 * 1024
 _SPOOL_MAX_BYTES = 1024 * 1024
+_ACTION_ROW_CLASSES = "items-center q-gutter-sm"
+_ACTION_WARNING_CLASSES = "text-caption text-warning"
 
 
 def _new_pack_spool() -> tempfile.SpooledTemporaryFile[bytes]:
@@ -214,8 +216,8 @@ class _PhantomCatalogSection:
             return
         ui.label(copy_text("settings.phantom_catalog.download_caption")).classes("text-caption text-grey-5")
         if pack_release_url(__version__) is None:
-            with ui.row().classes("items-center q-gutter-sm"):
-                ui.label(DOWNLOAD_UNAVAILABLE).classes("text-caption text-warning")
+            with ui.row().classes(_ACTION_ROW_CLASSES):
+                ui.label(DOWNLOAD_UNAVAILABLE).classes(_ACTION_WARNING_CLASSES)
                 self.mount_install_control()
             self._download_controller = None
             return
@@ -225,12 +227,12 @@ class _PhantomCatalogSection:
         try:
             library_dir = default_install_library_dir()
         except PhantomLibraryUnavailableError:
-            with ui.row().classes("items-center q-gutter-sm"):
-                ui.label(_WINDOWS_LIBRARY_UNAVAILABLE).classes("text-caption text-warning")
+            with ui.row().classes(_ACTION_ROW_CLASSES):
+                ui.label(_WINDOWS_LIBRARY_UNAVAILABLE).classes(_ACTION_WARNING_CLASSES)
                 self.mount_install_control()
             self._download_controller = None
             return
-        with ui.row().classes("items-center q-gutter-sm"):
+        with ui.row().classes(_ACTION_ROW_CLASSES):
             button = ui.button(copy_text("settings.phantom_catalog.download_button"))
             self.mount_install_control()
         progress = ui.linear_progress(value=0.0, show_value=False).classes("w-full")
@@ -262,7 +264,7 @@ def build_phantom_catalog_section(
 ) -> Callable[[], None]:
     """Render catalog status rows and pack install; return a mesh-options refresher."""
     section = _PhantomCatalogSection(mesh_select=mesh_select, on_change=on_change)
-    section.status_label = ui.label("").classes("text-caption text-warning")
+    section.status_label = ui.label("").classes(_ACTION_WARNING_CLASSES)
 
     @ui.refreshable
     def _catalog_rows() -> None:

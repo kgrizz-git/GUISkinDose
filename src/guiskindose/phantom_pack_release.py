@@ -28,7 +28,7 @@ PACK_REDIRECT_HOSTS: frozenset[str] = frozenset(
     }
 )
 
-_PLAIN_RELEASE_VERSION = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+$")
+_PLAIN_RELEASE_VERSION = re.compile(r"^\d+\.\d+\.\d+$", re.ASCII)
 
 
 def pack_asset_name(version: str) -> str | None:
