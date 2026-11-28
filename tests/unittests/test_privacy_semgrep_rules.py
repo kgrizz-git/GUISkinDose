@@ -121,11 +121,15 @@ def test_privacy_rules_allow_value_safe_helpers(tmp_path: Path) -> None:
     target.parent.mkdir(parents=True)
     target.write_text(
         """
+from guiskindose.export.failure_guidance import classify_export_failure
+
+
 def safe(exc, logger, output_path, payload):
     safe_error_event(logger, "report_export", exc)
     message = f"error_type={exception_class_name(exc)}"
     atomic_write_private(output_path, payload)
-    return message
+    failure = classify_export_failure(exc, format="png")
+    return message, failure
 """.strip()
         + "\n",
         encoding="utf-8",

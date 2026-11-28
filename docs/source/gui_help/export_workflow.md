@@ -30,6 +30,8 @@ The rich report collects the calculation output, effective settings, input prove
 
 In browser mode, exports download through the browser. In native mode, the app can ask for a save path and then offer open-file or open-folder actions when supported by the platform.
 
-If an export fails because a backend dependency is missing, the app shows the package needed to restore that format. JSON and basic dose-map exports should remain available as fallback artifacts when report-specific backends fail.
+If an export fails because a required package is missing, the app names the package and offers the exact `pip install` command to copy. The portable app shows a re-extract instruction instead, because a frozen copy cannot be repaired with pip. JSON and basic dose-map exports remain available as fallback artifacts when report-specific backends fail.
+
+PNG export, and the images embedded in rich reports, also need an installed Chrome or Chromium browser. Kaleido 1.x no longer includes one. Install Chrome for Testing with `plotly_get_chrome -y`, or point the `BROWSER_PATH` environment variable at an existing Chrome or Chromium, then retry. The portable Full app uses its bundled browser; the Light app has no PNG export by design.
 
 For export scope and remaining polish items, see [Rich Export Plan](../../../dev-docs/plans/RICH_EXPORT_PLAN.md).

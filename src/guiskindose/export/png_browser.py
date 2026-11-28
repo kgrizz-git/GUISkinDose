@@ -24,8 +24,10 @@ from queue import Empty, Queue
 from threading import Thread
 from typing import Any
 
-from guiskindose.edition import PngExportUnavailableError, png_export_available
+from guiskindose.edition import PngExportUnavailableError, is_frozen_app, png_export_available
 from guiskindose.privacy import safe_error_event
+
+from .failure_guidance import install_hint_for, missing_backend
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +40,8 @@ BUNDLED_BROWSER_MESSAGE = (
 
 
 PNG_RENDER_MESSAGE = "The PNG image could not be rendered. Check the log for details."
+
+PNG_BROWSER_MESSAGE = "PNG export needs an installed Chrome or Chromium browser."
 
 # Kaleido's own per-image timeout is 90 s; the margin covers browser start and shutdown.
 _RENDER_TIMEOUT_S = 120.0
@@ -56,8 +60,15 @@ class BundledBrowserUnavailableError(RuntimeError):
         super().__init__(BUNDLED_BROWSER_MESSAGE)
 
 
+class PngBrowserUnavailableError(RuntimeError):
+    """A source or pip install has no resolvable Chrome/Chromium for PNG export."""
+
+    def __init__(self) -> None:
+        super().__init__(PNG_BROWSER_MESSAGE)
+
+
 class PngRenderError(RuntimeError):
-    """The bundled browser started, but the image could not be rendered (not a browser failure)."""
+    """The browser started, but the image could not be rendered (not a browser failure)."""
 
     def __init__(self) -> None:
         super().__init__(PNG_RENDER_MESSAGE)
@@ -90,7 +101,28 @@ def bundled_browser(base: Path | None = None) -> Path:
 
 def _is_frozen() -> bool:
     """True when running from a frozen portable build."""
-    return bool(getattr(sys, "frozen", False))
+    return is_frozen_app()
+
+
+def system_browser_available() -> bool | None:
+    """Whether a Chrome/Chromium is resolvable, without downloading or launching one.
+
+    ``choreographer`` (installed with Kaleido 1.x) resolves the same browser Kaleido
+    uses: ``BROWSER_PATH``, the choreographer-managed download, then typical installs.
+    This probe only reads paths and the environment. It never downloads a browser and
+    never touches the network. Returns ``None`` when the probe itself is unavailable,
+    so callers do not mislabel an uncertain environment.
+    """
+    try:
+        from choreographer.browsers.chromium import Chromium
+    except Exception:
+        return None
+    try:
+        resolved = Chromium.find_browser(skip_local=False)
+        # ``BROWSER_PATH`` is returned unchecked, so a stale override must not count.
+        return resolved is not None and Path(resolved).is_file()
+    except Exception:
+        return None
 
 
 def bundled_browser_for_render() -> Path | None:
@@ -196,21 +228,48 @@ def _render_with_bundled_browser(
     raise PngRenderError() from None
 
 
+def _render_source_install(
+    fig: Any, width: int | None, height: int | None, scale: float | None
+) -> bytes:
+    """Render with ``fig.to_image`` and turn a failure into a typed, actionable error.
+
+    Plotly 6.x (from the 6.3.1 floor) and 7.x both rewrap
+    ``ChromeNotFoundError`` as a plain ``RuntimeError``, so exception type alone
+    cannot identify a missing browser. Presence probes run only on the failure
+    path and never download a browser.
+    """
+    try:
+        return fig.to_image(format="png", width=width, height=height, scale=scale)
+    except Exception as caught:
+        safe_error_event(logger, "png_render", caught)
+        backend = missing_backend("png")
+        if backend is not None:
+            from .models import MissingExportDependencyError
+
+            raise MissingExportDependencyError("png", backend, install_hint_for(backend)) from None
+        if system_browser_available() is False:
+            raise PngBrowserUnavailableError() from None
+        raise PngRenderError() from None
+
+
 def figure_to_png(
     fig: Any, *, width: int | None = None, height: int | None = None, scale: float | None = None
 ) -> bytes:
     """Render *fig* to PNG bytes.
 
     Light raises :class:`~guiskindose.edition.PngExportUnavailableError` before Kaleido is imported.
-    A source or pip install calls ``fig.to_image`` unchanged. The frozen Full app renders with its
+    A source or pip install calls ``fig.to_image`` and raises
+    :class:`MissingExportDependencyError` when Kaleido is absent,
+    :class:`PngBrowserUnavailableError` when no Chrome/Chromium is resolvable, or
+    :class:`PngRenderError` for any other render failure. The frozen Full app renders with its
     bundled browser only. It raises :class:`BundledBrowserUnavailableError` when that browser is
     missing, will not start, or times out (it never falls back to another browser), and
-    :class:`PngRenderError` for any other render failure. Neither message carries exception text.
+    :class:`PngRenderError` for any other render failure. No message carries exception text.
     """
     if not png_export_available():
         raise PngExportUnavailableError()
     if not _is_frozen():
-        return fig.to_image(format="png", width=width, height=height, scale=scale)
+        return _render_source_install(fig, width, height, scale)
     browser = bundled_browser_for_render()
     if browser is None or not browser.is_file():
         raise BundledBrowserUnavailableError()

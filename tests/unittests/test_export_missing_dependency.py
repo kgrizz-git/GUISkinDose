@@ -37,7 +37,8 @@ def test_pdf_missing_reportlab_raises_actionable_error(monkeypatch: pytest.Monke
     exc = excinfo.value
     assert exc.format == "pdf"
     assert exc.package == "reportlab"
-    assert "guiskindose[export]" in exc.install_hint
+    assert "pip install reportlab" in exc.install_hint
+    assert "guiskindose[export]" not in exc.install_hint
     assert "reportlab" in str(exc)
 
 

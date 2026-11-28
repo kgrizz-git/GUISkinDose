@@ -18,6 +18,7 @@ notify-dispatch contract, not rendering.
 from __future__ import annotations
 
 import asyncio
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -25,10 +26,14 @@ pytest.importorskip("nicegui")
 
 from nicegui import run, ui
 
+from guiskindose.export import MissingExportDependencyError
+from guiskindose.export import failure_guidance as fg
+from guiskindose.export.failure_guidance import ExportFailureKind
 from guiskindose.export.png_browser import (
     BUNDLED_BROWSER_MESSAGE,
     PNG_RENDER_MESSAGE,
     BundledBrowserUnavailableError,
+    PngBrowserUnavailableError,
     PngRenderError,
 )
 from guiskindose.gui.state import state
@@ -200,3 +205,133 @@ async def test_download_png_render_error_shows_render_message_not_kaleido(monkey
     messages = _messages(_capture_notify)
     assert PNG_RENDER_MESSAGE in messages, messages
     assert not any("kaleido" in m for m in messages), messages
+
+
+@pytest.mark.asyncio
+async def test_download_png_missing_browser_opens_guidance_dialog(monkeypatch, _capture_notify):
+    state.calculation_done = True
+    shown: list = []
+    monkeypatch.setattr(export_tab, "show_export_failure_dialog", shown.append)
+
+    async def _boom(*a, **k):
+        raise PngBrowserUnavailableError()
+
+    monkeypatch.setattr(run, "io_bound", _boom)
+    controller = export_tab.ExportTabController()
+
+    await controller.download_png()
+
+    assert [failure.kind for failure in shown] == [ExportFailureKind.MISSING_BROWSER]
+    assert shown[0].command == "plotly_get_chrome -y"
+    assert not any("kaleido" in m.lower() for m in _messages(_capture_notify))
+
+
+@pytest.mark.asyncio
+async def test_download_png_missing_kaleido_opens_package_dialog(monkeypatch, _capture_notify):
+    state.calculation_done = True
+    shown: list = []
+    monkeypatch.setattr(export_tab, "show_export_failure_dialog", shown.append)
+
+    async def _boom(*a, **k):
+        raise MissingExportDependencyError("png", "kaleido", "hint")
+
+    monkeypatch.setattr(run, "io_bound", _boom)
+    controller = export_tab.ExportTabController()
+
+    await controller.download_png()
+
+    assert [failure.kind for failure in shown] == [ExportFailureKind.MISSING_PACKAGE]
+    assert shown[0].command == "pip install kaleido"
+    assert not any("kaleido'" in m for m in _messages(_capture_notify))
+
+
+@pytest.mark.asyncio
+async def test_download_png_frozen_bundled_error_keeps_message_and_no_dialog(monkeypatch, _capture_notify):
+    state.calculation_done = True
+    shown: list = []
+    monkeypatch.setattr(export_tab, "show_export_failure_dialog", shown.append)
+
+    async def _boom(*a, **k):
+        raise BundledBrowserUnavailableError()
+
+    monkeypatch.setattr(run, "io_bound", _boom)
+    controller = export_tab.ExportTabController()
+
+    await controller.download_png()
+
+    assert shown == []
+    assert BUNDLED_BROWSER_MESSAGE in _messages(_capture_notify)
+
+
+@pytest.mark.asyncio
+async def test_download_png_light_edition_keeps_by_design_message(monkeypatch, _capture_notify):
+    from guiskindose.gui.ui_copy import copy_text
+
+    shown: list = []
+    monkeypatch.setattr(export_tab, "show_export_failure_dialog", shown.append)
+    monkeypatch.setattr(export_tab, "png_export_available", lambda: False)
+    controller = export_tab.ExportTabController()
+
+    await controller.download_png()
+
+    assert shown == []
+    assert copy_text("export.light_edition.no_png") in _messages(_capture_notify)
+
+
+def _rich_report_controller():
+    controller = export_tab.ExportTabController()
+    controller.include_identifiers = MagicMock(value=False)
+    controller.fmt_select = MagicMock(value="pdf")
+    controller.title_input = MagicMock(value="")
+    return controller
+
+
+@pytest.mark.asyncio
+async def test_rich_report_import_error_opens_guidance_dialog(monkeypatch, _capture_notify):
+    shown: list = []
+    monkeypatch.setattr(export_tab, "show_export_failure_dialog", shown.append)
+    # Pin the probe: the ambient environment may or may not have reportlab installed.
+    monkeypatch.setattr(fg, "missing_backend", lambda fmt: "reportlab" if fmt == "pdf" else None)
+
+    async def _boom(*a, **k):
+        raise ModuleNotFoundError("No module named 'reportlab'")
+
+    monkeypatch.setattr(run, "io_bound", _boom)
+    controller = _rich_report_controller()
+
+    assert await controller._render_rich_report("pdf", None) is None
+    assert [failure.kind for failure in shown] == [ExportFailureKind.MISSING_PACKAGE]
+    assert shown[0].command == "pip install reportlab"
+    assert not any("pdf" in m.lower() and "failed" in m.lower() for m in _messages(_capture_notify))
+
+
+@pytest.mark.asyncio
+async def test_rich_report_missing_dependency_opens_package_dialog(monkeypatch, _capture_notify):
+    shown: list = []
+    monkeypatch.setattr(export_tab, "show_export_failure_dialog", shown.append)
+
+    async def _boom(*a, **k):
+        raise MissingExportDependencyError("docx", "docx", "hint")
+
+    monkeypatch.setattr(run, "io_bound", _boom)
+    controller = _rich_report_controller()
+
+    assert await controller._render_rich_report("docx", None) is None
+    assert [failure.kind for failure in shown] == [ExportFailureKind.MISSING_PACKAGE]
+    assert shown[0].command == "pip install python-docx"
+
+
+@pytest.mark.asyncio
+async def test_rich_report_unknown_failure_keeps_toast_only(monkeypatch, _capture_notify):
+    shown: list = []
+    monkeypatch.setattr(export_tab, "show_export_failure_dialog", shown.append)
+
+    async def _boom(*a, **k):
+        raise RuntimeError("writer exploded")
+
+    monkeypatch.setattr(run, "io_bound", _boom)
+    controller = _rich_report_controller()
+
+    assert await controller._render_rich_report("pdf", None) is None
+    assert shown == []
+    assert any("rich_report_export" in m for m in _messages(_capture_notify))

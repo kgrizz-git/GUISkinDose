@@ -13,6 +13,8 @@ from typing import TYPE_CHECKING
 
 from guiskindose.safe_output import atomic_write_private
 
+from ..failure_guidance import FORMAT_BACKENDS, install_hint_for
+
 if TYPE_CHECKING:
     from ..models import ExportPayload
 
@@ -20,24 +22,16 @@ if TYPE_CHECKING:
 FORMATS: dict[str, str] = {"xlsx": "xlsx", "pdf": "pdf", "html": "html", "docx": "docx"}
 
 # Optional third-party package backing each format (None = core dependency).
-# Used to turn a bare ``ModuleNotFoundError`` into an actionable message.
+# Used to turn a bare ``ModuleNotFoundError`` into an actionable message. The
+# import-name table lives in ``failure_guidance`` so GUI and CLI agree.
 _FORMAT_PACKAGE: dict[str, str | None] = {
-    "xlsx": "openpyxl",
-    "pdf": "reportlab",
-    "html": None,
-    "docx": "docx",
+    fmt: (backends[0] if backends else None) for fmt, backends in FORMAT_BACKENDS.items()
 }
-# Install name (may differ from import name, e.g. ``docx`` → ``python-docx``).
-_PACKAGE_INSTALL_NAME: dict[str, str] = {"docx": "python-docx"}
 
 
 def _install_hint(package: str) -> str:
     """A copy-pasteable instruction for installing a missing export package."""
-    install_name = _PACKAGE_INSTALL_NAME.get(package, package)
-    return (
-        f"Install it with 'pip install {install_name}', or reinstall the app with the "
-        f"export extras: 'pip install guiskindose[export]'."
-    )
+    return install_hint_for(package)
 
 
 def render_bytes(payload: ExportPayload, fmt: str) -> bytes:

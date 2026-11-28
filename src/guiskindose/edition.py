@@ -16,6 +16,7 @@ what Light contains.
 
 from __future__ import annotations
 
+import sys
 from collections.abc import Iterable
 
 EDITION_LIGHT = "light"
@@ -63,6 +64,16 @@ def is_light() -> bool:
 def png_export_available() -> bool:
     """True when PNG dose-map rendering may start a browser."""
     return not is_light()
+
+
+def is_frozen_app() -> bool:
+    """True when running from a frozen portable build.
+
+    Frozen builds carry their own bundled resources and cannot be told to
+    ``pip install`` anything, so user-facing repair guidance must offer a
+    re-extract instruction instead.
+    """
+    return bool(getattr(sys, "frozen", False))
 
 
 def light_phantom_stl_names() -> list[str]:

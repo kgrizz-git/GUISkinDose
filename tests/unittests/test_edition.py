@@ -20,6 +20,7 @@ from guiskindose.edition import (
     current_edition,
     edition_phantom_stl_names,
     full_phantom_stl_names,
+    is_frozen_app,
     light_phantom_stl_names,
     png_export_available,
 )
@@ -191,6 +192,14 @@ def starter_only(tmp_path):
     source = package_phantom_data_dir() / "adult_male.stl"
     (tmp_path / "adult_male.stl").write_bytes(source.read_bytes())
     return tmp_path
+
+
+def test_is_frozen_app_reads_the_runtime_flag(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delattr(sys, "frozen", raising=False)
+    assert is_frozen_app() is False
+
+    monkeypatch.setattr(sys, "frozen", True, raising=False)
+    assert is_frozen_app() is True
 
 
 def test_catalog_stems_include_aliases_poses_and_previews():

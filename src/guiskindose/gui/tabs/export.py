@@ -21,10 +21,12 @@ from nicegui import run, ui
 
 from guiskindose.edition import png_export_available
 from guiskindose.export import MissingExportDependencyError
+from guiskindose.export.failure_guidance import classify_export_failure
 from guiskindose.export.png_browser import (
     BUNDLED_BROWSER_MESSAGE,
     PNG_RENDER_MESSAGE,
     BundledBrowserUnavailableError,
+    PngBrowserUnavailableError,
     PngRenderError,
 )
 from guiskindose.intended_use import INTENDED_USE_NOTICE
@@ -32,6 +34,7 @@ from guiskindose.privacy import safe_error_event, safe_user_error
 from guiskindose.safe_output import atomic_write_private
 
 from ..components import HelpButton
+from ..components.export_failure_dialog import show_export_failure_dialog
 from ..export_source import build_export_source_from_gui
 from ..figures import make_dosemap_html, make_dosemap_png
 from ..io_helpers import _get_save_path, _inject_html_tabular_meta, _is_native_mode, _tabular_input_meta
@@ -126,33 +129,14 @@ def _notify_export_failure(safe_error_key: str, exc: Exception, message: str) ->
     ui.notify(message, type="negative")
 
 
-def _show_missing_dependency_dialog(exc: MissingExportDependencyError) -> None:
-    """Persistent, actionable dialog for a missing optional export package."""
-    install_name = "python-docx" if exc.package == "docx" else exc.package
-    with ui.dialog() as dep_dialog, ui.card().classes("gap-3").style("max-width: 32rem"):
-        with ui.row().classes("items-center gap-2"):
-            ui.icon("extension_off", color="warning").classes("text-2xl")
-            ui.label(f"{exc.format.upper()} export needs an extra package").classes("text-lg font-medium")
-        ui.label(
-            f"The '{install_name}' package is required to generate {exc.format.upper()} "
-            "reports but isn't installed in this environment."
-        ).classes("text-sm")
-        ui.label("Install it, then try the export again:").classes("text-sm")
-        cmd = "pip install guiskindose[export]"
+def _show_failure_guidance(exc: Exception, fmt: str | None) -> None:
+    """Open the actionable dialog for a dependency/browser/install failure.
 
-        def _copy_cmd() -> None:
-            ui.clipboard.write(cmd)
-            ui.notify("Copied", color="positive")
-
-        with ui.row().classes("w-full items-center gap-2 no-wrap"):
-            ui.label(cmd).classes("font-mono text-xs bg-grey-2 rounded p-2 grow")
-            ui.button(icon="content_copy", on_click=_copy_cmd).props("flat dense").tooltip(
-                copy_text("export.copy_command.tooltip")
-            )
-        ui.label(f"Or install just this one: pip install {install_name}").classes("text-xs text-grey-6")
-        with ui.row().classes("w-full justify-end"):
-            ui.button("Close", on_click=dep_dialog.close).props("flat")
-    dep_dialog.open()
+    Classifies with the requested *fmt* and auto-detects frozen mode. Unknown
+    failures never reach this helper; callers keep the generic toast for those.
+    """
+    failure = classify_export_failure(exc, format=fmt)
+    show_export_failure_dialog(failure)
 
 
 def _show_saved_dialog(saved: Path) -> None:
@@ -211,7 +195,13 @@ class ExportTabController:
         save_path = await _get_save_path(default_name, "json")
         if save_path is None and _is_native_mode():
             return  # cancel or an already-reported dialog failure
-        content = json.dumps(self._build_export_payload(), indent=4).encode("utf-8")
+        try:
+            content = json.dumps(self._build_export_payload(), indent=4).encode("utf-8")
+        except Exception as exc:
+            _notify_export_failure(
+                "json_export", exc, "Could not serialize the results to JSON. Check the log for details."
+            )
+            return
         _write_or_download(save_path, content, default_name, "JSON export saved.", "json_export_write")
 
     async def download_html(self) -> None:
@@ -266,6 +256,10 @@ class ExportTabController:
             explicit_patient = state.multi_exam_result.exams[0].output.to_dict()["patient"]
         try:
             content = await run.io_bound(make_dosemap_png, explicit_dose_map, explicit_patient)
+        except (MissingExportDependencyError, PngBrowserUnavailableError) as exc:
+            safe_error_event(logger, "png_export", exc)
+            _show_failure_guidance(exc, "png")
+            return
         except BundledBrowserUnavailableError as exc:
             _notify_export_failure("png_export", exc, BUNDLED_BROWSER_MESSAGE)
             return
@@ -276,8 +270,7 @@ class ExportTabController:
             _notify_export_failure(
                 "png_export",
                 exc,
-                "Could not generate the PNG dose map (this may require the 'kaleido' "
-                "package). Check the log for details.",
+                "Could not generate the PNG dose map. Check the log for details.",
             )
             return
         logger.info("dosemap png export rendered (bytes=%d)", len(content))
@@ -286,8 +279,9 @@ class ExportTabController:
     async def _render_rich_report(self, fmt: str, title: str | None) -> bytes | None:
         try:
             return await run.io_bound(_rich_report_bytes_titled, fmt, title, self._include_ids())
-        except MissingExportDependencyError as exc:
-            _show_missing_dependency_dialog(exc)
+        except (MissingExportDependencyError, ImportError) as exc:
+            safe_error_event(logger, "rich_report_export", exc)
+            _show_failure_guidance(exc, fmt)
         except Exception as exc:  # kaleido or writer failure
             safe_error_event(logger, "rich_report_export", exc)
             ui.notify(
