@@ -40,14 +40,20 @@ def test_python_gate_hooks_use_the_project_lock(hook_id: str, command: str) -> N
 def test_dependabot_uses_uv_and_preserves_the_scanner_pin() -> None:
     config = yaml.safe_load((ROOT / ".github/dependabot.yml").read_text(encoding="utf-8"))
     entries = {(entry["package-ecosystem"], entry["directory"]): entry for entry in config["updates"]}
-    assert set(entries) == {("uv", "/"), ("uv", "/tools/semgrep"), ("github-actions", "/")}
+    assert set(entries) == {
+        ("uv", "/"),
+        ("uv", "/tools/semgrep"),
+        ("uv", "/tools/phi-scan"),
+        ("github-actions", "/"),
+    }
     root = entries["uv", "/"]
-    scanner = entries["uv", "/tools/semgrep"]
     assert root["versioning-strategy"] == "increase-if-necessary"
     assert "ruff" in root["groups"]["python-minor-and-patch"]["exclude-patterns"]
-    assert scanner["versioning-strategy"] == "lockfile-only"
-    assert scanner["allow"] == [{"dependency-type": "all"}]
-    assert scanner["ignore"] == [{"dependency-name": "semgrep"}]
+    for directory, scanner in (("/tools/semgrep", "semgrep"), ("/tools/phi-scan", "phi-scan")):
+        entry = entries["uv", directory]
+        assert entry["versioning-strategy"] == "lockfile-only"
+        assert entry["allow"] == [{"dependency-type": "all"}]
+        assert entry["ignore"] == [{"dependency-name": scanner}]
 
 
 def test_dependabot_waits_out_a_release_cooldown() -> None:

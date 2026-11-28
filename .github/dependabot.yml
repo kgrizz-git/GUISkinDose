@@ -62,6 +62,29 @@ updates:
           - "minor"
           - "patch"
 
+  # Same rule for the hash-locked phi-scan tool project: transitives only, never its pin.
+  - package-ecosystem: uv
+    directory: /tools/phi-scan
+    versioning-strategy: lockfile-only
+    schedule:
+      interval: cron
+      cronjob: "0 16 21 * *"
+      timezone: America/New_York
+    open-pull-requests-limit: 3
+    cooldown:
+      default-days: 7
+    allow:
+      - dependency-type: all
+    ignore:
+      - dependency-name: phi-scan
+    groups:
+      phi-scan-transitives-minor-and-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+
   - package-ecosystem: github-actions
     directory: /
     schedule:

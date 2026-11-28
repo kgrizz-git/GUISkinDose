@@ -22,8 +22,9 @@ tracked source of truth for scanner versions and validated by
 must repeat the pin because uv needs a literal requirement; the two are checked
 against each other by ``tests/unittests/test_semgrep_tool.py``.
 
-Follows the ``uvx --from 'phi-scan==0.7.0'`` pattern already used for the PHI
-scanner (``.github/workflows/phi-scan.yml``, ``scripts/privacy_admission.py``).
+The PHI text scanner follows the same pattern: ``tools/phi-scan`` is the hash-locked
+environment and ``scripts/phi_scan_tool.py`` resolves it (see that module for the
+``uv run --locked`` preference and CI refusal to use an unverified ``uvx`` fallback).
 """
 
 from __future__ import annotations

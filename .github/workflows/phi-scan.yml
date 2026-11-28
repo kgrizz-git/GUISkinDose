@@ -30,6 +30,10 @@ jobs:
         uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2  # v10.3.3
         with:
           version: "0.11.25"
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
+        with:
+          python-version: '3.12'
       - name: Make a tracked-files-only scan input
         run: |
           mkdir -p "$RUNNER_TEMP/phi-scan-input"
@@ -38,11 +42,11 @@ jobs:
         working-directory: ${{ runner.temp }}/phi-scan-input
         run: |
           set -euo pipefail
-          if ! uvx --from 'phi-scan==0.7.0' phi-scan scan . \
+          if ! python "$GITHUB_WORKSPACE/scripts/run_phi_scan.py" scan . \
             --config "$GITHUB_WORKSPACE/.phi-scanner.yml" \
             --baseline --no-cache --quiet --workers 4; then
             echo "::group::phi-scan findings (re-run without --quiet)"
-            uvx --from 'phi-scan==0.7.0' phi-scan scan . \
+            python "$GITHUB_WORKSPACE/scripts/run_phi_scan.py" scan . \
               --config "$GITHUB_WORKSPACE/.phi-scanner.yml" \
               --baseline --no-cache --workers 4
             echo "::endgroup::"

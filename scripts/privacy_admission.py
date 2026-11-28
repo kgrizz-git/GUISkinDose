@@ -24,9 +24,10 @@ from pathlib import Path, PurePosixPath
 from typing import Any, Literal, Sequence
 
 if __package__:
-    from . import privacy_scan_tool
+    from . import phi_scan_tool, privacy_scan_tool
 else:  # pragma: no cover - direct script execution (hooks, CI)
     sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import phi_scan_tool
     import privacy_scan_tool
 
 POLICY_PATH = Path("dev-docs/privacy_admission_policy.json")
@@ -389,6 +390,23 @@ def report_missing_tool_environment(root: Path, rule: ScannerRule) -> bool:
     return True
 
 
+def _run_phi_scan(root: Path, snapshot: Path, environment: dict[str, str]) -> int:
+    """Run the hash-locked phi-scan and reduce a missing environment to a clean failure."""
+    environment = phi_scan_tool.tool_environment(environment, root=root)
+    try:
+        command = phi_scan_tool.phi_scan_argv(
+            [
+                "scan", ".", "--config", str(snapshot / ".phi-scanner.yml"),
+                "--baseline", "--no-cache", "--quiet", "--workers", "4",
+            ],
+            root=root,
+        )
+    except phi_scan_tool.PhiScanUnavailableError as error:
+        print(f"ERROR: phi-scan did not run: {error}", file=sys.stderr)
+        return 1
+    return subprocess.run(command, cwd=snapshot, env=environment, check=False).returncode
+
+
 def run_scanner(root: Path, snapshot: Path, rule: ScannerRule, input_paths: Sequence[str]) -> int:
     if report_missing_tool_environment(root, rule):
         return 1
@@ -439,10 +457,7 @@ def run_scanner(root: Path, snapshot: Path, rule: ScannerRule, input_paths: Sequ
             "--scan-root", str(snapshot), "--require-installed",
         ]
     elif rule.scanner_id == "phi-scan":
-        command = [
-            "uvx", "--from", "phi-scan==0.7.0", "phi-scan", "scan", ".", "--config",
-            str(snapshot / ".phi-scanner.yml"), "--baseline", "--no-cache", "--quiet", "--workers", "4",
-        ]
+        return _run_phi_scan(root, snapshot, environment)
     elif rule.scanner_id == "dicom-phi-scan":
         command = [
             python, str(snapshot / "scripts/run_dicom_phi_advisory.py"),

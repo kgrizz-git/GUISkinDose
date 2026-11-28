@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import tomllib
 from pathlib import Path
 from unittest import mock
@@ -10,9 +11,10 @@ import pytest
 from packaging.requirements import Requirement
 from packaging.version import Version
 
-from scripts import privacy_admission, privacy_scan_tool
+from scripts import phi_scan_tool, privacy_admission, privacy_scan_tool
 
 ROOT = Path(__file__).resolve().parents[2]
+PHI_TOOL_VERSION = "9.9.9"
 
 
 def test_tool_environment_redirects_uv_settings(tmp_path: Path) -> None:
@@ -39,6 +41,22 @@ def _fake_synced_env(root: Path) -> Path:
     return venv
 
 
+def _fake_phi_tool_project(root: Path) -> Path:
+    """A locked phi-scan project plus the inventory entry the resolver reads."""
+    inventory = root / "dev-docs/privacy_tool_inventory.json"
+    inventory.parent.mkdir(parents=True, exist_ok=True)
+    inventory.write_text(
+        json.dumps({"version": 1, "tools": [{"id": "phi-scan", "version": PHI_TOOL_VERSION}]}), encoding="utf-8"
+    )
+    project = root / "tools/phi-scan"
+    project.mkdir(parents=True, exist_ok=True)
+    (project / "pyproject.toml").write_text(
+        f'[project]\nname = "x"\ndependencies = ["phi-scan=={PHI_TOOL_VERSION}"]\n', encoding="utf-8"
+    )
+    (project / "uv.lock").write_text("version = 1\n", encoding="utf-8")
+    return project
+
+
 def _run_scanner_capture(scanner_id: str, tmp_path: Path) -> mock.Mock:
     rule = privacy_admission.ScannerRule(
         scanner_id=scanner_id, version="v", trigger_extensions=frozenset(), trigger_prefixes=(),
@@ -47,9 +65,12 @@ def _run_scanner_capture(scanner_id: str, tmp_path: Path) -> mock.Mock:
     )
     completed = mock.Mock(returncode=0, stdout="", stderr="")
     _fake_synced_env(tmp_path)
+    if scanner_id == "phi-scan":
+        _fake_phi_tool_project(tmp_path)
     with (
         mock.patch.object(privacy_admission, "git_path_directory", return_value=tmp_path / "cache"),
         mock.patch.object(privacy_admission.subprocess, "run", return_value=completed) as run,
+        mock.patch.object(phi_scan_tool.shutil, "which", lambda name: "/bin/uv" if name == "uv" else None),
         mock.patch.dict("os.environ", {"UV_PYTHON": "3.14", "VIRTUAL_ENV": "/x"}),
     ):
         privacy_admission.run_scanner(tmp_path, tmp_path / "snap", rule, ["a.png"] if scanner_id == "image-ocr" else ["a.md"])
@@ -71,6 +92,18 @@ def test_run_scanner_image_ocr_uses_tool_project(tmp_path: Path) -> None:
     run = _run_scanner_capture("image-ocr", tmp_path)
     assert str(tmp_path / "tools/privacy-scan") in run.call_args.args[0]
     assert run.call_args.kwargs["env"]["UV_PROJECT_ENVIRONMENT"] == str(tmp_path / "tools/privacy-scan/.venv")
+
+
+def test_run_scanner_phi_scan_uses_the_locked_tool_project(tmp_path: Path) -> None:
+    run = _run_scanner_capture("phi-scan", tmp_path)
+    argv = run.call_args.args[0]
+    assert argv[:5] == ["/bin/uv", "run", "--locked", "--project", str(tmp_path / "tools/phi-scan")]
+    assert argv[5:7] == ["phi-scan", "scan"]
+    assert "--config" in argv
+    env = run.call_args.kwargs["env"]
+    assert env["UV_PROJECT_ENVIRONMENT"] == str(tmp_path / "tools/phi-scan/.venv")
+    assert "UV_PYTHON" not in env
+    assert "UV_CACHE_DIR" in env
 
 
 def _floors(path: Path) -> dict[str, Version]:

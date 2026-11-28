@@ -1,0 +1,36 @@
+# Isolated, hash-locked environment for the phi-scan PHI/PII text scanner.
+#
+# phi-scan is deliberately not a project dependency: it is only ever run as a CLI,
+# never imported, and the repository already keeps every privacy scanner in its own
+# environment. See scripts/phi_scan_tool.py.
+#
+# This mini-project exists so that isolation does not cost integrity. `uvx --from
+# phi-scan==<pin>` fixes the scanner's own version but re-resolves its whole dependency
+# tree on every run, with no recorded hashes. The uv.lock beside this file pins each of
+# those transitive packages to an exact version and sha256, which is what
+# `uv run --locked` uses.
+#
+# phi-scan 0.7.0 declares Python >=3.12, so this tool project does too. The root project
+# floor (3.11) is unaffected because this project is resolved and run on its own.
+#
+# Deliberately NOT a uv workspace member of the root project: joining the workspace
+# would merge these dependencies back into the root resolution and undo the isolation.
+# Dependabot refreshes this project's transitive lock versions with lockfile-only uv
+# updates, ignoring phi-scan itself. The version of record remains
+# dev-docs/privacy_tool_inventory.json; a test asserts the two agree.
+[project]
+name = "guiskindose-phi-scan-tool"
+version = "0"
+description = "Pinned, hash-locked phi-scan environment (not shipped, not importable)."
+requires-python = ">=3.12"
+dependencies = ["phi-scan==0.7.0"]
+
+# Nothing here is built or installed as a package; this project only carries the lock.
+[tool.uv]
+package = false
+
+# No [tool.uv.audit] suppressions as of 2026-11-27: `uv audit` on this lock reports no
+# known vulnerabilities and no adverse project statuses. Any new advisory therefore
+# fails the blocking scanner-lock audit in ci.yml and dependency-audit.yml. If a future
+# phi-scan pin holds a scanner-only dependency below its fix, list that advisory ID here
+# individually, with the reason, rather than suppressing a severity band.

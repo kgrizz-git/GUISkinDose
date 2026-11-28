@@ -239,7 +239,12 @@ location, purpose, and output boundary. Every conditional scanner must reference
 unknown tool or stale generated view. Candidate status does not authorize automated execution.
 
 [`phi-scan`](https://pypi.org/project/phi-scan/) runs weekly and on pull requests that change CSV/TSV data. It is
-pinned, quiet, and has no report upload or AI review enabled. Version 0.7.0 is calibrated to high-severity findings in
+hash-locked in the standalone `tools/phi-scan` uv project and launched through `scripts/run_phi_scan.py` (and the
+resolver in `scripts/phi_scan_tool.py` for the privacy hook), so a local run with uv uses the same sha256-pinned
+dependency tree as CI; `.envrc` provisions that environment and `scripts/setup-dev.sh` documents the sync command.
+The bare `uvx --from phi-scan==<pin>` route is a **warned** local fallback for a checkout without uv or the lock;
+CI refuses every non-locked route rather than using an unverified environment.
+The scan is quiet and has no report upload or AI review enabled. Version 0.7.0 is calibrated to high-severity findings in
 CSV/TSV files; broader source-code sinks are enforced by the project Semgrep rules. Its 90-day baseline contains only
 finding hashes and metadata. The current 14 entries were reviewed by `KG` on 2026-07-17 as synthetic fixture headers,
 synthetic numeric rows, or numeric correction-table combinations—not ignored findings. One more entry, for the fictional calibration dates in the shipped example

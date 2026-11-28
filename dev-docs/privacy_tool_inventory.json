@@ -8,7 +8,7 @@
       "name": "phi-scan",
       "status": "active",
       "version": "0.7.0",
-      "version_source": "Exact uvx/workflow pin",
+      "version_source": "tools/phi-scan/uv.lock (hash-locked isolated uv project; not in the root uv.lock)",
       "execution": "local and GitHub Actions",
       "role": "Secondary CSV/TSV PHI heuristic scan",
       "output_policy": "Quiet, value-suppressed, no uploaded report",
